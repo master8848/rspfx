@@ -1,0 +1,43 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "rspfx-example-shadcn-client-side-solution",
+    "id": "22222222-2222-4222-8222-222222222202",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-0000"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "RSPFX shadcn/ui example"
+      },
+      "longDescription": {
+        "default": "RSPFX shadcn/ui example web part"
+      },
+      "categories": [],
+      "screenshotPaths": []
+    },
+    "features": [
+      {
+        "title": "rspfx-example-shadcn Feature",
+        "description": "A feature which activates the Client-Side WebPart named 'shadcn/ui Hello'",
+        "id": "33333333-3333-4333-8333-333333333302",
+        "version": "1.0.0.0",
+        "assets": {
+          "elementManifests": [],
+          "elementFiles": []
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "sharepoint/solution/rspfx-example-shadcn.sppkg"
+  }
+}
