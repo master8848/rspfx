@@ -1,0 +1,33 @@
+{
+  "name": "@mbsks/rspfx-example-preact",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RSPFX example: Preact web part",
+  "license": "MIT",
+  "scripts": {
+    "dev": "rspfx dev",
+    "dev:refresh": "rspfx dev --refresh",
+    "playground": "rspfx playground",
+    "build": "rspfx build",
+    "package": "rspfx package",
+    "clean": "rspfx clean",
+    "doctor": "rspfx doctor",
+    "analyze": "rspfx analyze",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@microsoft/sp-component-base": "~1.22.0",
+    "@microsoft/sp-core-library": "~1.22.0",
+    "@microsoft/sp-property-pane": "~1.22.0",
+    "@microsoft/sp-webpart-base": "~1.22.0",
+    "preact": "^10.24.0"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-cli": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-framework-preact": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "typescript": "^5.7.0"
+  }
+}
