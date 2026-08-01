@@ -105,6 +105,11 @@ export abstract class BaseWebPart<TProps extends Record<string, unknown> = Recor
 }
 ```
 
+`BaseWebPart` and the `FrameworkAdapter` type live in `src/base-web-part.ts`,
+exported via the `@mbsks/rspfx-core/webpart` subpath (browser side); the index
+re-exports `FrameworkAdapter` as a type only and never imports the web part
+runtime.
+
 ## @mbsks/rspfx-plugin-api (depends on core only)
 
 ```ts
@@ -278,18 +283,42 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<{ url: s
 // Standalone: dev server on config.playground.port (default 3000) + generated playground page (see templates)
 export interface RefreshRuntime { dispose(): void; preserveState(): void; restoreState(): void; }
 export function createRefreshRuntime(framework: FrameworkId): RefreshRuntime; // no-op for vanilla
+export interface FrameworkPresetModule {
+  preset: FrameworkPreset;      // loaded preset (no-op when the framework package is missing)
+  moduleUrl: string;            // resolved framework package path ('' when missing)
+}
+export async function loadFrameworkPreset(framework: FrameworkId, projectRoot?: string): Promise<FrameworkPresetModule>;
+// imports @mbsks/rspfx-framework-<fw> index (Node side); warns + returns a no-op preset when absent
+export function resolveContributionLoaders(contributions: Record<string, unknown>, frameworkModuleUrl: string): Record<string, unknown>;
+// resolves bare loader strings ('vue-loader', 'svelte-loader', 'babel-loader') and babel
+// preset/plugin strings ('babel-preset-solid') in rule `use` entries against the framework
+// package's own node_modules (createRequire from moduleUrl); unchanged when moduleUrl is ''
 ```
 
 ## @mbsks/rspfx-framework-* (depends on core, plugin-api; peer: framework libs)
 
-Each package `@mbsks/rspfx-framework-react|solid|preact|vue|svelte|vanilla` exports:
+Each package `@mbsks/rspfx-framework-react|solid|preact|vue|svelte|vanilla` exposes two
+entry points:
+
+- Index (`@mbsks/rspfx-framework-<fw>`) — Node-safe; exports only the preset + adapter,
+  never imports `@mbsks/rspfx-core/webpart`:
 
 ```ts
 export const preset: FrameworkPreset;       // name = '<framework>'
 export const adapter: FrameworkAdapter;      // singleton
-export class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> { ... } // e.g. ReactWebPart
 ```
 
+- Subpath (`@mbsks/rspfx-framework-<fw>/webpart`) — the web part base classes
+  (browser side):
+
+```ts
+import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart';
+export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> { ... } // e.g. ReactWebPart
+```
+
+- Svelte's `/webpart` subpath also exports
+  `type SvelteWebPartComponent<TProps extends Record<string, unknown>>` — the
+  `{ component, props }` shape the adapter mounts.
 - `framework-vanilla`: mount = append component (HTMLElement|string), no refresh.
 - React: react ^18, react-dom ^18 (peers); mount via `createRoot(root).render(component)`; update re-renders with new props (render again); fast refresh: `@rspack/plugin-react-refresh` contribution when fastRefresh.
 - Solid: `render(() => component, root)` from solid-js/web; refresh: babel-loader + babel-preset-solid (+ solid-refresh in dev).
@@ -347,6 +376,11 @@ src/webparts/<name>/<name>.manifest.json  <name>WebPart.ts  components/<Pascal>.
 playground/index.html  playground/main.ts
 ```
 (Exact scaffold file contents are the template's design; must match API usage below.)
+
+The scaffolded `<name>WebPart.ts` extends `BaseClientSideWebPart` from
+`@microsoft/sp-webpart-base` directly (no `@mbsks/rspfx-framework-*` web part base),
+and `playground/main.ts` mounts it via a cast:
+`(webPart as unknown as { properties: Record<string, string> }).properties`.
 
 ## @mbsks/rspfx-cli (depends on ALL packages)
 
