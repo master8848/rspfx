@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./webpart": {
+      "types": "./dist/base-web-part.d.ts",
+      "import": "./dist/base-web-part.js"
     }
   },
   "files": [

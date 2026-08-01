@@ -1,4 +1,5 @@
-import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import * as spWebpartBase from '@microsoft/sp-webpart-base';
+import type { BaseClientSideWebPart as BaseClientSideWebPartType } from '@microsoft/sp-webpart-base';
 
 export interface FrameworkAdapter {
   name: string;
@@ -7,6 +8,12 @@ export interface FrameworkAdapter {
   update(root: HTMLElement): void;
   supportsFastRefresh(): boolean;
 }
+
+const BaseClientSideWebPart = (
+  spWebpartBase as unknown as {
+    BaseClientSideWebPart: new <TProps extends Record<string, unknown>>() => BaseClientSideWebPartType<TProps>;
+  }
+).BaseClientSideWebPart;
 
 export abstract class BaseWebPart<TProps extends Record<string, unknown> = Record<string, unknown>>
   extends BaseClientSideWebPart<TProps> {
