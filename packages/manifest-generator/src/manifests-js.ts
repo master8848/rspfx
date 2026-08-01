@@ -1,7 +1,5 @@
-import type { ComponentManifest } from './types.js';
-
 export async function generateManifestsJs(
-  manifests: ComponentManifest[],
+  manifests: unknown[],
   metadata?: unknown
 ): Promise<string> {
   const manifestsJson = JSON.stringify(manifests);
