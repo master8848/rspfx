@@ -3,26 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "description": "In-repo RSPFX smoke-test app (vanilla web part + playground page)",
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "dev": "rspfx dev",
+    "playground": "rspfx playground",
+    "build": "rspfx build",
+    "package": "rspfx package",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-framework-vanilla": "workspace:*",
-    "@mbsks/rspfx-sharepoint-runtime": "workspace:*"
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "@microsoft/sp-core-library": "~1.22.0",
+    "@microsoft/sp-webpart-base": "~1.22.0",
+    "@microsoft/sp-property-pane": "~1.22.0",
+    "@microsoft/sp-component-base": "~1.22.0"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-cli": "workspace:*",
+    "typescript": "^5.7.0"
   }
 }

@@ -1,0 +1,12 @@
+{
+  "bundles": {
+    "demo": {
+      "components": [
+        {
+          "entrypoint": "src/webparts/demo/demoWebPart.ts",
+          "manifest": "src/webparts/demo/demo.manifest.json"
+        }
+      ]
+    }
+  }
+}

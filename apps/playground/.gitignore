@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+temp/
+sharepoint/solution/
+.rspfx/
+.rspack-cache/
+*.sppkg
+*.log

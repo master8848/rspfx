@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "11111111-1111-4111-8111-111111111100",
+  "alias": "DemoWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "safeWithCustomScriptDisabled": true,
+  "supportedHosts": ["SharePointWebPart", "TeamsPersonalApp", "TeamsTab", "SharePointFullPage"],
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c31a052-22b4-4f36-8f7d-4b4d8c7c2e7a",
+      "group": { "default": "Other" },
+      "title": { "default": "Playground Demo" },
+      "description": { "default": "In-repo smoke-test web part" },
+      "officeFabricIconFontName": "EmojiIcon",
+      "properties": { "description": "Hello from the playground" }
+    }
+  ]
+}
