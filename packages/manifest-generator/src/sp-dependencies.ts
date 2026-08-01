@@ -43,7 +43,7 @@ export function findSpDependencies(projectRoot: string): Map<string, SpDependenc
     return dependencies;
   }
   for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith('.')) {
+    if ((!entry.isDirectory() && !entry.isSymbolicLink()) || entry.name.startsWith('.')) {
       continue;
     }
     const pkgDir = path.join(microsoftDir, entry.name);

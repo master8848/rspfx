@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { RspfxError } from './errors.js';
+import { SP_COMPONENT_IDS } from './data/component-ids.js';
 import { findSpDependencies } from './sp-dependencies.js';
 import type { ComponentManifest, ManifestContext } from './types.js';
 
@@ -95,6 +96,15 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
       }
       const nonSpDependency = findNonSpExternalManifest(ctx.projectRoot, externalName);
       if (!nonSpDependency) {
+        const fallback = SP_COMPONENT_IDS[externalName];
+        if (fallback) {
+          scriptResources[externalName] = {
+            type: 'component',
+            id: fallback.id,
+            version: fallback.version
+          };
+          continue;
+        }
         throw new RspfxError(
           'UNRESOLVED_EXTERNAL',
           `External '${externalName}' could not be resolved to a component manifest (expected a .manifest.json under node_modules/${externalName}/dist)`

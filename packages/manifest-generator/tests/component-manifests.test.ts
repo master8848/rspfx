@@ -111,6 +111,26 @@ describe('generateComponentManifests', () => {
     expect((error as RspfxError).code).toBe('UNRESOLVED_EXTERNAL');
   });
 
+  it('resolves tslib from the component ids table without a dist manifest', async () => {
+    const manifests = await generateComponentManifests(ctx({ externals: ['tslib'] }));
+    expect(manifests[0]!.loaderConfig.scriptResources['tslib']).toEqual({
+      type: 'component',
+      id: '01c4df03-e775-48cb-aa14-171ee5199a15',
+      version: '2.3.1'
+    });
+  });
+
+  it('resolves load-themed-styles from the component ids table without a dist manifest', async () => {
+    const manifests = await generateComponentManifests(
+      ctx({ externals: ['@microsoft/load-themed-styles'] })
+    );
+    expect(manifests[0]!.loaderConfig.scriptResources['@microsoft/load-themed-styles']).toEqual({
+      type: 'component',
+      id: '229b8d08-79f3-438b-8c21-4613fc877abd',
+      version: '0.1.2'
+    });
+  });
+
   it('throws MULTIPLE_MANIFESTS when a web part folder has more than one manifest', async () => {
     const error = await generateComponentManifests(
       ctx({ projectRoot: multiRoot, externals: [] })

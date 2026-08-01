@@ -18,5 +18,7 @@ export const SP_COMPONENT_IDS: Record<string, ComponentIdEntry> = {
   '@microsoft/sp-http': { id: 'c07208f0-ea3b-4c1a-9965-ac1b825211a6', version: '1.23.2' },
   '@microsoft/sp-http-base': { id: '8496636c-2300-4915-abef-20de64c98d8b', version: '1.23.2' },
   '@microsoft/sp-diagnostics': { id: '78359e4b-07c2-43c6-8d0b-d060b4d577e8', version: '1.23.2' },
-  '@microsoft/sp-dynamic-data': { id: 'e40f8203-b39d-425a-a957-714852e33b79', version: '1.23.2' }
+  '@microsoft/sp-dynamic-data': { id: 'e40f8203-b39d-425a-a957-714852e33b79', version: '1.23.2' },
+  '@microsoft/load-themed-styles': { id: '229b8d08-79f3-438b-8c21-4613fc877abd', version: '0.1.2' },
+  tslib: { id: '01c4df03-e775-48cb-aa14-171ee5199a15', version: '2.3.1' }
 };

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { findSpDependencies } from '../src/index.js';
 
@@ -25,6 +26,21 @@ describe('findSpDependencies', () => {
     });
   });
 
+  it('resolves load-themed-styles and tslib from the component ids table', () => {
+    const dependencies = findSpDependencies(fixtureRoot);
+    expect(dependencies.get('@microsoft/load-themed-styles')).toEqual({
+      id: '229b8d08-79f3-438b-8c21-4613fc877abd',
+      version: '0.1.2',
+      manifestPath: ''
+    });
+  });
+
+  it('keeps table fallback entries in the dependencies set even without a manifest path', () => {
+    const loadThemedStyles = findSpDependencies(fixtureRoot).get('@microsoft/load-themed-styles');
+    expect(loadThemedStyles).toBeDefined();
+    expect(loadThemedStyles!.manifestPath).toBe('');
+  });
+
   it('derives the package name from the package.json name field', () => {
     const dependencies = findSpDependencies(fixtureRoot);
     const renamed = dependencies.get('@microsoft/sp-renamed-package');
@@ -48,5 +64,23 @@ describe('findSpDependencies', () => {
   it('returns an empty map for a project without node_modules', () => {
     const missingRoot = fileURLToPath(new URL('./fixtures/nonexistent', import.meta.url));
     expect(findSpDependencies(missingRoot).size).toBe(0);
+  });
+
+  it('scans symlinked @microsoft packages (pnpm layout)', () => {
+    const targetRoot = fileURLToPath(new URL('./fixtures/symlink-target', import.meta.url));
+    const linkPath = fileURLToPath(
+      new URL('./fixtures/proj/node_modules/@microsoft/sp-symlinked', import.meta.url)
+    );
+    fs.symlinkSync(targetRoot, linkPath, 'dir');
+    try {
+      const dependencies = findSpDependencies(fixtureRoot);
+      expect(dependencies.get('@microsoft/sp-symlinked')).toEqual({
+        id: '88888888-8888-4888-8888-888888888888',
+        version: '9.9.9',
+        manifestPath: expect.stringMatching(/sp-symlinked[\\/]dist[\\/]88888888-.*manifest\.json$/)
+      });
+    } finally {
+      fs.rmSync(linkPath, { recursive: true, force: true });
+    }
   });
 });
