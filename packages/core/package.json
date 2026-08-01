@@ -8,11 +8,13 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./webpart": {
       "types": "./dist/base-web-part.d.ts",
-      "import": "./dist/base-web-part.js"
+      "import": "./dist/base-web-part.js",
+      "default": "./dist/base-web-part.js"
     }
   },
   "files": [

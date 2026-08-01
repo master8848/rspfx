@@ -1,4 +1,3 @@
-export { BaseWebPart } from './base-web-part.js';
 export type { FrameworkAdapter } from './base-web-part.js';
 export { defineConfig, resolveConfig } from './config.js';
 export type {

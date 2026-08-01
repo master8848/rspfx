@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { BaseWebPart } from '../src/index.js';
+import { BaseWebPart } from '../src/base-web-part.js';
 
 interface MockAdapter {
   name: string;
