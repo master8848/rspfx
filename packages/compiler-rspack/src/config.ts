@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { rspack, type Configuration, type RuleSetRule } from '@rspack/core';
 import type { CompileContext } from './types.js';
 import { RspfxError } from './errors.js';
@@ -12,6 +13,12 @@ const styleLoaderPath = require.resolve('style-loader');
 const cssLoaderPath = require.resolve('css-loader');
 const sassLoaderPath = require.resolve('sass-loader');
 const postcssLoaderPath = require.resolve('postcss-loader');
+
+const BUILD_TIME_ALIASES: Record<string, string> = {
+  '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
+  '@rspack/plugin-preact-refresh': fileURLToPath(new URL('./stubs/preact-refresh.js', import.meta.url)),
+  'vue-loader': fileURLToPath(new URL('./stubs/vue-loader.js', import.meta.url))
+};
 
 const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss', '.css', '.sass'];
 
@@ -53,8 +60,6 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const tailwind = ctx.tailwind === true;
   const useCache = ctx.serveMode === true;
 
-  const firstEntry = ctx.entries[0]!;
-  const libraryName = `${firstEntry.componentIds[0]!}_${firstEntry.version}`;
   const devtool: Configuration['devtool'] = ctx.production
     ? sourcemap
       ? 'hidden-source-map'
@@ -71,7 +76,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   };
   const rules: RuleSetRule[] = [];
   const plugins: Configuration['plugins'] = [];
-  const alias: Record<string, string> = {};
+  const alias: Record<string, string> = { ...BUILD_TIME_ALIASES };
   const extensions: string[] = [...BASE_EXTENSIONS];
 
   for (const contribution of ctx.swcContributions ?? []) {
@@ -151,12 +156,20 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const config: Configuration = {
     mode,
     context: ctx.projectRoot,
-    entry: Object.fromEntries(ctx.entries.map((entry) => [entry.name, entry.import])),
+    entry: Object.fromEntries(
+      ctx.entries.map((entry) => [
+        entry.name,
+        {
+          import: entry.import,
+          library: { type: 'amd', name: `${entry.componentIds[0]!}_${entry.version}` }
+        }
+      ])
+    ),
     output: {
       path: path.join(ctx.projectRoot, outDir),
       filename: '[name].js',
       chunkFilename: 'chunk.[name].js',
-      library: { type: 'amd', name: libraryName },
+      library: { type: 'amd' },
       chunkLoadingGlobal: `webpackJsonp_${computeUniqueName(ctx)}`,
       crossOriginLoading: 'anonymous',
       publicPath: 'auto',

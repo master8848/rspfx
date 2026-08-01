@@ -34,12 +34,37 @@ async function getConfig(ctx: CompileContext): Promise<Configuration> {
 }
 
 describe('createRspackConfig', () => {
-  it('uses AMD library named <componentId>_<version>', async () => {
+  it('emits a per-entry AMD library named <componentId>_<version>', async () => {
     const config = await getConfig(makeCtx());
-    expect(config.output?.library).toEqual({
-      type: 'amd',
-      name: 'aaaaaaaa-0000-0000-0000-000000000001_1.0.0'
+    const entries = config.entry as Record<
+      string,
+      { import: string; library: { type: string; name: string } }
+    >;
+    expect(entries['testwebpart']).toEqual({
+      import: '/tmp/proj/src/index.ts',
+      library: { type: 'amd', name: 'aaaaaaaa-0000-0000-0000-000000000001_1.0.0' }
     });
+    expect(config.output?.library).toEqual({ type: 'amd' });
+  });
+
+  it('uses a distinct per-entry AMD name for every bundle', async () => {
+    const second: BundleEntry = {
+      name: 'secondwebpart',
+      import: '/tmp/proj/src/second.ts',
+      componentIds: ['bbbbbbbb-0000-0000-0000-000000000002'],
+      version: '2.0.0'
+    };
+    const config = await getConfig(makeCtx({ entries: [ENTRY, second] }));
+    const entries = config.entry as Record<
+      string,
+      { library?: { type: string; name: string } }
+    >;
+    expect(entries['testwebpart']?.library?.name).toBe(
+      'aaaaaaaa-0000-0000-0000-000000000001_1.0.0'
+    );
+    expect(entries['secondwebpart']?.library?.name).toBe(
+      'bbbbbbbb-0000-0000-0000-000000000002_2.0.0'
+    );
   });
 
   it('uses a deterministic chunkLoadingGlobal for a single component', async () => {

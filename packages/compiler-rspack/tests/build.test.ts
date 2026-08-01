@@ -73,4 +73,25 @@ describe('build', () => {
     const content = fs.readFileSync(bundlePath, 'utf8');
     expect(content).not.toContain('sourceMappingURL=testwebpart.js.map');
   });
+
+  it('emits a distinct AMD define name per entry in multi-bundle projects', async () => {
+    const secondComponentId = 'bbbbbbbb-0000-0000-0000-000000000002';
+    const ctx = makeCtx();
+    ctx.entries.push({
+      name: 'secondwebpart',
+      import: path.join(FIXTURE, 'src', 'second.ts'),
+      componentIds: [secondComponentId],
+      version: VERSION
+    });
+    const result = await build(ctx);
+
+    expect(result.outputFiles).toContain('secondwebpart.js');
+
+    const firstBundle = fs.readFileSync(path.join(FIXTURE, OUT_DIR, 'testwebpart.js'), 'utf8');
+    const secondBundle = fs.readFileSync(path.join(FIXTURE, OUT_DIR, 'secondwebpart.js'), 'utf8');
+    expect(firstBundle.slice(0, 200).startsWith(AMD_PREFIX)).toBe(true);
+    expect(secondBundle.slice(0, 200).startsWith(`define('${secondComponentId}_${VERSION}',`)).toBe(true);
+    expect(firstBundle).not.toContain(`define('${secondComponentId}_${VERSION}',`);
+    expect(secondBundle).not.toContain(AMD_PREFIX.slice(0, AMD_PREFIX.indexOf(',')));
+  });
 });

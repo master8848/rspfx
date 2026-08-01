@@ -8,7 +8,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -33,5 +34,12 @@
     "postcss": "^8.4.49",
     "postcss-loader": "^8.1.1",
     "@tailwindcss/postcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-framework-react": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0"
   }
 }
