@@ -1,0 +1,33 @@
+{
+  "name": "@mbsks/rspfx-fluent-adapter",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-framework-react": "workspace:*"
+  },
+  "peerDependencies": {
+    "@fluentui/react": "^8.0.0"
+  },
+  "devDependencies": {
+    "@fluentui/react": "8.122.7"
+  }
+}

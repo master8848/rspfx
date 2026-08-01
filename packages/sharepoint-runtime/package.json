@@ -1,0 +1,34 @@
+{
+  "name": "@mbsks/rspfx-sharepoint-runtime",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@microsoft/sp-webpart-base": "*",
+    "@microsoft/sp-core-library": "*"
+  },
+  "devDependencies": {
+    "@microsoft/sp-webpart-base": "1.23.2",
+    "@microsoft/sp-core-library": "1.23.2"
+  }
+}

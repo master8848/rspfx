@@ -1,0 +1,38 @@
+{
+  "name": "@mbsks/rspfx-dev-runtime",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "@mbsks/rspfx-framework-vanilla": "workspace:*",
+    "@mbsks/rspfx-framework-react": "workspace:*",
+    "@mbsks/rspfx-framework-solid": "workspace:*",
+    "@mbsks/rspfx-framework-preact": "workspace:*",
+    "@mbsks/rspfx-framework-vue": "workspace:*",
+    "@mbsks/rspfx-framework-svelte": "workspace:*"
+  }
+}

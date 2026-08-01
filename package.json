@@ -1,0 +1,31 @@
+{
+  "name": "rspfx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SPFx-compatible build toolchain powered by Rspack",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' build",
+    "typecheck": "pnpm -r --filter './packages/**' typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench": "node benchmarks/run.mjs",
+    "e2e": "node tests/e2e/run.mjs",
+    "gen-examples": "node scripts/gen-examples.mjs",
+    "clean": "node scripts/clean.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "happy-dom": "^15.11.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "@parcel/watcher"]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@mbsks/rspfx-framework-svelte",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "svelte-loader": "^3.2.4",
+    "svelte-hmr": "^0.16.0"
+  },
+  "peerDependencies": {
+    "svelte": "^4.2.0"
+  },
+  "devDependencies": {
+    "svelte": "^4.2.19"
+  }
+}

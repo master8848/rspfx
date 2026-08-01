@@ -1,0 +1,40 @@
+{
+  "name": "@mbsks/rspfx-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "bin": {
+    "rspfx": "./dist/cli.js"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-sppkg-builder": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@mbsks/rspfx-dev-runtime": "workspace:*",
+    "@mbsks/rspfx-templates": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "commander": "^12.1.0",
+    "jiti": "^2.4.0"
+  }
+}

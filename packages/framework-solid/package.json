@@ -1,0 +1,36 @@
+{
+  "name": "@mbsks/rspfx-framework-solid",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "babel-loader": "^9.2.1",
+    "@babel/core": "^7.26.0",
+    "babel-preset-solid": "^1.9.4"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "solid-js": "^1.9.4"
+  }
+}
