@@ -1,0 +1,47 @@
+{
+  "solution": {
+    "name": "rspfx-test-solution",
+    "id": "e2b3f8c8-2c9a-4f1e-9c3d-000000000001",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "RSPFX",
+      "websiteUrl": "https://rspfx.dev",
+      "privacyUrl": "https://rspfx.dev/privacy",
+      "termsOfUseUrl": "https://rspfx.dev/terms",
+      "mpnId": "Undefined-0000"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "RSPFX test solution"
+      },
+      "longDescription": {
+        "default": "A test solution produced by the RSPFX sppkg-builder."
+      },
+      "categories": [
+        "Web Design"
+      ]
+    },
+    "features": [
+      {
+        "title": "rspfx-test-solution Feature",
+        "description": "A feature which activates the Client-Side WebPart named 'RspfxTestWebPart'",
+        "id": "b6f3f8c8-2c9a-4f1e-9c3d-111111111111",
+        "version": "1.0.0.0",
+        "componentIds": [
+          "c8f3f8c8-2c9a-4f1e-9c3d-222222222222"
+        ],
+        "assets": {
+          "elementManifests": [],
+          "elementFiles": [],
+          "upgradeActions": []
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "sharepoint/solution/rspfx-test.sppkg"
+  }
+}

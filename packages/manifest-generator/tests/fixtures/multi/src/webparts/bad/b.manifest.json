@@ -1,0 +1,8 @@
+{
+  "id": "55555555-5555-4555-8555-555555555555",
+  "alias": "SecondWebPart",
+  "componentType": "WebPart",
+  "version": "1.0.0",
+  "manifestVersion": 2,
+  "preconfiguredEntries": []
+}

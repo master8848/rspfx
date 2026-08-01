@@ -17,6 +17,26 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "noEmitOnError": true
+    "noEmitOnError": true,
+    "baseUrl": ".",
+    "paths": {
+      "@mbsks/rspfx-core": ["packages/core/src/index.ts"],
+      "@mbsks/rspfx-plugin-api": ["packages/plugin-api/src/index.ts"],
+      "@mbsks/rspfx-diagnostics": ["packages/diagnostics/src/index.ts"],
+      "@mbsks/rspfx-compiler-rspack": ["packages/compiler-rspack/src/index.ts"],
+      "@mbsks/rspfx-manifest-generator": ["packages/manifest-generator/src/index.ts"],
+      "@mbsks/rspfx-sppkg-builder": ["packages/sppkg-builder/src/index.ts"],
+      "@mbsks/rspfx-manifest-server": ["packages/manifest-server/src/index.ts"],
+      "@mbsks/rspfx-dev-runtime": ["packages/dev-runtime/src/index.ts"],
+      "@mbsks/rspfx-framework-vanilla": ["packages/framework-vanilla/src/index.ts"],
+      "@mbsks/rspfx-framework-react": ["packages/framework-react/src/index.ts"],
+      "@mbsks/rspfx-framework-solid": ["packages/framework-solid/src/index.ts"],
+      "@mbsks/rspfx-framework-preact": ["packages/framework-preact/src/index.ts"],
+      "@mbsks/rspfx-framework-vue": ["packages/framework-vue/src/index.ts"],
+      "@mbsks/rspfx-framework-svelte": ["packages/framework-svelte/src/index.ts"],
+      "@mbsks/rspfx-sharepoint-runtime": ["packages/sharepoint-runtime/src/index.ts"],
+      "@mbsks/rspfx-fluent-adapter": ["packages/fluent-adapter/src/index.ts"],
+      "@mbsks/rspfx-templates": ["packages/templates/src/index.ts"]
+    }
   }
 }

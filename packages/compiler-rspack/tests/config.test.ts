@@ -1,0 +1,150 @@
+import { createHash } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import { createRspackConfig, type BundleEntry, type CompileContext } from '../src/index.js';
+import type { Configuration } from '@rspack/core';
+
+const ENTRY: BundleEntry = {
+  name: 'testwebpart',
+  import: '/tmp/proj/src/index.ts',
+  componentIds: ['aaaaaaaa-0000-0000-0000-000000000001'],
+  version: '1.0.0'
+};
+
+function makeCtx(overrides: Partial<CompileContext> = {}): CompileContext {
+  return {
+    projectRoot: '/tmp/proj',
+    framework: 'vanilla',
+    fastRefresh: false,
+    production: true,
+    entries: [ENTRY],
+    externals: ['@microsoft/sp-core-library'],
+    build: {
+      sourcemap: false,
+      minify: true,
+      splitChunks: false,
+      outDir: 'dist',
+      releaseDir: 'release'
+    },
+    ...overrides
+  };
+}
+
+async function getConfig(ctx: CompileContext): Promise<Configuration> {
+  return (await createRspackConfig(ctx)) as Configuration;
+}
+
+describe('createRspackConfig', () => {
+  it('uses AMD library named <componentId>_<version>', async () => {
+    const config = await getConfig(makeCtx());
+    expect(config.output?.library).toEqual({
+      type: 'amd',
+      name: 'aaaaaaaa-0000-0000-0000-000000000001_1.0.0'
+    });
+  });
+
+  it('uses a deterministic chunkLoadingGlobal for a single component', async () => {
+    const config = await getConfig(makeCtx());
+    expect(config.output?.chunkLoadingGlobal).toBe(
+      'webpackJsonp_aaaaaaaa-0000-0000-0000-000000000001_1.0.0'
+    );
+  });
+
+  it('hashes chunkLoadingGlobal for multiple bundles', async () => {
+    const second: BundleEntry = {
+      name: 'secondwebpart',
+      import: '/tmp/proj/src/second.ts',
+      componentIds: ['bbbbbbbb-0000-0000-0000-000000000002'],
+      version: '2.0.0'
+    };
+    const config = await getConfig(makeCtx({ entries: [ENTRY, second] }));
+    const expected = createHash('md5')
+      .update('aaaaaaaa-0000-0000-0000-000000000001_1.0.0bbbbbbbb-0000-0000-0000-000000000002_2.0.0')
+      .digest('hex');
+    expect(config.output?.chunkLoadingGlobal).toBe(`webpackJsonp_${expected}`);
+  });
+
+  it('maps devtool by production/sourcemap matrix', async () => {
+    const prodNoMap = await getConfig(makeCtx({ production: true, build: { ...makeCtx().build, sourcemap: false } }));
+    expect(prodNoMap.devtool).toBe(false);
+
+    const prodMap = await getConfig(makeCtx({ production: true, build: { ...makeCtx().build, sourcemap: true } }));
+    expect(prodMap.devtool).toBe('hidden-source-map');
+
+    const dev = await getConfig(makeCtx({ production: false }));
+    expect(dev.devtool).toBe('source-map');
+  });
+
+  it('passes externals through', async () => {
+    const config = await getConfig(
+      makeCtx({ externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'] })
+    );
+    expect(config.externals).toEqual([
+      '@microsoft/sp-core-library',
+      '@microsoft/sp-webpart-base'
+    ]);
+  });
+
+  it('includes DefinePlugin with DEBUG, DEPRECATED_UNIT_TEST and process.env.NODE_ENV', async () => {
+    const config = await getConfig(makeCtx());
+    const definePlugin = config.plugins?.find(
+      (plugin) =>
+        plugin &&
+        typeof plugin === 'object' &&
+        Object.getPrototypeOf(plugin)?.constructor?.name === 'DefinePlugin'
+    ) as { _args?: Record<string, string>[] } | undefined;
+    expect(definePlugin).toBeDefined();
+    expect(definePlugin?._args?.[0]).toEqual({
+      DEBUG: 'false',
+      DEPRECATED_UNIT_TEST: 'false',
+      'process.env.NODE_ENV': '"production"'
+    });
+  });
+
+  it('uses stable [name].js output filename', async () => {
+    const config = await getConfig(makeCtx());
+    expect(config.output?.filename).toBe('[name].js');
+    expect(config.output?.chunkFilename).toBe('chunk.[name].js');
+    expect(config.output?.crossOriginLoading).toBe('anonymous');
+    expect(config.output?.publicPath).toBe('auto');
+  });
+
+  it('outputs to projectRoot/build.outDir', async () => {
+    const config = await getConfig(makeCtx());
+    expect(config.output?.path).toBe('/tmp/proj/dist');
+  });
+
+  it('disables minimize when build.minify is false', async () => {
+    const config = await getConfig(makeCtx({ build: { ...makeCtx().build, minify: false } }));
+    expect(config.optimization?.minimize).toBe(false);
+  });
+
+  it('enables splitChunks only when build.splitChunks is true', async () => {
+    const without = await getConfig(makeCtx());
+    expect(without.optimization?.splitChunks).toBeUndefined();
+
+    const withChunks = await getConfig(
+      makeCtx({ build: { ...makeCtx().build, splitChunks: true } })
+    );
+    expect(withChunks.optimization?.splitChunks).toEqual({ chunks: 'all' });
+  });
+
+  it('enables filesystem cache in serve mode under .rspack-cache', async () => {
+    const serve = await getConfig(makeCtx({ serveMode: true }));
+    expect(serve.experiments?.cache).toEqual({
+      type: 'persistent',
+      storage: { type: 'filesystem', directory: '/tmp/proj/.rspack-cache' }
+    });
+
+    const notServe = await getConfig(makeCtx());
+    expect(notServe.experiments?.cache).toBeUndefined();
+  });
+
+  it('adds postcss-loader with tailwind when ctx.tailwind is true', async () => {
+    const config = await getConfig(makeCtx({ tailwind: true }));
+    const rules = (config.module?.rules ?? []) as { test?: RegExp; use?: unknown[] }[];
+    const scssRule = rules.find((rule) => rule.test?.toString().includes('s[ac]ss'));
+    const cssRule = rules.find((rule) => rule.test?.toString() === '/\\.css$/' || rule.test?.toString() === '/\\.css/');
+    expect(JSON.stringify(scssRule?.use)).toContain('postcss-loader');
+    expect(JSON.stringify(cssRule?.use)).toContain('postcss-loader');
+  });
+});

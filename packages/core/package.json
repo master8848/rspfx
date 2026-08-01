@@ -19,5 +19,13 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@microsoft/sp-core-library": "*",
+    "@microsoft/sp-webpart-base": "*"
+  },
+  "devDependencies": {
+    "@microsoft/sp-core-library": "1.23.2",
+    "@microsoft/sp-webpart-base": "1.23.2"
   }
 }
