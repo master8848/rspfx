@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { BuildConfig, FrameworkId, RspfxConfig } from '@mbsks/rspfx-core';
 import type { BundleEntry, CompileContext } from '@mbsks/rspfx-compiler-rspack';
@@ -19,7 +21,7 @@ export interface DiscoveredWebParts {
 
 export interface ProjectConfigJson {
   bundles?: Record<string, { components: { entrypoint: string; manifest: string }[] }>;
-  externals?: Record<string, string>;
+  externals?: Record<string, unknown>;
 }
 
 export interface ProjectServeConfigJson {
@@ -187,15 +189,26 @@ export function createCompileContext(opts: {
   };
 }
 
-export async function loadFrameworkPreset(framework: FrameworkId): Promise<unknown> {
+export interface FrameworkPresetModule {
+  preset: { contributions(opts: { fastRefresh: boolean }): Record<string, unknown> };
+  moduleUrl: string;
+}
+
+export async function loadFrameworkPreset(
+  framework: FrameworkId,
+  projectRoot?: string
+): Promise<FrameworkPresetModule> {
   try {
-    const mod = (await import(`@mbsks/rspfx-framework-${framework}`)) as {
+    const mod = (await importFramework(framework, projectRoot)) as {
       preset?: { contributions(opts: { fastRefresh: boolean }): unknown };
     };
     if (!mod.preset) {
       throw new Error(`Framework package @mbsks/rspfx-framework-${framework} does not export a preset`);
     }
-    return mod.preset;
+    return {
+      preset: mod.preset as FrameworkPresetModule['preset'],
+      moduleUrl: (mod as { __rspfxModuleUrl?: string }).__rspfxModuleUrl ?? ''
+    };
   } catch (error) {
     if (
       error instanceof Error &&
@@ -204,8 +217,108 @@ export async function loadFrameworkPreset(framework: FrameworkId): Promise<unkno
       createLogger('rspfx').warn(
         `Framework package @mbsks/rspfx-framework-${framework} has no preset; running without framework compiler contributions.`
       );
-      return { contributions: (): Record<string, unknown> => ({}) };
+      return {
+        preset: { contributions: (): Record<string, unknown> => ({}) },
+        moduleUrl: ''
+      };
     }
     throw error;
   }
+}
+
+export function resolveContributionLoaders(
+  contributions: Record<string, unknown>,
+  frameworkModuleUrl: string
+): Record<string, unknown> {
+  if (!frameworkModuleUrl) {
+    return contributions;
+  }
+  const requireFromFramework = createRequire(frameworkModuleUrl);
+  const resolveLoader = (value: unknown): unknown => {
+    if (typeof value === 'string' && !value.startsWith('builtin:')) {
+      try {
+        return requireFromFramework.resolve(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  };
+  const resolveLoaderOptions = (use: Record<string, unknown>): Record<string, unknown> => {
+    const options = use.options as Record<string, unknown> | undefined;
+    if (options) {
+      for (const key of ['presets', 'plugins']) {
+        const list = options[key];
+        if (Array.isArray(list)) {
+          options[key] = list.map((item) => {
+            if (typeof item === 'string') {
+              return resolveBabelItem(item, requireFromFramework);
+            }
+            if (Array.isArray(item) && typeof item[0] === 'string') {
+              return [resolveBabelItem(item[0], requireFromFramework), item[1]];
+            }
+            return item;
+          });
+        }
+      }
+    }
+    return { ...use, loader: resolveLoader(use.loader) };
+  };
+  const rules = contributions.rules;
+  if (Array.isArray(rules)) {
+    contributions.rules = rules.map((rule: Record<string, unknown>) => {
+      if (rule && typeof rule === 'object' && 'use' in rule) {
+        const use = rule.use;
+        if (typeof use === 'string') {
+          rule.use = resolveLoader(use);
+        } else if (Array.isArray(use)) {
+          rule.use = use.map((u) => {
+            if (typeof u === 'string') {
+              return resolveLoader(u);
+            }
+            if (u && typeof u === 'object' && 'loader' in (u as Record<string, unknown>)) {
+              return resolveLoaderOptions(u as Record<string, unknown>);
+            }
+            return u;
+          });
+        } else if (use && typeof use === 'object' && 'loader' in (use as Record<string, unknown>)) {
+          rule.use = resolveLoaderOptions(use as Record<string, unknown>);
+        }
+      }
+      return rule;
+    });
+  }
+  return contributions;
+}
+
+function resolveBabelItem(
+  name: string,
+  requireFromFramework: ReturnType<typeof createRequire>
+): string {
+  try {
+    return requireFromFramework.resolve(name);
+  } catch {
+    return name;
+  }
+}
+
+function importFramework(framework: FrameworkId, projectRoot?: string): Promise<unknown> {
+  const specifier = `@mbsks/rspfx-framework-${framework}`;
+  if (projectRoot) {
+    try {
+      const requireFromProject = createRequire(
+        pathToFileURL(path.join(projectRoot, 'package.json')).href
+      );
+      const resolved = requireFromProject.resolve(specifier);
+      return import(pathToFileURL(resolved).href).then((mod) => ({
+        ...mod,
+        __rspfxModuleUrl: pathToFileURL(resolved).href
+      }));
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('Cannot find')) {
+        throw error;
+      }
+    }
+  }
+  return import(specifier);
 }

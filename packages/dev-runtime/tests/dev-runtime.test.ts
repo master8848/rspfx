@@ -224,3 +224,32 @@ describe('createRefreshRuntime', () => {
     }
   });
 });
+
+describe('readProject', () => {
+  it('externalizes every config.json externals key regardless of value form', async () => {
+    const configDir = path.join(FIXTURE, 'config');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'config.json'),
+      JSON.stringify({
+        externals: {
+          jquery: 'https://code.jquery.com/jquery-3.1.0.min.js',
+          '@microsoft/load-themed-styles': {
+            path: 'node_modules/@microsoft/load-themed-styles/dist/load-themed-styles.js',
+            globalName: 'loadThemedStyles'
+          },
+          lodash: 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'
+        }
+      }, null, 2)
+    );
+    try {
+      const { readProject } = await import('../src/project.js');
+      const result = readProject(FIXTURE);
+      expect(result.externals).toEqual(
+        expect.arrayContaining(['jquery', '@microsoft/load-themed-styles', 'lodash'])
+      );
+    } finally {
+      fs.rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+});

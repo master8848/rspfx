@@ -11,7 +11,7 @@ import {
 } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
-import { readProject, createCompileContext, loadFrameworkPreset } from './project.js';
+import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { openBrowser } from './browser.js';
 
 export interface DevRuntimeOptions {
@@ -45,10 +45,13 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
 
   const scheme = https ? 'https' : 'http';
   let origin = `${scheme}://${hostname}:${port}`;
-  const frameworkPreset = await loadFrameworkPreset(config.framework);
-  const contributions = (
-    frameworkPreset as { contributions(opts: { fastRefresh: boolean }): unknown }
-  ).contributions({ fastRefresh: opts.fastRefresh ?? config.dev.fastRefresh ?? false });
+  const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
+  const contributions = resolveContributionLoaders(
+    frameworkPreset.preset.contributions({
+      fastRefresh: opts.fastRefresh ?? config.dev.fastRefresh ?? false
+    }) as Record<string, unknown>,
+    frameworkPreset.moduleUrl
+  );
 
   const ctx = createCompileContext({
     projectRoot: opts.projectRoot,
@@ -180,10 +183,11 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
   const scheme = 'http';
   const hostname = config.dev.hostname ?? 'localhost';
   let origin = `${scheme}://${hostname}:${port}`;
-  const frameworkPreset = await loadFrameworkPreset(config.framework);
-  const contributions = (
-    frameworkPreset as { contributions(opts: { fastRefresh: boolean }): unknown }
-  ).contributions({ fastRefresh: true });
+  const frameworkPreset = await loadFrameworkPreset(config.framework, projectRoot);
+  const contributions = resolveContributionLoaders(
+    frameworkPreset.preset.contributions({ fastRefresh: true }) as Record<string, unknown>,
+    frameworkPreset.moduleUrl
+  );
 
   const ctx = createCompileContext({
     projectRoot,
