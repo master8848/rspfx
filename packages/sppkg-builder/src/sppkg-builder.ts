@@ -83,6 +83,8 @@ const REL_MANIFEST_CLIENTSIDEASSET =
 const REL_PART_CONFIGURATION = 'http://schemas.microsoft.com/sharepoint/2012/app/relationships/partconfiguration';
 const REL_FEATURE_ELEMENT_MANIFEST =
   'http://schemas.microsoft.com/sharepoint/2012/app/relationships/feature-elementmanifest';
+const REL_FEATURE_CLIENTSIDEASSET =
+  'http://schemas.microsoft.com/sharepoint/2016/03/features/clientsideasset';
 const REL_CLIENTSIDEASSET = 'http://schemas.microsoft.com/sharepoint/2012/app/relationships/clientsideasset';
 const REL_CONTENT_DEFAULT_RESOURCE =
   'http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-defaultresource';
@@ -149,6 +151,9 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
       const componentFile = `${feature.id}/${componentType}_${component.id}.xml`;
       addEntry(componentFile, buildElementsXml(componentName, component, pretty));
       relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: componentFile });
+    }
+    if (assetsFeature) {
+      relationships.push({ type: REL_FEATURE_CLIENTSIDEASSET, target: 'ClientSideAssets.xml' });
     }
     for (const relativePath of feature.assets.elementManifests) {
       const zipName = toZipPath(relativePath);
