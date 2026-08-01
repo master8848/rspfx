@@ -75,7 +75,9 @@ export async function generateManifestsJs(
   };
   self.debugManifests = a;
   window.debugManifests = a;
-  define([], function () { return a; });
+  if (typeof define === 'function') {
+    define([], function () { return a; });
+  }
 })();
 `;
 }
