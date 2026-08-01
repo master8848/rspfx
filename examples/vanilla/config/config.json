@@ -1,0 +1,12 @@
+{
+  "bundles": {
+    "hello": {
+      "components": [
+        {
+          "entrypoint": "src/webparts/hello/helloWebPart.ts",
+          "manifest": "src/webparts/hello/hello.manifest.json"
+        }
+      ]
+    }
+  }
+}
