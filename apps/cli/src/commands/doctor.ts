@@ -1,0 +1,180 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import net from 'node:net';
+import { fileURLToPath } from 'node:url';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { readProject } from '@mbsks/rspfx-dev-runtime';
+import { loadConfig } from '../config.js';
+import { version } from '../version.js';
+
+const logger = createLogger('rspfx');
+
+export interface DoctorCheck {
+  name: string;
+  ok: boolean;
+  detail?: string;
+}
+
+export interface DoctorResult {
+  ok: boolean;
+  checks: DoctorCheck[];
+}
+
+export async function runDoctor(cwd: string): Promise<DoctorResult> {
+  const checks: DoctorCheck[] = [];
+
+  checks.push(checkNodeVersion());
+  checks.push({ name: 'rspfx version', ok: true, detail: version });
+
+  const packageJsonPath = path.join(cwd, 'package.json');
+  const packageJsonExists = fs.existsSync(packageJsonPath);
+  checks.push({ name: 'package.json exists', ok: packageJsonExists });
+
+  let config = { framework: 'vanilla', spfxVersion: '1.22' };
+  try {
+    config = await loadConfig(cwd);
+    checks.push({ name: 'rspfx.config.ts loads', ok: true, detail: `${config.framework} / SPFx ${config.spfxVersion}` });
+  } catch (error) {
+    checks.push({
+      name: 'rspfx.config.ts loads',
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    });
+  }
+
+  checks.push(checkFrameworkPackage(config.framework));
+
+  if (packageJsonExists) {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+      dependencies?: Record<string, string>;
+    };
+    checks.push(checkSpDependencies(packageJson.dependencies ?? {}, config.spfxVersion));
+  } else {
+    checks.push({ name: 'sp-* dependency versions', ok: false, detail: 'no package.json to inspect' });
+  }
+
+  try {
+    readProject(cwd);
+    checks.push({ name: 'web part bundles discovered', ok: true });
+  } catch (error) {
+    checks.push({
+      name: 'web part bundles discovered',
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    });
+  }
+
+  const [port4321, port8080] = await Promise.all([isPortFree(4321), isPortFree(8080)]);
+  checks.push({ name: 'port 4321 free (dev server)', ok: port4321 });
+  checks.push({ name: 'port 8080 free', ok: port8080 });
+
+  checks.push(checkDistWritable(cwd));
+
+  const failed = checks.filter((check) => !check.ok).length;
+  const ok = failed === 0;
+  for (const check of checks) {
+    if (check.ok) {
+      logger.info(`✓ ${check.name}${check.detail ? ` — ${check.detail}` : ''}`);
+    } else {
+      logger.error(`✗ ${check.name}${check.detail ? ` — ${check.detail}` : ''}`);
+    }
+  }
+  logger.info(`${checks.length - failed}/${checks.length} checks passed`);
+  return { ok, checks };
+}
+
+function checkNodeVersion(): DoctorCheck {
+  const major = Number(process.versions.node.split('.')[0]);
+  return { name: 'node >= 20', ok: major >= 20, detail: process.versions.node };
+}
+
+function checkFrameworkPackage(framework: string): DoctorCheck {
+  const pkgName = `@mbsks/rspfx-framework-${framework}`;
+  const resolved = resolveFrameworkPackage(pkgName);
+  return {
+    name: 'framework package resolvable',
+    ok: resolved !== undefined,
+    ...(resolved !== undefined ? { detail: resolved } : { detail: `${pkgName} could not be resolved` })
+  };
+}
+
+function resolveFrameworkPackage(pkgName: string): string | undefined {
+  const cliDir = path.dirname(fileURLToPath(import.meta.url));
+  const fromCli = findPackageDir(pkgName, cliDir);
+  if (fromCli) {
+    return fromCli;
+  }
+  const devRuntimeDir = findPackageDir('@mbsks/rspfx-dev-runtime', cliDir);
+  if (!devRuntimeDir) {
+    return undefined;
+  }
+  return findPackageDir(pkgName, devRuntimeDir);
+}
+
+function findPackageDir(pkgName: string, fromDir: string): string | undefined {
+  let dir = fromDir;
+  for (;;) {
+    const candidate = path.join(dir, 'node_modules', pkgName);
+    if (fs.existsSync(path.join(candidate, 'package.json'))) {
+      return candidate;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return undefined;
+    }
+    dir = parent;
+  }
+}
+
+function checkSpDependencies(dependencies: Record<string, string>, spfxVersion: string): DoctorCheck {
+  const spDeps = Object.entries(dependencies).filter(([name]) => name.startsWith('@microsoft/sp-'));
+  if (spDeps.length === 0) {
+    return { name: 'sp-* dependency versions', ok: true, detail: 'no @microsoft/sp-* dependencies' };
+  }
+  const prefix = `${spfxVersion}.`;
+  const mismatches = spDeps
+    .filter(([, depVersion]) => {
+      const clean = depVersion.replace(/^[~^]/, '');
+      return !clean.startsWith(prefix);
+    })
+    .map(([name, depVersion]) => `${name}@${depVersion}`);
+  return {
+    name: 'sp-* dependency versions',
+    ok: mismatches.length === 0,
+    detail:
+      mismatches.length > 0
+        ? `expected ${prefix}x: ${mismatches.join(', ')}`
+        : `${spDeps.length} sp-* deps match SPFx ${spfxVersion}`
+  };
+}
+
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ port, host: '127.0.0.1' });
+    const done = (free: boolean): void => {
+      socket.destroy();
+      resolve(free);
+    };
+    socket.setTimeout(500);
+    socket.once('connect', () => done(false));
+    socket.once('timeout', () => done(true));
+    socket.once('error', () => done(true));
+  });
+}
+
+function checkDistWritable(cwd: string): DoctorCheck {
+  const distDir = path.join(cwd, 'dist');
+  const probe = path.join(distDir, `.rspfx-write-probe`);
+  try {
+    fs.mkdirSync(distDir, { recursive: true });
+    fs.writeFileSync(probe, 'ok');
+    fs.rmSync(probe, { force: true });
+    return { name: 'dist writable', ok: true };
+  } catch (error) {
+    return {
+      name: 'dist writable',
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
