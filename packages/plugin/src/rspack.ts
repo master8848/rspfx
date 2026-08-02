@@ -2,6 +2,7 @@ import { rspack, type Compiler } from '@rspack/core';
 import {
   resolveConfig,
   RSPFX_PLUGIN_MARKER,
+  RSPFX_PLUGIN_OPTIONS,
   type RspfxBundlerPluginLike,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
@@ -37,14 +38,24 @@ const logger = createLogger('rspfx');
  * (entries discovery, externals, manifests, dev server, sppkg assembly).
  */
 export class RspfxPlugin implements RspfxBundlerPluginLike {
-  readonly options: RspfxConfig;
+  [key: symbol]: unknown;
+  private readonly _options: RspfxConfig;
   private readonly projectRoot: string;
   readonly [RSPFX_PLUGIN_MARKER]: true = true;
+
+  get [RSPFX_PLUGIN_OPTIONS](): RspfxConfig {
+    return this._options;
+  }
+
+  /** Convenience accessor; the CLI reads `plugin[RSPFX_PLUGIN_OPTIONS]`. */
+  get options(): RspfxConfig {
+    return this._options;
+  }
 
   constructor(options: RspfxPluginOptions) {
     const { projectRoot, ...rest } = options;
     this.projectRoot = projectRoot ?? process.cwd();
-    this.options = resolveConfig(rest);
+    this._options = resolveConfig(rest);
   }
 
   apply(compiler: Compiler): void {

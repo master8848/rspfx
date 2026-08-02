@@ -9,7 +9,7 @@ export type {
   RspfxConfig,
   SpfxTarget
 } from './config.js';
-export { RSPFX_PLUGIN_MARKER } from './marker.js';
+export { RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS } from './marker.js';
 export type { RspfxBundlerPluginLike } from './marker.js';
 export { EnvironmentType, PropertyPaneFieldType } from './environment.js';
 export { Version } from './version.js';

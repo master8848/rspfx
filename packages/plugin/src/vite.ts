@@ -2,7 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { resolveConfig, RSPFX_PLUGIN_MARKER, type RspfxBundlerPluginLike } from '@mbsks/rspfx-core';
+import {
+  resolveConfig,
+  RSPFX_PLUGIN_MARKER,
+  RSPFX_PLUGIN_OPTIONS,
+  type RspfxBundlerPluginLike
+} from '@mbsks/rspfx-core';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import {
@@ -82,7 +87,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
   return {
     name: 'rspfx',
     [RSPFX_PLUGIN_MARKER]: true,
-    options: resolved,
+    [RSPFX_PLUGIN_OPTIONS]: resolved,
 
     async config() {
       const project = readProject(root, resolved.paths, resolved.version);

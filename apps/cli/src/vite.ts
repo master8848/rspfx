@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -8,7 +9,15 @@ import { VITE_ENV } from '@mbsks/rspfx-plugin';
 export function resolveViteBin(projectRoot: string): string {
   try {
     const requireFromProject = createRequire(pathToFileURL(path.join(projectRoot, 'package.json')).href);
-    return requireFromProject.resolve('vite/bin/vite.js');
+    const pkgJsonPath = requireFromProject.resolve('vite/package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as {
+      bin?: string | Record<string, string>;
+    };
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin ? Object.values(pkg.bin)[0] : undefined;
+    if (typeof bin !== 'string') {
+      throw new Error(`vite package has no bin entry: ${pkgJsonPath}`);
+    }
+    return path.join(path.dirname(pkgJsonPath), bin);
   } catch (error) {
     throw new RspfxError(
       'VITE_NOT_FOUND',

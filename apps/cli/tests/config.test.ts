@@ -31,7 +31,7 @@ describe('findRspfxPlugin', () => {
   it('finds a rspfxVite plugin', () => {
     const plugin = findRspfxPlugin({ plugins: [rspfxVite({ name: 'vite-proj', dev: { port: 9999 } })] });
     expect(plugin).toBeDefined();
-    expect(resolveConfig(plugin!.options).dev.port).toBe(9999);
+    expect(resolveConfig(plugin![Symbol.for('@mbsks/rspfx/options')]).dev.port).toBe(9999);
   });
 
   it('returns undefined without an rspfx plugin', () => {
@@ -49,7 +49,7 @@ describe('config loading', () => {
         'export default {',
         '  plugins: [{',
         "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
-        "    options: { name: 'my-proj', framework: 'react', version: '9.9.9' }",
+        "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'my-proj', framework: 'react', version: '9.9.9' }",
         '  }]',
         '};'
       ].join('\n')
@@ -77,7 +77,7 @@ describe('config loading', () => {
       path.join(dir, 'vite.config.ts'),
       [
         'export default () => ({',
-        "  plugins: [{ [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true, options: { name: 'vite-proj', dev: { port: 8888 }, build: { sourcemap: true } } }]",
+        "  plugins: [{ [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true, [Symbol.for('@mbsks/rspfx/options')]: { name: 'vite-proj', dev: { port: 8888 }, build: { sourcemap: true } } }]",
         '});'
       ].join('\n')
     );
@@ -108,7 +108,7 @@ describe('config loading', () => {
       'export default {',
       '  plugins: [{',
       "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
-      "    options: { name: 'rspack-proj' }",
+      "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'rspack-proj' }",
       '  }]',
       '};'
     ].join('\n'));
@@ -116,7 +116,7 @@ describe('config loading', () => {
       'export default {',
       '  plugins: [{',
       "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
-      "    options: { name: 'vite-proj' }",
+      "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'vite-proj' }",
       '  }]',
       '};'
     ].join('\n'));

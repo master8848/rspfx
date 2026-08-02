@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createJiti } from 'jiti';
-import { resolveConfig, RSPFX_PLUGIN_MARKER, type RspfxConfig } from '@mbsks/rspfx-core';
+import { resolveConfig, RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS, type RspfxConfig } from '@mbsks/rspfx-core';
 import type { RspfxBundlerPluginLike } from '@mbsks/rspfx-core';
 import { RspfxError } from '@mbsks/rspfx-diagnostics';
 
@@ -69,5 +69,5 @@ export async function loadConfig(projectRoot: string): Promise<LoadedProject> {
         `new RspfxPlugin({ name: 'my-app', framework: 'react' }) (rspack) or rspfxVite({ ... }) (vite).`
     );
   }
-  return { config: resolveConfig(plugin.options), bundler: found.bundler, configFile: found.file };
+  return { config: resolveConfig(plugin[RSPFX_PLUGIN_OPTIONS]), bundler: found.bundler, configFile: found.file };
 }

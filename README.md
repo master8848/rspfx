@@ -101,6 +101,7 @@ webpack + gulp to RSPFX with zero web part code changes. See its README and
 
 | Topic | Doc |
 |---|---|
+| Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
 | Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
 | Command reference | [docs/commands.md](docs/commands.md) |
 | Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |

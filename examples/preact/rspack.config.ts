@@ -8,7 +8,6 @@ export default {
       version: '1.0.0',
       framework: 'preact',
       spfxVersion: '1.22',
-      fluent: false,
       language: 'typescript',
       styling: 'scss',
       dev: {
@@ -18,11 +17,7 @@ export default {
         fastRefresh: true
       },
       build: {
-        sourcemap: false,
         minify: true
-      },
-      playground: {
-        port: 3000
       }
     })
   ]

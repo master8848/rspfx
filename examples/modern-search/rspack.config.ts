@@ -8,10 +8,16 @@ export default {
       version: '4.23.3',
       framework: 'react',
       spfxVersion: '1.22',
+      language: 'typescript',
       styling: 'scss',
       dev: {
-        // https://{tenantdomain}/... is taken from config/serve.json initialPage
-        tenantUrl: 'https://contoso.sharepoint.com'
+        tenantUrl: 'https://contoso.sharepoint.com',
+        port: 4321,
+        https: true,
+        fastRefresh: true
+      },
+      build: {
+        minify: true
       }
     })
   ]
