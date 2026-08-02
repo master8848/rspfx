@@ -12,6 +12,13 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 - **Broken root scripts — do not use:** `pnpm bench` (points at missing `benchmarks/run.mjs`; use `node bench/bench.mjs`), `pnpm e2e`, `pnpm gen-examples`, `pnpm clean` — all reference files that don't exist. `scripts/gen-skeleton.mjs` exists but is stale/destructive; never run it.
 - No lint, no CI, no git hooks. `pnpm test` is the only gate.
 
+## Publishing (npm)
+
+- `pnpm publish` runs `scripts/publish.mjs`: gates (clean tree → `pnpm build` → `pnpm test`), bumps **all** publishable packages (`packages/*` + `apps/cli`, never `examples/*` or `apps/playground` — hard abort if any of those is not `private: true`), publishes in dependency order, verifies each version on the registry, and commits the bump. Already-published versions are skipped, so re-runs resume.
+- Flags: `--dry-run` (plan only), `--version x.y.z`, `--patch|--minor|--major` (default patch), `--skip-checks`, `--otp <code>`, `--no-commit`. Preview with `pnpm publish:dry`.
+- All publishable packages share ONE version number (bump them together; the script aborts if they drift).
+- npm account: `master8848`; scope `@mbsks`. Do NOT publish `0.0.1` again — previously published-then-unpublished versions can never be re-published (npm E400).
+
 ## Build / TS conventions
 
 - Every workspace package is plain `tsc` to ESM `dist/` (NodeNext). No bundling of workspace packages; Rspack only compiles end-user projects via the CLI.
