@@ -1,5 +1,20 @@
 import { defineConfig } from '@mbsks/rspfx-core';
 
+declare const process: {
+  env: Record<string, string | undefined>;
+  loadEnvFile?: (path?: string) => void;
+};
+
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile(new URL('./.env', import.meta.url).pathname);
+  } catch {
+    // no local .env — falls back to the generic placeholder below
+  }
+}
+
+const tenantUrl = process.env.RSPFX_TENANT_URL ?? 'https://contoso.sharepoint.com';
+
 export default defineConfig({
   name: '@mbsks/rspfx-example-react',
   framework: 'react',
@@ -8,7 +23,7 @@ export default defineConfig({
   language: 'typescript',
   styling: 'scss',
   dev: {
-    tenantUrl: 'https://contoso.sharepoint.com',
+    tenantUrl,
     port: 4321,
     https: true,
     fastRefresh: true

@@ -7,3 +7,6 @@ sharepoint/solution/
 .rspack-cache/
 *.sppkg
 *.log
+.env
+.env.local
+.env.*.local

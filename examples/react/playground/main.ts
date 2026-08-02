@@ -10,5 +10,13 @@ const context = createMockWebPartContext(manifest, {
 
 adapter.mount(
   document.getElementById('root')!,
-  createElement(Hello, { description: String(context.properties.description) })
+  createElement(Hello, {
+    description: String(context.properties.description),
+    userDisplayName: 'Alex (Playground)',
+    userEmail: 'alex@contoso.com',
+    userLoginName: 'i:0#.f|membership|alex@contoso.com',
+    siteUrl: 'http://localhost:3000',
+    webTitle: 'Local Workbench',
+    spAvailable: false
+  })
 );

@@ -9,6 +9,9 @@ coverage/
 .DS_Store
 *.log
 .npmrc
+.env
+.env.local
+.env.*.local
 examples/*/node_modules/
 examples/*/dist/
 examples/*/release/
