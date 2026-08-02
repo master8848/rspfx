@@ -40,6 +40,6 @@
   "description": "rspfx CLI - SPFx-compatible build toolchain powered by Rspack",
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/rspfx.git"
+    "url": "git+https://github.com/master8848/rspfx.git"
   }
 }

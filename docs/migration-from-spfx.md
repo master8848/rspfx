@@ -3,6 +3,13 @@
 RSPFX intentionally mirrors official SPFx project conventions, so most of an
 existing project carries over as-is.
 
+> **Guides:** for the full step-by-step (including the automated migration
+> script) see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md); a
+> real migration of the PnP Modern Search solution is documented in
+> [migration-case-study.md](migration-case-study.md); read
+> [why-not-to-migrate.md](why-not-to-migrate.md) before you start —
+> extensions, Angular, and library components are not supported yet.
+
 ## What's reused
 
 | Item | Notes |
@@ -62,7 +69,8 @@ existing project carries over as-is.
      picked up from the manifest as before.
 
 5. **Package** — `rspfx package` → `sharepoint/solution/<name>.sppkg` → upload to
-   the app catalog → add to a page.
+   the app catalog → add to a page. See [building-packages.md](building-packages.md)
+   for the artifact anatomy and CI usage.
 
 ## Known gaps
 

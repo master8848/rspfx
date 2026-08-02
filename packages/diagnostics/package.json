@@ -27,6 +27,6 @@
   "description": "RSPFX diagnostics: logger, typed errors, benchmarks, formatting",
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/rspfx.git"
+    "url": "git+https://github.com/master8848/rspfx.git"
   }
 }

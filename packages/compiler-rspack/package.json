@@ -45,6 +45,6 @@
   "description": "RSPFX Rspack compiler: config factory, TS/SWC, SCSS, asset pipeline",
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/rspfx.git"
+    "url": "git+https://github.com/master8848/rspfx.git"
   }
 }

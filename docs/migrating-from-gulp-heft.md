@@ -200,4 +200,4 @@ appear in `AppManifest.xml` (`RequestedWebApiPermission` entries).
 
 See [building-packages.md](building-packages.md) for the artifact details and
 [migration-case-study.md](migration-case-study.md) for a real migration
-(18,000-line solution, 2-hour exercise including two framework fixes).
+(42,000-line solution, 2-hour exercise including two framework fixes).

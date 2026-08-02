@@ -29,6 +29,6 @@
   "description": "RSPFX .sppkg package assembly (AppManifest, features, assets)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/rspfx.git"
+    "url": "git+https://github.com/master8848/rspfx.git"
   }
 }

@@ -78,9 +78,32 @@ packages/framework-*      per-framework adapters (vanilla, react, solid, preact,
 packages/fluent-adapter   optional Fluent UI web part base (React-only)
 packages/sharepoint-runtime  shims/bridges for sp-* packages
 packages/templates        project scaffolding templates
+examples/                 smoke apps (react, solid, vue, svelte, preact, shadcn, vanilla, modern-search)
 reference/                captured SPFx format ground truth (FORMATS.md, component IDs)
 docs/                     user + architecture documentation
 ```
+
+`examples/modern-search` is a real production solution — PnP Modern Search
+(4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft +
+webpack + gulp to RSPFX with zero web part code changes. See its README and
+[docs/migration-case-study.md](docs/migration-case-study.md).
+
+## Documentation
+
+| Topic | Doc |
+|---|---|
+| Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
+| Command reference | [docs/commands.md](docs/commands.md) |
+| Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |
+| Move an existing project off gulp/Heft | [docs/migrating-from-gulp-heft.md](docs/migrating-from-gulp-heft.md) |
+| Migration overview | [docs/migration-from-spfx.md](docs/migration-from-spfx.md) |
+| Real-world case study (PnP Modern Search) | [docs/migration-case-study.md](docs/migration-case-study.md) |
+| Why you should NOT migrate (yet) | [docs/why-not-to-migrate.md](docs/why-not-to-migrate.md) |
+| Framework adapters | [docs/frameworks.md](docs/frameworks.md) |
+| Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
+| Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
+| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |
+| Roadmap | [docs/roadmap.md](docs/roadmap.md) |
 
 ## Status & roadmap
 

@@ -38,6 +38,6 @@
   "description": "RSPFX Fluent UI web part base (React)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/master8848/rspfx.git"
+    "url": "git+https://github.com/master8848/rspfx.git"
   }
 }
