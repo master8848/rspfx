@@ -1,6 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
-import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
@@ -13,6 +13,12 @@ import { watchDependencyScope, fingerprintDependencyScope } from './deps-watch.j
 import type { ProjectServeConfigJson } from './project.js';
 import { openBrowser } from './browser.js';
 import { createReloadController } from './reload.js';
+import { createMockSharePointApi } from './mock-api.js';
+import { buildLocalPageHtml, readLocalPageComponents } from './local-page.js';
+
+const require = createRequire(import.meta.url);
+
+export type ServeMode = 'local' | 'sharepoint';
 
 export interface DevRuntimeOptions {
   projectRoot: string;
@@ -21,6 +27,8 @@ export interface DevRuntimeOptions {
   noBrowser?: boolean;
   port?: number;
   tenantDomain?: string;
+  /** 'local' → local preview page at `/` (no SharePoint); 'sharepoint' → workbench. */
+  mode?: ServeMode;
 }
 
 export interface DevRuntimeHandle {
@@ -71,6 +79,21 @@ export function resolveServeSettings(
 }
 
 /**
+ * Resolves the serve mode: an explicit `--mode` wins; otherwise the presence
+ * of a tenant domain (flag/env/config) selects the SharePoint workbench, and
+ * everything else gets the local preview.
+ */
+export function resolveServeMode(
+  opts: Pick<DevRuntimeOptions, 'mode' | 'config'>,
+  tenantDomain: string | undefined
+): ServeMode {
+  if (opts.mode) {
+    return opts.mode;
+  }
+  return tenantDomain ? 'sharepoint' : 'local';
+}
+
+/**
  * Builds the workbench URL with `debug=true&noredir=true&debugManifestsFile=…`.
  * Returns `undefined` when no tenant domain is available (SPFx workbench needs
  * one); warns in that case. Shared by the Rspack dev server and the Vite plugin.
@@ -103,8 +126,12 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const project = readProject(opts.projectRoot, config.paths, config.version);
 
   const settings = resolveServeSettings(opts, project.serveJson);
+  const mode = resolveServeMode(opts, settings.tenantDomain);
+  const local = mode === 'local';
+  const https = local ? false : settings.https;
+  const scheme = https ? 'https' : 'http';
   const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
-  const certs = settings.https ? await ensureCertificates(certsDir) : undefined;
+  const certs = https ? await ensureCertificates(certsDir) : undefined;
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
   const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
@@ -117,19 +144,22 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     frameworkPreset.moduleUrl
   );
 
-  let origin = settings.origin;
+  let origin = `${scheme}://${settings.hostname}:${settings.port}`;
   let server: StartDevServerResult | undefined;
   let closing = false;
 
   const startOnce = async (port?: number): Promise<StartDevServerResult> => {
     const currentProject = readProject(opts.projectRoot, config.paths, config.version);
+    const entries = local
+      ? [...currentProject.webParts.entries, localRuntimeEntry(currentProject.webParts.packageVersion)]
+      : currentProject.webParts.entries;
     const ctx = createCompileContext({
       projectRoot: opts.projectRoot,
       config,
-      entries: currentProject.webParts.entries,
-      externals: [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
+      entries,
+      externals: local ? [] : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
       localizedAliases: currentProject.localizedAliases,
-      localizedResources: currentProject.localizedResources,
+      localizedResources: local ? [] : currentProject.localizedResources,
       fastRefresh,
       production: false,
       serveMode: true,
@@ -156,34 +186,65 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     });
     await regenerator.regenerate();
 
+    const mockApi = local
+      ? createMockSharePointApi({ projectRoot: opts.projectRoot, origin: () => origin })
+      : undefined;
+
+    const routes: NonNullable<Parameters<typeof startDevServer>[1]['routes']> = [
+      {
+        path: '/temp/manifests.js',
+        handler: (req, res) => {
+          const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
+          response.setHeader('Content-Type', 'application/javascript');
+          response.setHeader('Cache-Control', 'no-store');
+          response.end(regenerator.manifestsJs + reload.clientScript);
+        }
+      },
+      {
+        path: reload.path,
+        handler: (req, res) => reload.handle(req, res as Parameters<typeof reload.handle>[1])
+      }
+    ];
+    if (mockApi) {
+      routes.push({ path: mockApi.path, handler: mockApi.handle });
+    }
+    if (local) {
+      const pageHtml = buildLocalPageHtml({
+        projectName: config.name,
+        origin,
+        components: readLocalPageComponents(currentProject.webParts.bundles, currentProject.webParts.packageVersion),
+        reloadClientScript: reload.clientScript
+      });
+      routes.push({
+        path: '/',
+        handler: (req, res, next) => {
+          const pathname = ((req as { url?: string }).url ?? '').split('?')[0];
+          if (pathname !== '/') {
+            next?.();
+            return;
+          }
+          const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
+          response.setHeader('Content-Type', 'text/html; charset=utf-8');
+          response.setHeader('Cache-Control', 'no-store');
+          response.end(pageHtml);
+        }
+      });
+    }
+
     const nextServer = await startDevServer(
       { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
       {
         port: port ?? settings.port,
         hostname: settings.hostname,
-        https: settings.https,
+        https,
         certs,
         hot: true,
         allowedHosts: 'all',
-        routes: [
-          {
-            path: '/temp/manifests.js',
-            handler: (req, res) => {
-              const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
-              response.setHeader('Content-Type', 'application/javascript');
-              response.setHeader('Cache-Control', 'no-store');
-              response.end(regenerator.manifestsJs + reload.clientScript);
-            }
-          },
-          {
-            path: reload.path,
-            handler: (req, res) => reload.handle(req, res as Parameters<typeof reload.handle>[1])
-          }
-        ],
+        routes,
         staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
       }
     );
-    origin = `${settings.scheme}://${settings.hostname}:${nextServer.port}`;
+    origin = `${scheme}://${settings.hostname}:${nextServer.port}`;
 
     nextServer.onEmit(() => {
       void regenerator
@@ -201,15 +262,25 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
 
   const initialServer = await startOnce();
 
-  const workbenchUrl = buildWorkbenchUrl({ ...settings, origin }, config);
+  const workbenchUrl = local ? undefined : buildWorkbenchUrl({ ...settings, https, scheme, origin }, config);
+  const openTarget = workbenchUrl ?? (local ? `${origin}/` : undefined);
 
-  if (workbenchUrl && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
-    openBrowser(workbenchUrl);
+  if (openTarget && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
+    openBrowser(openTarget);
   }
 
-  logger.success(`Manifest server running at ${origin}/temp/manifests.js`);
-  if (workbenchUrl) {
-    logger.info(`Workbench: ${workbenchUrl}`);
+  if (local) {
+    logger.success(`Local preview running at ${origin}/ — no SharePoint needed.`);
+    if (settings.tenantDomain) {
+      logger.info(
+        `Pass --mode sharepoint (or remove dev.tenantUrl) to debug in the SharePoint workbench instead.`
+      );
+    }
+  } else {
+    logger.success(`Manifest server running at ${origin}/temp/manifests.js`);
+    if (workbenchUrl) {
+      logger.info(`Workbench: ${workbenchUrl}`);
+    }
   }
 
   let restarting = false;
@@ -268,76 +339,17 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   };
 }
 
-export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
-  const config = resolveConfig(opts.config);
-  const projectRoot = opts.projectRoot;
-  const playgroundMain = path.join(projectRoot, 'playground', 'main.ts');
-  const playgroundHtml = path.join(projectRoot, 'playground', 'index.html');
-  if (!fsExists(playgroundMain)) {
-    throw new RspfxError(
-      'PLAYGROUND_MISSING',
-      `Playground entry not found at ${playgroundMain}. Run "rspfx new" or add a playground/ folder.`
-    );
-  }
-  const project = readProject(projectRoot, config.paths, config.version);
-  const port = opts.port ?? config.playground?.port ?? 3000;
-  const scheme = 'http';
-  const hostname = config.dev.hostname ?? 'localhost';
-  let origin = `${scheme}://${hostname}:${port}`;
-  const frameworkPreset = await loadFrameworkPreset(config.framework, projectRoot);
-  const contributions = resolveContributionLoaders(
-    frameworkPreset.preset.contributions({ fastRefresh: true }) as Record<string, unknown>,
-    frameworkPreset.moduleUrl
-  );
-
-  const ctx = createCompileContext({
-    projectRoot,
-    config,
-    entries: [
-      {
-        name: 'playground',
-        import: playgroundMain,
-        componentIds: ['playground'],
-        version: project.webParts.packageVersion
-      }
-    ],
-    externals: [...findSpDependencies(projectRoot).keys(), ...project.externals],
-    localizedAliases: project.localizedAliases,
-    localizedResources: project.localizedResources,
-    fastRefresh: true,
-    production: false,
-    serveMode: true,
-    build: config.build
-  });
-
-  const server = await startDevServer(
-    { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
-    {
-      port,
-      hostname,
-      https: false,
-      hot: true,
-      allowedHosts: 'all',
-      staticFolders: [{ path: projectRoot, urlPrefix: '/' }]
-    }
-  );
-  origin = `${scheme}://${hostname}:${server.port}`;
-
-  await waitForFirstCompile(server);
-
-  const url = fsExists(playgroundHtml) ? `${origin}/playground/index.html` : origin;
-  if ((opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
-    openBrowser(url);
-  }
-  logger.success(`Playground running at ${url}`);
-
+function localRuntimeEntry(packageVersion: string): {
+  name: string;
+  import: string;
+  componentIds: string[];
+  version: string;
+} {
   return {
-    url,
-    port: server.port,
-    workbenchUrl: undefined,
-    close: async () => {
-      await server.close();
-    }
+    name: 'local-runtime',
+    import: require.resolve('@mbsks/rspfx-sharepoint-runtime/local-bootstrap'),
+    componentIds: ['local-runtime'],
+    version: packageVersion
   };
 }
 
@@ -360,12 +372,4 @@ function waitForFirstCompile(server: StartDevServerResult): Promise<void> {
       resolve();
     });
   });
-}
-
-function fsExists(filePath: string): boolean {
-  try {
-    return fs.statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
 }

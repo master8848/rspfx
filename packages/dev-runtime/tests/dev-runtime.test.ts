@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, afterAll, beforeAll } from 'vitest';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
-import { startPlayground, startServe } from '../src/index.js';
+import { resolveServeMode, startServe } from '../src/index.js';
 
 const FIXTURE = path.join(process.cwd(), 'tests', 'fixtures', 'proj');
 
@@ -216,22 +216,9 @@ describe('startServe', () => {
   });
 });
 
-describe('startPlayground', () => {
-  it('serves the playground page and bundle', async () => {
-    const playgroundDir = path.join(FIXTURE, 'playground');
-    fs.mkdirSync(playgroundDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(playgroundDir, 'index.html'),
-      '<!doctype html><html><body><div id="root"></div><script src="/dist/playground.js"></script></body></html>'
-    );
-    fs.writeFileSync(
-      path.join(playgroundDir, 'main.ts'),
-      `const root = document.getElementById('root');
-if (root) { root.textContent = 'playground-mount'; }
-`
-    );
-
-    const handle = await startPlayground({
+describe('startServe local mode', () => {
+  it('serves the local preview page at / with injected components', async () => {
+    const handle = await startServe({
       projectRoot: FIXTURE,
       config: makeConfig(),
       noBrowser: true,
@@ -239,16 +226,117 @@ if (root) { root.textContent = 'playground-mount'; }
     });
 
     try {
-      const base = `http://localhost:${handle.port}`;
-      const page = await fetch(`${base}/playground/index.html`);
-      expect(page.status).toBe(200);
-      expect(await page.text()).toContain('playground.js');
-      const bundle = await fetch(`${base}/dist/playground.js`);
-      expect(bundle.status).toBe(200);
-      expect(await bundle.text()).toContain('playground-mount');
+      expect(handle.workbenchUrl).toBeUndefined();
+      const res = await fetch(`${handle.url}/`);
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toContain('window.__RSPFX_COMPONENTS__');
+      expect(body).toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+      expect(body).toContain('"bundleName":"hello"');
+      expect(body).toContain('/dist/local-runtime.js');
+      expect(body).toContain('location.reload');
+      expect(body).toContain('local preview');
     } finally {
       await handle.close();
     }
+  });
+
+  it('serves the local runtime bootstrap bundle', async () => {
+    const handle = await startServe({
+      projectRoot: FIXTURE,
+      config: makeConfig(),
+      noBrowser: true,
+      port: 0
+    });
+
+    try {
+      const res = await fetch(`${handle.url}/dist/local-runtime.js`);
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toContain('window.define');
+      expect(body).toContain('__RSPFX_COMPONENTS__');
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it('serves mock SharePoint REST endpoints under /_api', async () => {
+    const handle = await startServe({
+      projectRoot: FIXTURE,
+      config: makeConfig(),
+      noBrowser: true,
+      port: 0
+    });
+
+    try {
+      const web = (await (await fetch(`${handle.url}/_api/web`)).json()) as {
+        d: { Title: string; CurrentUser: { LoginName: string } };
+      };
+      expect(web.d.Title).toBe('Local Workbench');
+      expect(web.d.CurrentUser.LoginName).toContain('dev@contoso.onmicrosoft.com');
+
+      const lists = (await (await fetch(`${handle.url}/_api/web/lists`)).json()) as {
+        d: { results: { Title: string }[] };
+      };
+      expect(lists.d.results.map((list) => list.Title)).toEqual(['Announcements', 'Documents']);
+
+      const items = (await (
+        await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`)
+      ).json()) as { d: { results: { Id: number; Title: string }[] } };
+      expect(items.d.results[0]!.Title).toBe('Welcome to RSPFX');
+
+      const contextinfo = (await (
+        await fetch(`${handle.url}/_api/contextinfo`, { method: 'POST' })
+      ).json()) as { d: { GetContextWebInformation: { FormDigestValue: string } } };
+      expect(contextinfo.d.GetContextWebInformation.FormDigestValue).toBe('0xRSPFXLOCALPREVIEW');
+
+      const unknown = await fetch(`${handle.url}/_api/web/search`);
+      expect(unknown.status).toBe(400);
+      expect((await unknown.json()) as { error: { code: string } }).toMatchObject({
+        error: { code: '-1, System.NotSupportedException' }
+      });
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it('creates list items via POST /_api/.../items and persists them in the mock store', async () => {
+    const handle = await startServe({
+      projectRoot: FIXTURE,
+      config: makeConfig(),
+      noBrowser: true,
+      port: 0
+    });
+
+    try {
+      const createdRes = await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Title: 'New item from test' })
+      });
+      expect(createdRes.status).toBe(201);
+      const created = (await createdRes.json()) as { d: { Id: number; Title: string } };
+      expect(created.d.Title).toBe('New item from test');
+      expect(created.d.Id).toBe(3);
+
+      const items = (await (
+        await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`)
+      ).json()) as { d: { results: { Id: number; Title: string }[] } };
+      expect(items.d.results).toHaveLength(3);
+      expect(items.d.results.some((item) => item.Title === 'New item from test')).toBe(true);
+    } finally {
+      await handle.close();
+    }
+  });
+});
+
+describe('resolveServeMode', () => {
+  it('defaults to sharepoint when a tenant is configured and local otherwise', () => {
+    const config = makeConfig();
+    expect(resolveServeMode({ mode: undefined, config }, 'contoso.sharepoint.com')).toBe('sharepoint');
+    expect(resolveServeMode({ mode: undefined, config }, undefined)).toBe('local');
+    expect(resolveServeMode({ mode: 'local', config }, 'contoso.sharepoint.com')).toBe('local');
+    expect(resolveServeMode({ mode: 'sharepoint', config }, undefined)).toBe('sharepoint');
   });
 });
 

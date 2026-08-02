@@ -1,5 +1,11 @@
-export { startServe, startPlayground, buildWorkbenchUrl, resolveServeSettings, stripScheme } from './serve.js';
-export type { DevRuntimeHandle, DevRuntimeOptions, ServeSettings } from './serve.js';
+export {
+  startServe,
+  resolveServeMode,
+  buildWorkbenchUrl,
+  resolveServeSettings,
+  stripScheme
+} from './serve.js';
+export type { DevRuntimeHandle, DevRuntimeOptions, ServeMode, ServeSettings } from './serve.js';
 export { createManifestRegenerator } from './manifests.js';
 export type { ManifestRegenerator, ManifestRegeneratorOptions } from './manifests.js';
 export { createRefreshRuntime } from './refresh.js';

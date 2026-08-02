@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { scaffoldPlaygroundPage, scaffoldProject } from '../src/index.js';
+import { scaffoldProject } from '../src/index.js';
 import type { TemplateVars } from '../src/index.js';
 
 const FRAMEWORKS = ['vanilla', 'react', 'solid', 'preact', 'vue', 'svelte'] as const;
@@ -64,9 +64,7 @@ describe('scaffoldProject', () => {
       'src/webparts/hello-world/components/HelloWorld.ts',
       'src/webparts/hello-world/styles/HelloWorld.module.scss',
       'src/webparts/hello-world/assets/.gitkeep',
-      'src/rspfx-env.d.ts',
-      'playground/index.html',
-      'playground/main.ts'
+      'src/rspfx-env.d.ts'
     ];
     expect(written).toHaveLength(expectedPaths.length);
     for (const relative of expectedPaths) {
@@ -238,39 +236,9 @@ describe('scaffoldProject', () => {
   });
 });
 
-describe('scaffoldPlaygroundPage', () => {
-  it('writes playground main.ts and index.html into an existing project', async () => {
-    const written = await scaffoldPlaygroundPage(vanillaDir, vanillaVars);
-    expect(written).toHaveLength(2);
-    expect(written).toContain(path.join(vanillaDir, 'playground/main.ts'));
-    expect(written).toContain(path.join(vanillaDir, 'playground/index.html'));
-
-    const main = fs.readFileSync(path.join(vanillaDir, 'playground/main.ts'), 'utf-8');
-    expect(main).toContain("import HelloWorldWebPart from '../src/webparts/hello-world/hello-worldWebPart'");
-    expect(main).toContain("import { DisplayMode } from '@microsoft/sp-core-library'");
-    expect(main).toContain("document.getElementById('root')");
-    expect(main).toContain('_internalInitialize(');
-    expect(main).toContain('DisplayMode.Read');
-    expect(main).toContain('_internalDeserialize(');
-    expect(main).toContain("properties: { description: 'hello-world' }");
-    expect(main).not.toContain('properties = { description:');
-    expect(main).not.toContain('webPart.domElement = root');
-    expect(main).toContain('webPart.render()');
-
-    const html = fs.readFileSync(path.join(vanillaDir, 'playground/index.html'), 'utf-8');
-    expect(html).toContain('<title>HelloWorld playground</title>');
-    expect(html).toContain('src="./main.ts"');
-  });
-
-  it.each(FRAMEWORKS)('writes a playground main that initializes via _internalInitialize for %s', async (framework) => {
-    const vars = makeVars({ framework });
-    const dir = path.join(tmpRoot, `pg-${framework}`);
-    await scaffoldPlaygroundPage(dir, vars);
-
-    const main = fs.readFileSync(path.join(dir, 'playground/main.ts'), 'utf-8');
-    expect(main).toContain('_internalInitialize(');
-    expect(main).toContain('_internalDeserialize(');
-    expect(main).not.toContain('properties = { description:');
-    expect(main).toContain(`manifest: { id: '${vars.componentId}', alias: 'HelloWorldWebPart' }`);
+describe('scaffoldProject without playground', () => {
+  it('no longer scaffolds the playground folder (local preview is served by the dev server at /)', async () => {
+    const written = await scaffoldProject(vanillaVars, path.join(tmpRoot, 'no-playground'));
+    expect(written.some((file) => file.includes('playground'))).toBe(false);
   });
 });

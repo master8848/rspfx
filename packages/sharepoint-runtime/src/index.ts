@@ -45,3 +45,32 @@ export function createPlaygroundLoader(
     }
   };
 }
+
+export { createMockPageContextData, createLocalWebPartContext } from './context.js';
+export type {
+  CreateLocalContextOptions,
+  LocalContextServices,
+  LocalPageContextData,
+  ScopeLike
+} from './context.js';
+export { LOCAL_CURRENT_USER } from './context.js';
+export {
+  LOCAL_THEMES,
+  createMockThemeProvider
+} from './theme.js';
+export type { LocalThemeProvider } from './theme.js';
+export {
+  createMockAadHttpClientFactory,
+  createMockMSGraphClientFactory,
+  createMockSPHttpClient,
+  defaultMockTransport,
+  LOCAL_GRAPH_DATA
+} from './http.js';
+export type {
+  MockAadHttpClient,
+  MockGraphData,
+  MockMSGraphClient,
+  MockMSGraphClientRequest,
+  MockSpHttpClient,
+  MockTransport
+} from './http.js';

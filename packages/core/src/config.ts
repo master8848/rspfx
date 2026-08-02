@@ -22,11 +22,6 @@ export interface BuildConfig {
   releaseDir?: string;
 }
 
-export interface PlaygroundConfig {
-  port?: number;
-  enabled?: boolean;
-}
-
 export interface PathsConfig {
   srcDir?: string;
   webpartsDir?: string;
@@ -52,7 +47,6 @@ export interface RspfxConfig {
   dev: DevConfig;
   build: BuildConfig;
   paths?: PathsConfig;
-  playground?: PlaygroundConfig;
   deploy?: DeployConfig;
 }
 
@@ -120,7 +114,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
       releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir
     },
     paths: resolvePathDefaults(config.paths),
-    ...(config.playground !== undefined ? { playground: config.playground } : {}),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {})
   };
 }

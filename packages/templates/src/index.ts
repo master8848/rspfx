@@ -31,18 +31,6 @@ export async function scaffoldProject(vars: TemplateVars, destDir: string): Prom
   return written;
 }
 
-export async function scaffoldPlaygroundPage(projectRoot: string, vars: TemplateVars): Promise<string[]> {
-  const files = playgroundFiles(vars);
-  const written: string[] = [];
-  for (const file of files) {
-    const target = path.join(projectRoot, file.path);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, file.content);
-    written.push(target);
-  }
-  return written;
-}
-
 interface TemplateFile {
   path: string;
   content: string;
@@ -98,21 +86,13 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: `src/webparts/${vars.name}/${vars.name}WebPart.${vars.language === 'javascript' ? 'js' : 'ts'}`, content: webpartEntry(vars) },
     { path: `src/webparts/${vars.name}/components/${vars.namePascal}${componentExtension(vars)}`, content: component(vars) },
     { path: `src/webparts/${vars.name}/assets/.gitkeep`, content: '' },
-    { path: 'src/rspfx-env.d.ts', content: declarations(vars) },
-    ...playgroundFiles(vars)
+    { path: 'src/rspfx-env.d.ts', content: declarations(vars) }
   ];
   files.push({
     path: `src/webparts/${vars.name}/styles/${vars.namePascal}.module.scss`,
     content: stylesheet(vars)
   });
   return files;
-}
-
-function playgroundFiles(vars: TemplateVars): TemplateFile[] {
-  return [
-    { path: 'playground/index.html', content: playgroundHtml(vars) },
-    { path: 'playground/main.ts', content: playgroundMain(vars) }
-  ];
 }
 
 function componentExtension(vars: TemplateVars): string {
@@ -594,48 +574,4 @@ function declarations(vars: TemplateVars): string {
     );
   }
   return lines.join('\n');
-}
-
-function playgroundHtml(vars: TemplateVars): string {
-  return [
-    '<!doctype html>',
-    '<html lang="en">',
-    '<head>',
-    '  <meta charset="utf-8" />',
-    `  <title>${vars.namePascal} playground</title>`,
-    '</head>',
-    '<body>',
-    '  <div id="root"></div>',
-    '  <script type="module" src="./main.ts"></script>',
-    '</body>',
-    '</html>'
-  ].join('\n');
-}
-
-function playgroundMain(vars: TemplateVars): string {
-  return [
-    `import { DisplayMode } from '@microsoft/sp-core-library';`,
-    `import ${vars.namePascal}WebPart from '../src/webparts/${vars.name}/${vars.name}WebPart';`,
-    '',
-    'const root = document.getElementById(\'root\');',
-    'if (root) {',
-    `  const webPart = new ${vars.namePascal}WebPart();`,
-    '  (webPart as unknown as {',
-    '    _internalInitialize(',
-    '      context: { domElement: HTMLElement; manifest: { id: string; alias: string } },',
-    '      addedFromPersistedData: boolean,',
-    '      mode: DisplayMode',
-    '    ): void;',
-    '  })._internalInitialize(',
-    `    { domElement: root, manifest: { id: '${vars.componentId}', alias: '${vars.namePascal}WebPart' } },`,
-    '    false,',
-    '    DisplayMode.Read',
-    '  );',
-    '  (webPart as unknown as { _internalDeserialize(data: unknown): void })._internalDeserialize({',
-    `    properties: { description: '${vars.name}' },`,
-    "    dataVersion: '1.0'",
-    '  });',
-    '  webPart.render();',
-    '}'
-  ].join('\n');
 }

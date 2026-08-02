@@ -50,7 +50,10 @@ export interface DevServerOptions {
   certs?: { key: string; cert: string };
   hot?: boolean;
   allowedHosts?: 'all' | string[];
-  routes?: { path: string; handler: (req: unknown, res: unknown) => void }[];
+  routes?: {
+    path: string;
+    handler: (req: unknown, res: unknown, next?: (err?: unknown) => void) => void;
+  }[];
   staticFolders?: { path: string; urlPrefix: string }[];
 }
 

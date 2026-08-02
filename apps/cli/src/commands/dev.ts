@@ -16,6 +16,7 @@ export interface DevOptions {
   refresh?: boolean;
   browser?: boolean;
   port?: number;
+  mode?: 'local' | 'sharepoint';
   tenant?: string;
 }
 
@@ -66,6 +67,7 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
     fastRefresh: opts.refresh ?? config.dev.fastRefresh,
     noBrowser: opts.browser === true ? false : undefined,
     port: opts.port,
+    mode: opts.mode,
     tenantDomain: opts.tenant
   });
 
