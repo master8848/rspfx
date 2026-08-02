@@ -152,10 +152,14 @@ if (versions.size > 1) {
   fatal(`Publishable packages have inconsistent versions: ${[...versions].join(', ')} — bump them all to one version first.`);
 }
 const currentVersion = [...versions][0];
-const targetVersion = versionFlag ?? bumpVersion(currentVersion, bumpKind);
+// Resume detection: if the current version is already partially published
+// (e.g. a previous run failed halfway), keep it — never bump past an
+// in-progress release.
+const resumed = [...set.values()].some((pkg) => isPublished(pkg.name, currentVersion));
+const targetVersion = versionFlag ?? (resumed ? currentVersion : bumpVersion(currentVersion, bumpKind));
 
 console.log(`Publishing ${set.size} packages (${DRY_RUN ? 'DRY RUN — nothing will be published' : 'LIVE'})`);
-console.log(`  current: ${currentVersion} → target: ${targetVersion}\n`);
+console.log(`  current: ${currentVersion} → target: ${targetVersion}${resumed ? ' (resume — version already on the registry)' : ''}\n`);
 console.log([...set.values()].map((p) => `  • ${p.name}@${targetVersion}`).sort().join('\n'));
 console.log('');
 console.log('  Excluded (private/example): examples/*, apps/playground\n');
