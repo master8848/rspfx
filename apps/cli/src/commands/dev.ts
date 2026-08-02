@@ -8,6 +8,7 @@ import {
 } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
 import { spawnViteDev } from '../vite.js';
+import { spawnRsbuildDev } from '../rsbuild.js';
 
 const logger = createLogger('rspfx');
 
@@ -22,13 +23,13 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
   const loaded = await loadConfig(cwd);
   const config = loaded.config;
 
-  if (loaded.bundler === 'vite') {
+  if (loaded.bundler === 'vite' || loaded.bundler === 'rsbuild') {
     const project = readProject(cwd, config.paths, config.version);
     const settings = resolveServeSettings(
       { port: opts.port, tenantDomain: opts.tenant, config },
       project.serveJson
     );
-    const child = spawnViteDev(cwd);
+    const child = loaded.bundler === 'vite' ? spawnViteDev(cwd) : spawnRsbuildDev(cwd);
 
     logger.info(`Manifest server running at ${settings.origin}/temp/manifests.js`);
 
@@ -63,7 +64,7 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
     projectRoot: cwd,
     config,
     fastRefresh: opts.refresh ?? config.dev.fastRefresh,
-    noBrowser: !opts.browser,
+    noBrowser: opts.browser === true ? false : undefined,
     port: opts.port,
     tenantDomain: opts.tenant
   });

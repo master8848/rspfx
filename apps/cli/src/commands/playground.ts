@@ -16,10 +16,15 @@ export async function runPlayground(cwd: string, opts: PlaygroundOptions = {}): 
       'The playground is not supported for Vite projects yet. Use "rspack.config.ts" with RspfxPlugin, or run "vite" directly.'
     );
   }
+  if (loaded.bundler === 'rsbuild') {
+    throw new RspfxError(
+      'PLAYGROUND_RSBUILD_UNSUPPORTED',
+      'The playground is not supported for Rsbuild projects yet. Use "rspack.config.ts" with RspfxPlugin, or run "rsbuild dev" directly.'
+    );
+  }
   const handle = await startPlayground({
     projectRoot: cwd,
     config: loaded.config,
-    noBrowser: false,
     port: opts.port
   });
 

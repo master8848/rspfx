@@ -68,9 +68,8 @@ describe('build', () => {
         "    spfxVersion: '1.22',",
         '    fluent: false,',
         "    language: 'typescript',",
-        "    styling: 'scss',",
         "    paths: { srcDir: 'src', webpartsDir: 'components/widgets', configDir: 'config-custom' },",
-        "    dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: true },",
+        "    dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: false },",
         "    build: { sourcemap: false, minify: true, splitChunks: false, outDir: 'dist', releaseDir: 'release' }",
         '  })]',
         '};'

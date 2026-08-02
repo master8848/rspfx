@@ -28,7 +28,7 @@ export interface DevConfig {
   hostname?: string;             // default 'localhost'
   workbench?: boolean;           // default true — auto-open workbench page
   fastRefresh?: boolean;         // default false (rspfx dev --refresh)
-  openBrowser?: boolean;         // default true
+  openBrowser?: boolean;         // default false — opt in with rspfx dev --browser
   tenantUrl?: string;            // e.g. https://contoso.sharepoint.com
   initialPage?: string;          // overrides tenantUrl; supports {tenantdomain} token
 }
@@ -50,9 +50,8 @@ export interface RspfxConfig {
   version?: string;              // build-time version for AMD library names + manifests; overrides package.json
   framework: FrameworkId;
   spfxVersion: SpfxTarget;       // default '1.23'
-  fluent: boolean;               // default false
+  fluent?: boolean;              // default false
   language: 'typescript' | 'javascript';
-  styling: 'css' | 'scss' | 'tailwind';
   dev: DevConfig;
   build: BuildConfig;
   playground?: PlaygroundConfig;
@@ -205,9 +204,10 @@ export async function startDevServer(ctx: CompileContext, devServerOptions: unkn
 ## @mbsks/rspfx-plugin (depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, diagnostics)
 
 The project config as bundler plugins — the replacement for the legacy
-`rspfx.config.ts`. The CLI loads the user's `rspack.config.ts` / `vite.config.ts`
-via jiti, scans the `plugins` array for the marker symbol, and reads the
-resolved `options` (project config). No plugin → CLI error with guidance.
+`rspfx.config.ts`. The CLI loads the user's `rspack.config.ts` /
+`vite.config.ts` / `rsbuild.config.ts` via jiti, scans the `plugins` array for
+the marker symbol, and reads the resolved `options` (project config). No plugin
+→ CLI error with guidance.
 
 ```ts
 export type { RspfxConfig } from '@mbsks/rspfx-core';
@@ -220,7 +220,7 @@ export interface RspfxPluginOptions extends Partial<Omit<RspfxConfig, 'name'>> {
 }
 // options carry: name, version (build-time version used in AMD library names and
 // manifests — overrides package.json), spfxVersion, framework, fluent, language,
-// styling, dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
+// dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
 // build (sourcemap/minify/splitChunks/outDir/releaseDir), paths (srcDir/webpartsDir/configDir),
 // playground, deploy; defaults unchanged
 export class RspfxPlugin implements RspfxBundlerPluginLike {
@@ -231,6 +231,12 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
 }
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin; // { name: 'rspfx', [RSPFX_PLUGIN_MARKER]: true, options }
 export const VITE_ENV: { mode: string; entry: string; amdId: string };  // env var names for per-bundle vite builds (RSPFX_VITE_*)
+export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin;
+// { name: 'rspfx-rsbuild', [RSPFX_PLUGIN_MARKER]: true, options, setup(api) } — RsbuildPlugin-compatible
+// setup: modifyRsbuildConfig (html: false, distPath.root = build.outDir, source.entry) +
+// modifyRspackConfig (AMD library entries, externals, [name].js output, chunkLoadingGlobal
+// webpackJsonp_<uniqueName>, SPFX_PUBLIC_PATH_SENTINEL publicPath, localized aliases, and the
+// SpfxPublicPathPlugin / SpfxLocalizedResourcesPlugin / DefinePlugin instances)
 ```
 
 `@mbsks/rspfx-core` exports the structural marker contract:
@@ -240,18 +246,20 @@ The full pipeline (manifests, dev server, packaging) runs through the rspfx CLI;
 for Vite configs `rspfx build`/`rspfx package` spawn one `vite build` per web
 part bundle (selected via `VITE_ENV` env vars), and `rspfx dev` spawns `vite`
 (the plugin serves `/temp/manifests.js`, rebuilds AMD bundles into `dist/`,
-opens the workbench). `rspfx playground` is Rspack-only for now.
+opens the workbench). For Rsbuild configs a single `rsbuild build` produces all
+web part bundles and `rspfx dev` spawns `rsbuild dev`. `rspfx playground` is
+Rspack-only for now.
 
 Notes for implementer:
 - Use `builtin:swc-loader` for .ts/.tsx/.jsx/.js (parser jsx, decorators, importMeta); merge framework swc contributions.
-- SCSS: `sass-loader` + `sass`; CSS modules via `experiments.css` + `.module.*` convention; Tailwind: postcss-loader with `@tailwindcss/postcss`.
+- SCSS: `sass-loader` + `sass`; CSS modules via `experiments.css` + `.module.*` convention; no Tailwind special-casing — users wire their own CSS tooling (Tailwind, UnoCSS, …) in the bundler config.
 - Output: filename `[name].js` (always — manifest references exact name), chunkFilename `chunk.[name].js`,
   `output.library: { type: 'amd', name: '<componentId>_<version>' }` (single component per bundle — M1 default),
   `externals: string[]`, `chunkLoadingGlobal: webpackJsonp_<uniqueName>` where uniqueName = single id_version or md5 hex of concatenated ids,
   `crossOriginLoading: 'anonymous'`, `publicPath: 'auto'`, `devtool: production ? (sourcemap?'hidden-source-map':false) : 'source-map'` (rspack value 'hidden-source-map' supported).
 - DefinePlugin: DEBUG, DEPRECATED_UNIT_TEST, process.env.NODE_ENV.
 - CSS inlined into JS bundle (SPFx has no external css in sppkg). Implement a tiny inline-css loader (or style-loader equivalent) — do NOT use css-extract.
-- optimization: moduleIds 'deterministic', usedExports, sideEffects, removeEmptyChunks.
+- optimization: moduleIds 'named' in dev / 'deterministic' in production, usedExports, sideEffects, removeEmptyChunks; `minimize` only in production (`mode === 'production' && build.minify`).
 - `experiments.css: true` only if stable; otherwise css-loader+style-loader chain. Verify in tests.
 - Caching: rspack `cache: { type: 'filesystem' }` in watch mode.
 
@@ -329,6 +337,10 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<{ url: s
 export function readProject(projectRoot: string, paths?: PathsConfig, versionOverride?: string): ReadProjectResult;
 // reads package.json/config.json/serve.json, discovers web parts; the version override
 // (plugin `version` option) replaces package.json version in AMD library names and manifests
+export function createReloadController(): ReloadController;
+// dev auto-reload: monotonically increasing build counter served at /__rspfx_hot.json
+// (no-store + CORS); tick() after each completed rebuild; clientScript is appended to
+// /temp/manifests.js and polls the endpoint, calling location.reload() when the counter changes
 export function resolveServeSettings(config: { config: RspfxConfig }, serveJson: ProjectServeConfigJson | undefined): ServeSettings;
 export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string;
 // <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<enc>.../temp/manifests.js
@@ -429,7 +441,6 @@ export interface TemplateVars {
   spfxVersion: SpfxTarget;
   fluent: boolean;
   language: 'typescript' | 'javascript';
-  styling: 'css' | 'scss' | 'tailwind';
   tenantUrl?: string;
   componentId: string;                // uuid for webpart manifest
   solutionId: string;                 // uuid for package-solution.json
@@ -460,8 +471,8 @@ and `playground/main.ts` mounts it via a cast:
 ## @mbsks/rspfx-cli (depends on ALL packages)
 
 Bin `rspfx`. Commands (commander):
-- `rspfx new <name>` — interactive prompts (framework, language, styling, fluent, spfx target, pm); flags `--framework <id> --language <ts|js> --styling <css|scss|tailwind> --fluent --spfx-version <v> --pm <pnpm|npm|yarn> --no-install --yes` for non-interactive. Then scaffold + install deps.
-- `rspfx dev` — startServe; flags `--refresh`, `--no-browser`, `--port <n>`, `--tenant <url>`
+- `rspfx new <name>` — interactive prompts (framework, language, fluent, spfx target, pm); flags `--framework <id> --language <ts|js> --fluent --spfx-version <v> --pm <pnpm|npm|yarn> --no-install --yes` for non-interactive. Then scaffold + install deps.
+- `rspfx dev` — startServe; flags `--refresh`, `--browser`, `--port <n>`, `--tenant <url>`
 - `rspfx playground` — startPlayground; `--port <n>`
 - `rspfx build` — production compile to dist + release (manifests/assets); `--no-minify --sourcemap`
 - `rspfx package` — build + package → sppkg; `--no-build`
@@ -471,11 +482,12 @@ Bin `rspfx`. Commands (commander):
 - `rspfx clean` — rm dist release temp .rspfx node_modules/.cache
 - `rspfx --version`, `rspfx --help`
 
-Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`), find
-the plugin by `RSPFX_PLUGIN_MARKER`, read `.options` → `resolveConfig`.
-Guidance error when no config or no plugin is found. Per-command bundler
-awareness: for Vite configs, `dev`/`build`/`package` spawn the project-local
-`vite`/`vite build` (one build per web part bundle); for Rspack configs the
-internal Rspack pipeline runs as before. `rspfx playground` is Rspack-only for
-now.
+Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`, or
+`rsbuild.config.ts`), find the plugin by `RSPFX_PLUGIN_MARKER`, read `.options`
+→ `resolveConfig`. Guidance error when no config or no plugin is found.
+Per-command bundler awareness: for Vite configs, `dev`/`build`/`package` spawn
+the project-local `vite`/`vite build` (one build per web part bundle); for
+Rsbuild configs a single `rsbuild build` runs and `dev` spawns `rsbuild dev`;
+for Rspack configs the internal Rspack pipeline runs as before. `rspfx
+playground` is Rspack-only for now.
 Guid generation: `crypto.randomUUID`.

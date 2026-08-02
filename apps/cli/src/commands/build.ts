@@ -15,6 +15,7 @@ import type { RspfxConfig } from '@mbsks/rspfx-core';
 import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import { loadConfig } from '../config.js';
 import { runViteBuild } from '../vite.js';
+import { runRsbuildBuild } from '../rsbuild.js';
 
 const logger = createLogger('rspfx');
 
@@ -50,6 +51,13 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     for (const entry of project.webParts.entries) {
       await runViteBuild(cwd, { entry: entry.name, amdId: `${entry.componentIds[0]}_${entry.version}` });
     }
+    outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
+    stats = undefined;
+  } else if (loaded.bundler === 'rsbuild') {
+    const distDir = path.join(cwd, config.build.outDir ?? 'dist');
+    fs.rmSync(distDir, { recursive: true, force: true });
+    fs.mkdirSync(distDir, { recursive: true });
+    await runRsbuildBuild(cwd);
     outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
     stats = undefined;
   } else {

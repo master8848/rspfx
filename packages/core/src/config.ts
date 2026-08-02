@@ -46,9 +46,9 @@ export interface RspfxConfig {
   version?: string;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
-  fluent: boolean;
+  /** Enable the Fluent UI web part base class; default false. */
+  fluent?: boolean;
   language: 'typescript' | 'javascript';
-  styling: 'css' | 'scss' | 'tailwind';
   dev: DevConfig;
   build: BuildConfig;
   paths?: PathsConfig;
@@ -67,7 +67,7 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
     hostname: 'localhost',
     workbench: true,
     fastRefresh: false,
-    openBrowser: true
+    openBrowser: false
   },
   build: {
     sourcemap: false,
@@ -102,7 +102,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     spfxVersion: config.spfxVersion ?? SPFX_DEFAULT_TARGET,
     fluent: config.fluent ?? false,
     language: config.language ?? 'typescript',
-    styling: config.styling ?? 'scss',
     dev: {
       port: config.dev?.port ?? configDefaults.dev.port,
       https: config.dev?.https ?? configDefaults.dev.https,

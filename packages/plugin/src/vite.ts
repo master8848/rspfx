@@ -15,6 +15,7 @@ import {
   resolveServeSettings,
   buildWorkbenchUrl,
   createManifestRegenerator,
+  createReloadController,
   openBrowser,
   type ServeSettings
 } from '@mbsks/rspfx-dev-runtime';
@@ -137,6 +138,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     configureServer(server) {
       const project = readProject(root, resolved.paths, resolved.version);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
+      const reload = createReloadController();
       const originRef: { value: string } = { value: settings.origin };
       const entryModuleIds: Record<string, string> = {};
       project.webParts.bundles.forEach((bundle, index) => {
@@ -162,7 +164,9 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
               configFile: false,
               root,
               logLevel: 'error',
-              mode: 'development'
+              mode: 'development',
+              minify: false,
+              sourcemap: true
             });
           });
         }
@@ -197,7 +201,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           .then(() => {
             response.setHeader('Content-Type', 'application/javascript');
             response.setHeader('Cache-Control', 'no-store');
-            response.end(regenerator.manifestsJs);
+            response.end(regenerator.manifestsJs + reload.clientScript);
           })
           .catch((error: unknown) => {
             response.statusCode = 500;
@@ -205,8 +209,12 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           });
       });
 
+      devServer.middlewares.use(reload.path, (_req, res) => {
+        reload.handle(_req, res as ConnectResponse);
+      });
+
       const workbenchUrl = buildWorkbenchUrl(settings, resolved);
-      if (workbenchUrl && (resolved.dev.openBrowser ?? true)) {
+      if (workbenchUrl && (resolved.dev.openBrowser ?? false)) {
         devServer.httpServer?.once('listening', () => {
           originRef.value = updateOriginWithActualPort(settings, devServer);
           openBrowser(workbenchUrl);

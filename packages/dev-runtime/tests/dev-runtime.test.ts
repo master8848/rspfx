@@ -11,7 +11,6 @@ function makeConfig(overrides: Partial<RspfxConfig> = {}): RspfxConfig {
     name: 'test-proj',
     framework: 'vanilla',
     language: 'typescript',
-    styling: 'scss',
     dev: { https: false },
     ...overrides
   });
@@ -149,10 +148,33 @@ describe('startServe', () => {
       expect(body).toContain('7263c7d0-1d6a-45ec-8d85-d4d1d234171b');
       expect(body).toContain(`${handle.url}/dist/`);
       expect(body).toContain(`${handle.url}/node_modules/@microsoft/sp-core-library/dist/`);
+      expect(body).toContain('hello.js?t=');
+      expect(body).toContain('location.reload');
       expect(handle.workbenchUrl).toContain('contoso.sharepoint.com/_layouts/15/workbench.aspx');
       expect(handle.workbenchUrl).toContain(
         `debugManifestsFile=${encodeURIComponent(`${handle.url}/temp/manifests.js`)}`
       );
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it('serves the reload hot endpoint with a build counter', async () => {
+    const handle = await startServe({
+      projectRoot: FIXTURE,
+      config: makeConfig(),
+      noBrowser: true,
+      port: 0
+    });
+
+    try {
+      const res = await fetch(`${handle.url}/__rspfx_hot.json`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      const data = (await res.json()) as { build: number };
+      expect(typeof data.build).toBe('number');
+      expect(data.build).toBeGreaterThanOrEqual(1);
     } finally {
       await handle.close();
     }

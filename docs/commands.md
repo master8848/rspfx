@@ -1,9 +1,10 @@
 # Command Reference
 
 Global: `rspfx --version`, `rspfx --help`. All commands load the project's
-bundler config (`rspack.config.ts` via jiti, or `vite.config.ts` for Vite
-projects), find the `RspfxPlugin` / `rspfxVite` plugin by its marker symbol,
-and use its options, merging CLI flags over them. The optional `paths` section
+bundler config (`rspack.config.ts` via jiti, `vite.config.ts` for Vite projects,
+or `rsbuild.config.ts` for Rsbuild projects), find the `RspfxPlugin` /
+`rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options,
+merging CLI flags over them. The optional `paths` section
 of the plugin options customizes the project folder layout: `paths.srcDir`
 (default `src`), `paths.webpartsDir` (default `src/webparts`), `paths.configDir`
 (default `config`) — see [building-packages.md](building-packages.md) for what
@@ -18,7 +19,6 @@ Scaffold a new SPFx project and install dependencies.
 |---|---|
 | `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` |
 | `--language <lang>` | `ts` (typescript) \| `js` (javascript) |
-| `--styling <style>` | `css` \| `scss` \| `tailwind` |
 | `--fluent` | Enable the Fluent UI adapter (React only) |
 | `--spfx-version <v>` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default `1.23`) |
 | `--pm <pm>` | `pnpm` \| `npm` \| `yarn` (dependency install) |
@@ -27,26 +27,27 @@ Scaffold a new SPFx project and install dependencies.
 
 ```sh
 rspfx new my-app
-rspfx new my-app --framework vue --styling scss --yes
+rspfx new my-app --framework vue --yes
 rspfx new my-app --framework react --fluent --spfx-version 1.20 --no-install
 ```
 
 ## `rspfx dev`
 
-Start the dev environment: Rspack dev server + HTTPS manifest server on `:4321`,
-then auto-open the workbench.
+Start the dev environment: Rspack dev server + HTTPS manifest server on `:4321`.
+Dev output is unminified with readable module names and source maps; rebuilds
+auto-reload the workbench page (client embedded in `/temp/manifests.js`).
 
 | Flag | Description |
 |---|---|
 | `--refresh` | Enable fast refresh (state-preserving where supported) |
-| `--no-browser` | Do not auto-open the browser |
+| `--browser` | Open the workbench in a browser (off by default) |
 | `--port <n>` | Override `dev.port` (default 4321) |
 | `--tenant <url>` | Override the tenant URL (else `dev.tenantUrl` or `SPFX_SERVE_TENANT_DOMAIN`) |
 
 ```sh
 rspfx dev
 rspfx dev --refresh
-rspfx dev --tenant https://contoso.sharepoint.com --no-browser
+rspfx dev --tenant https://contoso.sharepoint.com --browser
 ```
 
 ## `rspfx playground`
@@ -160,7 +161,7 @@ export default {
       name: 'my-app',
       framework: 'react',
       spfxVersion: '1.22',
-      dev: { port: 4321, https: true, hostname: 'localhost', tenantUrl: 'https://contoso.sharepoint.com', openBrowser: true },
+      dev: { port: 4321, https: true, hostname: 'localhost', tenantUrl: 'https://contoso.sharepoint.com', openBrowser: false },
       build: { minify: true, sourcemap: false, outDir: 'dist', releaseDir: 'release' },
       version: '1.0.0'
     })
@@ -188,11 +189,32 @@ export default {
 bundles into `dist/`, opens the workbench). `rspfx playground` is Rspack-only
 for now — Vite projects get a clear error.
 
+### Rsbuild — `rsbuild.config.ts`
+
+```ts
+import { defineConfig } from '@rsbuild/core';
+import { rspfxRsbuild } from '@mbsks/rspfx-plugin';
+
+export default defineConfig({
+  plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react', dev: { ... }, build: { ... }, version: '1.0.0' })]
+});
+```
+
+The plugin injects the SPFx pipeline into Rsbuild's underlying Rspack config:
+web part entries (AMD library names `<componentId>_<version>`), sp-*
+externals + localized resources, the `webpackJsonp_<uniqueName>`
+`chunkLoadingGlobal`, the public-path capture and localized-resource plugins,
+and the `DEBUG`/`NODE_ENV` defines; HTML output is disabled (SPFx ships raw
+JS bundles). `rspfx build` / `rspfx package` run a single `rsbuild build`
+(one build produces all web part bundles in `dist/`); `rspfx dev` spawns
+`rsbuild dev` and prints the workbench URL. `rspfx playground` is Rspack-only
+for now — Rsbuild projects get a clear error.
+
 ### Options
 
 The options object carries: `name`, `version` (build-time version used in AMD
 library names and manifests — overrides package.json), `spfxVersion`,
-`framework`, `fluent`, `language`, `styling`, `dev` (port/https/hostname/
+`framework`, `fluent`, `language`, `dev` (port/https/hostname/
 workbench/fastRefresh/openBrowser/tenantUrl/initialPage), `build`
 (sourcemap/minify/splitChunks/outDir/releaseDir), `paths`
 (srcDir/webpartsDir/configDir), `playground`, `deploy`. Defaults are unchanged

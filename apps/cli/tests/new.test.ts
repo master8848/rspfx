@@ -12,7 +12,6 @@ describe('new', () => {
       cwd: tmp,
       framework: 'vanilla',
       language: 'ts',
-      styling: 'scss',
       fluent: false,
       spfxVersion: '1.23',
       pm: 'pnpm',
@@ -64,7 +63,6 @@ describe('new', () => {
     const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
     expect(config).toContain("tenantUrl: 'https://contoso.sharepoint.com'");
-    rmRf(tmp);
   });
 
   it('rejects unknown framework values', async () => {
@@ -75,23 +73,23 @@ describe('new', () => {
     rmRf(tmp);
   });
 
-  it('defaults to a react + tailwind scaffold when using yes', async () => {
+  it('defaults to a react + scss scaffold when using yes', async () => {
     const tmp = makeTmpDir('new-defaults');
     const dest = await runNew({ name: 'def-app', cwd: tmp, yes: true, install: false });
 
     const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'react'");
-    expect(config).toContain("styling: 'tailwind'");
+    expect(config).not.toContain('fluent');
 
     const componentsDir = path.join(dest, 'src/webparts/def-app/components');
-    expect(fs.existsSync(path.join(componentsDir, 'ui/button.tsx'))).toBe(true);
-    expect(fs.existsSync(path.join(componentsDir, 'globals.css'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'ui/button.tsx'))).toBe(false);
+    expect(fs.existsSync(path.join(componentsDir, 'globals.css'))).toBe(false);
 
     const packageJson = JSON.parse(fs.readFileSync(path.join(dest, 'package.json'), 'utf8')) as {
       dependencies?: Record<string, string>;
     };
-    expect(packageJson.dependencies?.['clsx']).toBeDefined();
-    expect(packageJson.dependencies?.['react']).toBeDefined();
+    expect(packageJson.dependencies?.['@microsoft/sp-webpart-base']).toBeDefined();
+    expect(packageJson.dependencies?.['tailwindcss']).toBeUndefined();
     rmRf(tmp);
   });
 });

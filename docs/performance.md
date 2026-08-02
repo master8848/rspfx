@@ -16,7 +16,7 @@ Measured speed of the RSPFX toolchain (Rspack-based, replacing the classic gulp/
 
 Full methodology in [`bench/README.md`](../bench/README.md). Summary:
 
-- **Cold start** = spawn `node apps/cli/dist/cli.js dev --no-browser` → time until the `Manifest server running` line appears (initial compile done). No prior dev server on the port; `node_modules` already installed and OS file caches warm.
+- **Cold start** = spawn `node apps/cli/dist/cli.js dev` → time until the `Manifest server running` line appears (initial compile done). No prior dev server on the port; `node_modules` already installed and OS file caches warm. (Browsers are never opened: opening is opt-in via `--browser`.)
 - **Recompile** = append a timestamp comment to a source file in `src/webparts/*/` while the server runs → time until the compiled bundle's SHA-256 changes on disk. 3 runs per project; file bytes restored after every run.
 - **Full build** = `dist/` and `release/` removed, then `node apps/cli/dist/cli.js build` wall time.
 - Harness: `bench/bench.mjs` (node-only, no deps).

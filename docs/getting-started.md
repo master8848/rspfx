@@ -16,7 +16,7 @@ rspfx new my-app
 ```
 
 Runs interactively: prompts for framework (vanilla / react / solid / preact / vue /
-svelte), language (typescript / javascript), styling (css / scss / tailwind),
+svelte), language (typescript / javascript), styling (css / scss),
 Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22 / 1.23), and package manager. Then it
 scaffolds the project and installs dependencies.
 
@@ -26,7 +26,6 @@ Non-interactive (useful for CI):
 rspfx new my-app \
   --framework react \
   --language ts \
-  --styling scss \
   --fluent \
   --spfx-version 1.22 \
   --pm pnpm \
@@ -83,7 +82,7 @@ export default {
 
 The CLI loads the bundler config via jiti, finds the plugin by its marker
 symbol, and uses its options. Key defaults: `dev.port` **4321**, `dev.https`
-true, `dev.fastRefresh` false, `dev.openBrowser` true, `dev.workbench` true,
+true, `dev.fastRefresh` false, `dev.openBrowser` false, `dev.workbench` true,
 `build.outDir` **dist**, `build.releaseDir` **release**. The `version` option
 overrides package.json for the AMD library names and manifests.
 
@@ -136,11 +135,14 @@ dependencies) — cert trust itself is the browser's job.
 
 ### Editing
 
-Save a source file → incremental rebuild → refresh event pushed over the
-websocket → the page updates. `rspfx dev --refresh` upgrades to state-preserving
-fast refresh where the framework supports it (see [fast-refresh.md](fast-refresh.md)).
+Save a source file → incremental rebuild → the reload client embedded in
+`/temp/manifests.js` detects the new build and reloads the workbench page
+automatically, so you never have to press F5. The dev build is **unminified**
+with readable module names and full source maps; only `rspfx build` optimizes
+and minifies. `rspfx dev --refresh` upgrades to state-preserving fast refresh
+where the framework supports it (see [fast-refresh.md](fast-refresh.md)).
 
-To stop: `Ctrl+C`. `rspfx dev --no-browser` skips auto-opening the browser.
+To stop: `Ctrl+C`. The browser is never auto-opened unless you pass `rspfx dev --browser` or set `dev.openBrowser: true` in the config.
 
 ## 4. Build, package, deploy
 

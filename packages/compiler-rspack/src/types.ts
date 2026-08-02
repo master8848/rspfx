@@ -32,7 +32,6 @@ export interface CompileContext {
   serveMode?: boolean;
   additionalPlugins?: unknown[];
   swcContributions?: Record<string, unknown>[];
-  tailwind?: boolean;
 }
 
 export interface BuildResult {

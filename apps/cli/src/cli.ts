@@ -48,7 +48,6 @@ export function configureProgram(): void {
     .argument('<name>', 'project name')
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
-    .option('--styling <css|scss|tailwind>', 'styling')
     .option('--fluent', 'enable Fluent UI')
     .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn>', 'package manager')
@@ -61,7 +60,6 @@ export function configureProgram(): void {
         cwd,
         framework: options.framework as string | undefined,
         language: options.language as string | undefined,
-        styling: options.styling as string | undefined,
         fluent: options.fluent as boolean | undefined,
         spfxVersion: options.spfxVersion as string | undefined,
         pm: options.pm as string | undefined,
@@ -74,9 +72,9 @@ export function configureProgram(): void {
 
   program
     .command('dev')
-    .description('start the dev server and open the SharePoint workbench')
+    .description('start the dev server (add --browser to open the workbench)')
     .option('--refresh', 'enable fast refresh')
-    .option('--no-browser', 'do not open the workbench in a browser')
+    .option('--browser', 'open the workbench in a browser')
     .option('--port <n>', 'dev server port')
     .option('--tenant <url>', 'tenant URL or domain (e.g. https://contoso.sharepoint.com)')
     .action((options: Record<string, unknown>) => {

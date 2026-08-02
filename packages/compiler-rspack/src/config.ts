@@ -14,7 +14,6 @@ const require = createRequire(import.meta.url);
 const styleLoaderPath = require.resolve('style-loader');
 const cssLoaderPath = require.resolve('css-loader');
 const sassLoaderPath = require.resolve('sass-loader');
-const postcssLoaderPath = require.resolve('postcss-loader');
 
 const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
@@ -73,7 +72,6 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const sourcemap = build.sourcemap ?? false;
   const minify = build.minify ?? true;
   const splitChunks = build.splitChunks ?? false;
-  const tailwind = ctx.tailwind === true;
   const useCache = ctx.serveMode === true;
 
   const devtool: Configuration['devtool'] = ctx.production
@@ -138,43 +136,18 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     options: { jsc: swcJsc }
   });
 
-  if (tailwind) {
-    const tailwindPostcss = (await import('@tailwindcss/postcss')).default;
-    const postcssRule = {
-      loader: postcssLoaderPath,
-      options: { postcssOptions: { plugins: [tailwindPostcss] } }
-    };
-    rules.push({
-      test: /\.css$/,
-      use: [
-        styleLoaderPath,
-        { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-        postcssRule
-      ]
-    });
-    rules.push({
-      test: /\.s[ac]ss$/i,
-      use: [
-        styleLoaderPath,
-        { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 2 } },
-        postcssRule,
-        { loader: sassLoaderPath }
-      ]
-    });
-  } else {
-    rules.push({
-      test: /\.css$/,
-      use: [styleLoaderPath, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
-    });
-    rules.push({
-      test: /\.s[ac]ss$/i,
-      use: [
-        styleLoaderPath,
-        { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-        { loader: sassLoaderPath }
-      ]
-    });
-  }
+  rules.push({
+    test: /\.css$/,
+    use: [styleLoaderPath, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
+  });
+  rules.push({
+    test: /\.s[ac]ss$/i,
+    use: [
+      styleLoaderPath,
+      { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
+      { loader: sassLoaderPath }
+    ]
+  });
 
   rules.push({ test: /\.html$/, type: 'asset/source' });
 
@@ -219,7 +192,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     module: { rules },
     plugins,
     optimization: {
-      moduleIds: 'deterministic',
+      moduleIds: ctx.production ? 'deterministic' : 'named',
       usedExports: true,
       sideEffects: true,
       removeEmptyChunks: true,

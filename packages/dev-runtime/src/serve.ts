@@ -9,8 +9,10 @@ import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { createRefreshRuntime } from './refresh.js';
 import { createManifestRegenerator } from './manifests.js';
+import { watchDependencyScope, fingerprintDependencyScope } from './deps-watch.js';
 import type { ProjectServeConfigJson } from './project.js';
 import { openBrowser } from './browser.js';
+import { createReloadController } from './reload.js';
 
 export interface DevRuntimeOptions {
   projectRoot: string;
@@ -106,6 +108,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
   const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
+  const reload = createReloadController();
   const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
   const contributions = resolveContributionLoaders(
     frameworkPreset.preset.contributions({
@@ -114,75 +117,93 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     frameworkPreset.moduleUrl
   );
 
-  const ctx = createCompileContext({
-    projectRoot: opts.projectRoot,
-    config,
-    entries: project.webParts.entries,
-    externals: [...findSpDependencies(opts.projectRoot).keys(), ...project.externals],
-    localizedAliases: project.localizedAliases,
-    localizedResources: project.localizedResources,
-    fastRefresh,
-    production: false,
-    serveMode: true,
-    build: config.build
-  });
-
-  const entryModuleIds: Record<string, string> = {};
-  project.webParts.bundles.forEach((bundle, index) => {
-    entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
-  });
-
   let origin = settings.origin;
-  const regenerator = createManifestRegenerator({
-    projectRoot: opts.projectRoot,
-    production: false,
-    origin: () => origin,
-    packageVersion: project.webParts.packageVersion,
-    entries: project.webParts.entries,
-    externals: ctx.externals,
-    localizedResources: project.localizedResources,
-    webpartsDir: config.paths?.webpartsDir,
-    entryModuleIds,
-    refreshRuntime
-  });
-  await regenerator.regenerate();
+  let server: StartDevServerResult | undefined;
+  let closing = false;
 
-  const server = await startDevServer(
-    { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
-    {
-      port: settings.port,
-      hostname: settings.hostname,
-      https: settings.https,
-      certs,
-      hot: true,
-      allowedHosts: 'all',
-      routes: [
-        {
-          path: '/temp/manifests.js',
-          handler: (req, res) => {
-            const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
-            response.setHeader('Content-Type', 'application/javascript');
-            response.setHeader('Cache-Control', 'no-store');
-            response.end(regenerator.manifestsJs);
-          }
-        }
-      ],
-      staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
-    }
-  );
-  origin = `${settings.scheme}://${settings.hostname}:${server.port}`;
-
-  server.onEmit(() => {
-    void regenerator.regenerate().catch((error) => {
-      logger.error(`Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`);
+  const startOnce = async (port?: number): Promise<StartDevServerResult> => {
+    const currentProject = readProject(opts.projectRoot, config.paths, config.version);
+    const ctx = createCompileContext({
+      projectRoot: opts.projectRoot,
+      config,
+      entries: currentProject.webParts.entries,
+      externals: [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
+      localizedAliases: currentProject.localizedAliases,
+      localizedResources: currentProject.localizedResources,
+      fastRefresh,
+      production: false,
+      serveMode: true,
+      build: config.build
     });
-  });
-  await waitForFirstCompile(server);
-  await regenerator.regenerate();
+
+    const entryModuleIds: Record<string, string> = {};
+    currentProject.webParts.bundles.forEach((bundle, index) => {
+      entryModuleIds[currentProject.webParts.manifestIds[index]!] = bundle.bundleName;
+    });
+
+    const regenerator = createManifestRegenerator({
+      projectRoot: opts.projectRoot,
+      production: false,
+      origin: () => origin,
+      packageVersion: currentProject.webParts.packageVersion,
+      entries: currentProject.webParts.entries,
+      externals: ctx.externals,
+      localizedResources: currentProject.localizedResources,
+      webpartsDir: config.paths?.webpartsDir,
+      entryModuleIds,
+      refreshRuntime,
+      bundleUrlSuffix: () => `?t=${reload.current}`
+    });
+    await regenerator.regenerate();
+
+    const nextServer = await startDevServer(
+      { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
+      {
+        port: port ?? settings.port,
+        hostname: settings.hostname,
+        https: settings.https,
+        certs,
+        hot: true,
+        allowedHosts: 'all',
+        routes: [
+          {
+            path: '/temp/manifests.js',
+            handler: (req, res) => {
+              const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
+              response.setHeader('Content-Type', 'application/javascript');
+              response.setHeader('Cache-Control', 'no-store');
+              response.end(regenerator.manifestsJs + reload.clientScript);
+            }
+          },
+          {
+            path: reload.path,
+            handler: (req, res) => reload.handle(req, res as Parameters<typeof reload.handle>[1])
+          }
+        ],
+        staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
+      }
+    );
+    origin = `${settings.scheme}://${settings.hostname}:${nextServer.port}`;
+
+    nextServer.onEmit(() => {
+      void regenerator
+        .regenerate()
+        .then(() => reload.tick())
+        .catch((error) => {
+          logger.error(`Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`);
+        });
+    });
+    await waitForFirstCompile(nextServer);
+    await regenerator.regenerate();
+    server = nextServer;
+    return nextServer;
+  };
+
+  const initialServer = await startOnce();
 
   const workbenchUrl = buildWorkbenchUrl({ ...settings, origin }, config);
 
-  if (workbenchUrl && (opts.noBrowser ?? !(config.dev.openBrowser ?? true)) === false) {
+  if (workbenchUrl && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
     openBrowser(workbenchUrl);
   }
 
@@ -191,13 +212,58 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     logger.info(`Workbench: ${workbenchUrl}`);
   }
 
+  let restarting = false;
+  let pendingFingerprint: string | undefined;
+  const drainRestarts = async (): Promise<void> => {
+    if (restarting || closing) {
+      return;
+    }
+    while (pendingFingerprint !== undefined && server) {
+      restarting = true;
+      const fingerprint = pendingFingerprint;
+      pendingFingerprint = undefined;
+      const port = server.port;
+      logger.info('Dependency scope changed — restarting dev server with updated externals.');
+      try {
+        await server.close();
+        server = undefined;
+        const nextServer = await startOnce(port);
+        if (closing) {
+          await nextServer.close();
+          server = undefined;
+          return;
+        }
+        logger.success(`Dev server restarted at ${origin}.`);
+        // Changes that landed while restarting must not be missed.
+        const current = fingerprintDependencyScope(opts.projectRoot);
+        if (current !== fingerprint) {
+          pendingFingerprint = current;
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to restart dev server: ${error instanceof Error ? error.message : String(error)}. ` +
+            'It will retry on the next dependency change.'
+        );
+      } finally {
+        restarting = false;
+      }
+    }
+  };
+
+  const watcher = watchDependencyScope(opts.projectRoot, (fingerprint) => {
+    pendingFingerprint = fingerprint;
+    void drainRestarts();
+  });
+
   return {
     url: origin,
-    port: server.port,
+    port: initialServer.port,
     workbenchUrl,
     close: async () => {
+      closing = true;
+      watcher.stop();
       refreshRuntime?.dispose();
-      await server.close();
+      await server?.close();
     }
   };
 }
@@ -260,7 +326,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
   await waitForFirstCompile(server);
 
   const url = fsExists(playgroundHtml) ? `${origin}/playground/index.html` : origin;
-  if ((opts.noBrowser ?? !(config.dev.openBrowser ?? true)) === false) {
+  if ((opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
     openBrowser(url);
   }
   logger.success(`Playground running at ${url}`);

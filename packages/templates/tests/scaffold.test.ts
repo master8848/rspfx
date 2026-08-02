@@ -20,7 +20,6 @@ function makeVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
-    styling: 'css',
     componentId: '11111111-1111-4111-8111-111111111111',
     solutionId: '22222222-2222-4222-8222-222222222222',
     featureId: '33333333-3333-4333-8333-333333333333',
@@ -63,7 +62,7 @@ describe('scaffoldProject', () => {
       'src/webparts/hello-world/hello-world.manifest.json',
       'src/webparts/hello-world/hello-worldWebPart.ts',
       'src/webparts/hello-world/components/HelloWorld.ts',
-      'src/webparts/hello-world/styles/HelloWorld.module.css',
+      'src/webparts/hello-world/styles/HelloWorld.module.scss',
       'src/webparts/hello-world/assets/.gitkeep',
       'src/rspfx-env.d.ts',
       'playground/index.html',
@@ -98,9 +97,10 @@ describe('scaffoldProject', () => {
     scaffoldProject(vars, dir);
 
     const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
-    expect(config).toContain('    openBrowser: true,');
+    expect(config).toContain('    openBrowser: false,');
     expect(config).toContain("    tenantUrl: 'https://contoso.sharepoint.com'");
-    expect(config).toMatch(/openBrowser: true,\n {8}tenantUrl: 'https:\/\/contoso\.sharepoint\.com'/);
+    expect(config).not.toContain('fluent');
+    expect(config).toMatch(/openBrowser: false,\n {8}tenantUrl: 'https:\/\/contoso\.sharepoint\.com'/);
   });
 
   it('writes a webpart manifest with componentType WebPart and an alias', () => {
@@ -158,80 +158,9 @@ describe('scaffoldProject', () => {
     expect(component).not.toContain('lang="ts"');
   });
 
-  it('scaffolds a tailwind styling variant', () => {
-    const vars = makeVars({ styling: 'tailwind' });
-    const dir = path.join(tmpRoot, 'tailwind');
-    scaffoldProject(vars, dir);
 
-    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
-    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
-    expect(config).toContain("styling: 'tailwind'");
-
-    const stylesPath = path.join(dir, 'src/webparts/hello-world/styles/HelloWorld.module.scss');
-    expect(fs.existsSync(stylesPath)).toBe(true);
-    const styles = fs.readFileSync(stylesPath, 'utf-8');
-    expect(styles).toContain('@apply');
-
-    const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'), 'utf-8');
-    expect(entry).toContain('./styles/HelloWorld.module.scss');
-  });
-
-  it('scaffolds a react tailwind project with shadcn/ui components', () => {
-    const vars = makeVars({ framework: 'react', styling: 'tailwind' });
-    const dir = path.join(tmpRoot, 'react-tailwind');
-    scaffoldProject(vars, dir);
-
-    const componentsDir = path.join(dir, 'src/webparts/hello-world/components');
-    for (const relative of [
-      'HelloWorld.tsx',
-      'globals.css',
-      'lib/utils.ts',
-      'ui/button.tsx',
-      'ui/card.tsx',
-      'ui/badge.tsx',
-      'ui/input.tsx',
-      'ui/label.tsx'
-    ]) {
-      expect(fs.existsSync(path.join(componentsDir, relative)), relative).toBe(true);
-    }
-
-    const pkg = readJson(dir, 'package.json');
-    const deps = pkg['dependencies'] as Record<string, string>;
-    expect(deps['tailwindcss']).toBeDefined();
-    for (const dep of ['clsx', 'tailwind-merge', 'class-variance-authority', 'lucide-react', 'react', 'react-dom']) {
-      expect(deps[dep], dep).toBeDefined();
-    }
-    const devDeps = pkg['devDependencies'] as Record<string, string>;
-    expect(devDeps['@types/react']).toBeDefined();
-
-    const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'), 'utf-8');
-    expect(entry).toContain("import { createRoot, type Root } from 'react-dom/client'");
-    expect(entry).toContain("import { createElement } from 'react'");
-    expect(entry).toContain("import HelloWorld from './components/HelloWorld'");
-    expect(entry).toContain('this._root.render(createElement(HelloWorld, { description: this.properties.description }))');
-    expect(entry).toContain('protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration');
-    expect(entry).not.toContain('innerHTML');
-
-    const component = fs.readFileSync(path.join(componentsDir, 'HelloWorld.tsx'), 'utf-8');
-    expect(component).toContain("import './globals.css'");
-    expect(component).toContain("from './ui/button'");
-    expect(component).toContain('useState');
-
-    const globals = fs.readFileSync(path.join(componentsDir, 'globals.css'), 'utf-8');
-    expect(globals).toContain('@import "tailwindcss"');
-    expect(globals).toContain('--background');
-    expect(globals).toContain('--primary');
-    expect(globals).toContain('@theme inline');
-    expect(globals).toContain('--color-background: var(--background);');
-
-    const button = fs.readFileSync(path.join(componentsDir, 'ui/button.tsx'), 'utf-8');
-    expect(button).toContain("from 'class-variance-authority'");
-    expect(button).toContain("from '@radix-ui/react-slot'");
-    expect(button).toContain("from '../lib/utils'");
-  });
-
-  it('does not scaffold shadcn ui for react with scss styling', () => {
-    const vars = makeVars({ framework: 'react', styling: 'scss' });
+  it('scaffolds a react project using plain components', () => {
+    const vars = makeVars({ framework: 'react' });
     const dir = path.join(tmpRoot, 'react-scss');
     scaffoldProject(vars, dir);
 
@@ -242,32 +171,6 @@ describe('scaffoldProject', () => {
     const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'), 'utf-8');
     expect(entry).toContain('innerHTML');
     expect(entry).not.toContain('createRoot');
-  });
-
-  it('scaffolds tailwind styling for vue without shadcn ui components', () => {
-    const vars = makeVars({ framework: 'vue', styling: 'tailwind' });
-    const dir = path.join(tmpRoot, 'vue-tailwind');
-    scaffoldProject(vars, dir);
-
-    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
-    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
-    expect(config).toContain("styling: 'tailwind'");
-
-    expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/styles/HelloWorld.module.scss'))).toBe(false);
-    expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/components/globals.css'))).toBe(true);
-    expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/components/ui/button.tsx'))).toBe(false);
-
-    const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'), 'utf-8');
-    expect(entry).toContain("import './components/globals.css'");
-    expect(entry).toContain("import { VueWebPart } from '@mbsks/rspfx-framework-vue/webpart'");
-
-    const globals = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/components/globals.css'), 'utf-8');
-    expect(globals).toContain('@import "tailwindcss"');
-
-    const component = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/components/HelloWorld.vue'), 'utf-8');
-    expect(component).toContain('max-w-md');
-    expect(component).toContain('shadow-sm');
-    expect(component).not.toContain('<style');
   });
 
   it.each(['svelte', 'solid', 'preact'] as const)(
@@ -296,26 +199,6 @@ describe('scaffoldProject', () => {
     }
   );
 
-  it('scaffolds tailwind styling for svelte, solid, and preact without a styles module', () => {
-    for (const framework of ['svelte', 'solid', 'preact'] as const) {
-      const vars = makeVars({ framework, styling: 'tailwind' });
-      const dir = path.join(tmpRoot, `tw-${framework}`);
-      scaffoldProject(vars, dir);
-
-      expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/styles/HelloWorld.module.scss'))).toBe(false);
-      expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/components/globals.css'))).toBe(true);
-
-      const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'), 'utf-8');
-      expect(entry).toContain("import './components/globals.css'");
-
-      const componentDir = path.join(dir, 'src/webparts/hello-world/components');
-      const componentPath = framework === 'svelte' ? 'HelloWorld.svelte' : 'HelloWorld.tsx';
-      const component = fs.readFileSync(path.join(componentDir, componentPath), 'utf-8');
-      expect(component).toContain('max-w-md');
-      expect(component).toContain('shadow-sm');
-    }
-  });
-
   it('scaffolds a javascript svelte project without typescript annotations', () => {
     const vars = makeVars({ framework: 'svelte', language: 'javascript' });
     const dir = path.join(tmpRoot, 'svelte-js');
@@ -329,30 +212,6 @@ describe('scaffoldProject', () => {
     const component = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/components/HelloWorld.svelte'), 'utf-8');
     expect(component).toContain('export let description');
     expect(component).not.toContain('lang="ts"');
-  });
-
-  it('scaffolds a javascript react tailwind project with jsx variants', () => {
-    const vars = makeVars({ framework: 'react', styling: 'tailwind', language: 'javascript' });
-    const dir = path.join(tmpRoot, 'react-tailwind-js');
-    scaffoldProject(vars, dir);
-
-    expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.js'))).toBe(true);
-    expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.ts'))).toBe(false);
-
-    const componentsDir = path.join(dir, 'src/webparts/hello-world/components');
-    expect(fs.existsSync(path.join(componentsDir, 'HelloWorld.jsx'))).toBe(true);
-    expect(fs.existsSync(path.join(componentsDir, 'ui/button.jsx'))).toBe(true);
-    expect(fs.existsSync(path.join(componentsDir, 'ui/button.tsx'))).toBe(false);
-    expect(fs.existsSync(path.join(componentsDir, 'lib/utils.js'))).toBe(true);
-
-    const entry = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/hello-worldWebPart.js'), 'utf-8');
-    expect(entry).toContain('export default class HelloWorldWebPart extends BaseClientSideWebPart {');
-    expect(entry).not.toContain('IHelloWorldWebPartProps');
-
-    const component = fs.readFileSync(path.join(componentsDir, 'HelloWorld.jsx'), 'utf-8');
-    expect(component).toContain("import './globals.css'");
-    expect(component).not.toContain('interface IHelloWorldProps');
-    expect(component).not.toContain(': IHelloWorldProps');
   });
 
   it('keeps generated ids consistent with the supplied vars', () => {

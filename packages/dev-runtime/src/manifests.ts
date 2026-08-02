@@ -21,6 +21,7 @@ export interface ManifestRegeneratorOptions {
   webpartsDir?: string;
   entryModuleIds: Record<string, string>;
   refreshRuntime?: RefreshRuntime;
+  bundleUrlSuffix?: () => string;
 }
 
 export interface ManifestRegenerator {
@@ -47,7 +48,12 @@ export function createManifestRegenerator(opts: ManifestRegeneratorOptions): Man
           production: opts.production,
           baseUrls: { debug: `${origin}/dist/`, release: [] },
           packageVersion: opts.packageVersion,
-          bundleFiles: new Map(opts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
+          bundleFiles: new Map(
+            opts.entries.map((entry) => [
+              entry.name,
+              `${entry.name}.js${opts.bundleUrlSuffix?.() ?? ''}`
+            ])
+          ),
           externals: opts.externals,
           localizedResources: opts.localizedResources.map((resource) => ({
             name: resource.name,

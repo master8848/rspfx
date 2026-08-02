@@ -9,7 +9,6 @@ export default {
       framework: 'solid',
       spfxVersion: '1.22',
       language: 'typescript',
-      styling: 'scss',
       dev: {
         tenantUrl: 'https://contoso.sharepoint.com',
         port: 4321,
