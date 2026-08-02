@@ -247,8 +247,13 @@ if (failed.length > 0) {
 // ─── 4. commit the bump ──────────────────────────────────────────────────────
 if (!NO_COMMIT) {
   run('git', ['add', ...changedFiles], { cwd: ROOT });
-  run('git', ['commit', '-m', `chore: bump all publishable packages to v${targetVersion}`], { cwd: ROOT });
-  console.log(`\nCommitted version bump (v${targetVersion}). Run "git push" to share it.`);
+  const staged = execSync('git diff --cached --name-only', { cwd: ROOT }).toString().trim();
+  if (staged) {
+    run('git', ['commit', '-m', `chore: bump all publishable packages to v${targetVersion}`], { cwd: ROOT });
+    console.log(`\nCommitted version bump (v${targetVersion}). Run "git push" to share it.`);
+  } else {
+    console.log('\nVersion bump already committed — skipping commit.');
+  }
 }
 
 console.log(`\n✓ Published ${published.length}/${set.size} packages at v${targetVersion}.`);

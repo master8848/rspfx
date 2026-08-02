@@ -128,7 +128,10 @@ describe('config loading', () => {
 });
 
 describe('version', () => {
-  it('reads 0.0.1 from package.json', () => {
-    expect(version).toBe('0.0.1');
+  it('matches apps/cli/package.json', () => {
+    const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string;
+    };
+    expect(version).toBe(pkg.version);
   });
 });

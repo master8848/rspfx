@@ -99,6 +99,11 @@ webpack + gulp to RSPFX with zero web part code changes. See its README and
 
 ## Documentation
 
+AI agents working in this repo can load the project skill
+[`.opencode/skills/rspfx/SKILL.md`](.opencode/skills/rspfx/SKILL.md) (via the
+`rspfx` skill) for install/usage instructions covering both the RSPFX toolchain
+and the official Microsoft Heft toolchain.
+
 | Topic | Doc |
 |---|---|
 | Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
