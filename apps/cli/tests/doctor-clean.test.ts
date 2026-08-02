@@ -4,12 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { scaffoldProject } from '@mbsks/rspfx-templates';
 import { runDoctor } from '../src/commands/doctor.js';
 import { runClean } from '../src/commands/clean.js';
-import { baseVars, makeTmpDir, rmRf } from './helpers.js';
+import { baseVars, linkPluginPackage, makeTmpDir, rmRf } from './helpers.js';
 
 describe('doctor', () => {
   it('passes all checks on a healthy fixture project', async () => {
     const dir = makeTmpDir('doctor');
     await scaffoldProject(baseVars(), dir);
+    linkPluginPackage(dir);
     const result = await runDoctor(dir);
     const failed = result.checks.filter((check) => !check.ok);
     expect(failed).toEqual([]);
@@ -22,7 +23,7 @@ describe('doctor', () => {
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'bad', version: '1.0.0' }));
     const result = await runDoctor(dir);
     expect(result.ok).toBe(false);
-    expect(result.checks.some((check) => check.name === 'rspfx.config.ts loads' && !check.ok)).toBe(true);
+    expect(result.checks.some((check) => check.name === 'project config loads (rspack.config.ts / vite.config.ts)' && !check.ok)).toBe(true);
     expect(result.checks.some((check) => check.name === 'web part bundles discovered' && !check.ok)).toBe(true);
     rmRf(dir);
   });

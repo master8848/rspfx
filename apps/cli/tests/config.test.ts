@@ -1,53 +1,137 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from '../src/config.js';
+import { resolveConfig } from '@mbsks/rspfx-core';
+import { RspfxPlugin, rspfxVite } from '@mbsks/rspfx-plugin';
+import { findRspfxPlugin, loadConfig } from '../src/config.js';
 import { version } from '../src/version.js';
 import { makeTmpDir, rmRf } from './helpers.js';
 
-describe('config loading', () => {
-  it('loads rspfx.config.ts and fills defaults via resolveConfig', async () => {
-    const dir = makeTmpDir('config');
-    fs.writeFileSync(
-      path.join(dir, 'rspfx.config.ts'),
-      `export default { name: 'my-proj', framework: 'react' };\n`
-    );
-    const config = await loadConfig(dir);
-    expect(config.name).toBe('my-proj');
+describe('findRspfxPlugin', () => {
+  it('finds an RspfxPlugin instance and exposes resolved options', () => {
+    const plugin = findRspfxPlugin({ plugins: [new RspfxPlugin({ name: 'my-proj', framework: 'react' })] });
+    expect(plugin).toBeDefined();
+    const config = resolveConfig(plugin!.options);
     expect(config.framework).toBe('react');
     expect(config.language).toBe('typescript');
     expect(config.styling).toBe('scss');
-    expect(config.spfxVersion).toBe('1.22');
+    expect(config.spfxVersion).toBe('1.23');
     expect(config.dev.port).toBe(4321);
     expect(config.dev.https).toBe(true);
     expect(config.dev.workbench).toBe(true);
     expect(config.build.minify).toBe(true);
     expect(config.build.releaseDir).toBe('release');
+  });
+
+  it('passes version through to plugin options', () => {
+    const plugin = findRspfxPlugin({ plugins: [new RspfxPlugin({ name: 'x', version: '2.3.4' })] });
+    expect(plugin?.options.version).toBe('2.3.4');
+  });
+
+  it('finds a rspfxVite plugin', () => {
+    const plugin = findRspfxPlugin({ plugins: [rspfxVite({ name: 'vite-proj', dev: { port: 9999 } })] });
+    expect(plugin).toBeDefined();
+    expect(resolveConfig(plugin![Symbol.for('@mbsks/rspfx/options')]).dev.port).toBe(9999);
+  });
+
+  it('returns undefined without an rspfx plugin', () => {
+    expect(findRspfxPlugin({ plugins: [{ name: 'nope' }] })).toBeUndefined();
+    expect(findRspfxPlugin({ module: {} })).toBeUndefined();
+  });
+});
+
+describe('config loading', () => {
+  it('loads rspack.config.ts and fills defaults via resolveConfig', async () => {
+    const dir = makeTmpDir('config');
+    fs.writeFileSync(
+      path.join(dir, 'rspack.config.ts'),
+      [
+        'export default {',
+        '  plugins: [{',
+        "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
+        "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'my-proj', framework: 'react', version: '9.9.9' }",
+        '  }]',
+        '};'
+      ].join('\n')
+    );
+    const loaded = await loadConfig(dir);
+    expect(loaded.config.name).toBe('my-proj');
+    expect(loaded.bundler).toBe('rspack');
+    expect(loaded.configFile).toBe('rspack.config.ts');
+    expect(loaded.config.framework).toBe('react');
+    expect(loaded.config.language).toBe('typescript');
+    expect(loaded.config.styling).toBe('scss');
+    expect(loaded.config.spfxVersion).toBe('1.23');
+    expect(loaded.config.dev.port).toBe(4321);
+    expect(loaded.config.dev.https).toBe(true);
+    expect(loaded.config.dev.workbench).toBe(true);
+    expect(loaded.config.build.minify).toBe(true);
+    expect(loaded.config.build.releaseDir).toBe('release');
+    expect(loaded.config.version).toBe('9.9.9');
     rmRf(dir);
   });
 
-  it('loads rspfx.config.js', async () => {
-    const dir = makeTmpDir('config-js');
+  it('loads vite.config.ts with a function default', async () => {
+    const dir = makeTmpDir('config-vite');
     fs.writeFileSync(
-      path.join(dir, 'rspfx.config.js'),
-      `export default { name: 'js-proj', dev: { port: 9999 }, build: { sourcemap: true } };\n`
+      path.join(dir, 'vite.config.ts'),
+      [
+        'export default () => ({',
+        "  plugins: [{ [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true, [Symbol.for('@mbsks/rspfx/options')]: { name: 'vite-proj', dev: { port: 8888 }, build: { sourcemap: true } } }]",
+        '});'
+      ].join('\n')
     );
-    const config = await loadConfig(dir);
-    expect(config.name).toBe('js-proj');
-    expect(config.dev.port).toBe(9999);
-    expect(config.build.sourcemap).toBe(true);
+    const loaded = await loadConfig(dir);
+    expect(loaded.bundler).toBe('vite');
+    expect(loaded.configFile).toBe('vite.config.ts');
+    expect(loaded.config.dev.port).toBe(8888);
+    expect(loaded.config.build.sourcemap).toBe(true);
     rmRf(dir);
   });
 
   it('throws when no config file exists', async () => {
     const dir = makeTmpDir('no-config');
-    await expect(loadConfig(dir)).rejects.toThrow(/No rspfx.config.ts found/);
+    await expect(loadConfig(dir)).rejects.toThrow(/No rspack.config.ts \/ vite.config.ts found/);
+    rmRf(dir);
+  });
+
+  it('throws when the config has no rspfx plugin', async () => {
+    const dir = makeTmpDir('no-plugin');
+    fs.writeFileSync(path.join(dir, 'rspack.config.ts'), 'export default { plugins: [] };\n');
+    await expect(loadConfig(dir)).rejects.toThrow(/No rspfx plugin found/);
+    rmRf(dir);
+  });
+
+  it('prefers rspack.config.ts over vite.config.ts', async () => {
+    const dir = makeTmpDir('prefer-rspack');
+    fs.writeFileSync(path.join(dir, 'rspack.config.ts'), [
+      'export default {',
+      '  plugins: [{',
+      "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
+      "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'rspack-proj' }",
+      '  }]',
+      '};'
+    ].join('\n'));
+    fs.writeFileSync(path.join(dir, 'vite.config.ts'), [
+      'export default {',
+      '  plugins: [{',
+      "    [Symbol.for('@mbsks/rspfx/bundler-plugin')]: true,",
+      "    [Symbol.for('@mbsks/rspfx/options')]: { name: 'vite-proj' }",
+      '  }]',
+      '};'
+    ].join('\n'));
+    const loaded = await loadConfig(dir);
+    expect(loaded.bundler).toBe('rspack');
+    expect(loaded.configFile).toBe('rspack.config.ts');
     rmRf(dir);
   });
 });
 
 describe('version', () => {
-  it('reads 0.0.1 from package.json', () => {
-    expect(version).toBe('0.0.1');
+  it('matches apps/cli/package.json', () => {
+    const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string;
+    };
+    expect(version).toBe(pkg.version);
   });
 });

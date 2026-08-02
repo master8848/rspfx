@@ -21,7 +21,7 @@ RSPFX. It was written from a real migration of
 | `config/config.json` | bundles + externals + `localizedResources` honored (entrypoint paths rewritten, see below) |
 | `config/write-manifests.json` | `cdnBasePath` used for release base URLs |
 | `sharepoint/` solution assets | unchanged |
-| `@microsoft/sp-*` dependencies | stay pinned to your SPFx target (1.20 / 1.21 / 1.22) |
+| `@microsoft/sp-*` dependencies | stay pinned to your SPFx target (1.20 / 1.21 / 1.22 / 1.23) |
 | Localized string modules (`import strings from 'XxxWebPartStrings'`) | resolve natively from `config.json` `localizedResources` (default locale `en-us`) |
 | Lazy `import()` chunks, `*.module.scss`, HTML template imports, `require('*.json')` | supported |
 
@@ -62,8 +62,8 @@ outside the two documented rewrites, never installs anything):
 3. **SCSS** — `@import 'pkg:<pkg>/<path>'` (sass-loader ≥16.5 syntax) rewritten
    to a relative `node_modules` path.
 4. **Deletes** the Heft-only config files above.
-5. **Writes `rspfx.config.ts`** (detects react/vanilla + scss) and a plain
-   `tsconfig.json` if the old one extends a rig.
+5. **Writes `rspack.config.ts`** (with the `RspfxPlugin`; detects react/vanilla
+   + scss) and a plain `tsconfig.json` if the old one extends a rig.
 
 Then:
 
@@ -89,17 +89,23 @@ overrides for runtime dependencies.
 ### 2. Add the config file
 
 ```ts
-import { defineConfig } from '@mbsks/rspfx-core';
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
-export default defineConfig({
-  name: 'my-app',
-  framework: 'react',          // vanilla | react | solid | preact | vue | svelte
-  spfxVersion: '1.22',         // 1.20 | 1.21 | 1.22 — match installed sp-* versions
-  dev: { tenantUrl: 'https://contoso.sharepoint.com' }
-});
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: 'my-app',
+      framework: 'react',          // vanilla | react | solid | preact | vue | svelte
+      spfxVersion: '1.22',         // 1.20 | 1.21 | 1.22 | 1.23 — match installed sp-* versions
+      dev: { tenantUrl: 'https://contoso.sharepoint.com' }
+    })
+  ]
+};
 ```
 
-`@mbsks/rspfx-core` is a devDependency (zero-dependency package, so no version fights).
+`@mbsks/rspfx-plugin` is a devDependency (the plugin carries the whole project
+config; its core dependency is zero-dependency, so no version fights).
 
 ### 3. Rewrite `config/config.json` entrypoints
 
@@ -132,7 +138,7 @@ name**, so `searchResults` here is the entry module id. In the default layout
 the bundle name must equal the web part folder name (that's what the bundle key
 above is). If your project uses a different folder structure — e.g. manifests
 under `components/` or a bundle name that differs from the folder — configure
-it once in `rspfx.config.ts` (`paths.webpartsDir`, `paths.configDir`,
+it once in the plugin options (`paths.webpartsDir`, `paths.configDir`,
 `paths.srcDir`) and the bundle name becomes authoritative for
 `entryModuleId` regardless of folder naming.
 

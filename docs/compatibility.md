@@ -35,13 +35,25 @@ referenced package's own `node_modules` manifest at build time, never hardcoded.
 |---|---|
 | 1.20 | Supported — component IDs stable across versions; versions come from `node_modules` |
 | 1.21 | Supported — same |
-| 1.22 | Supported, default — same |
+| 1.22 | Supported — same |
+| 1.23 | Supported, default — Heft-era; formats unchanged (verified-by-reference from 1.23.2 packages) |
 
-Component IDs for sp-* packages are stable across 1.20/1.21/1.22; the `version`
+Component IDs for sp-* packages are stable across 1.20–1.23; the `version`
 field of each `"type": "component"` entry is read from the installed
 `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, with the
-`reference/sp-component-ids.json` table as fallback. Pin the target in
-`rspfx.config.ts` (`spfxVersion`) and keep `@microsoft/sp-*` deps in sync.
+`reference/sp-component-ids.json` table as fallback. Pin the target via the
+plugin options (`spfxVersion` in `rspack.config.ts` / `vite.config.ts`) and
+keep `@microsoft/sp-*` deps in sync.
+
+SPFx 1.24 is in public preview (beta.1, July 2026; GA expected September 2026)
+and is **not** yet a supported target. The matrix above is defined in
+`packages/core/src/versions.ts` (single source of truth, `SPFX_VERSIONS`); see
+[docs/supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for
+the process of adding a new target.
+
+SPFx 1.23 deprecated the hosted workbench (`workbench.aspx`); it retires
+December 1, 2026, replaced by the SPFx Debug Toolbar. RSPFX dev-serve output is
+unaffected — it still emits the same `manifests.js` + workbench URL format.
 
 Non-negotiables (from ARCHITECTURE.md §7): sp-* never bundled in production
 output; output naming identical to official; the `.sppkg` must install via app

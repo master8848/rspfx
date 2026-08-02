@@ -1,6 +1,6 @@
 {
   "name": "rspfx",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "private": true,
   "type": "module",
   "description": "SPFx-compatible build toolchain powered by Rspack",
@@ -14,6 +14,8 @@
     "typecheck": "pnpm -r --filter './packages/**' typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "publish": "node scripts/publish.mjs",
+    "publish:dry": "node scripts/publish.mjs --dry-run",
     "bench": "node benchmarks/run.mjs",
     "e2e": "node tests/e2e/run.mjs",
     "gen-examples": "node scripts/gen-examples.mjs",
@@ -26,6 +28,9 @@
     "vitest": "^2.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@parcel/watcher"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@parcel/watcher"
+    ]
   }
 }

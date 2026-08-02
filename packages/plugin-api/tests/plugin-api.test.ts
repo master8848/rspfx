@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { definePlugin, getPlugins, registerPlugin } from '../src/index.js';
-import type { FrameworkAdapter, FrameworkPreset, RspfxPlugin } from '../src/index.js';
+import type { FrameworkPreset, RspfxExtension } from '../src/index.js';
 
 describe('registerPlugin / getPlugins', () => {
   it('roundtrips registered plugins', () => {
-    const alpha: RspfxPlugin = { name: 'alpha' };
-    const beta: RspfxPlugin = { name: 'beta' };
+    const alpha: RspfxExtension = { name: 'alpha' };
+    const beta: RspfxExtension = { name: 'beta' };
     registerPlugin(alpha);
     registerPlugin(beta);
     const plugins = getPlugins();
@@ -16,7 +16,7 @@ describe('registerPlugin / getPlugins', () => {
 
   it('replaces a previously registered plugin with the same name', () => {
     registerPlugin({ name: 'replace-me', compilerHooks: { afterStats: () => {} } });
-    const latest: RspfxPlugin = { name: 'replace-me', packageHooks: { beforePackage: () => {} } };
+    const latest: RspfxExtension = { name: 'replace-me', packageHooks: { beforePackage: () => {} } };
     registerPlugin(latest);
     const matches = getPlugins().filter((p) => p.name === 'replace-me');
     expect(matches).toHaveLength(1);
@@ -24,7 +24,7 @@ describe('registerPlugin / getPlugins', () => {
   });
 
   it('returns copies so callers cannot mutate the registry', () => {
-    const plugin: RspfxPlugin = { name: 'copies' };
+    const plugin: RspfxExtension = { name: 'copies' };
     registerPlugin(plugin);
     const first = getPlugins();
     const second = getPlugins();
@@ -34,28 +34,15 @@ describe('registerPlugin / getPlugins', () => {
 
 describe('definePlugin', () => {
   it('returns the plugin unchanged', () => {
-    const plugin: RspfxPlugin = { name: 'identity' };
+    const plugin: RspfxExtension = { name: 'identity' };
     expect(definePlugin(plugin)).toBe(plugin);
   });
 });
 
 describe('FrameworkPreset structural compliance', () => {
-  it('exposes a name, adapter factory and contributions factory', () => {
-    const adapter: FrameworkAdapter = {
-      name: 'react',
-      mount: (root: HTMLElement, component: unknown) => {
-        expect(root.tagName).toBe('DIV');
-        expect(component).toBe('component');
-      },
-      unmount: (root: HTMLElement) => {
-        expect(root).toBeTruthy();
-      },
-      update: () => {},
-      supportsFastRefresh: () => true
-    };
+  it('exposes a name and a contributions factory', () => {
     const preset: FrameworkPreset = {
       name: 'react',
-      adapter: () => adapter,
       contributions: (opts) => ({
         rules: [{ test: /\.tsx$/ }],
         plugins: ['react-refresh'],
@@ -65,11 +52,10 @@ describe('FrameworkPreset structural compliance', () => {
         moduleTest: { test: /\.module\.scss$/, type: 'css/module' }
       })
     };
-    const plugin: RspfxPlugin = { name: 'framework-react', frameworkPreset: preset };
+    const plugin: RspfxExtension = { name: 'framework-react', frameworkPreset: preset };
     registerPlugin(plugin);
     expect(getPlugins()).toContain(plugin);
     expect(preset.name).toBe('react');
-    expect(preset.adapter()).toBe(adapter);
 
     const refresh = preset.contributions({ fastRefresh: true });
     expect(refresh.rules).toHaveLength(1);
@@ -82,31 +68,23 @@ describe('FrameworkPreset structural compliance', () => {
 
     const prod = preset.contributions({ fastRefresh: false });
     expect(prod.define?.['__DEV__']).toBe('false');
-    expect(adapter.supportsFastRefresh()).toBe(true);
   });
 
-  it('accepts a preset with only an adapter', () => {
+  it('accepts a preset with only a name and contributions factory', () => {
     const preset: FrameworkPreset = {
       name: 'vanilla',
-      adapter: () => ({
-        name: 'vanilla',
-        mount: () => {},
-        unmount: () => {},
-        update: () => {},
-        supportsFastRefresh: () => false
-      }),
       contributions: () => ({})
     };
-    const plugin: RspfxPlugin = { name: 'framework-vanilla', frameworkPreset: preset };
+    const plugin: RspfxExtension = { name: 'framework-vanilla', frameworkPreset: preset };
     registerPlugin(plugin);
     expect(getPlugins()).toContain(plugin);
   });
 });
 
-describe('RspfxPlugin hooks', () => {
+describe('RspfxExtension hooks', () => {
   it('supports compiler and package hooks', () => {
     const called: string[] = [];
-    const plugin: RspfxPlugin = {
+    const plugin: RspfxExtension = {
       name: 'hook-carrier',
       compilerHooks: {
         beforeCompile: (config) => {
@@ -134,7 +112,7 @@ describe('RspfxPlugin hooks', () => {
   });
 
   it('beforeCompile can mutate a compile context in place', () => {
-    const plugin: RspfxPlugin = {
+    const plugin: RspfxExtension = {
       name: 'ctx-mutator',
       compilerHooks: {
         beforeCompile: (config) => {

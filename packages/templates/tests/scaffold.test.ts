@@ -17,7 +17,7 @@ function makeVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     namePascal: 'HelloWorld',
     nameCamel: 'helloWorld',
     framework: 'vanilla',
-    spfxVersion: '1.22',
+    spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
     styling: 'css',
@@ -50,8 +50,9 @@ describe('scaffoldProject', () => {
     const written = await scaffoldProject(vanillaVars, path.join(tmpRoot, 'vanilla-again'));
     const expectedPaths = [
       'package.json',
-      'rspfx.config.ts',
+      'rspack.config.ts',
       'tsconfig.json',
+'.npmrc',
       '.gitignore',
       'README.md',
       'config/package-solution.json',
@@ -80,9 +81,26 @@ describe('scaffoldProject', () => {
     expect(pkg['name']).toBe('@contoso/hello');
     expect(pkg['version']).toBe('0.0.1');
     const deps = pkg['dependencies'] as Record<string, string>;
-    expect(deps['@microsoft/sp-core-library']).toBe('1.22.0');
-    expect(deps['@microsoft/sp-webpart-base']).toBe('1.22.0');
-    expect(deps['@microsoft/sp-property-pane']).toBe('1.22.0');
+    expect(deps['@microsoft/sp-core-library']).toBe('1.23.0');
+    expect(deps['@microsoft/sp-webpart-base']).toBe('1.23.0');
+    expect(deps['@microsoft/sp-property-pane']).toBe('1.23.0');
+    const devDeps = pkg['devDependencies'] as Record<string, string>;
+    const toolchainVersion = JSON.parse(
+      fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    ) as { version: string };
+    expect(devDeps['@mbsks/rspfx-plugin']).toBe(`^${toolchainVersion.version}`);
+    expect(devDeps['@mbsks/rspfx-cli']).toBe(`^${toolchainVersion.version}`);
+  });
+
+  it('writes a comma-correct dev block when tenantUrl is set', () => {
+    const vars = makeVars({ tenantUrl: 'https://contoso.sharepoint.com' });
+    const dir = path.join(tmpRoot, 'tenant');
+    scaffoldProject(vars, dir);
+
+    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    expect(config).toContain('    openBrowser: true,');
+    expect(config).toContain("    tenantUrl: 'https://contoso.sharepoint.com'");
+    expect(config).toMatch(/openBrowser: true,\n {8}tenantUrl: 'https:\/\/contoso\.sharepoint\.com'/);
   });
 
   it('writes a webpart manifest with componentType WebPart and an alias', () => {
@@ -107,9 +125,13 @@ describe('scaffoldProject', () => {
     expect(entry).toContain("import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base'");
     expect(entry).toContain("import HelloWorld from './components/HelloWorld'");
 
-    const config = fs.readFileSync(path.join(dir, 'rspfx.config.ts'), 'utf-8');
+    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
+    expect(config).toContain("name: '@contoso/hello'");
+    expect(config).toContain("version: '0.0.1'");
     expect(config).toContain("framework: 'react'");
     expect(config).toContain('fluent: true');
+    expect(config).toContain('port: 4321');
 
     const tsconfig = readJson(dir, 'tsconfig.json');
     const compilerOptions = (tsconfig['compilerOptions'] as Record<string, unknown>);
@@ -141,7 +163,8 @@ describe('scaffoldProject', () => {
     const dir = path.join(tmpRoot, 'tailwind');
     scaffoldProject(vars, dir);
 
-    const config = fs.readFileSync(path.join(dir, 'rspfx.config.ts'), 'utf-8');
+    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
     expect(config).toContain("styling: 'tailwind'");
 
     const stylesPath = path.join(dir, 'src/webparts/hello-world/styles/HelloWorld.module.scss');
@@ -226,7 +249,8 @@ describe('scaffoldProject', () => {
     const dir = path.join(tmpRoot, 'vue-tailwind');
     scaffoldProject(vars, dir);
 
-    const config = fs.readFileSync(path.join(dir, 'rspfx.config.ts'), 'utf-8');
+    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
     expect(config).toContain("styling: 'tailwind'");
 
     expect(fs.existsSync(path.join(dir, 'src/webparts/hello-world/styles/HelloWorld.module.scss'))).toBe(false);

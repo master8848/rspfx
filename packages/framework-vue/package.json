@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-framework-vue",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "vue": "^3.5.13"
   },
-  "description": "RSPFX Vue framework adapter",
+  "description": "RSPFX Vue framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

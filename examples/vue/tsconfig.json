@@ -16,5 +16,5 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["src", "playground", "shims.d.ts", "rspfx.config.ts"]
+  "include": ["src", "playground", "shims.d.ts", "rspack.config.ts"]
 }

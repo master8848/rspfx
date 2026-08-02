@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { program } from 'commander';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { SPFX_TARGETS } from '@mbsks/rspfx-core';
 import { version } from './version.js';
 import { runNew, type NewOptions } from './commands/new.js';
 import { runDev } from './commands/dev.js';
@@ -48,7 +50,7 @@ export function configureProgram(): void {
     .option('--language <ts|js>', 'language')
     .option('--styling <css|scss|tailwind>', 'styling')
     .option('--fluent', 'enable Fluent UI')
-    .option('--spfx-version <1.20|1.21|1.22>', 'SPFx target version')
+    .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn>', 'package manager')
     .option('--no-install', 'skip dependency installation')
     .option('--tenant <url>', 'tenant URL for the dev workbench')
@@ -159,6 +161,6 @@ async function main(): Promise<void> {
 }
 
 const entry = process.argv[1];
-if (entry && import.meta.url === pathToFileURL(entry).href) {
+if (entry && import.meta.url === pathToFileURL(fs.realpathSync(entry)).href) {
   void main();
 }

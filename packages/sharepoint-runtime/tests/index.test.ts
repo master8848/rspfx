@@ -2,7 +2,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { EnvironmentType } from '@mbsks/rspfx-core';
-import { RspfxError } from '@mbsks/rspfx-diagnostics';
 import {
   createMockWebPartContext,
   createPlaygroundLoader,
@@ -55,38 +54,27 @@ describe('createMockWebPartContext', () => {
 });
 
 describe('createPlaygroundLoader', () => {
-  it('mounts and unmounts the resolved component with a stub adapter', () => {
-    const component = { kind: 'fake-component' };
-    const adapter = { mount: vi.fn(), unmount: vi.fn() };
-    const loader = createPlaygroundLoader({ default: component }, adapter);
+  it('mounts into the root via the supplied mount closure and unmounts via the teardown closure', () => {
+    const mount = vi.fn();
+    const unmount = vi.fn();
+    const loader = createPlaygroundLoader(mount, unmount);
     const root = document.createElement('div');
 
     loader.mount(root);
     loader.unmount();
 
-    expect(adapter.mount).toHaveBeenCalledTimes(1);
-    expect(adapter.mount).toHaveBeenCalledWith(root, component);
-    expect(adapter.unmount).toHaveBeenCalledTimes(1);
-    expect(adapter.unmount).toHaveBeenCalledWith(root);
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(mount).toHaveBeenCalledWith(root);
+    expect(unmount).toHaveBeenCalledTimes(1);
+    expect(unmount).toHaveBeenCalledWith(root);
   });
 
-  it('falls back to the module itself when there is no default export', () => {
-    const component = { kind: 'module-export' };
-    const adapter = { mount: vi.fn(), unmount: vi.fn() };
-    const loader = createPlaygroundLoader(component, adapter);
+  it('no-ops on unmount when no teardown closure is supplied', () => {
+    const mount = vi.fn();
+    const loader = createPlaygroundLoader(mount);
 
     loader.mount(document.createElement('div'));
-
-    expect(adapter.mount).toHaveBeenCalledWith(expect.any(HTMLElement), component);
-  });
-
-  it('throws RspfxError without an adapter', () => {
-    const loader = createPlaygroundLoader({ default: {} });
-
-    expect(() => loader.mount(document.createElement('div'))).toThrowError(
-      expect.objectContaining({ code: 'PLAYGROUND_ADAPTER_REQUIRED', name: 'RspfxError' })
-    );
-    expect(() => loader.mount(document.createElement('div'))).toThrowError(RspfxError);
+    expect(() => loader.unmount()).not.toThrow();
   });
 
   it('exports the playground service key', () => {

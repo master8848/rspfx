@@ -72,7 +72,7 @@ src/ → compiler-rspack → dist/ (bundles + assets)
           ▼              ▼                 ▼                  ▼
    ┌────────────┐  ┌────────────┐  ┌─────────────┐   ┌──────────────┐
    │diagnostics │  │ plugin-api │  │sharepoint-  │   │framework-*   │
-   │(log/error/ │  │(adapters,  │  │runtime      │   │(vanilla,     │
+   │(log/error/ │  │(presets,   │  │runtime      │   │(vanilla,     │
    │ telemetry) │  │ loaders,   │  │(sp-* shims, │   │ react, solid,│
    └────────────┘  │ hooks)     │  │ webpart id  │   │ preact, vue, │
                    └────────────┘  │ mapping)    │   │ svelte,      │
@@ -103,6 +103,7 @@ Rules:
 - `compiler-rspack` knows nothing about SharePoint. SharePoint logic lives in manifest-generator/sppkg-builder.
 - `manifest-server` + `dev-runtime` only exist in dev.
 - CLI is the only package that composes others; no cycles.
+- `plugin` (the bundler plugins carrying the project config) depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, and diagnostics.
 
 ---
 
@@ -112,25 +113,31 @@ Rules:
 |---|---|---|---|---|
 | `core` | foundation | — | SPFx interfaces, `BaseClientSideWebPart`, `WebPartContext`, property pane contracts, `Environment`, `ThemeProvider`, types | `defineConfig`, `BaseWebPart`, types |
 | `diagnostics` | foundation | core | logger, error codes, telemetry (opt-out), timers | `Logger`, `trace()` |
-| `plugin-api` | foundation | core, diagnostics | FrameworkAdapter interface, loader/transform hooks, packaging hooks | `FrameworkAdapter`, hook types |
+| `plugin-api` | foundation | core, diagnostics | FrameworkPreset interface, loader/transform hooks, packaging hooks | `FrameworkPreset`, hook types |
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, TS via swc, sourcemaps, tree-shaking, splitting, CSS/SCSS/CSS-modules, assets, caching | `createCompiler()`, `watch()` |
 | `manifest-generator` | build | core, diagnostics | manifests.js, component manifests, loaderConfig, asset references | `generateManifests()` |
 | `sppkg-builder` | build (PRIORITY 1) | manifest-generator, core | package-solution.json, solution feature metadata, package manifest, ZIP, `.sppkg` | `buildPackage()` |
 | `manifest-server` | dev | core, diagnostics | certs + dev certificates only; serving is handled by the compiler dev server | `ensureCertificates()` |
 | `dev-runtime` | dev | core, compiler-rspack, manifest-server | serve emulation, websocket hub, browser refresh, fast-refresh runtime, workbench URL | `startDev()`, `FastRefreshRuntime` |
-| `framework-vanilla` | framework | core, plugin-api | DOM mount/unmount adapter | adapter |
-| `framework-react` | framework | core, plugin-api | react adapter + fast refresh (react-refresh) | adapter |
-| `framework-solid` | framework | core, plugin-api | solid adapter + fast refresh (solid-refresh) | adapter |
-| `framework-preact` | framework | core, plugin-api | preact adapter + refresh | adapter |
-| `framework-vue` | framework | core, plugin-api | vue adapter + vue HMR | adapter |
-| `framework-svelte` | framework | core, plugin-api | svelte adapter + svelte HMR | adapter |
-| `framework-angular` | framework | core, plugin-api | **DEFERRED** — separate compiler track (AOT, ngc/ng-packagr) | adapter |
+| `framework-vanilla` | framework | core, plugin-api | vanilla web part class (replaceChildren) | preset |
+| `framework-react` | framework | core, plugin-api | react web part class (createRoot) + fast refresh (react-refresh) | preset |
+| `framework-solid` | framework | core, plugin-api | solid web part class (render + dispose); no refresh | preset |
+| `framework-preact` | framework | core, plugin-api | preact web part class (render / render-null) + refresh | preset |
+| `framework-vue` | framework | core, plugin-api | vue web part class (createApp + unmount) + vue HMR | preset |
+| `framework-svelte` | framework | core, plugin-api | svelte web part class (new Component + $destroy) + svelte HMR | preset |
+| `framework-angular` | framework | core, plugin-api | **DEFERRED** — separate compiler track (AOT, ngc/ng-packagr) | preset |
 | `fluent-adapter` | optional | framework-react | Fluent UI web part boilerplate, theme sync | `FluentWebPart` |
 | `sharepoint-runtime` | runtime | core | shims/bridges for sp-* npm packages, framework→SPFx glue | helpers |
 | `templates` | scaffolding | — | project templates (per framework, per language, per styling) | template files |
 | `cli` | app | everything above | `new/dev/playground/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
 
 Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend on them directly (version pinned to SPFx target); the toolchain externalizes them and emits `"type": "component"` dependency entries into manifests so SharePoint resolves its own built-in copies. `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.
+
+**Config flow:** the CLI loads the user's `rspack.config.ts` (or `vite.config.ts`)
+via jiti, scans the `plugins` array for `RSPFX_PLUGIN_MARKER`, and reads the
+plugin's `options` — the single project config (name, framework, dev, build,
+paths, playground, deploy). No config or no plugin → CLI error with guidance.
+`rspfx.config.ts` is removed; there is no legacy support.
 
 ---
 
@@ -139,7 +146,7 @@ Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend 
 | # | Risk | Severity | Mitigation |
 |---|---|---|---|
 | R1 | **Bundle wrapper incompatibility.** SPFx's module loader expects a specific AMD-style `define(...)` wrapper and module-id convention that official webpack emits via a custom plugin. If Rspack's `library` output doesn't match, the web part silently fails to load. | CRITICAL | Phase 0 reference capture: unzip a real `.sppkg`, diff wrapper byte-for-byte; wrap Rspack output with a small output plugin if needed. Automated fixture test compares against captured artifact. |
-| R2 | **sp-* dependency IDs/versions drift** across SPFx 1.20/1.21/1.22. Wrong `component` id/version in loaderConfig → loader fails at runtime. | CRITICAL | Harvest from node_modules `.manifest.json` files, not hardcoded tables; version matrix tests per target. |
+| R2 | **sp-* dependency IDs/versions drift** across SPFx 1.20–1.23. Wrong `component` id/version in loaderConfig → loader fails at runtime. | CRITICAL | Harvest from node_modules `.manifest.json` files, not hardcoded tables; version matrix tests per target. |
 | R3 | **Rspack output-format gaps** (AMD interop, iife/var combos, `output.library.type: 'amd'` behavior) vs webpack. | HIGH | Verify in Phase 2 spike before building anything else; fallback = custom chunk wrapper. |
 | R4 | **Silent dev-mode failure**: wrong cert/URL/port → blank workbench with no error (hard to debug, no local UI tests). | HIGH | `rspfx doctor` runs the same checks SPFx uses; keep the serve pipeline byte-compatible with official behavior. |
 | R5 | **Fast Refresh per framework** needs framework-specific runtimes (react-refresh, solid-refresh, vue HMR, svelte HMR) — 5 runtimes, 5 failure modes. | HIGH | Framework packages own their runtime; fallback to full page refresh is mandatory and automatic. |
@@ -154,7 +161,7 @@ Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend 
 
 1. Exact byte-level format of the production bundle wrapper (AMD? named module? `define` signature) and how `entryModuleId` maps to it. → Capture from real `.sppkg`.
 2. Exact ZIP layout of `.sppkg` (root `manifest.json` schema, component manifest filenames, presence/absence of feature.xml, `_locales/`, `assets/`). → Capture.
-3. `manifests.js` global shape (`window['__MANIFESTS__']`? version field?) and full component-manifest schema for 1.20/1.21/1.22. → Capture from `temp/manifests.js` of a reference project.
+3. `manifests.js` global shape (`window['__MANIFESTS__']`? version field?) and full component-manifest schema for 1.20–1.23. → Capture from `temp/manifests.js` of a reference project.
 4. Whether Rspack `output.library.type: 'amd'` + `externals` reproduces the official wrapper without a custom output plugin. → 1-day spike (R3).
 5. How official serve mode resolves local sp-* manifests through :4321 (`node_modules` proxy path shape) — must mirror it for offline-ish workbench. → Capture `temp/serve.json`, curl :4321 endpoints.
 6. Exact `package-solution.json` → `feature.xml` semantics (SPFx generates features server-side from solution metadata; confirm nothing client-side is needed beyond package-solution.json).
@@ -168,7 +175,7 @@ Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend 
 
 ```
 Phase 0  Reference capture (no product code)
-         - scaffold official SPFx 1.20/1.21/1.22 projects (vanilla + React)
+         - scaffold official SPFx 1.20–1.23 projects (vanilla + React)
          - capture: built .sppkg, dist bundles, temp/manifests.js, serve endpoints,
            node_modules sp-* manifest inventory → tests/fixtures/reference/
          - 1-day Rspack AMD output spike (Unknown #4)
@@ -181,7 +188,7 @@ Phase 2  Packaging core (PRIORITY #1 — the "prove .sppkg works" milestone)
          - sppkg-builder + manifest-generator
          - fixture-driven: fixture src → dist → solution.sppkg
          - unit + packaging tests against captured reference artifacts
-         - vanilla adapter
+         - vanilla web part class
          ✅ GATE: generated .sppkg installs in a real tenant app catalog,
            web part renders, property pane opens, no console errors.
 
@@ -190,7 +197,7 @@ Phase 3  Compiler
 
 Phase 4  CLI build+package surface
          - rspfx new / build / package / clean / analyze / doctor
-         - React + Solid adapters (build-only)
+         - React + Solid web part classes (build-only)
 
 Phase 5  Dev mode
          - :4321 dev server (in compiler-rspack) with certs from manifest-server;
@@ -204,7 +211,7 @@ Phase 6  dev --refresh + playground
          - playground: standalone localhost sandbox, no SharePoint
 
 Phase 7  Framework breadth
-         - Preact, Vue, Svelte adapters + refresh
+         - Preact, Vue, Svelte web part classes + refresh
          - Fluent adapter
 
 Phase 8  Angular (deferred track, only after Phases 2–6 proven)
@@ -221,7 +228,7 @@ Phase 9  Benchmarks + full test suite + docs
 
 1. **`sp-*` never bundled in production output.** Always `externals` + `"type": "component"` manifest entries with the exact id/version from the targeted SPFx version's node_modules.
 2. **Output naming identical to official**: `<entry>.js` (e.g. `my-webpart.js`), matching `loaderConfig.scriptResources.<entryModuleId>.path`.
-3. **`defineConfig` + generated project layout mirror official SPFx conventions** (`src/webparts/*/`, `config/`, `sharepoint/`) so `rspfx new` output is boring and familiar.
+3. **The generated project layout mirrors official SPFx conventions** — a bundler config hosting the `RspfxPlugin` (`src/webparts/*/`, `config/`, `sharepoint/`) so `rspfx new` output is boring and familiar.
 4. **The `.sppkg` must install via app catalog → site collection → workbench**, byte-valid zip (CRC/ZIP64 correctness — Python `zipfile`-compatible, readable by SharePoint's extraction).
 5. **Manifest schema fields preserved**: `preconfiguredEntries`, `properties`, `safeWithCustomScriptDisabled`, `componentType`, `manifestVersion: 2`, `loaderConfig.scriptResources` dependency types (`component`/`path`/`localizedPath`).
 6. **Dev must work like official serve**: workbench is primary; `localhost:4321/temp/manifests.js` URL shape; auto-opened browser; rebuild notifications; HTTPS with trusted self-signed cert.
@@ -241,11 +248,11 @@ Phase 9  Benchmarks + full test suite + docs
 | M2 | Compiler + build/package CLI + React/Solid | `rspfx new` → `rspfx build` → `rspfx package` one-command happy path for 3 frameworks |
 | M3 | Dev mode | Workbench-first live editing, auto browser open, <2s cold start, <300ms rebuild |
 | M4 | Fast refresh + playground | State-preserving refresh <150ms; sandbox mode without tenant |
-| M5 | Framework breadth + Fluent | Preact/Vue/Svelte adapters; Fluent web part scaffold |
-| M6 | Angular (deferred) | Angular adapter on separate compiler track |
+| M5 | Framework breadth + Fluent | Preact/Vue/Svelte web part classes; Fluent web part scaffold |
+| M6 | Angular (deferred) | Angular web part class + preset on separate compiler track |
 | M7 | Benchmarks, full test suite, docs | Targets met; docs site; migration guide; examples for all frameworks |
 
-Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20/1.21/1.22), framework tests, benchmarks (scripted).
+Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20–1.23), framework tests, benchmarks (scripted).
 
 ---
 

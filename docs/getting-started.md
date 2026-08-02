@@ -17,7 +17,7 @@ rspfx new my-app
 
 Runs interactively: prompts for framework (vanilla / react / solid / preact / vue /
 svelte), language (typescript / javascript), styling (css / scss / tailwind),
-Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22), and package manager. Then it
+Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22 / 1.23), and package manager. Then it
 scaffolds the project and installs dependencies.
 
 Non-interactive (useful for CI):
@@ -39,7 +39,7 @@ rspfx new my-app \
 
 ```
 my-app/
-├── rspfx.config.ts              # the single config file (name, framework, dev, build, ...)
+├── rspack.config.ts              # the bundler config hosting the RspfxPlugin (name, framework, dev, build, ...)
 ├── package.json
 ├── tsconfig.json
 ├── src/
@@ -57,26 +57,35 @@ my-app/
 └── playground/                  # playground host (index.html, main.ts)
 ```
 
-Every path above is a default — `paths` in `rspfx.config.ts` (`srcDir`,
+Every path above is a default — `paths` in the plugin options (`srcDir`,
 `webpartsDir`, `configDir`) relocates the source, web parts, and config folders;
 see [building-packages.md](building-packages.md).
 
-`rspfx.config.ts` uses `defineConfig`:
+The project config lives in your bundler config as a plugin instance — the
+`RspfxPlugin` from `@mbsks/rspfx-plugin` in `rspack.config.ts` (the default;
+`rspfxVite` in `vite.config.ts` for Vite-based projects):
 
 ```ts
-import { defineConfig } from '@mbsks/rspfx-core';
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
-export default defineConfig({
-  name: 'my-app',
-  framework: 'react',
-  spfxVersion: '1.22',
-  dev: { tenantUrl: 'https://contoso.sharepoint.com' },
-});
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: 'my-app',
+      framework: 'react',
+      spfxVersion: '1.23',
+      dev: { tenantUrl: 'https://contoso.sharepoint.com' },
+    }),
+  ],
+};
 ```
 
-Key defaults: `dev.port` **4321**, `dev.https` true, `dev.fastRefresh` false,
-`dev.openBrowser` true, `dev.workbench` true, `build.outDir` **dist**,
-`build.releaseDir` **release**.
+The CLI loads the bundler config via jiti, finds the plugin by its marker
+symbol, and uses its options. Key defaults: `dev.port` **4321**, `dev.https`
+true, `dev.fastRefresh` false, `dev.openBrowser` true, `dev.workbench` true,
+`build.outDir` **dist**, `build.releaseDir` **release**. The `version` option
+overrides package.json for the AMD library names and manifests.
 
 ## 3. Development workflow
 
@@ -105,7 +114,7 @@ The browser opens:
 
 The workbench page is on your SharePoint tenant, so rspfx needs to know it:
 
-- Set `dev.tenantUrl` in `rspfx.config.ts`, or
+- Set `dev.tenantUrl` in the plugin options in `rspack.config.ts`, or
 - Set the `SPFX_SERVE_TENANT_DOMAIN` env var (replaces the `{tenantdomain}` token
   in `config/serve.json`'s `initialPage`), or
 - Override per-run: `rspfx dev --tenant https://contoso.sharepoint.com`.
@@ -168,8 +177,9 @@ rspfx doctor
 Runs the same checks the dev/package pipeline depends on:
 
 - Node version ≥ 20
-- `package.json` present; `rspfx.config.ts` loads and resolves
-  (`resolveConfig` defaults)
+- `package.json` present; the bundler config (`rspack.config.ts` /
+  `vite.config.ts`) loads and resolves (plugin options → `resolveConfig`
+  defaults)
 - Framework package resolvable; sp-* dependency versions match `spfxVersion`
 - Web part bundles discovered (`config.json` bundles or `src/webparts/*`
   scanning)

@@ -62,10 +62,4 @@ describe('ReactWebPart', () => {
     });
     expect(domElement.childNodes.length).toBe(0);
   });
-
-  it('exposes the framework adapter singleton', () => {
-    const webPart = new TestReactWebPart();
-    const adapter = (webPart as unknown as { frameworkAdapter: unknown }).frameworkAdapter;
-    expect(adapter).toMatchObject({ name: 'react' });
-  });
 });

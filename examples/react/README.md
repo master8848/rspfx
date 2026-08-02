@@ -6,10 +6,10 @@ A React 18 web part demonstrating the RSPFX framework support.
 
 - React web part via `ReactWebPart` from `@mbsks/rspfx-framework-react`
 - Automatic JSX runtime (`jsx: react-jsx`), bundle includes React (SPFx convention)
-- `rspfx.config.ts` configuration (framework, spfx target, dev/build/playground settings)
+- `rspack.config.ts` configuration via the `RspfxPlugin` (framework, spfx target, dev/build/playground settings)
 - Manifest auto-discovery (`src/webparts/hello/hello.manifest.json` + `helloWebPart.ts`)
 - Property pane (`PropertyPaneTextField`) via `getPropertyPaneConfiguration`
-- Standalone playground page (`playground/`) using the framework adapter + `createMockWebPartContext`
+- Standalone playground page (`playground/`) using a self-mounting playground entry + `createMockWebPartContext`
 
 ## Commands
 

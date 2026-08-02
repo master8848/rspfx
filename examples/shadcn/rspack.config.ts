@@ -1,0 +1,24 @@
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: '@mbsks/rspfx-example-shadcn',
+      version: '1.0.0',
+      framework: 'react',
+      spfxVersion: '1.22',
+      language: 'typescript',
+      styling: 'tailwind',
+      dev: {
+        tenantUrl: 'https://contoso.sharepoint.com',
+        port: 4321,
+        https: true,
+        fastRefresh: true
+      },
+      build: {
+        minify: true
+      }
+    })
+  ]
+};

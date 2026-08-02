@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@mbsks/rspfx-cli": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
     "typescript": "^5.7.0"
   }
 }

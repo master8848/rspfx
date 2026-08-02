@@ -48,7 +48,11 @@ export interface ReadProjectResult {
   localizedResources: LocalizedResource[];
 }
 
-export function readProject(projectRoot: string, paths?: PathsConfig): ReadProjectResult {
+export function readProject(
+  projectRoot: string,
+  paths?: PathsConfig,
+  versionOverride?: string
+): ReadProjectResult {
   const resolvedPaths = resolvePathDefaults(paths);
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
@@ -68,7 +72,9 @@ export function readProject(projectRoot: string, paths?: PathsConfig): ReadProje
     serveJson = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
   }
 
-  const webParts = discoverWebParts(projectRoot, configJson, resolvedPaths.webpartsDir, packageJson);
+  const webParts = discoverWebParts(projectRoot, configJson, resolvedPaths.webpartsDir, {
+    version: versionOverride ?? packageJson.version
+  });
   return {
     webParts,
     configJson,

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { configDefaults } from '@mbsks/rspfx-core';
+import { configDefaults, spfxNpmVersion } from '@mbsks/rspfx-core';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 
 export interface TemplateVars {
@@ -66,20 +66,33 @@ const FRAMEWORK_RUNTIME_DEPS: Record<string, Record<string, string>> = {
   preact: { preact: '^10.24.0' }
 };
 
+/**
+ * The current release version of the rspfx toolchain — every publishable
+ * package shares one version, so the scaffold can pin its @mbsks/rspfx-*
+ * devDependencies to a resolvable range of the actual npm release.
+ */
+const TOOLCHAIN_VERSION: string = (() => {
+  const pkg = JSON.parse(
+    fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+  ) as { version?: string };
+  return pkg.version ?? '0.0.1';
+})();
+
 function frameworkDeps(vars: TemplateVars): Record<string, string> {
   const runtime = FRAMEWORK_RUNTIME_DEPS[vars.framework];
   if (!runtime) {
     return {};
   }
-  return { [`@mbsks/rspfx-framework-${vars.framework}`]: '^0.0.1', ...runtime };
+  return { [`@mbsks/rspfx-framework-${vars.framework}`]: `^${TOOLCHAIN_VERSION}`, ...runtime };
 }
 
 function buildFiles(vars: TemplateVars): TemplateFile[] {
   const files: TemplateFile[] = [
     { path: 'package.json', content: packageJson(vars) },
     { path: 'tsconfig.json', content: tsconfigJson(vars) },
-    { path: 'rspfx.config.ts', content: rspfxConfig(vars) },
+    { path: 'rspack.config.ts', content: rspackConfig(vars) },
     { path: '.gitignore', content: gitignore() },
+    { path: '.npmrc', content: npmrc() },
     { path: 'README.md', content: readme(vars) },
     { path: 'config/package-solution.json', content: packageSolution(vars) },
     { path: 'config/serve.json', content: serveJson(vars) },
@@ -148,7 +161,7 @@ function componentExtension(vars: TemplateVars): string {
 }
 
 function packageJson(vars: TemplateVars): string {
-  const spVersion = `${vars.spfxVersion}.0`;
+  const spVersion = spfxNpmVersion(vars.spfxVersion);
   const tailwindDeps = vars.styling === 'tailwind' ? { tailwindcss: '^4.0.0' } : {};
   const framework = frameworkDeps(vars);;
   const shadcnDeps = isShadcn(vars)
@@ -193,6 +206,8 @@ function packageJson(vars: TemplateVars): string {
         ...shadcnDeps
       },
       devDependencies: {
+        '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
+        '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
         typescript: '^5.7.0',
         ...shadcnDevDeps
       }
@@ -231,30 +246,40 @@ function tsconfigJson(vars: TemplateVars): string {
   );
 }
 
-function rspfxConfig(vars: TemplateVars): string {
+function rspackConfig(vars: TemplateVars): string {
+  const devLines = [
+    `        port: ${configDefaults.dev.port},`,
+    `        https: ${configDefaults.dev.https},`,
+    `        hostname: '${configDefaults.dev.hostname}',`,
+    `        workbench: ${configDefaults.dev.workbench},`,
+    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: '${vars.tenantUrl}'` : ''}`
+  ];
   const lines: string[] = [
+    `import { RspfxPlugin } from '@mbsks/rspfx-plugin';`,
+    '',
     'export default {',
-    `  name: '${vars.packageName}',`,
-    `  framework: '${vars.framework}',`,
-    `  spfxVersion: '${vars.spfxVersion}',`,
-    `  fluent: ${vars.fluent},`,
-    `  language: '${vars.language}',`,
-    `  styling: '${vars.styling}',`,
-    '  dev: {',
-    `    port: ${configDefaults.dev.port},`,
-    `    https: ${configDefaults.dev.https},`,
-    `    hostname: '${configDefaults.dev.hostname}',`,
-    `    workbench: ${configDefaults.dev.workbench},`,
-    `    openBrowser: ${configDefaults.dev.openBrowser}`,
-    ...(vars.tenantUrl ? [`    tenantUrl: '${vars.tenantUrl}'`] : []),
-    '  },',
-    '  build: {',
-    `    sourcemap: ${configDefaults.build.sourcemap},`,
-    `    minify: ${configDefaults.build.minify},`,
-    `    splitChunks: ${configDefaults.build.splitChunks},`,
-    `    outDir: '${configDefaults.build.outDir}',`,
-    `    releaseDir: '${configDefaults.build.releaseDir}'`,
-    '  }',
+    "  mode: 'development',",
+    '  plugins: [',
+    '    new RspfxPlugin({',
+    `      name: '${vars.packageName}',`,
+    `      version: '${vars.packageVersion}',`,
+    `      framework: '${vars.framework}',`,
+    `      spfxVersion: '${vars.spfxVersion}',`,
+    `      fluent: ${vars.fluent},`,
+    `      language: '${vars.language}',`,
+    `      styling: '${vars.styling}',`,
+    '      dev: {',
+    ...devLines,
+    '      },',
+    '      build: {',
+    `        sourcemap: ${configDefaults.build.sourcemap},`,
+    `        minify: ${configDefaults.build.minify},`,
+    `        splitChunks: ${configDefaults.build.splitChunks},`,
+    `        outDir: '${configDefaults.build.outDir}',`,
+    `        releaseDir: '${configDefaults.build.releaseDir}'`,
+    '      }',
+    '    })',
+    '  ]',
     '};'
   ];
   return `${lines.join('\n')}\n`;
@@ -272,6 +297,15 @@ function gitignore(): string {
     '*.sppkg',
     '.DS_Store'
   ].join('\n');
+}
+
+/**
+ * The @microsoft/sp-* packages declare exact-version peers on each other;
+ * npm >= 7 fails those with ERESOLVE. The official SPFx community fix is
+ * legacy-peer-deps, which also auto-installs framework peers (react, vue...).
+ */
+function npmrc(): string {
+  return 'legacy-peer-deps=true\n';
 }
 
 function readme(vars: TemplateVars): string {

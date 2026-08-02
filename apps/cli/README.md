@@ -47,14 +47,14 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 |---|---|
 | `@mbsks/rspfx-cli` | This package — the `rspfx` binary |
 | `@mbsks/rspfx-core` | Zero-dependency core: types, base web part, config |
-| `@mbsks/rspfx-plugin-api` | Framework adapter / plugin hooks |
+| `@mbsks/rspfx-plugin-api` | Framework preset / plugin hooks |
 | `@mbsks/rspfx-diagnostics` | Logger, errors, benchmarks |
 | `@mbsks/rspfx-compiler-rspack` | Rspack compiler layer |
 | `@mbsks/rspfx-manifest-generator` | SPFx component manifests |
 | `@mbsks/rspfx-sppkg-builder` | `.sppkg` package assembly |
 | `@mbsks/rspfx-manifest-server` | Workbench HTTPS manifest server |
 | `@mbsks/rspfx-dev-runtime` | Dev serve / refresh runtime |
-| `@mbsks/rspfx-framework-*` | Per-framework web part adapters |
+| `@mbsks/rspfx-framework-*` | Per-framework presets + web part classes |
 | `@mbsks/rspfx-fluent-adapter` | Fluent UI web part base (React) |
 | `@mbsks/rspfx-sharepoint-runtime` | `@microsoft/sp-*` bridges for the playground |
 | `@mbsks/rspfx-templates` | Project scaffolding |

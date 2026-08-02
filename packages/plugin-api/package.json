@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-plugin-api",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -24,7 +24,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*"
   },
-  "description": "RSPFX plugin API: FrameworkAdapter, FrameworkPreset, RspfxPlugin hooks",
+  "description": "RSPFX plugin API: FrameworkPreset, extension hooks",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

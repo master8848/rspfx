@@ -20,7 +20,7 @@
  *      resolves it.
  *   4. Delete Heft-only config files: rig.json, typescript.json, sass.json,
  *      deploy-azure-storage.json, spfx-customize-webpack.js.
- *   5. Write rspfx.config.ts (plain-object export; no dependency on @mbsks/rspfx-core
+ *   5. Write rspack.config.ts (RspfxPlugin-based; no dependency on @mbsks/rspfx-core
  *      required) and a plain tsconfig.json if the old one extends a rig.
  *
  * Note: `localizedResources` in config.json are handled natively — RSPFX maps
@@ -134,6 +134,7 @@ const removed = Object.keys(devDeps).filter((name) => TOOLCHAIN_DEPS.includes(na
 for (const name of removed) {
   delete devDeps[name];
 }
+devDeps['@mbsks/rspfx-plugin'] = '^0.0.1';
 pkg.devDependencies = devDeps;
 const removedHeftScripts = [];
 if (pkg.scripts?.start && pkg.scripts.start.includes('heft')) {
@@ -151,7 +152,8 @@ if (pkg.engines?.node) {
 fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 4) + '\n');
 log(`✓ package.json: removed ${removed.length} toolchain devDependencies` +
   (removed.length ? ` (${removed.join(', ')})` : '') + ', added rspfx scripts' +
-  (removedHeftScripts.length ? `, dropped heft scripts (${removedHeftScripts.join(', ')})` : ''));
+  (removedHeftScripts.length ? `, dropped heft scripts (${removedHeftScripts.join(', ')})` : '') +
+  ', added @mbsks/rspfx-plugin devDependency');
 
 // ─── 2. config/config.json ───────────────────────────────────────────────────
 const configJsonPath = path.join(projectRoot, 'config', 'config.json');
@@ -240,30 +242,35 @@ if (fs.existsSync(configDir)) {
   }
 }
 
-// ─── 5. rspfx.config.ts + tsconfig.json ──────────────────────────────────────
+// ─── 5. rspack.config.ts + tsconfig.json ─────────────────────────────────────
 const projectName = (pkg.name ?? 'my-app').replace(/^@[^/]+\//, '');
 const framework = (pkg.dependencies?.react ?? pkg.devDependencies?.react) ? 'react' : 'vanilla';
 const hasScss = fs.existsSync(path.join(srcDir, 'webparts')) &&
   fs.readdirSync(path.join(srcDir, 'webparts'), { recursive: true }).some((f) => f.endsWith('.scss'));
 const styling = hasScss || pkg.dependencies?.sass ? 'scss' : 'css';
 
-const configContent = `import { defineConfig } from '@mbsks/rspfx-core';
+const configContent = `import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
-export default defineConfig({
-  name: '${projectName}',
-  framework: '${framework}',
-  spfxVersion: '1.22',
-  styling: '${styling}',
-  dev: {
-    // https://{tenantdomain}/... is taken from config/serve.json initialPage
-    tenantUrl: 'https://contoso.sharepoint.com'
-  }
-});
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: '${projectName}',
+      framework: '${framework}',
+      spfxVersion: '1.22',
+      styling: '${styling}',
+      dev: {
+        // https://{tenantdomain}/... is taken from config/serve.json initialPage
+        tenantUrl: 'https://contoso.sharepoint.com'
+      }
+    })
+  ]
+};
 `;
-const configTsPath = path.join(projectRoot, 'rspfx.config.ts');
+const configTsPath = path.join(projectRoot, 'rspack.config.ts');
 if (!fs.existsSync(configTsPath)) {
   fs.writeFileSync(configTsPath, configContent);
-  log(`✓ wrote rspfx.config.ts (framework: ${framework}, styling: ${styling}) — edit dev.tenantUrl`);
+  log(`✓ wrote rspack.config.ts with RspfxPlugin (framework: ${framework}, styling: ${styling}) — edit dev.tenantUrl`);
 }
 
 const tsconfigPath = path.join(projectRoot, 'tsconfig.json');

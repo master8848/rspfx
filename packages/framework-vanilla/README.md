@@ -1,8 +1,8 @@
 # @mbsks/rspfx-framework-vanilla
 
-Vanilla JS/TS framework adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Vanilla JS/TS framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
-The default adapter with no framework runtime: extend `BaseWebPart` directly.
+The default framework with no runtime: extend `BaseWebPart` directly.
 
 ## Install
 
@@ -14,7 +14,7 @@ npm i @mbsks/rspfx-framework-vanilla
 
 ```ts
 import { BaseWebPart } from '@mbsks/rspfx-core';
-import { adapter, preset } from '@mbsks/rspfx-framework-vanilla';
+import { preset } from '@mbsks/rspfx-framework-vanilla';
 
 export default class MyWebPart extends BaseWebPart {
   protected async onInit(): Promise<void> {
@@ -25,7 +25,7 @@ export default class MyWebPart extends BaseWebPart {
 
 ## API
 
-- `adapter` / `preset` — `FrameworkAdapter` / `FrameworkPreset` registrations
+- `preset` — `FrameworkPreset` compiler contributions (from the package index)
 
 ## Links
 

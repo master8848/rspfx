@@ -1,0 +1,13 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "SharePoint Framework",
+      "description": "Skills for creating and building SharePoint Framework (SPFx) web parts with modern toolchains.",
+      "skills": [
+        "rspfx"
+      ]
+    }
+  ]
+}

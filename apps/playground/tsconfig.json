@@ -16,5 +16,5 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["src", "playground", "rspfx.config.ts"]
+  "include": ["src", "playground", "rspack.config.ts"]
 }

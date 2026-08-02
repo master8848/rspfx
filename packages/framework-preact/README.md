@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-preact
 
-Preact framework adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Preact framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
 Provides the `PreactWebPart` base class with fast refresh via `@rspack/plugin-preact-refresh`.
 
@@ -16,7 +16,7 @@ Requires `preact` `^10.24` as a peer dependency.
 
 ```ts
 import { PreactWebPart } from '@mbsks/rspfx-framework-preact/webpart';
-import { adapter, preset } from '@mbsks/rspfx-framework-preact';
+import { preset } from '@mbsks/rspfx-framework-preact';
 
 export default class MyWebPart extends PreactWebPart {
   protected async renderComponent(root: HTMLElement): Promise<void> {
@@ -28,7 +28,7 @@ export default class MyWebPart extends PreactWebPart {
 ## API
 
 - `PreactWebPart` — base web part class (from `@mbsks/rspfx-framework-preact/webpart`)
-- `adapter` / `preset` — `FrameworkAdapter` / `FrameworkPreset` registrations
+- `preset` — `FrameworkPreset` compiler contributions (from the package index)
 
 ## Links
 

@@ -27,6 +27,7 @@
     "@mbsks/rspfx-cli": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-framework-solid": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
     "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
     "typescript": "^5.7.0"
   }

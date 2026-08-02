@@ -58,7 +58,7 @@ rspfx package     # production build → .sppkg
 ## Supported targets
 
 - **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte (Angular deferred)
-- **SPFx targets:** 1.20, 1.21, 1.22
+- **SPFx targets:** 1.20, 1.21, 1.22, 1.23 (default)
 - **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
 
 ## Project structure
@@ -67,14 +67,15 @@ rspfx package     # production build → .sppkg
 apps/cli                  the rspfx binary (composition root)
 apps/playground           standalone playground host
 packages/core             SPFx types, base web part, config — zero dependencies
-packages/plugin-api       FrameworkAdapter / FrameworkPreset / plugin hooks
+packages/plugin           the RspfxPlugin / rspfxVite bundler plugins carrying the project config
+packages/plugin-api       FrameworkPreset / extension hooks
 packages/diagnostics      logger, errors, telemetry, benchmarks
 packages/compiler-rspack  Rspack config factory, TS via swc, SCSS, assets
 packages/manifest-generator  component manifests, manifests.js, sp-* deps
 packages/sppkg-builder    .sppkg ZIP assembly (AppManifest, features, assets)
 packages/manifest-server  dev certificates in ~/.rspfx/certs (serving is handled by the compiler dev server)
 packages/dev-runtime      serve emulation, websocket refresh, fast-refresh runtime
-packages/framework-*      per-framework adapters (vanilla, react, solid, preact, vue, svelte)
+packages/framework-*      per-framework presets + web part classes (vanilla, react, solid, preact, vue, svelte)
 packages/fluent-adapter   optional Fluent UI web part base (React-only)
 packages/sharepoint-runtime  shims/bridges for sp-* packages
 packages/templates        project scaffolding templates
@@ -83,13 +84,13 @@ reference/                captured SPFx format ground truth (FORMATS.md, compone
 docs/                     user + architecture documentation
 ```
 
-- **Custom folder layouts** — `paths` in `rspfx.config.ts` (`srcDir`,
-  `webpartsDir`, `configDir`) relocates the default `src/` + `src/webparts/` +
-  `config/` layout.
-- **Bundler plugin surface** — `spfx()` from `@mbsks/rspfx-compiler-rspack`
-  returns a full Rspack `Configuration` for use in your own `rspack.config.ts`
-  (vite/turbopack variants are future work; the CLI stays the opinionated
-  default).
+- **Custom folder layouts** — `paths` in the bundler config plugin options
+  (`srcDir`, `webpartsDir`, `configDir`) relocates the default `src/` +
+  `src/webparts/` + `config/` layout.
+- **Project config is a bundler plugin** — the `RspfxPlugin` in
+  `rspack.config.ts` (or `rspfxVite` in `vite.config.ts`) from
+  `@mbsks/rspfx-plugin` carries the project config (name, framework, dev,
+  build, …); the CLI finds it by its marker symbol and uses its options.
 
 `examples/modern-search` is a real production solution — PnP Modern Search
 (4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft +
@@ -98,8 +99,21 @@ webpack + gulp to RSPFX with zero web part code changes. See its README and
 
 ## Documentation
 
+The repo ships an installable agent skill for building SPFx with RSPFX (covers
+both the modern RSPFX toolchain and the official Microsoft Heft toolchain).
+Install it in any agent project:
+
+```sh
+npx skills add master8848/rspfx
+```
+
+It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
+
+[![skills.sh](https://skills.sh/b/master8848/rspfx)](https://skills.sh/master8848/rspfx)
+
 | Topic | Doc |
 |---|---|
+| Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
 | Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
 | Command reference | [docs/commands.md](docs/commands.md) |
 | Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |
@@ -107,7 +121,7 @@ webpack + gulp to RSPFX with zero web part code changes. See its README and
 | Migration overview | [docs/migration-from-spfx.md](docs/migration-from-spfx.md) |
 | Real-world case study (PnP Modern Search) | [docs/migration-case-study.md](docs/migration-case-study.md) |
 | Why you should NOT migrate (yet) | [docs/why-not-to-migrate.md](docs/why-not-to-migrate.md) |
-| Framework adapters | [docs/frameworks.md](docs/frameworks.md) |
+| Framework support | [docs/frameworks.md](docs/frameworks.md) |
 | Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
 | Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |

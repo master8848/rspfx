@@ -19,7 +19,7 @@ interface BundleRow {
 }
 
 export async function runAnalyze(cwd: string, opts: AnalyzeOptions = {}): Promise<{ reportPath: string; rows: BundleRow[] }> {
-  const config = await loadConfig(cwd);
+  const { config } = await loadConfig(cwd);
   const distDir = path.join(cwd, config.build.outDir ?? 'dist');
 
   let stats: { toJson(options: { all: boolean; chunks: boolean; chunkModules: boolean }): unknown } | undefined;

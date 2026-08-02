@@ -19,7 +19,7 @@ export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<
     return;
   }
 
-  const config = await loadConfig(cwd);
+  const { config } = await loadConfig(cwd);
   let tenant = config.deploy?.appCatalogSiteUrl ?? process.env.RSPFX_APP_CATALOG_URL;
   if (!tenant) {
     tenant = await promptText('App catalog site URL (e.g. https://contoso.sharepoint.com/sites/appcatalog)');

@@ -13,25 +13,26 @@ right call, or at least the low-risk one.
 | **List view command sets** (`ListViewCommandSet`) | ❌ Not supported | Same as above. |
 | **Angular web parts** | ❌ Not supported | Angular needs a separate AOT pipeline (`ngc`/`ng-packagr`); roadmap M6, deferred. |
 | **SPFx library components** (`src/libraries/`, component type Library) | ❌ Not supported | No library-component manifest/package path yet. |
-| **SharePoint 2019 / on-premises targets** | ❌ Not supported | RSPFX targets SPFx 1.20–1.22 (SharePoint Online); older sp-* packages are out of the supported matrix. |
+| **SharePoint 2019 / on-premises targets** | ❌ Not supported | RSPFX targets SPFx 1.20–1.23 (SharePoint Online); older sp-* packages are out of the supported matrix. |
 | **Teams tab / personal app manifests** | ⚠️ Not generated | You keep building the `teams/` manifests yourself (RSPFX doesn't emit them). |
 
 ## Strong warnings (migrate only with eyes open)
 
 | Feature | Status | Consequence |
 |---|---|---|
-| **Custom gulp pipelines** | ⚠️ No gulp task ecosystem | Arbitrary gulp tasks (release automation, multi-stage bundling, custom deploy scripts) have no gulp equivalent. Project-level extension points exist: `plugin-api` hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI, and `spfx()` (see below) lets you own the Rspack config — but scripting-style pipelines are still yours to write. |
-| **`spfx-customize-webpack.js` / webpack config surgery** | ⚠️ Escape hatch exists | The old webpack file is deleted. Most aliases turn out unnecessary under Rspack, but for real custom work there is now an escape hatch: export a `rspack.config.ts` that calls `spfx()` from `@mbsks/rspfx-compiler-rspack` (returns a full Rspack configuration; extend it with `additionalPlugins`/`swcContributions` or merge your own rules). Caveat: webpack-specific configs don't port automatically — loaders/plugins that only exist for webpack (and webpack-shaped module-federation configs) still need Rspack equivalents. |
+| **Custom gulp pipelines** | ⚠️ No gulp task ecosystem | Arbitrary gulp tasks (release automation, multi-stage bundling, custom deploy scripts) have no gulp equivalent. Project-level extension points exist: `plugin-api` hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI, and since the project config is a plugin in your own `rspack.config.ts` (the `RspfxPlugin`), the Rspack config is yours to extend — but scripting-style pipelines are still yours to write. |
+| **`spfx-customize-webpack.js` / webpack config surgery** | ⚠️ Escape hatch exists | The old webpack file is deleted. Most aliases turn out unnecessary under Rspack. The **primary** way to configure a project is the `RspfxPlugin` in `rspack.config.ts` (or `rspfxVite` in `vite.config.ts`) from `@mbsks/rspfx-plugin`; for full control, the plugin sits in a config you own, so you can extend it with extra loaders/plugins or merge your own rules. A lower-level alternative for compiler-only work is `spfx()` from `@mbsks/rspfx-compiler-rspack`, which returns a full Rspack configuration to extend (add `additionalPlugins`/`swcContributions` or merge your own rules). Caveat: webpack-specific configs don't port automatically — loaders/plugins that only exist for webpack (and webpack-shaped module-federation configs) still need Rspack equivalents. |
 | **Multi-locale runtime switching** | ⚠️ Single-locale | String modules resolve to the default locale (`en-us`) and are bundled. RSPFX does not yet emit `localizedPath` manifest entries from `config.json` `localizedResources`, so sp-loader won't swap locale modules at runtime. UI strings render in the default language. |
-| **SPFx version pinning** | ⚠️ 1.20–1.22 only | `spfxVersion` is typed to those three targets. If your tenant requires a newer patch level than 1.22 (e.g. 1.23), you can still point the config at the nearest supported target (versions are harvested from `node_modules`), but it's untested territory. |
+| **SPFx version pinning** | ⚠️ 1.20–1.23 | `spfxVersion` is typed to 1.20–1.23; the value must match the installed `@microsoft/sp-*` versions (harvested from `node_modules` at build time). |
 | **React 18/19 mixed tenants** | ⚠️ Same as official | Bundle React per web part (official behavior); check for React version conflicts on legacy pages — unchanged from official tooling. |
 
 ## Softer risks
 
 - **The toolchain is new.** Fewer battle-tested users than `gulp serve` +
   spfx-fast-serve. You become the beta tester.
-- **Adapters aren't final.** Framework adapter APIs are explicitly unstable
-  until milestone M5 — the framework packages can change under you.
+- **Framework APIs aren't final.** The web part class / preset surface is
+  explicitly unstable until milestone M5 — the framework packages can change
+  under you.
 - **No extension ecosystem.** No spfx-fast-serve, no PnP CLI build plugins,
   no custom heft rigs. The PnP tooling you may rely on (PnPjs, controls) works,
   but PnP-ecosystem *build* tooling doesn't apply.
@@ -49,7 +50,7 @@ right call, or at least the low-risk one.
 ## When migration IS the right call
 
 - Your solution is **web parts only** (no extensions, no libraries, no Angular).
-- You're on **SPFx 1.20–1.22** (SharePoint Online).
+- You're on **SPFx 1.20–1.23** (SharePoint Online).
 - Your team wants **fast builds** (a full PnP Modern Search build is ~2s vs
   minutes on Heft), **zero webpack/Heft/gulp surface**, and a **single config
   file**.
@@ -65,7 +66,7 @@ right call, or at least the low-risk one.
 | 4 web parts, localization, PnP controls (like Modern Search) | ✅ Migrate (single-locale) |
 | Any extension or library component | ❌ Don't |
 | Angular web part | ❌ Don't |
-| Custom webpack config doing real work | ⚠️ Try it — `rspack.config.ts` + `spfx()`; webpack-only plugins/loaders still need Rspack equivalents |
+| Custom webpack config doing real work | ⚠️ Try it — `rspack.config.ts` + `RspfxPlugin` (or the lower-level `spfx()`); webpack-only plugins/loaders still need Rspack equivalents |
 | SPFx 1.16 / 2019 / on-prem | ❌ Don't |
 | Enterprise, risk-averse, no capacity to babysit a new toolchain | ❌ Don't — revisit when RSPFX hits a stable release with real-tenant CI |
 

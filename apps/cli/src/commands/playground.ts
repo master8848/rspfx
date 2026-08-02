@@ -1,4 +1,4 @@
-import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { startPlayground, type DevRuntimeHandle } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
 
@@ -9,10 +9,16 @@ export interface PlaygroundOptions {
 }
 
 export async function runPlayground(cwd: string, opts: PlaygroundOptions = {}): Promise<DevRuntimeHandle> {
-  const config = await loadConfig(cwd);
+  const loaded = await loadConfig(cwd);
+  if (loaded.bundler === 'vite') {
+    throw new RspfxError(
+      'PLAYGROUND_VITE_UNSUPPORTED',
+      'The playground is not supported for Vite projects yet. Use "rspack.config.ts" with RspfxPlugin, or run "vite" directly.'
+    );
+  }
   const handle = await startPlayground({
     projectRoot: cwd,
-    config,
+    config: loaded.config,
     noBrowser: false,
     port: opts.port
   });

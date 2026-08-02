@@ -1,7 +1,15 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { TemplateVars } from '@mbsks/rspfx-templates';
+
+export function linkPluginPackage(dir: string): void {
+  const nmDir = path.join(dir, 'node_modules', '@mbsks');
+  fs.mkdirSync(nmDir, { recursive: true });
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+  fs.symlinkSync(path.join(repoRoot, 'packages', 'plugin'), path.join(nmDir, 'rspfx-plugin'), 'dir');
+}
 
 export function makeTmpDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `rspfx-cli-${prefix}-`));
@@ -13,7 +21,7 @@ export function baseVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     namePascal: 'Hello',
     nameCamel: 'hello',
     framework: 'vanilla',
-    spfxVersion: '1.22',
+    spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
     styling: 'scss',

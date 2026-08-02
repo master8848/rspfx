@@ -2,7 +2,7 @@
 
 Plugin API of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
-Lets you extend the toolchain with `RspfxPlugin` instances: framework adapters, compiler hooks, and package hooks.
+Lets you extend the toolchain with `RspfxExtension` instances: framework presets, compiler hooks, and package hooks.
 
 ## Install
 
@@ -14,23 +14,23 @@ npm i @mbsks/rspfx-plugin-api
 
 ```ts
 import { definePlugin, registerPlugin, getPlugins } from '@mbsks/rspfx-plugin-api';
-import type { FrameworkAdapter, FrameworkPreset } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 
-const myAdapter: FrameworkAdapter = { /* ... */ };
 const preset: FrameworkPreset = {
-  id: 'my-framework',
-  adapter: myAdapter,
-  rspack: { /* loader/plugin contributions */ }
+  name: 'my-framework',
+  contributions() {
+    return { swc: { jsc: { parser: { syntax: 'typescript' } } } };
+  }
 };
 
-registerPlugin(definePlugin({ name: 'my-framework', preset }));
+registerPlugin(definePlugin({ name: 'my-framework', frameworkPreset: preset }));
 ```
 
 ## API
 
 - `definePlugin(plugin)` — typed plugin factory
 - `registerPlugin(plugin)` / `getPlugins()` — global registry (wired by the CLI)
-- Types: `RspfxPlugin`, `FrameworkAdapter`, `FrameworkPreset`, `FrameworkRspackContributions`, `CompilerHooks`, `PackageHooks`
+- Types: `RspfxExtension`, `FrameworkPreset`, `FrameworkRspackContributions`, `CompilerHooks`, `PackageHooks`
 
 ## Links
 

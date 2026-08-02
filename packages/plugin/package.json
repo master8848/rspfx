@@ -1,0 +1,41 @@
+{
+  "name": "@mbsks/rspfx-plugin",
+  "version": "0.0.6",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-dev-runtime": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@rspack/core": "^1.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "description": "RSPFX bundler plugins: RspfxPlugin (Rspack/Webpack-compatible) and rspfxVite (Vite) carrying the single project config object",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/master8848/rspfx.git"
+  }
+}

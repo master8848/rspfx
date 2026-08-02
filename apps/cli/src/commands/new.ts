@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { scaffoldProject, type TemplateVars } from '@mbsks/rspfx-templates';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
+import { SPFX_DEFAULT_TARGET, SPFX_TARGETS, isSpfxTarget } from '@mbsks/rspfx-core';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import {
   DEFAULT_FRAMEWORK,
@@ -17,7 +18,6 @@ import {
 const logger = createLogger('rspfx');
 
 const LANGUAGES = ['ts', 'js'] as const;
-const SPFX_VERSIONS: readonly SpfxTarget[] = ['1.20', '1.21', '1.22'];
 const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn'] as const;
 
 export interface NewOptions {
@@ -42,7 +42,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
   let language = opts.language ?? 'ts';
   let styling = (opts.styling as string) ?? DEFAULT_STYLING;
   let fluent = opts.fluent ?? false;
-  let spfxVersion = (opts.spfxVersion as SpfxTarget) ?? '1.22';
+  let spfxVersion = (opts.spfxVersion as SpfxTarget) ?? SPFX_DEFAULT_TARGET;
   let pm = opts.pm ?? 'pnpm';
 
   if (!skipPrompts) {
@@ -59,7 +59,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
       fluent = await promptConfirm('Enable Fluent UI?', false);
     }
     if (opts.spfxVersion === undefined) {
-      spfxVersion = (await promptChoice('SPFx version', SPFX_VERSIONS, spfxVersion)) as SpfxTarget;
+      spfxVersion = (await promptChoice('SPFx version', SPFX_TARGETS, spfxVersion)) as SpfxTarget;
     }
     if (opts.pm === undefined) {
       pm = await promptChoice('Package manager', PACKAGE_MANAGERS, pm);
@@ -75,8 +75,8 @@ export async function runNew(opts: NewOptions): Promise<string> {
   if (!(STYLING_CHOICES as readonly string[]).includes(styling)) {
     throw new RspfxError('INVALID_OPTION', `Unknown styling '${styling}'. Expected one of: ${STYLING_CHOICES.join(', ')}`);
   }
-  if (!(SPFX_VERSIONS as readonly string[]).includes(spfxVersion)) {
-    throw new RspfxError('INVALID_OPTION', `Unknown spfx version '${spfxVersion}'. Expected one of: ${SPFX_VERSIONS.join(', ')}`);
+  if (!isSpfxTarget(spfxVersion)) {
+    throw new RspfxError('INVALID_OPTION', `Unknown spfx version '${spfxVersion}'. Expected one of: ${SPFX_TARGETS.join(', ')}`);
   }
   if (!(PACKAGE_MANAGERS as readonly string[]).includes(pm)) {
     throw new RspfxError('INVALID_OPTION', `Unknown package manager '${pm}'. Expected one of: ${PACKAGE_MANAGERS.join(', ')}`);

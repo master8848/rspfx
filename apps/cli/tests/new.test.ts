@@ -14,7 +14,7 @@ describe('new', () => {
       language: 'ts',
       styling: 'scss',
       fluent: false,
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       pm: 'pnpm',
       install: false,
       tenant: 'https://contoso.sharepoint.com'
@@ -24,7 +24,8 @@ describe('new', () => {
     for (const file of [
       'package.json',
       'tsconfig.json',
-      'rspfx.config.ts',
+      'rspack.config.ts',
+'.npmrc',
       '.gitignore',
       'README.md',
       'config/package-solution.json',
@@ -48,7 +49,7 @@ describe('new', () => {
     };
     expect(packageJson.name).toBe('my-app');
     expect(packageJson.version).toBe('1.0.0');
-    expect(packageJson.dependencies?.['@microsoft/sp-property-pane']).toBe('1.22.0');
+    expect(packageJson.dependencies?.['@microsoft/sp-property-pane']).toBe('1.23.0');
 
     const solutionConfig = JSON.parse(
       fs.readFileSync(path.join(dest, 'config', 'package-solution.json'), 'utf8')
@@ -60,7 +61,7 @@ describe('new', () => {
     expect(solutionConfig.solution.features[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(solutionConfig.paths.zippedPackage).toBe('sharepoint/solution/my-app.sppkg');
 
-    const config = fs.readFileSync(path.join(dest, 'rspfx.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
     expect(config).toContain("tenantUrl: 'https://contoso.sharepoint.com'");
     rmRf(tmp);
@@ -78,7 +79,7 @@ describe('new', () => {
     const tmp = makeTmpDir('new-defaults');
     const dest = await runNew({ name: 'def-app', cwd: tmp, yes: true, install: false });
 
-    const config = fs.readFileSync(path.join(dest, 'rspfx.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'react'");
     expect(config).toContain("styling: 'tailwind'");
 

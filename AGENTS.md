@@ -12,6 +12,13 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 - **Broken root scripts — do not use:** `pnpm bench` (points at missing `benchmarks/run.mjs`; use `node bench/bench.mjs`), `pnpm e2e`, `pnpm gen-examples`, `pnpm clean` — all reference files that don't exist. `scripts/gen-skeleton.mjs` exists but is stale/destructive; never run it.
 - No lint, no CI, no git hooks. `pnpm test` is the only gate.
 
+## Publishing (npm)
+
+- `pnpm run publish` runs `scripts/publish.mjs` (note: `pnpm publish` alone is pnpm's built-in and would act on the private root package — always use `pnpm run publish`): gates (clean tree → `pnpm build` → CLI build → `pnpm test`), bumps **all** publishable packages (`packages/*` + `apps/cli`, never `examples/*` or `apps/playground` — hard abort if any of those is not `private: true`), publishes in dependency order, verifies each version on the registry, and commits the bump. Already-published versions are skipped, so re-runs resume.
+- Flags: `--dry-run` (plan only), `--version x.y.z`, `--patch|--minor|--major` (default patch), `--skip-checks`, `--otp <code>`, `--no-commit`. Preview with `pnpm publish:dry`.
+- All publishable packages share ONE version number (bump them together; the script aborts if they drift).
+- npm account: `master8848`; scope `@mbsks`. Do NOT publish `0.0.1` again — previously published-then-unpublished versions can never be re-published (npm E400).
+
 ## Build / TS conventions
 
 - Every workspace package is plain `tsc` to ESM `dist/` (NodeNext). No bundling of workspace packages; Rspack only compiles end-user projects via the CLI.
@@ -32,7 +39,8 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 ## Structure gotchas
 
 - `examples/*` are git-tracked source (only their build outputs are gitignored) and are CLI-driven smoke apps with `@microsoft/sp-*` @ 1.22, while package dev/peer deps are @ 1.23.2 — version drift is intentional.
+- SPFx version matrix lives in ONE place: `packages/core/src/versions.ts` (`SPFX_VERSIONS`, `SPFX_DEFAULT_TARGET` = 1.23, `spfxNpmVersion`). Never scatter version literals; add a new SPFx target per `docs/supporting-a-new-spfx-version.md`.
 - `apps/cli` is the composition root (commander; commands in `apps/cli/src/commands/`); `packages/templates` scaffolds projects via inline string builders in `src/index.ts` (not template files on disk).
-- Framework packages: per docs/roadmap.md the adapter APIs aren't final until M5 — don't treat them as stable.
+- Framework packages: per docs/roadmap.md the web part class / preset APIs aren't final until M5 — don't treat them as stable.
 - Env vars: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN` (dev serve); deploy reads `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` (implemented) — the `RSPFX_TENANT`/`RSPFX_USERNAME`/`RSPFX_PASSWORD` vars from the original design are **not implemented** (docs don't reference them).
 - Core constraint: webpack / Heft / gulp strings must never appear in runtime, build output, or generated `node_modules` — only `@microsoft/sp-*` runtime deps are allowed in generated projects.

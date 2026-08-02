@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-framework-preact",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "preact": "^10.24.0"
   },
-  "description": "RSPFX Preact framework adapter",
+  "description": "RSPFX Preact framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

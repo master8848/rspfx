@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-cli",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -27,6 +27,7 @@
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-manifest-generator": "workspace:*",
     "@mbsks/rspfx-sppkg-builder": "workspace:*",
