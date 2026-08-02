@@ -9,7 +9,11 @@ import type { RefreshRuntime } from './refresh.js';
 export interface ManifestRegeneratorOptions {
   projectRoot: string;
   production: boolean;
-  origin: string;
+  /**
+   * Base origin for debug URLs; a function is re-evaluated on every
+   * regenerate (the dev server's real port is only known after it binds).
+   */
+  origin: string | (() => string);
   packageVersion: string;
   entries: BundleEntry[];
   externals: string[];
@@ -37,10 +41,11 @@ export function createManifestRegenerator(opts: ManifestRegeneratorOptions): Man
     regeneration ??= (async () => {
       opts.refreshRuntime?.preserveState();
       try {
+        const origin = typeof opts.origin === 'function' ? opts.origin() : opts.origin;
         const manifests = await generateComponentManifests({
           projectRoot: opts.projectRoot,
           production: opts.production,
-          baseUrls: { debug: `${opts.origin}/dist/`, release: [] },
+          baseUrls: { debug: `${origin}/dist/`, release: [] },
           packageVersion: opts.packageVersion,
           bundleFiles: new Map(opts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
           externals: opts.externals,
@@ -54,7 +59,7 @@ export function createManifestRegenerator(opts: ManifestRegeneratorOptions): Man
         const debugManifests = await collectDebugManifests({
           projectRoot: opts.projectRoot,
           componentManifests: manifests,
-          serverOrigin: opts.origin
+          serverOrigin: origin
         });
         manifestsJs = await generateManifestsJs(debugManifests);
       } finally {

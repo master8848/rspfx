@@ -2,7 +2,7 @@
 
 Dev runtime for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
-Implements the workbench-first development experience: serve emulation, websocket-based refresh, state-preserving fast refresh, and project discovery (`rspfx.config.ts`).
+Implements the workbench-first development experience: serve emulation, websocket-based refresh, state-preserving fast refresh, and project discovery (reads the project's bundler config plugin options).
 
 ## Install
 
@@ -26,7 +26,7 @@ await handle.close();
 
 - `startServe(project, opts)` — dev server + manifest server + workbench launch
 - `startPlayground(project, opts)` — standalone localhost sandbox (no SharePoint)
-- `readProject(dir)` — load and validate `rspfx.config.ts`
+- `readProject(dir, paths?, version?)` — read package.json/config.json/serve.json, discover web parts (options come from the bundler config plugin; `version` overrides package.json)
 - `loadFrameworkPreset(framework)` — resolve framework preset (compiler contributions)
 - `createRefreshRuntime(project)` — websocket refresh runtime
 - `discoverWebParts(project)` — find web part entry points

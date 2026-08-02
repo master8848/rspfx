@@ -63,7 +63,8 @@
         "typescript": "~5.8.0",
         "@mbsks/rspfx-cli": "workspace:*",
         "@mbsks/rspfx-core": "workspace:*",
-        "@mbsks/rspfx-framework-react": "workspace:*"
+        "@mbsks/rspfx-framework-react": "workspace:*",
+        "@mbsks/rspfx-plugin": "workspace:*"
     },
     "resolutions": {
         "@types/react": "17.0.45"

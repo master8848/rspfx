@@ -8,7 +8,7 @@ A Solid web part demonstrating the RSPFX framework support.
 - Solid JSX typechecked via `jsx: react-jsx` + `jsxImportSource: solid-js` (the SPFx
   `@microsoft/sp-*` types load React's global JSX namespace, which is incompatible
   with `jsx: preserve`; the build itself uses `babel-preset-solid` and is unaffected)
-- `rspfx.config.ts` configuration (framework, spfx target, dev/build/playground settings)
+- `rspack.config.ts` configuration via the `RspfxPlugin` (framework, spfx target, dev/build/playground settings)
 - Manifest auto-discovery (`src/webparts/hello/hello.manifest.json` + `helloWebPart.ts`)
 - Property pane (`PropertyPaneTextField`) via `getPropertyPaneConfiguration`
 - Standalone playground page (`playground/`) using a self-mounting playground entry + `createMockWebPartContext`

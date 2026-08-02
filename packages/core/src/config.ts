@@ -91,10 +91,11 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
 
 export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
   if (!config.name) {
-    throw new Error('rspfx: "name" is required in rspfx.config');
+    throw new Error('rspfx: "name" is required in the bundler config (rspack.config.ts)');
   }
   return {
     name: config.name,
+    ...(config.version !== undefined ? { version: config.version } : {}),
     framework: config.framework ?? 'vanilla',
     spfxVersion: config.spfxVersion ?? '1.22',
     fluent: config.fluent ?? false,

@@ -103,6 +103,7 @@ Rules:
 - `compiler-rspack` knows nothing about SharePoint. SharePoint logic lives in manifest-generator/sppkg-builder.
 - `manifest-server` + `dev-runtime` only exist in dev.
 - CLI is the only package that composes others; no cycles.
+- `plugin` (the bundler plugins carrying the project config) depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, and diagnostics.
 
 ---
 
@@ -131,6 +132,12 @@ Rules:
 | `cli` | app | everything above | `new/dev/playground/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
 
 Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend on them directly (version pinned to SPFx target); the toolchain externalizes them and emits `"type": "component"` dependency entries into manifests so SharePoint resolves its own built-in copies. `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.
+
+**Config flow:** the CLI loads the user's `rspack.config.ts` (or `vite.config.ts`)
+via jiti, scans the `plugins` array for `RSPFX_PLUGIN_MARKER`, and reads the
+plugin's `options` — the single project config (name, framework, dev, build,
+paths, playground, deploy). No config or no plugin → CLI error with guidance.
+`rspfx.config.ts` is removed; there is no legacy support.
 
 ---
 
@@ -221,7 +228,7 @@ Phase 9  Benchmarks + full test suite + docs
 
 1. **`sp-*` never bundled in production output.** Always `externals` + `"type": "component"` manifest entries with the exact id/version from the targeted SPFx version's node_modules.
 2. **Output naming identical to official**: `<entry>.js` (e.g. `my-webpart.js`), matching `loaderConfig.scriptResources.<entryModuleId>.path`.
-3. **`defineConfig` + generated project layout mirror official SPFx conventions** (`src/webparts/*/`, `config/`, `sharepoint/`) so `rspfx new` output is boring and familiar.
+3. **The generated project layout mirrors official SPFx conventions** — a bundler config hosting the `RspfxPlugin` (`src/webparts/*/`, `config/`, `sharepoint/`) so `rspfx new` output is boring and familiar.
 4. **The `.sppkg` must install via app catalog → site collection → workbench**, byte-valid zip (CRC/ZIP64 correctness — Python `zipfile`-compatible, readable by SharePoint's extraction).
 5. **Manifest schema fields preserved**: `preconfiguredEntries`, `properties`, `safeWithCustomScriptDisabled`, `componentType`, `manifestVersion: 2`, `loaderConfig.scriptResources` dependency types (`component`/`path`/`localizedPath`).
 6. **Dev must work like official serve**: workbench is primary; `localhost:4321/temp/manifests.js` URL shape; auto-opened browser; rebuild notifications; HTTPS with trusted self-signed cert.

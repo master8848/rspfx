@@ -18,11 +18,11 @@ export async function runClean(cwd: string): Promise<string[]> {
   let outDir = 'dist';
   let releaseDir = 'release';
   try {
-    const config = await loadConfig(cwd);
+    const { config } = await loadConfig(cwd);
     outDir = config.build.outDir ?? 'dist';
     releaseDir = config.build.releaseDir ?? 'release';
   } catch {
-    // Missing or broken rspfx.config — fall back to default output dirs.
+    // Missing or broken bundler config — fall back to default output dirs.
   }
 
   const projectRoot = path.resolve(cwd);

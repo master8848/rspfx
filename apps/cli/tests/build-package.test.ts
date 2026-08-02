@@ -5,13 +5,14 @@ import { scaffoldProject } from '@mbsks/rspfx-templates';
 import { validateSppkg } from '@mbsks/rspfx-sppkg-builder';
 import { runBuild } from '../src/commands/build.js';
 import { runPackage } from '../src/commands/package.js';
-import { baseVars, makeTmpDir, rmRf } from './helpers.js';
+import { baseVars, linkPluginPackage, makeTmpDir, rmRf } from './helpers.js';
 
 const COMPONENT_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
 
 async function makeFixture(): Promise<string> {
   const dir = makeTmpDir('build');
   await scaffoldProject(baseVars(), dir);
+  linkPluginPackage(dir);
   fs.writeFileSync(
     path.join(dir, 'src', 'webparts', 'hello', 'helloWebPart.ts'),
     `export default class HelloWebPart {
@@ -57,18 +58,21 @@ describe('build', () => {
   it('honors a custom project layout configured via paths', async () => {
     const dir = await makeFixture();
     fs.writeFileSync(
-      path.join(dir, 'rspfx.config.ts'),
+      path.join(dir, 'rspack.config.ts'),
       [
+        "import { RspfxPlugin } from '@mbsks/rspfx-plugin';",
         'export default {',
-        "  name: 'hello',",
-        "  framework: 'vanilla',",
-        "  spfxVersion: '1.22',",
-        '  fluent: false,',
-        "  language: 'typescript',",
-        "  styling: 'scss',",
-        "  paths: { srcDir: 'src', webpartsDir: 'components/widgets', configDir: 'config-custom' },",
-        "  dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: true },",
-        "  build: { sourcemap: false, minify: true, splitChunks: false, outDir: 'dist', releaseDir: 'release' }",
+        '  plugins: [new RspfxPlugin({',
+        "    name: 'hello',",
+        "    framework: 'vanilla',",
+        "    spfxVersion: '1.22',",
+        '    fluent: false,',
+        "    language: 'typescript',",
+        "    styling: 'scss',",
+        "    paths: { srcDir: 'src', webpartsDir: 'components/widgets', configDir: 'config-custom' },",
+        "    dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: true },",
+        "    build: { sourcemap: false, minify: true, splitChunks: false, outDir: 'dist', releaseDir: 'release' }",
+        '  })]',
         '};'
       ].join('\n')
     );

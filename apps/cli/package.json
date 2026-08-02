@@ -27,6 +27,7 @@
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-manifest-generator": "workspace:*",
     "@mbsks/rspfx-sppkg-builder": "workspace:*",

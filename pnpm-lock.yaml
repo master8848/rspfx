@@ -41,6 +41,9 @@ importers:
       '@mbsks/rspfx-manifest-server':
         specifier: workspace:*
         version: link:../../packages/manifest-server
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-plugin-api':
         specifier: workspace:*
         version: link:../../packages/plugin-api
@@ -87,6 +90,9 @@ importers:
       '@mbsks/rspfx-cli':
         specifier: workspace:*
         version: link:../cli
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -217,6 +223,9 @@ importers:
       '@mbsks/rspfx-framework-react':
         specifier: workspace:*
         version: link:../../packages/framework-react
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@types/jest':
         specifier: 30.0.0
         version: 30.0.0
@@ -260,6 +269,9 @@ importers:
       '@mbsks/rspfx-framework-preact':
         specifier: workspace:*
         version: link:../../packages/framework-preact
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -297,6 +309,9 @@ importers:
       '@mbsks/rspfx-framework-react':
         specifier: workspace:*
         version: link:../../packages/framework-react
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -361,6 +376,9 @@ importers:
       '@mbsks/rspfx-framework-react':
         specifier: workspace:*
         version: link:../../packages/framework-react
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -404,6 +422,9 @@ importers:
       '@mbsks/rspfx-framework-solid':
         specifier: workspace:*
         version: link:../../packages/framework-solid
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -438,6 +459,9 @@ importers:
       '@mbsks/rspfx-framework-svelte':
         specifier: workspace:*
         version: link:../../packages/framework-svelte
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -469,6 +493,9 @@ importers:
       '@mbsks/rspfx-framework-vanilla':
         specifier: workspace:*
         version: link:../../packages/framework-vanilla
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime
@@ -503,6 +530,9 @@ importers:
       '@mbsks/rspfx-framework-vue':
         specifier: workspace:*
         version: link:../../packages/framework-vue
+      '@mbsks/rspfx-plugin':
+        specifier: workspace:*
+        version: link:../../packages/plugin
       '@mbsks/rspfx-sharepoint-runtime':
         specifier: workspace:*
         version: link:../../packages/sharepoint-runtime

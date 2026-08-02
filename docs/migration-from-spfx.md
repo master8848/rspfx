@@ -31,8 +31,9 @@ existing project carries over as-is.
   present.
 - **`config/deploy-azure-storage.json`** (CDN deploy) — replaced by
   `config/write-manifests.json` `cdnBasePath` for release base URLs.
-- Optionally `config/config.json` can be deleted once bundle config lives in
-  `rspfx.config.ts` — but it's still honored for compatibility.
+- **`rspfx.config.ts`** — the legacy project config file is removed; no legacy
+  support. `config/config.json` keeps its official role (bundles/externals are
+  still read from there).
 
 ## Steps
 
@@ -45,17 +46,25 @@ existing project carries over as-is.
 2. **Remove gulp/Heft dependencies** from `package.json` and reinstall
    (`pnpm install`). Keep `@microsoft/sp-*` packages at your SPFx version.
 
-3. **Add `rspfx.config.ts`**
+3. **Add `rspack.config.ts` with the `RspfxPlugin`**
 
    ```ts
-   import { defineConfig } from '@mbsks/rspfx-core';
-   export default defineConfig({
-     name: 'my-app',
-     framework: 'react',
-     spfxVersion: '1.22',
-     dev: { tenantUrl: 'https://contoso.sharepoint.com' },
-   });
+   import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+
+   export default {
+     mode: 'development',
+     plugins: [
+       new RspfxPlugin({
+         name: 'my-app',
+         framework: 'react',
+         spfxVersion: '1.22',
+         dev: { tenantUrl: 'https://contoso.sharepoint.com' },
+       }),
+     ],
+   };
    ```
+
+   `@mbsks/rspfx-plugin` is a devDependency.
 
 4. **Dev** — `rspfx dev`, trust the `~/.rspfx/certs` cert once, and iterate in
    the workbench exactly as with `gulp serve`. Fix any drift found:

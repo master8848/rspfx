@@ -40,8 +40,9 @@ referenced package's own `node_modules` manifest at build time, never hardcoded.
 Component IDs for sp-* packages are stable across 1.20/1.21/1.22; the `version`
 field of each `"type": "component"` entry is read from the installed
 `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, with the
-`reference/sp-component-ids.json` table as fallback. Pin the target in
-`rspfx.config.ts` (`spfxVersion`) and keep `@microsoft/sp-*` deps in sync.
+`reference/sp-component-ids.json` table as fallback. Pin the target via the
+plugin options (`spfxVersion` in `rspack.config.ts` / `vite.config.ts`) and
+keep `@microsoft/sp-*` deps in sync.
 
 Non-negotiables (from ARCHITECTURE.md §7): sp-* never bundled in production
 output; output naming identical to official; the `.sppkg` must install via app

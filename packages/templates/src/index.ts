@@ -78,7 +78,7 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
   const files: TemplateFile[] = [
     { path: 'package.json', content: packageJson(vars) },
     { path: 'tsconfig.json', content: tsconfigJson(vars) },
-    { path: 'rspfx.config.ts', content: rspfxConfig(vars) },
+    { path: 'rspack.config.ts', content: rspackConfig(vars) },
     { path: '.gitignore', content: gitignore() },
     { path: 'README.md', content: readme(vars) },
     { path: 'config/package-solution.json', content: packageSolution(vars) },
@@ -193,6 +193,7 @@ function packageJson(vars: TemplateVars): string {
         ...shadcnDeps
       },
       devDependencies: {
+        '@mbsks/rspfx-plugin': '^0.0.1',
         typescript: '^5.7.0',
         ...shadcnDevDeps
       }
@@ -231,30 +232,40 @@ function tsconfigJson(vars: TemplateVars): string {
   );
 }
 
-function rspfxConfig(vars: TemplateVars): string {
+function rspackConfig(vars: TemplateVars): string {
+  const devLines = [
+    `        port: ${configDefaults.dev.port},`,
+    `        https: ${configDefaults.dev.https},`,
+    `        hostname: '${configDefaults.dev.hostname}',`,
+    `        workbench: ${configDefaults.dev.workbench},`,
+    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: '${vars.tenantUrl}'` : ''}`
+  ];
   const lines: string[] = [
+    `import { RspfxPlugin } from '@mbsks/rspfx-plugin';`,
+    '',
     'export default {',
-    `  name: '${vars.packageName}',`,
-    `  framework: '${vars.framework}',`,
-    `  spfxVersion: '${vars.spfxVersion}',`,
-    `  fluent: ${vars.fluent},`,
-    `  language: '${vars.language}',`,
-    `  styling: '${vars.styling}',`,
-    '  dev: {',
-    `    port: ${configDefaults.dev.port},`,
-    `    https: ${configDefaults.dev.https},`,
-    `    hostname: '${configDefaults.dev.hostname}',`,
-    `    workbench: ${configDefaults.dev.workbench},`,
-    `    openBrowser: ${configDefaults.dev.openBrowser}`,
-    ...(vars.tenantUrl ? [`    tenantUrl: '${vars.tenantUrl}'`] : []),
-    '  },',
-    '  build: {',
-    `    sourcemap: ${configDefaults.build.sourcemap},`,
-    `    minify: ${configDefaults.build.minify},`,
-    `    splitChunks: ${configDefaults.build.splitChunks},`,
-    `    outDir: '${configDefaults.build.outDir}',`,
-    `    releaseDir: '${configDefaults.build.releaseDir}'`,
-    '  }',
+    "  mode: 'development',",
+    '  plugins: [',
+    '    new RspfxPlugin({',
+    `      name: '${vars.packageName}',`,
+    `      version: '${vars.packageVersion}',`,
+    `      framework: '${vars.framework}',`,
+    `      spfxVersion: '${vars.spfxVersion}',`,
+    `      fluent: ${vars.fluent},`,
+    `      language: '${vars.language}',`,
+    `      styling: '${vars.styling}',`,
+    '      dev: {',
+    ...devLines,
+    '      },',
+    '      build: {',
+    `        sourcemap: ${configDefaults.build.sourcemap},`,
+    `        minify: ${configDefaults.build.minify},`,
+    `        splitChunks: ${configDefaults.build.splitChunks},`,
+    `        outDir: '${configDefaults.build.outDir}',`,
+    `        releaseDir: '${configDefaults.build.releaseDir}'`,
+    '      }',
+    '    })',
+    '  ]',
     '};'
   ];
   return `${lines.join('\n')}\n`;

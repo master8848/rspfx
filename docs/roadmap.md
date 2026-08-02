@@ -34,8 +34,9 @@ machinery; component type fields already preserved).
 ## Current phase note
 
 M0 and M1 are complete. M2–M4 are in progress (compiler and dev-runtime cores
-landed; plugin-api hooks wired into the CLI; custom folder layout (`paths`) and
-the `spfx()` rspack plugin surface shipped; CLI, templates, framework packages,
+landed; plugin-api hooks wired into the CLI; project config now lives in the
+bundler config as the `RspfxPlugin` / `rspfxVite` plugin, replacing
+`rspfx.config.ts`; CLI, templates, framework packages,
 refresh runtimes, and the playground are being filled in). Framework packages
 are currently scaffolded as stubs — treat the web part class / preset API as not
 yet final until M5.

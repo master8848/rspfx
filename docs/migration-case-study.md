@@ -36,7 +36,7 @@ which is exactly RSPFX's supported surface.
      (`modern-search-results-web-part` → `searchResults`, …)
    - rewrite the one `pkg:` SCSS import to a relative `node_modules` path
    - delete rig/sass/typescript/customize-webpack config files
-   - write `rspfx.config.ts` + a plain `tsconfig.json`
+   - write `rspack.config.ts` (with the `RspfxPlugin`) + a plain `tsconfig.json`
 3. `pnpm install` — 52s from warm cache.
 4. `rspfx build` — **first run failed** on the two gaps below, fixed in
    toolchain, rebuilt, **second run succeeded**:
@@ -82,10 +82,11 @@ These are the honest limits (tracked in [why-not-to-migrate.md](why-not-to-migra
    (RSPFX's `entryModuleId` convention) — a mechanical rename in `config.json`.
 4. **No `spfx-customize-webpack.js` equivalent — but an escape hatch now.**
    All five aliases in the upstream file turned out to be unnecessary under
-   Rspack. For genuinely custom behavior, `spfx()` from
-   `@mbsks/rspfx-compiler-rspack` returns a full Rspack configuration to extend
-   in your own `rspack.config.ts`, and `plugin-api` hooks
-   (`beforeCompile`/`afterStats`/`beforePackage`) are wired into the CLI.
+   Rspack. For genuinely custom behavior, the project config lives in
+   `rspack.config.ts` as the `RspfxPlugin` from `@mbsks/rspfx-plugin` — the
+   Rspack config is yours to extend (extra loaders, plugins, rule merges) —
+   and `plugin-api` hooks (`beforeCompile`/`afterStats`/`beforePackage`) are
+   wired into the CLI.
 
 ## What did NOT need changing
 

@@ -24,7 +24,7 @@ describe('new', () => {
     for (const file of [
       'package.json',
       'tsconfig.json',
-      'rspfx.config.ts',
+      'rspack.config.ts',
       '.gitignore',
       'README.md',
       'config/package-solution.json',
@@ -60,7 +60,7 @@ describe('new', () => {
     expect(solutionConfig.solution.features[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(solutionConfig.paths.zippedPackage).toBe('sharepoint/solution/my-app.sppkg');
 
-    const config = fs.readFileSync(path.join(dest, 'rspfx.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
     expect(config).toContain("tenantUrl: 'https://contoso.sharepoint.com'");
     rmRf(tmp);
@@ -78,7 +78,7 @@ describe('new', () => {
     const tmp = makeTmpDir('new-defaults');
     const dest = await runNew({ name: 'def-app', cwd: tmp, yes: true, install: false });
 
-    const config = fs.readFileSync(path.join(dest, 'rspfx.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'react'");
     expect(config).toContain("styling: 'tailwind'");
 

@@ -6,7 +6,7 @@ A Vue 3 web part demonstrating the RSPFX framework support.
 
 - Vue web part via `VueWebPart` from `@mbsks/rspfx-framework-vue`
 - Single-file component (`Hello.vue`) with `<script setup lang="ts">` and scoped styles
-- `rspfx.config.ts` configuration (framework, spfx target, dev/build/playground settings)
+- `rspack.config.ts` configuration via the `RspfxPlugin` (framework, spfx target, dev/build/playground settings)
 - Manifest auto-discovery (`src/webparts/hello/hello.manifest.json` + `helloWebPart.ts`)
 - Property pane (`PropertyPaneTextField`) via `getPropertyPaneConfiguration`
 - Standalone playground page (`playground/`) using a self-mounting playground entry + `createMockWebPartContext`

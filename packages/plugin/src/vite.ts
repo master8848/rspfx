@@ -10,7 +10,8 @@ import {
   resolveServeSettings,
   buildWorkbenchUrl,
   createManifestRegenerator,
-  openBrowser
+  openBrowser,
+  type ServeSettings
 } from '@mbsks/rspfx-dev-runtime';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
@@ -131,6 +132,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     configureServer(server) {
       const project = readProject(root, resolved.paths, resolved.version);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
+      const originRef: { value: string } = { value: settings.origin };
       const entryModuleIds: Record<string, string> = {};
       project.webParts.bundles.forEach((bundle, index) => {
         entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
@@ -138,7 +140,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       const regenerator = createManifestRegenerator({
         projectRoot: root,
         production: false,
-        origin: settings.origin,
+        origin: () => originRef.value,
         packageVersion: project.webParts.packageVersion,
         entries: project.webParts.entries,
         externals: collectExternals(root, project.externals, project.localizedResources),
@@ -201,6 +203,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       const workbenchUrl = buildWorkbenchUrl(settings, resolved);
       if (workbenchUrl && (resolved.dev.openBrowser ?? true)) {
         devServer.httpServer?.once('listening', () => {
+          originRef.value = updateOriginWithActualPort(settings, devServer);
           openBrowser(workbenchUrl);
           logger.info(`Workbench: ${workbenchUrl}`);
         });
@@ -208,6 +211,21 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       logger.success(`Manifest server running at ${settings.origin}/temp/manifests.js`);
     }
   };
+}
+
+function updateOriginWithActualPort(
+  settings: ServeSettings,
+  devServer: ConnectMiddlewareServer
+): string {
+  try {
+    const address = (devServer.httpServer as { address(): unknown } | undefined)?.address();
+    if (address && typeof address === 'object' && 'port' in address) {
+      return `${settings.scheme}://${settings.hostname}:${(address as { port: number }).port}`;
+    }
+  } catch {
+    // Fall back to the configured origin.
+  }
+  return settings.origin;
 }
 
 function selectEntry(

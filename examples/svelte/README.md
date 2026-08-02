@@ -6,7 +6,7 @@ A Svelte web part demonstrating the RSPFX framework support.
 
 - Svelte web part via `SvelteWebPart` from `@mbsks/rspfx-framework-svelte`
 - Single-file component (`Hello.svelte`) with native scoped styles
-- `rspfx.config.ts` configuration (framework, spfx target, dev/build/playground settings)
+- `rspack.config.ts` configuration via the `RspfxPlugin` (framework, spfx target, dev/build/playground settings)
 - Manifest auto-discovery (`src/webparts/hello/hello.manifest.json` + `helloWebPart.ts`)
 - Property pane (`PropertyPaneTextField`) via `getPropertyPaneConfiguration`
 - Standalone playground page (`playground/`) using a self-mounting playground entry + `createMockWebPartContext`

@@ -47,6 +47,7 @@ export interface DeployConfig {
 
 export interface RspfxConfig {
   name: string;                  // project name (npm name)
+  version?: string;              // build-time version for AMD library names + manifests; overrides package.json
   framework: FrameworkId;
   spfxVersion: SpfxTarget;       // default '1.22'
   fluent: boolean;               // default false
@@ -59,6 +60,11 @@ export interface RspfxConfig {
 }
 export function defineConfig(config: RspfxConfig): RspfxConfig;
 export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig; // fills defaults
+export const RSPFX_PLUGIN_MARKER: symbol;  // Symbol.for('@mbsks/rspfx/bundler-plugin'); stamped on bundler plugin instances
+export interface RspfxBundlerPluginLike {  // structural contract for RspfxPlugin / rspfxVite
+  options: RspfxConfig;
+  [key: symbol]: unknown;
+}
 
 // SPFx-mirror types (structural, no @microsoft dependency)
 export enum EnvironmentType { Local = 0, ClassicSharePoint = 1, SharePoint = 2 }
@@ -131,15 +137,15 @@ export interface CompilerHooks {
 export interface PackageHooks {
   beforePackage?(ctx: { manifests: unknown[]; files: { path: string; content: Uint8Array }[] }): void;
 }
-export interface RspfxPlugin {
+export interface RspfxExtension {
   name: string;
   frameworkPreset?: FrameworkPreset;
   compilerHooks?: CompilerHooks;
   packageHooks?: PackageHooks;
 }
-export function definePlugin(plugin: RspfxPlugin): RspfxPlugin;
-export function registerPlugin(plugin: RspfxPlugin): void;      // global registry; read by the CLI before each build/package
-export function getPlugins(): RspfxPlugin[];
+export function definePlugin(plugin: RspfxExtension): RspfxExtension;
+export function registerPlugin(plugin: RspfxExtension): void;      // global registry; read by the CLI before each build/package
+export function getPlugins(): RspfxExtension[];
 ```
 
 The CLI wires these hooks at fixed points (`apps/cli/src/commands/build.ts`,
@@ -190,26 +196,51 @@ export interface CompileContext {
   swcContributions?: Record<string, unknown>[];  // from framework presets
 }
 export async function createRspackConfig(ctx: CompileContext): Promise<unknown>;
-// Bundler plugin surface ("bring your own bundler config"): options mirror CompileContext with defaults
-export interface SpfxPluginOptions {
-  projectRoot: string;
-  framework: FrameworkId;
-  entries: BundleEntry[];
-  externals?: string[];                // default []
-  fastRefresh?: boolean;               // default false
-  production?: boolean;                // default true
-  aliases?: Record<string, string>;    // default {}
-  build?: Partial<BuildConfig>;        // minify/sourcemap/splitChunks/outDir/releaseDir defaults
-  serveMode?: boolean;                 // default false
-  additionalPlugins?: unknown[];
-  swcContributions?: Record<string, unknown>[];
-}
-export async function spfx(options: SpfxPluginOptions): Promise<unknown>;  // full Rspack Configuration for rspack.config.ts
 export async function build(ctx: CompileContext): Promise<{ stats: unknown; outputFiles: string[] }>; // writes dist/
 export function watch(ctx: CompileContext, onDone: (stats: unknown, errors: unknown[]) => void): { close(): Promise<void> };
 // dev server (rspack + @rspack/dev-server) — called by dev-runtime; returns started server
 export async function startDevServer(ctx: CompileContext, devServerOptions: unknown): Promise<{ close(): Promise<void>; port: number; compiler: unknown; onEmit(cb: () => void): void }>;
 ```
+
+## @mbsks/rspfx-plugin (depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, diagnostics)
+
+The project config as bundler plugins — the replacement for the legacy
+`rspfx.config.ts`. The CLI loads the user's `rspack.config.ts` / `vite.config.ts`
+via jiti, scans the `plugins` array for the marker symbol, and reads the
+resolved `options` (project config). No plugin → CLI error with guidance.
+
+```ts
+export type { RspfxConfig } from '@mbsks/rspfx-core';
+export { defineConfig, resolveConfig, RSPFX_PLUGIN_MARKER } from '@mbsks/rspfx-core';
+// RSPFX_PLUGIN_MARKER: Symbol.for('@mbsks/rspfx/bundler-plugin') — stable across
+// duplicated package copies; stamped on every plugin instance
+export interface RspfxPluginOptions extends Partial<Omit<RspfxConfig, 'name'>> {
+  name: string;
+  projectRoot?: string;            // defaults to process.cwd()
+}
+// options carry: name, version (build-time version used in AMD library names and
+// manifests — overrides package.json), spfxVersion, framework, fluent, language,
+// styling, dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
+// build (sourcemap/minify/splitChunks/outDir/releaseDir), paths (srcDir/webpartsDir/configDir),
+// playground, deploy; defaults unchanged
+export class RspfxPlugin implements RspfxBundlerPluginLike {
+  readonly [RSPFX_PLUGIN_MARKER]: true;
+  readonly options: RspfxConfig;
+  constructor(options: RspfxPluginOptions);
+  apply(compiler: unknown): void;  // standard webpack plugin interface — webpack-compatible bundlers (e.g. Turbopack) can run the compile-time parts
+}
+export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin; // { name: 'rspfx', [RSPFX_PLUGIN_MARKER]: true, options }
+export const VITE_ENV: { mode: string; entry: string; amdId: string };  // env var names for per-bundle vite builds (RSPFX_VITE_*)
+```
+
+`@mbsks/rspfx-core` exports the structural marker contract:
+`RSPFX_PLUGIN_MARKER` and `RspfxBundlerPluginLike` (`{ options: RspfxConfig }`).
+
+The full pipeline (manifests, dev server, packaging) runs through the rspfx CLI;
+for Vite configs `rspfx build`/`rspfx package` spawn one `vite build` per web
+part bundle (selected via `VITE_ENV` env vars), and `rspfx dev` spawns `vite`
+(the plugin serves `/temp/manifests.js`, rebuilds AMD bundles into `dist/`,
+opens the workbench). `rspfx playground` is Rspack-only for now.
 
 Notes for implementer:
 - Use `builtin:swc-loader` for .ts/.tsx/.jsx/.js (parser jsx, decorators, importMeta); merge framework swc contributions.
@@ -295,6 +326,14 @@ export async function startServe(opts: DevRuntimeOptions): Promise<{ url: string
 // On each compiler rebuild: regenerate manifests.js (dist files may change names; official keeps [name].js so stable).
 export async function startPlayground(opts: DevRuntimeOptions): Promise<{ url: string; close(): Promise<void> }>;
 // Standalone: dev server on config.playground.port (default 3000) + generated playground page (see templates)
+export function readProject(projectRoot: string, paths?: PathsConfig, versionOverride?: string): ReadProjectResult;
+// reads package.json/config.json/serve.json, discovers web parts; the version override
+// (plugin `version` option) replaces package.json version in AMD library names and manifests
+export function resolveServeSettings(config: { config: RspfxConfig }, serveJson: ProjectServeConfigJson | undefined): ServeSettings;
+export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string;
+// <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<enc>.../temp/manifests.js
+export function createManifestRegenerator(opts: ManifestRegeneratorOptions): ManifestRegenerator;
+// regenerates /temp/manifests.js after each compiler rebuild (project + sp-* debug manifests)
 export interface RefreshRuntime {
   dispose(): void;
   preserveState(): void;
@@ -404,7 +443,7 @@ export function scaffoldPlaygroundPage(projectRoot: string, vars: TemplateVars):
 
 Generated project layout:
 ```
-package.json  tsconfig.json  rspfx.config.ts  .gitignore  README.md
+package.json  tsconfig.json  rspack.config.ts  .gitignore  README.md
 config/package-solution.json  config/serve.json  config/write-manifests.json
 sharepoint/assets/.gitkeep
 src/index.ts
@@ -432,5 +471,11 @@ Bin `rspfx`. Commands (commander):
 - `rspfx clean` — rm dist release temp .rspfx node_modules/.cache
 - `rspfx --version`, `rspfx --help`
 
-Config loading: `jiti` import of `rspfx.config.ts` (or `.js`); then `defineConfig`/`resolveConfig`.
+Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`), find
+the plugin by `RSPFX_PLUGIN_MARKER`, read `.options` → `resolveConfig`.
+Guidance error when no config or no plugin is found. Per-command bundler
+awareness: for Vite configs, `dev`/`build`/`package` spawn the project-local
+`vite`/`vite build` (one build per web part bundle); for Rspack configs the
+internal Rspack pipeline runs as before. `rspfx playground` is Rspack-only for
+now.
 Guid generation: `crypto.randomUUID`.

@@ -2,7 +2,7 @@
 
 Plugin API of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
-Lets you extend the toolchain with `RspfxPlugin` instances: framework presets, compiler hooks, and package hooks.
+Lets you extend the toolchain with `RspfxExtension` instances: framework presets, compiler hooks, and package hooks.
 
 ## Install
 
@@ -30,7 +30,7 @@ registerPlugin(definePlugin({ name: 'my-framework', frameworkPreset: preset }));
 
 - `definePlugin(plugin)` — typed plugin factory
 - `registerPlugin(plugin)` / `getPlugins()` — global registry (wired by the CLI)
-- Types: `RspfxPlugin`, `FrameworkPreset`, `FrameworkRspackContributions`, `CompilerHooks`, `PackageHooks`
+- Types: `RspfxExtension`, `FrameworkPreset`, `FrameworkRspackContributions`, `CompilerHooks`, `PackageHooks`
 
 ## Links
 

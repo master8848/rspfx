@@ -3,9 +3,9 @@ import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
-import type { RspfxConfig } from '@mbsks/rspfx-core';
 import { readProject } from '@mbsks/rspfx-dev-runtime';
-import { loadConfig } from '../config.js';
+import { loadConfig, type LoadedProject } from '../config.js';
+import { resolveViteBin } from '../vite.js';
 import { version } from '../version.js';
 
 const logger = createLogger('rspfx');
@@ -31,20 +31,35 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
   const packageJsonExists = fs.existsSync(packageJsonPath);
   checks.push({ name: 'package.json exists', ok: packageJsonExists });
 
-  let config: RspfxConfig | undefined;
+  let loaded: LoadedProject | undefined;
   try {
-    config = await loadConfig(cwd);
+    loaded = await loadConfig(cwd);
     checks.push({
-      name: 'rspfx.config.ts loads',
+      name: 'project config loads (rspack.config.ts / vite.config.ts)',
       ok: true,
-      detail: `${config.framework} / SPFx ${config.spfxVersion}`
+      detail: `${loaded.config.framework} / SPFx ${loaded.config.spfxVersion} / ${loaded.bundler}`
     });
   } catch (error) {
     checks.push({
-      name: 'rspfx.config.ts loads',
+      name: 'project config loads (rspack.config.ts / vite.config.ts)',
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
     });
+  }
+
+  const config = loaded?.config;
+
+  if (loaded?.bundler === 'vite') {
+    try {
+      const bin = resolveViteBin(cwd);
+      checks.push({ name: 'vite installed', ok: true, detail: bin });
+    } catch (error) {
+      checks.push({
+        name: 'vite installed',
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error)
+      });
+    }
   }
 
   const framework = config?.framework ?? 'vanilla';

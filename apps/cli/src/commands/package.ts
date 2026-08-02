@@ -16,7 +16,7 @@ export async function runPackage(cwd: string, opts: PackageOptions = {}): Promis
   if (opts.build !== false) {
     await runBuild(cwd, {});
   }
-  const config = await loadConfig(cwd);
+  const { config } = await loadConfig(cwd);
   const releaseDir = config.build.releaseDir ?? 'release';
   invokeBeforePackage(cwd, releaseDir);
   const result = await buildPackage({

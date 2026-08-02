@@ -8,10 +8,13 @@ import {
   readProject,
   loadFrameworkPreset,
   resolveContributionLoaders,
-  createCompileContext
+  createCompileContext,
+  type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
+import type { RspfxConfig } from '@mbsks/rspfx-core';
 import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import { loadConfig } from '../config.js';
+import { runViteBuild } from '../vite.js';
 
 const logger = createLogger('rspfx');
 
@@ -31,43 +34,78 @@ export interface BuildOutput {
 }
 
 export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<BuildOutput> {
-  const config = await loadConfig(cwd);
-  const project = readProject(cwd, config.paths);
+  const loaded = await loadConfig(cwd);
+  const config = loaded.config;
+  const project = readProject(cwd, config.paths, config.version);
 
-  const frameworkPreset = await loadFrameworkPreset(config.framework, cwd);
-  const contributions = resolveContributionLoaders(
-    frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<string, unknown>,
-    frameworkPreset.moduleUrl
-  );
+  const externals = collectExternals(cwd, project);
 
-  const ctx = createCompileContext({
-    projectRoot: cwd,
-    config,
-    entries: project.webParts.entries,
-    externals: [...findSpDependencies(cwd).keys(), ...project.externals],
-    localizedAliases: project.localizedAliases,
-    localizedResources: project.localizedResources,
-    fastRefresh: false,
-    production: true,
-    serveMode: false,
-    build: {
-      ...config.build,
-      ...(opts.minify !== undefined ? { minify: opts.minify } : {}),
-      ...(opts.sourcemap !== undefined ? { sourcemap: opts.sourcemap } : {})
+  let stats: unknown;
+  let outputFiles: string[];
+
+  if (loaded.bundler === 'vite') {
+    const distDir = path.join(cwd, config.build.outDir ?? 'dist');
+    fs.rmSync(distDir, { recursive: true, force: true });
+    fs.mkdirSync(distDir, { recursive: true });
+    for (const entry of project.webParts.entries) {
+      await runViteBuild(cwd, { entry: entry.name, amdId: `${entry.componentIds[0]}_${entry.version}` });
     }
-  });
-  ctx.swcContributions = [contributions as Record<string, unknown>];
+    outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
+    stats = undefined;
+  } else {
+    const frameworkPreset = await loadFrameworkPreset(config.framework, cwd);
+    const contributions = resolveContributionLoaders(
+      frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<string, unknown>,
+      frameworkPreset.moduleUrl
+    );
 
-  for (const plugin of getPlugins()) {
-    plugin.compilerHooks?.beforeCompile?.(ctx);
+    const ctx = createCompileContext({
+      projectRoot: cwd,
+      config,
+      entries: project.webParts.entries,
+      externals: [...findSpDependencies(cwd).keys(), ...project.externals],
+      localizedAliases: project.localizedAliases,
+      localizedResources: project.localizedResources,
+      fastRefresh: false,
+      production: true,
+      serveMode: false,
+      build: {
+        ...config.build,
+        ...(opts.minify !== undefined ? { minify: opts.minify } : {}),
+        ...(opts.sourcemap !== undefined ? { sourcemap: opts.sourcemap } : {})
+      }
+    });
+    ctx.swcContributions = [contributions as Record<string, unknown>];
+
+    for (const plugin of getPlugins()) {
+      plugin.compilerHooks?.beforeCompile?.(ctx);
+    }
+
+    const result = await build(ctx);
+
+    for (const plugin of getPlugins()) {
+      plugin.compilerHooks?.afterStats?.(result.stats);
+    }
+
+    stats = result.stats;
+    outputFiles = result.outputFiles;
   }
 
-  const result = await build(ctx);
+  return assembleRelease(cwd, config, project, externals, stats, outputFiles);
+}
 
-  for (const plugin of getPlugins()) {
-    plugin.compilerHooks?.afterStats?.(result.stats);
-  }
+function collectExternals(cwd: string, project: ReadProjectResult): string[] {
+  return [...findSpDependencies(cwd).keys(), ...project.externals, ...project.localizedResources.map((r) => r.name)];
+}
 
+async function assembleRelease(
+  cwd: string,
+  config: RspfxConfig,
+  project: ReadProjectResult,
+  externals: string[],
+  stats: unknown,
+  outputFiles: string[]
+): Promise<BuildOutput> {
   const distDir = path.join(cwd, config.build.outDir ?? 'dist');
   const releaseDir = path.join(cwd, config.build.releaseDir ?? 'release');
   const releaseManifestsDir = path.join(releaseDir, 'manifests');
@@ -84,7 +122,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     baseUrls: { debug: '', release: cdnBasePath },
     packageVersion: project.webParts.packageVersion,
     bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
-    externals: ctx.externals,
+    externals,
     localizedResources: project.localizedResources.map((resource) => ({
       name: resource.name,
       locales: resource.files.map((file) => file.locale)
@@ -113,7 +151,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     packageFiles.push({ path: file, content: fs.readFileSync(source) });
   }
 
-  for (const file of result.outputFiles) {
+  for (const file of outputFiles) {
     const bundlePath = path.join(distDir, file);
     if (fs.existsSync(bundlePath)) {
       logger.info(`${file}: ${formatBytes(fs.statSync(bundlePath).size)}`);
@@ -125,8 +163,8 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
   }
 
   return {
-    stats: result.stats,
-    outputFiles: result.outputFiles,
+    stats,
+    outputFiles,
     manifests,
     distDir,
     releaseDir,

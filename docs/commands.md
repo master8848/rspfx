@@ -1,11 +1,14 @@
 # Command Reference
 
-Global: `rspfx --version`, `rspfx --help`. All commands read `rspfx.config.ts`
-(loaded via jiti) and merge CLI flags over config. The optional `paths` section
-customizes the project folder layout: `paths.srcDir` (default `src`),
-`paths.webpartsDir` (default `src/webparts`), `paths.configDir` (default
-`config`) — see [building-packages.md](building-packages.md) for what each one
-controls.
+Global: `rspfx --version`, `rspfx --help`. All commands load the project's
+bundler config (`rspack.config.ts` via jiti, or `vite.config.ts` for Vite
+projects), find the `RspfxPlugin` / `rspfxVite` plugin by its marker symbol,
+and use its options, merging CLI flags over them. The optional `paths` section
+of the plugin options customizes the project folder layout: `paths.srcDir`
+(default `src`), `paths.webpartsDir` (default `src/webparts`), `paths.configDir`
+(default `config`) — see [building-packages.md](building-packages.md) for what
+each one controls. If no config or no plugin is found the CLI errors with
+guidance.
 
 ## `rspfx new <name>`
 
@@ -120,8 +123,8 @@ rspfx analyze
 
 ## `rspfx doctor`
 
-Environment/config/port/dependency checks: Node ≥ 20, `rspfx.config.ts` loads,
-framework package resolvable, sp-* versions match the target, web part bundles
+Environment/config/port/dependency checks: Node ≥ 20, the bundler config loads
+and exposes the rspfx plugin, framework package resolvable, sp-* versions match the target, web part bundles
 discovered, the configured dev port (`dev.port`) free, `build.outDir` writable.
 Exit code **1** on failures.
 
@@ -139,40 +142,59 @@ Refuses to run outside a project and respects the configured output dirs.
 rspfx clean
 ```
 
-## Bundler plugin surface (`spfx()`)
+## Project config as a bundler plugin
 
-`@mbsks/rspfx-compiler-rspack` exports `spfx(options)` — the first step toward
-"bring your own bundler config". It returns a **full Rspack `Configuration`**
-(the same one the CLI builds internally), ready to drop into your own
-`rspack.config.ts`:
+The project config lives in your bundler config as a plugin instance from
+`@mbsks/rspfx-plugin`. The CLI finds it by its marker symbol
+(`RSPFX_PLUGIN_MARKER`) and uses its options.
+
+### Rspack (default) — `rspack.config.ts`
 
 ```ts
-// rspack.config.ts
-import { spfx } from '@mbsks/rspfx-compiler-rspack';
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
-export default await spfx({
-  projectRoot: process.cwd(),
-  framework: 'react',
-  entries: [
-    {
-      name: 'hello',
-      import: './src/webparts/hello/HelloWebPart.ts',
-      componentIds: [],
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: 'my-app',
+      framework: 'react',
+      spfxVersion: '1.22',
+      dev: { port: 4321, https: true, hostname: 'localhost', tenantUrl: 'https://contoso.sharepoint.com', openBrowser: true },
+      build: { minify: true, sourcemap: false, outDir: 'dist', releaseDir: 'release' },
       version: '1.0.0'
-    }
-  ],
-  production: false,
-  fastRefresh: true
-});
+    })
+  ]
+};
 ```
 
-Options mirror the compile context: `projectRoot`, `framework`, `entries`
-(bundle name → entrypoint, manifest ids, version), `externals?`, `aliases?`,
-`fastRefresh?` (default false), `production?` (default true), `serveMode?`
-(default false), `build?` (minify/sourcemap/splitChunks/outDir/releaseDir
-defaults), `additionalPlugins?`, `swcContributions?`.
+`RspfxPlugin` implements the standard webpack plugin interface
+(`apply(compiler)`), so it can also be tested under webpack-compatible bundlers
+(e.g. Turbopack) for the compile-time parts; the full pipeline (manifests, dev
+server, packaging) runs through the rspfx CLI.
 
-The CLI remains the opinionated default — `rspfx build` / `rspfx dev` are
-unchanged. The plugin surface is the escape hatch for projects that need to
-extend the compiler config (extra loaders, plugins, module-federation-style
-setups). vite/turbopack variants are future work.
+### Vite — `vite.config.ts`
+
+```ts
+import { rspfxVite } from '@mbsks/rspfx-plugin';
+
+export default {
+  plugins: [rspfxVite({ name: 'my-app', framework: 'react', dev: { ... }, build: { ... }, version: '1.0.0' })]
+};
+```
+
+`rspfx build` / `rspfx package` spawn one `vite build` per web part bundle;
+`rspfx dev` spawns `vite` (the plugin serves `/temp/manifests.js`, rebuilds AMD
+bundles into `dist/`, opens the workbench). `rspfx playground` is Rspack-only
+for now — Vite projects get a clear error.
+
+### Options
+
+The options object carries: `name`, `version` (build-time version used in AMD
+library names and manifests — overrides package.json), `spfxVersion`,
+`framework`, `fluent`, `language`, `styling`, `dev` (port/https/hostname/
+workbench/fastRefresh/openBrowser/tenantUrl/initialPage), `build`
+(sourcemap/minify/splitChunks/outDir/releaseDir), `paths`
+(srcDir/webpartsDir/configDir), `playground`, `deploy`. Defaults are unchanged
+(port 4321, https true, hostname localhost, minify true, dist/release,
+src/src/webparts/config).

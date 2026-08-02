@@ -1,6 +1,13 @@
 import { createLogger } from '@mbsks/rspfx-diagnostics';
-import { startServe, type DevRuntimeHandle } from '@mbsks/rspfx-dev-runtime';
+import {
+  startServe,
+  readProject,
+  resolveServeSettings,
+  buildWorkbenchUrl,
+  type DevRuntimeHandle
+} from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
+import { spawnViteDev } from '../vite.js';
 
 const logger = createLogger('rspfx');
 
@@ -12,7 +19,46 @@ export interface DevOptions {
 }
 
 export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRuntimeHandle> {
-  const config = await loadConfig(cwd);
+  const loaded = await loadConfig(cwd);
+  const config = loaded.config;
+
+  if (loaded.bundler === 'vite') {
+    const project = readProject(cwd, config.paths, config.version);
+    const settings = resolveServeSettings(
+      { port: opts.port, tenantDomain: opts.tenant, config },
+      project.serveJson
+    );
+    const child = spawnViteDev(cwd);
+
+    logger.info(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+
+    const workbenchUrl = buildWorkbenchUrl(settings, config);
+    if (workbenchUrl) {
+      printBox(['Open this URL in the SharePoint workbench (debug manifests):', '', workbenchUrl]);
+    }
+
+    let closing = false;
+    const shutdown = async (): Promise<void> => {
+      if (closing) {
+        return;
+      }
+      closing = true;
+      child.kill();
+      process.exit(0);
+    };
+    process.once('SIGINT', () => void shutdown());
+    process.once('SIGTERM', () => void shutdown());
+
+    return {
+      url: settings.origin,
+      port: settings.port,
+      workbenchUrl,
+      close: async () => {
+        child.kill();
+      }
+    };
+  }
+
   const handle = await startServe({
     projectRoot: cwd,
     config,

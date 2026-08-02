@@ -16,13 +16,15 @@ artifacts are, and how to wire it into CI. For the day-to-day flow see
 | `rspfx clean` | Removes `dist/`, `release/`, `temp/`, `.rspfx/`, `node_modules/.cache` | — |
 | `rspfx doctor` | Environment/config checks, exit code 1 on failure | CI-friendly preflight |
 
-All commands load `rspfx.config.ts` and merge CLI flags over it
+All commands load the project's bundler config (`rspack.config.ts` /
+`vite.config.ts`), find the `RspfxPlugin` / `rspfxVite` plugin by its marker
+symbol, and use its options, merging CLI flags over them
 (`build.minify`/`build.sourcemap`, `dev.port`, etc.).
 
 ## Project layout
 
 RSPFX assumes the official SPFx folder layout by default, but every part of it
-is configurable via the `paths` section of `rspfx.config.ts`:
+is configurable via the `paths` section of the plugin options:
 
 | Option | Default | Used for |
 |---|---|---|
@@ -31,14 +33,21 @@ is configurable via the `paths` section of `rspfx.config.ts`:
 | `paths.configDir` | `config` | Reading `config.json` and `serve.json` |
 
 ```ts
-export default defineConfig({
-  name: 'my-app',
-  paths: {
-    srcDir: 'src',
-    webpartsDir: 'src/webparts',
-    configDir: 'config'
-  }
-});
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+
+export default {
+  mode: 'development',
+  plugins: [
+    new RspfxPlugin({
+      name: 'my-app',
+      paths: {
+        srcDir: 'src',
+        webpartsDir: 'src/webparts',
+        configDir: 'config'
+      }
+    })
+  ]
+};
 ```
 
 With the default layout, a web part folder `src/webparts/hello/` maps to a

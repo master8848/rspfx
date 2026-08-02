@@ -91,7 +91,7 @@ Any failure in a framework runtime falls back to a full page reload automaticall
    Exported from the `@mbsks/rspfx-framework-<fw>/webpart` subpath (it imports
    `@mbsks/rspfx-core/webpart`, so it must not live in the Node-safe index).
 4. **Register it** — either import the preset in the CLI's framework registry, or
-   ship it as an `RspfxPlugin` (via `definePlugin`/`registerPlugin` from
+   ship it as an `RspfxExtension` (via `definePlugin`/`registerPlugin` from
    `plugin-api`) so projects can opt in without a CLI change.
 5. **Scaffolding** — add a project template to `packages/templates`
    (`components/<Pascal>.<ext>`, web part class, styles) and a playground page
@@ -103,7 +103,7 @@ Nothing in the build, packaging, or dev pipeline changes.
 ## Fluent UI adapter
 
 `@mbsks/rspfx-fluent-adapter` is **optional** (enable with `fluent: true` in
-`rspfx.config.ts`) and **React-only**:
+the plugin options in `rspack.config.ts`) and **React-only**:
 
 - `FluentWebPart<TProps, TState> extends ReactWebPart` — full web part with Fluent
   UI boilerplate.

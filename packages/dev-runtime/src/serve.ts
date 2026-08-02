@@ -132,10 +132,11 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
   });
 
+  let origin = settings.origin;
   const regenerator = createManifestRegenerator({
     projectRoot: opts.projectRoot,
     production: false,
-    origin: settings.origin,
+    origin: () => origin,
     packageVersion: project.webParts.packageVersion,
     entries: project.webParts.entries,
     externals: ctx.externals,
@@ -169,7 +170,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
     }
   );
-  const origin = `${settings.scheme}://${settings.hostname}:${server.port}`;
+  origin = `${settings.scheme}://${settings.hostname}:${server.port}`;
 
   server.onEmit(() => {
     void regenerator.regenerate().catch((error) => {

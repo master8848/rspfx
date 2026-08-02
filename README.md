@@ -67,7 +67,8 @@ rspfx package     # production build → .sppkg
 apps/cli                  the rspfx binary (composition root)
 apps/playground           standalone playground host
 packages/core             SPFx types, base web part, config — zero dependencies
-packages/plugin-api       FrameworkPreset / plugin hooks
+packages/plugin           the RspfxPlugin / rspfxVite bundler plugins carrying the project config
+packages/plugin-api       FrameworkPreset / extension hooks
 packages/diagnostics      logger, errors, telemetry, benchmarks
 packages/compiler-rspack  Rspack config factory, TS via swc, SCSS, assets
 packages/manifest-generator  component manifests, manifests.js, sp-* deps
@@ -83,13 +84,13 @@ reference/                captured SPFx format ground truth (FORMATS.md, compone
 docs/                     user + architecture documentation
 ```
 
-- **Custom folder layouts** — `paths` in `rspfx.config.ts` (`srcDir`,
-  `webpartsDir`, `configDir`) relocates the default `src/` + `src/webparts/` +
-  `config/` layout.
-- **Bundler plugin surface** — `spfx()` from `@mbsks/rspfx-compiler-rspack`
-  returns a full Rspack `Configuration` for use in your own `rspack.config.ts`
-  (vite/turbopack variants are future work; the CLI stays the opinionated
-  default).
+- **Custom folder layouts** — `paths` in the bundler config plugin options
+  (`srcDir`, `webpartsDir`, `configDir`) relocates the default `src/` +
+  `src/webparts/` + `config/` layout.
+- **Project config is a bundler plugin** — the `RspfxPlugin` in
+  `rspack.config.ts` (or `rspfxVite` in `vite.config.ts`) from
+  `@mbsks/rspfx-plugin` carries the project config (name, framework, dev,
+  build, …); the CLI finds it by its marker symbol and uses its options.
 
 `examples/modern-search` is a real production solution — PnP Modern Search
 (4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft +
