@@ -14,7 +14,7 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 
 ## Publishing (npm)
 
-- `pnpm publish` runs `scripts/publish.mjs`: gates (clean tree → `pnpm build` → `pnpm test`), bumps **all** publishable packages (`packages/*` + `apps/cli`, never `examples/*` or `apps/playground` — hard abort if any of those is not `private: true`), publishes in dependency order, verifies each version on the registry, and commits the bump. Already-published versions are skipped, so re-runs resume.
+- `pnpm run publish` runs `scripts/publish.mjs` (note: `pnpm publish` alone is pnpm's built-in and would act on the private root package — always use `pnpm run publish`): gates (clean tree → `pnpm build` → CLI build → `pnpm test`), bumps **all** publishable packages (`packages/*` + `apps/cli`, never `examples/*` or `apps/playground` — hard abort if any of those is not `private: true`), publishes in dependency order, verifies each version on the registry, and commits the bump. Already-published versions are skipped, so re-runs resume.
 - Flags: `--dry-run` (plan only), `--version x.y.z`, `--patch|--minor|--major` (default patch), `--skip-checks`, `--otp <code>`, `--no-commit`. Preview with `pnpm publish:dry`.
 - All publishable packages share ONE version number (bump them together; the script aborts if they drift).
 - npm account: `master8848`; scope `@mbsks`. Do NOT publish `0.0.1` again — previously published-then-unpublished versions can never be re-published (npm E400).

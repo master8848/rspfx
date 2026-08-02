@@ -211,7 +211,12 @@ for (const name of order) {
   console.log(`  → ${name}@${targetVersion}`);
   const publishArgs = ['publish', '--no-git-checks', '--access', 'public'];
   if (otp) publishArgs.push('--otp', otp);
-  const result = spawnSync('pnpm', publishArgs, { cwd: pkg.dir, stdio: 'inherit' });
+  // Pipe stdin so pnpm never shows interactive prompts (branch check, OTP) —
+  // a missing OTP surfaces as a hard error instead of a hung prompt.
+  const result = spawnSync('pnpm', publishArgs, {
+    cwd: pkg.dir,
+    stdio: ['pipe', 'inherit', 'inherit']
+  });
   if (result.status !== 0) {
     failed.push(name);
     console.error(`  ✗ ${name} failed (exit ${result.status ?? 'signal'})`);
