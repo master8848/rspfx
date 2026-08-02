@@ -84,7 +84,11 @@ describe('scaffoldProject', () => {
     expect(deps['@microsoft/sp-webpart-base']).toBe('1.22.0');
     expect(deps['@microsoft/sp-property-pane']).toBe('1.22.0');
     const devDeps = pkg['devDependencies'] as Record<string, string>;
-    expect(devDeps['@mbsks/rspfx-plugin']).toBe('^0.0.1');
+    const toolchainVersion = JSON.parse(
+      fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    ) as { version: string };
+    expect(devDeps['@mbsks/rspfx-plugin']).toBe(`^${toolchainVersion.version}`);
+    expect(devDeps['@mbsks/rspfx-cli']).toBe(`^${toolchainVersion.version}`);
   });
 
   it('writes a comma-correct dev block when tenantUrl is set', () => {

@@ -66,12 +66,24 @@ const FRAMEWORK_RUNTIME_DEPS: Record<string, Record<string, string>> = {
   preact: { preact: '^10.24.0' }
 };
 
+/**
+ * The current release version of the rspfx toolchain — every publishable
+ * package shares one version, so the scaffold can pin its @mbsks/rspfx-*
+ * devDependencies to a resolvable range of the actual npm release.
+ */
+const TOOLCHAIN_VERSION: string = (() => {
+  const pkg = JSON.parse(
+    fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+  ) as { version?: string };
+  return pkg.version ?? '0.0.1';
+})();
+
 function frameworkDeps(vars: TemplateVars): Record<string, string> {
   const runtime = FRAMEWORK_RUNTIME_DEPS[vars.framework];
   if (!runtime) {
     return {};
   }
-  return { [`@mbsks/rspfx-framework-${vars.framework}`]: '^0.0.1', ...runtime };
+  return { [`@mbsks/rspfx-framework-${vars.framework}`]: `^${TOOLCHAIN_VERSION}`, ...runtime };
 }
 
 function buildFiles(vars: TemplateVars): TemplateFile[] {
@@ -193,7 +205,8 @@ function packageJson(vars: TemplateVars): string {
         ...shadcnDeps
       },
       devDependencies: {
-        '@mbsks/rspfx-plugin': '^0.0.1',
+        '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
+        '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
         typescript: '^5.7.0',
         ...shadcnDevDeps
       }
