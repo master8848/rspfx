@@ -1,6 +1,6 @@
 {
   "name": "rspfx",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "SPFx-compatible build toolchain powered by Rspack",
@@ -28,6 +28,9 @@
     "vitest": "^2.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@parcel/watcher"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@parcel/watcher"
+    ]
   }
 }

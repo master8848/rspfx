@@ -213,13 +213,18 @@ for (const name of order) {
   if (otp) publishArgs.push('--otp', otp);
   // Pipe stdin so pnpm never shows interactive prompts (branch check, OTP) —
   // a missing OTP surfaces as a hard error instead of a hung prompt.
-  const result = spawnSync('pnpm', publishArgs, {
-    cwd: pkg.dir,
-    stdio: ['pipe', 'inherit', 'inherit']
-  });
-  if (result.status !== 0) {
+  const publishOnce = (): number =>
+    spawnSync('pnpm', publishArgs, { cwd: pkg.dir, stdio: ['pipe', 'inherit', 'inherit'] }).status ?? 1;
+  let status = publishOnce();
+  for (let attempt = 1; status !== 0 && attempt < 4; attempt++) {
+    // npm registry races (E409 packument) are transient — back off and retry.
+    console.log(`    (attempt ${attempt + 1}/4 after exit ${status})`);
+    execSync('sleep 4');
+    status = publishOnce();
+  }
+  if (status !== 0) {
     failed.push(name);
-    console.error(`  ✗ ${name} failed (exit ${result.status ?? 'signal'})`);
+    console.error(`  ✗ ${name} failed (exit ${status})`);
     break;
   }
   if (!verifyPublished(name, targetVersion)) {
