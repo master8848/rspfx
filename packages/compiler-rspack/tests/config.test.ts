@@ -130,7 +130,7 @@ describe('createRspackConfig', () => {
     expect(config.output?.filename).toBe('[name].js');
     expect(config.output?.chunkFilename).toBe('chunk.[name].js');
     expect(config.output?.crossOriginLoading).toBe('anonymous');
-    expect(config.output?.publicPath).toBe('auto');
+    expect(config.output?.publicPath).toBe('__RSPFX_SPFX_PUBLIC_PATH__');
   });
 
   it('outputs to projectRoot/build.outDir', async () => {

@@ -75,7 +75,9 @@ describe('startDevServer', () => {
       expect(emitCount).toBeGreaterThanOrEqual(1);
 
       const body = await response.text();
-      expect(body.slice(0, 200).startsWith(AMD_PREFIX)).toBe(true);
+      expect(body).toContain(AMD_PREFIX);
+      expect(body.startsWith(`(function(){window["__rspfx_script_url_testwebpart"]=`)).toBe(true);
+      expect(body).not.toContain('__RSPFX_SPFX_PUBLIC_PATH__');
 
       const onDisk = path.join(FIXTURE, 'dist', 'testwebpart.js');
       expect(fs.existsSync(onDisk)).toBe(true);

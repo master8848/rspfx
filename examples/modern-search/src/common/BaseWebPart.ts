@@ -33,9 +33,14 @@ export abstract class BaseWebPart<T extends IBaseWebPartProps> extends BaseClien
 
     /**
      * The Web Part properties
+     *
+     * Forwarding getter: the base class exposes `properties` as a prototype accessor.
+     * Redeclaring it as a plain field would shadow the getter (own property stuck at
+     * `undefined` under modern class-field semantics), breaking `this.properties` at onInit.
      */
-    // @ts-ignore: redefinition
-    protected properties: T;
+    protected get properties(): T {
+        return super.properties as T;
+    }
 
     /**
      * The data source service instance

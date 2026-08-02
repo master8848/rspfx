@@ -4,6 +4,8 @@ import styles from './styles.mod.scss';
 import htmlTemplate from './template.html';
 import * as strings from 'XxxWebPartStrings';
 
+void import('./lazy.js');
+
 export interface ITestWebPartProps {
   description: string;
 }

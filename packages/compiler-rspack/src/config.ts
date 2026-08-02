@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { rspack, type Configuration, type RuleSetRule } from '@rspack/core';
 import type { CompileContext } from './types.js';
 import { RspfxError } from './errors.js';
+import { SpfxLocalizedResourcesPlugin } from './localized-resources.js';
+import { SpfxPublicPathPlugin, SPFX_PUBLIC_PATH_SENTINEL } from './public-path.js';
 import type { FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
 
 const require = createRequire(import.meta.url);
@@ -168,6 +170,10 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   if (ctx.additionalPlugins) {
     plugins.push(...(ctx.additionalPlugins as NonNullable<Configuration['plugins']>));
   }
+  plugins.push(new SpfxPublicPathPlugin({ entries: ctx.entries }));
+  if (ctx.localizedResources && ctx.localizedResources.length > 0) {
+    plugins.push(new SpfxLocalizedResourcesPlugin(ctx.localizedResources));
+  }
 
   const config: Configuration = {
     mode,
@@ -188,10 +194,10 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
       library: { type: 'amd' },
       chunkLoadingGlobal: `webpackJsonp_${computeUniqueName(ctx)}`,
       crossOriginLoading: 'anonymous',
-      publicPath: 'auto',
+      publicPath: SPFX_PUBLIC_PATH_SENTINEL,
       devtoolModuleFilenameTemplate: 'webpack:///../[resource-path]'
     },
-    externals: ctx.externals,
+    externals: [...ctx.externals, ...(ctx.localizedResources ?? []).map((resource) => resource.name)],
     resolve: {
       extensions,
       modules: ['node_modules'],

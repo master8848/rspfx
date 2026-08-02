@@ -10,6 +10,7 @@ export interface SpfxPluginOptions {
   fastRefresh?: boolean;
   production?: boolean;
   aliases?: Record<string, string>;
+  localizedResources?: import('./types.js').LocalizedResource[];
   build?: Partial<BuildConfig>;
   serveMode?: boolean;
   additionalPlugins?: unknown[];
@@ -25,6 +26,7 @@ export async function spfx(options: SpfxPluginOptions): Promise<unknown> {
     entries: options.entries,
     externals: options.externals ?? [],
     aliases: options.aliases ?? {},
+    localizedResources: options.localizedResources,
     build: {
       sourcemap: options.build?.sourcemap ?? false,
       minify: options.build?.minify ?? true,

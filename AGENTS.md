@@ -25,7 +25,7 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 - Default env is `node`; DOM tests opt in per-file with `// @vitest-environment happy-dom` (all framework `adapter.test.ts`, `webpart.test.ts`, `fluent-adapter`, `sharepoint-runtime`, `manifests-js.test.ts`).
 - Root vitest aliases stub real `@microsoft/sp-webpart-base` / `@microsoft/sp-core-library` to `tests/stubs/`. Tests never import real `@microsoft/sp-*` implementations.
 - Shared root `tests/fixtures/` is empty — golden fixtures live per-package (e.g. `packages/sppkg-builder/tests/fixtures/proj/`).
-- Golden-style checks are assertion-based, not snapshots: AMD bundle header prefix `define('<id>_1.0.0', ["@microsoft/sp-core-library"],` (`compiler-rspack/tests/build.test.ts`), byte-equal zip entries and exact `.sppkg` entry lists (`sppkg-builder/tests/sppkg-builder.test.ts`).
+- Golden-style checks are assertion-based, not snapshots: AMD bundle header prefix `define('<id>_1.0.0', ["@microsoft/sp-core-library"],` preceded by the currentScript capture line (`(function(){window["__rspfx_script_url_<name>"]=` — see `compiler-rspack/src/public-path.ts` and `compiler-rspack/tests/build.test.ts`), byte-equal zip entries and exact `.sppkg` entry lists (`sppkg-builder/tests/sppkg-builder.test.ts`).
 - `packages/dev-runtime/tests/dev-runtime.test.ts` writes its fixture at runtime into cwd `tests/fixtures/proj` — run it from the package dir.
 - No captured binary `.sppkg` artifacts exist. Ground truth is `reference/FORMATS.md` + `reference/sp-component-ids.json`, enforced via string assertions; `packages/manifest-generator/src/data/component-ids.ts` holds a compiled copy of the ID table — keep it in sync with `reference/`.
 

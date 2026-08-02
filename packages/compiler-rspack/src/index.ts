@@ -3,6 +3,8 @@ export type {
   BundleEntry,
   CompileContext,
   DevServerOptions,
+  LocalizedResource,
+  LocalizedResourceFile,
   StartDevServerResult,
   WatchHandle
 } from './types.js';

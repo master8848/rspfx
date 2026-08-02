@@ -62,11 +62,17 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     entries: project.webParts.entries,
     externals: [...findSpDependencies(opts.projectRoot).keys(), ...project.externals],
     localizedAliases: project.localizedAliases,
+    localizedResources: project.localizedResources,
     fastRefresh,
     production: false,
     serveMode: true,
     build: config.build
   });
+
+  const localizedEntries = project.localizedResources.map((resource) => ({
+    name: resource.name,
+    locales: resource.files.map((file) => file.locale)
+  }));
 
   const entryModuleIds: Record<string, string> = {};
   project.webParts.bundles.forEach((bundle, index) => {
@@ -86,6 +92,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
           packageVersion: project.webParts.packageVersion,
           bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
           externals: ctx.externals,
+          localizedResources: localizedEntries,
           webpartsDir: config.paths?.webpartsDir,
           entryModuleIds
         });
@@ -214,6 +221,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
     ],
     externals: [...findSpDependencies(projectRoot).keys(), ...project.externals],
     localizedAliases: project.localizedAliases,
+    localizedResources: project.localizedResources,
     fastRefresh: true,
     production: false,
     serveMode: true,

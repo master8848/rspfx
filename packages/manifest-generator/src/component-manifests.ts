@@ -83,8 +83,9 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
         path: ctx.bundleFiles.get(entryModuleId) ?? `${entryModuleId}.js`
       }
     };
+    const localizedNames = new Set((ctx.localizedResources ?? []).map((resource) => resource.name));
     const externalNames = [...ctx.externals]
-      .filter((name) => name !== entryModuleId)
+      .filter((name) => name !== entryModuleId && !localizedNames.has(name))
       .sort();
     for (const externalName of externalNames) {
       const spDependency = spDependencies.get(externalName);
@@ -117,6 +118,17 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
         id: nonSpDependency.id,
         version: nonSpDependency.version
       };
+    }
+    for (const resource of ctx.localizedResources ?? []) {
+      const paths: Record<string, { path: string; integrity: string }> = {};
+      const defaultLocale = resource.locales.find((locale) => locale === 'en-us');
+      if (defaultLocale !== undefined) {
+        paths['default'] = { path: `${resource.name}_${defaultLocale}.js`, integrity: '' };
+      }
+      for (const locale of resource.locales) {
+        paths[locale] = { path: `${resource.name}_${locale}.js`, integrity: '' };
+      }
+      scriptResources[resource.name] = { type: 'localizedPath', paths };
     }
     source.loaderConfig = {
       internalModuleBaseUrls: ctx.production ? ctx.baseUrls.release : [ctx.baseUrls.debug],

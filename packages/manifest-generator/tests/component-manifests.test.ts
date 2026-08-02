@@ -112,6 +112,29 @@ describe('generateComponentManifests', () => {
     expect((error as RspfxError).code).toBe('UNRESOLVED_EXTERNAL');
   });
 
+  it('declares localizedPath resources and excludes them from external resolution', async () => {
+    const manifests = await generateComponentManifests(
+      ctx({
+        externals: ['@microsoft/sp-core-library', 'CommonStrings'],
+        localizedResources: [{ name: 'CommonStrings', locales: ['en-us', 'fr-fr'] }]
+      })
+    );
+    const scriptResources = manifests[0]!.loaderConfig.scriptResources;
+    expect(scriptResources['CommonStrings']).toEqual({
+      type: 'localizedPath',
+      paths: {
+        default: { path: 'CommonStrings_en-us.js', integrity: '' },
+        'en-us': { path: 'CommonStrings_en-us.js', integrity: '' },
+        'fr-fr': { path: 'CommonStrings_fr-fr.js', integrity: '' }
+      }
+    });
+    expect(scriptResources['@microsoft/sp-core-library']).toEqual({
+      type: 'component',
+      id: '7263c7d0-1d6a-45ec-8d85-d4d1d234171b',
+      version: '1.23.2'
+    });
+  });
+
   it('resolves tslib from the component ids table without a dist manifest', async () => {
     const manifests = await generateComponentManifests(ctx({ externals: ['tslib'] }));
     expect(manifests[0]!.loaderConfig.scriptResources['tslib']).toEqual({

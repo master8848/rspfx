@@ -1,5 +1,5 @@
 export { generateComponentManifests } from './component-manifests.js';
-export type { ComponentManifest, ManifestContext } from './types.js';
+export type { ComponentManifest, LocalizedResourceEntry, ManifestContext } from './types.js';
 export { RspfxError } from './errors.js';
 export { generateManifestsJs } from './manifests-js.js';
 export { findSpDependencies } from './sp-dependencies.js';

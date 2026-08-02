@@ -10,7 +10,7 @@ import {
   type PathsConfig,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
-import type { BundleEntry, CompileContext } from '@mbsks/rspfx-compiler-rspack';
+import type { BundleEntry, CompileContext, LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
 
 export interface WebPartBundle {
   bundleName: string;
@@ -45,6 +45,7 @@ export interface ReadProjectResult {
   serveJson: ProjectServeConfigJson | undefined;
   externals: string[];
   localizedAliases: Record<string, string>;
+  localizedResources: LocalizedResource[];
 }
 
 export function readProject(projectRoot: string, paths?: PathsConfig): ReadProjectResult {
@@ -73,7 +74,8 @@ export function readProject(projectRoot: string, paths?: PathsConfig): ReadProje
     configJson,
     serveJson,
     externals: readExternals(projectRoot, configJson),
-    localizedAliases: readLocalizedAliases(projectRoot, configJson, resolvedPaths.srcDir)
+    localizedAliases: readLocalizedAliases(projectRoot, configJson, resolvedPaths.srcDir),
+    localizedResources: readLocalizedResources(projectRoot, configJson, resolvedPaths.srcDir)
   };
 }
 
@@ -105,6 +107,61 @@ export function readLocalizedAliases(
     aliases[name] = path.resolve(projectRoot, target).replace(/\.(js|ts|tsx)$/, '');
   }
   return aliases;
+}
+
+/**
+ * Maps `config.json` `localizedResources` entries (the official SPFx mechanism
+ * for localized string modules such as `import strings from 'XxxWebPartStrings'`)
+ * to the locale files on disk. `lib/...` patterns resolve under the source
+ * directory (official projects point at Heft output `lib/...`), while
+ * `node_modules/...` patterns are kept as-is.
+ *
+ * The returned resources are externalized in the bundle (the AMD entry lists
+ * them as dependencies), emitted to `dist/<name>_<locale>.js`, and declared in
+ * the generated manifests as `localizedPath` script resources — mirroring the
+ * official toolchain. sp-loader then loads the correct locale per UI language.
+ */
+export function readLocalizedResources(
+  projectRoot: string,
+  configJson: ProjectConfigJson | undefined,
+  srcDir = 'src'
+): LocalizedResource[] {
+  const resources: LocalizedResource[] = [];
+  if (!configJson?.localizedResources) {
+    return resources;
+  }
+  for (const [name, pattern] of Object.entries(configJson.localizedResources)) {
+    if (typeof pattern !== 'string' || !pattern.includes('{locale}')) {
+      continue;
+    }
+    const dirPattern = pattern.slice(0, pattern.lastIndexOf('/') + 1);
+    let dirPath: string;
+    if (dirPattern.startsWith('lib/')) {
+      dirPath = path.resolve(projectRoot, srcDir, dirPattern.slice('lib/'.length));
+    } else {
+      dirPath = path.resolve(projectRoot, dirPattern);
+    }
+    let fileNames: string[];
+    try {
+      fileNames = fs.readdirSync(dirPath);
+    } catch {
+      continue;
+    }
+    const files = fileNames
+      .filter(
+        (file) =>
+          (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) &&
+          !file.startsWith('.')
+      )
+      .map((file) => ({
+        locale: file.replace(/\.(js|ts)$/, ''),
+        path: path.join(dirPath, file)
+      }));
+    if (files.length > 0) {
+      resources.push({ name, files });
+    }
+  }
+  return resources;
 }
 
 function readExternals(projectRoot: string, configJson: ProjectConfigJson | undefined): string[] {
@@ -224,19 +281,26 @@ export function createCompileContext(opts: {
   entries: BundleEntry[];
   externals: string[];
   localizedAliases?: Record<string, string>;
+  localizedResources?: LocalizedResource[];
   fastRefresh: boolean;
   production: boolean;
   serveMode: boolean;
   build: BuildConfig;
 }): CompileContext {
+  const localizedResources = opts.localizedResources ?? [];
+  const localizedNames = new Set(localizedResources.map((resource) => resource.name));
+  const aliases = Object.fromEntries(
+    Object.entries(opts.localizedAliases ?? {}).filter(([name]) => !localizedNames.has(name))
+  );
   return {
     projectRoot: opts.projectRoot,
     framework: opts.config.framework,
     fastRefresh: opts.fastRefresh,
     production: opts.production,
     entries: opts.entries,
-    externals: opts.externals,
-    aliases: opts.localizedAliases,
+    externals: [...opts.externals, ...localizedNames],
+    aliases,
+    localizedResources,
     build: opts.build,
     serveMode: opts.serveMode,
     tailwind: opts.config.styling === 'tailwind'

@@ -13,6 +13,11 @@ export interface ComponentManifest {
   [k: string]: unknown;
 }
 
+export interface LocalizedResourceEntry {
+  name: string;
+  locales: string[];
+}
+
 export interface ManifestContext {
   projectRoot: string;
   production: boolean;
@@ -20,6 +25,7 @@ export interface ManifestContext {
   packageVersion: string;
   bundleFiles: Map<string, string>;
   externals: string[];
+  localizedResources?: LocalizedResourceEntry[];
   webpartsDir?: string;
   entryModuleIds?: Record<string, string>;
 }

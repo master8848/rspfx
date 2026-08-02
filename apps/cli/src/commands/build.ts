@@ -46,6 +46,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     entries: project.webParts.entries,
     externals: [...findSpDependencies(cwd).keys(), ...project.externals],
     localizedAliases: project.localizedAliases,
+    localizedResources: project.localizedResources,
     fastRefresh: false,
     production: true,
     serveMode: false,
@@ -84,6 +85,10 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     packageVersion: project.webParts.packageVersion,
     bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
     externals: ctx.externals,
+    localizedResources: project.localizedResources.map((resource) => ({
+      name: resource.name,
+      locales: resource.files.map((file) => file.locale)
+    })),
     webpartsDir: config.paths?.webpartsDir,
     entryModuleIds
   });

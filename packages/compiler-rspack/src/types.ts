@@ -9,6 +9,16 @@ export interface BundleEntry {
   version: string;
 }
 
+export interface LocalizedResourceFile {
+  locale: string;
+  path: string;
+}
+
+export interface LocalizedResource {
+  name: string;
+  files: LocalizedResourceFile[];
+}
+
 export interface CompileContext {
   projectRoot: string;
   framework: FrameworkIdType;
@@ -17,6 +27,7 @@ export interface CompileContext {
   entries: BundleEntry[];
   externals: string[];
   aliases?: Record<string, string>;
+  localizedResources?: LocalizedResource[];
   build: BuildConfigType;
   serveMode?: boolean;
   additionalPlugins?: unknown[];
