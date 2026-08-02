@@ -213,7 +213,7 @@ for (const name of order) {
   if (otp) publishArgs.push('--otp', otp);
   // Pipe stdin so pnpm never shows interactive prompts (branch check, OTP) —
   // a missing OTP surfaces as a hard error instead of a hung prompt.
-  const publishOnce = (): number =>
+  const publishOnce = () =>
     spawnSync('pnpm', publishArgs, { cwd: pkg.dir, stdio: ['pipe', 'inherit', 'inherit'] }).status ?? 1;
   let status = publishOnce();
   for (let attempt = 1; status !== 0 && attempt < 4; attempt++) {
