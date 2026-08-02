@@ -1,5 +1,5 @@
 {
-  "name": "@mbsks/rspfx-plugin-api",
+  "name": "@mbsks/rspfx-plugin",
   "version": "0.0.1",
   "private": false,
   "type": "module",
@@ -22,9 +22,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*"
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-dev-runtime": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@rspack/core": "^1.2.0"
   },
-  "description": "RSPFX plugin API: FrameworkPreset, extension hooks",
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "description": "RSPFX bundler plugins: RspfxPlugin (Rspack/Webpack-compatible) and rspfxVite (Vite) carrying the single project config object",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

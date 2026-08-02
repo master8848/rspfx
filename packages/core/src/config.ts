@@ -40,6 +40,8 @@ export interface DeployConfig {
 
 export interface RspfxConfig {
   name: string;
+  /** Build-time package version used in AMD library names and manifests; overrides package.json "version". */
+  version?: string;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
   fluent: boolean;

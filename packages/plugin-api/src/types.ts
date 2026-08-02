@@ -23,7 +23,7 @@ export interface PackageHooks {
   beforePackage?(ctx: { manifests: unknown[]; files: { path: string; content: Uint8Array }[] }): void;
 }
 
-export interface RspfxPlugin {
+export interface RspfxExtension {
   name: string;
   frameworkPreset?: FrameworkPreset;
   compilerHooks?: CompilerHooks;

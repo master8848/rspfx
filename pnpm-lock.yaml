@@ -781,6 +781,34 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1
 
+  packages/plugin:
+    dependencies:
+      '@mbsks/rspfx-compiler-rspack':
+        specifier: workspace:*
+        version: link:../compiler-rspack
+      '@mbsks/rspfx-core':
+        specifier: workspace:*
+        version: link:../core
+      '@mbsks/rspfx-dev-runtime':
+        specifier: workspace:*
+        version: link:../dev-runtime
+      '@mbsks/rspfx-diagnostics':
+        specifier: workspace:*
+        version: link:../diagnostics
+      '@mbsks/rspfx-manifest-generator':
+        specifier: workspace:*
+        version: link:../manifest-generator
+      '@mbsks/rspfx-manifest-server':
+        specifier: workspace:*
+        version: link:../manifest-server
+      '@rspack/core':
+        specifier: ^1.2.0
+        version: 1.7.12(@swc/helpers@0.5.23)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.8.3
+
   packages/plugin-api:
     dependencies:
       '@mbsks/rspfx-core':

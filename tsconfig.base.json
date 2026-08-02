@@ -24,6 +24,7 @@
       "@mbsks/rspfx-plugin-api": ["packages/plugin-api/src/index.ts"],
       "@mbsks/rspfx-diagnostics": ["packages/diagnostics/src/index.ts"],
       "@mbsks/rspfx-compiler-rspack": ["packages/compiler-rspack/src/index.ts"],
+      "@mbsks/rspfx-plugin": ["packages/plugin/src/index.ts"],
       "@mbsks/rspfx-manifest-generator": ["packages/manifest-generator/src/index.ts"],
       "@mbsks/rspfx-sppkg-builder": ["packages/sppkg-builder/src/index.ts"],
       "@mbsks/rspfx-manifest-server": ["packages/manifest-server/src/index.ts"],

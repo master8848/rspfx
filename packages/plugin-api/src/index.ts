@@ -3,6 +3,6 @@ export type {
   FrameworkPreset,
   FrameworkRspackContributions,
   PackageHooks,
-  RspfxPlugin
+  RspfxExtension
 } from './types.js';
 export { definePlugin, getPlugins, registerPlugin } from './registry.js';

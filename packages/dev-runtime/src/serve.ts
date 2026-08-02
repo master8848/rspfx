@@ -3,16 +3,13 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
-import {
-  collectDebugManifests,
-  findSpDependencies,
-  generateComponentManifests,
-  generateManifestsJs
-} from '@mbsks/rspfx-manifest-generator';
+import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { createRefreshRuntime } from './refresh.js';
+import { createManifestRegenerator } from './manifests.js';
+import type { ProjectServeConfigJson } from './project.js';
 import { openBrowser } from './browser.js';
 
 export interface DevRuntimeOptions {
@@ -31,21 +28,82 @@ export interface DevRuntimeHandle {
   close(): Promise<void>;
 }
 
+export interface ServeSettings {
+  port: number;
+  hostname: string;
+  https: boolean;
+  scheme: string;
+  origin: string;
+  tenantDomain: string | undefined;
+  initialPage: string | undefined;
+}
+
 const logger = createLogger('rspfx');
 
-export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
+/**
+ * Resolves the dev server settings (port/hostname/https/tenant) from CLI
+ * overrides → legacy config/serve.json → plugin options (`dev` section) →
+ * built-in defaults. Shared by the Rspack dev server and the Vite plugin.
+ */
+export function resolveServeSettings(
+  opts: Pick<DevRuntimeOptions, 'port' | 'tenantDomain' | 'config'>,
+  serveJson?: ProjectServeConfigJson
+): ServeSettings {
   const config = resolveConfig(opts.config);
-  const project = readProject(opts.projectRoot, config.paths);
-
-  const serveJson = project.serveJson;
   const port = opts.port ?? serveJson?.port ?? config.dev.port ?? 4321;
   const hostname = serveJson?.hostname ?? serveJson?.ipAddress ?? config.dev.hostname ?? 'localhost';
   const https = serveJson?.https ?? config.dev.https ?? true;
-  const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
-  const certs = https ? await ensureCertificates(certsDir) : undefined;
-
   const scheme = https ? 'https' : 'http';
-  let origin = `${scheme}://${hostname}:${port}`;
+  const tenantDomain =
+    opts.tenantDomain ?? process.env.SPFX_SERVE_TENANT_DOMAIN ?? stripScheme(config.dev.tenantUrl);
+  const initialPage = serveJson?.initialPage ?? config.dev.initialPage;
+  return {
+    port,
+    hostname,
+    https,
+    scheme,
+    origin: `${scheme}://${hostname}:${port}`,
+    tenantDomain,
+    initialPage
+  };
+}
+
+/**
+ * Builds the workbench URL with `debug=true&noredir=true&debugManifestsFile=…`.
+ * Returns `undefined` when no tenant domain is available (SPFx workbench needs
+ * one); warns in that case. Shared by the Rspack dev server and the Vite plugin.
+ */
+export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string | undefined {
+  if (!(config.dev.workbench ?? true)) {
+    return undefined;
+  }
+  const page =
+    settings.initialPage?.replace(/\{tenantdomain\}/gi, settings.tenantDomain ?? '{tenantdomain}') ??
+    (settings.tenantDomain ? `https://${settings.tenantDomain}/_layouts/15/workbench.aspx` : undefined);
+  if (!page || page.includes('{tenantdomain}')) {
+    if (page) {
+      logger.warn(
+        'No tenant domain configured. Set dev.tenantUrl in the rspfx plugin options, ' +
+          'pass --tenant, or set the SPFX_SERVE_TENANT_DOMAIN environment variable.'
+      );
+    }
+    return undefined;
+  }
+  const url = new URL(page);
+  url.searchParams.set('debug', 'true');
+  url.searchParams.set('noredir', 'true');
+  url.searchParams.set('debugManifestsFile', `${settings.origin}/temp/manifests.js`);
+  return url.toString();
+}
+
+export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
+  const config = resolveConfig(opts.config);
+  const project = readProject(opts.projectRoot, config.paths, config.version);
+
+  const settings = resolveServeSettings(opts, project.serveJson);
+  const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+  const certs = settings.https ? await ensureCertificates(certsDir) : undefined;
+
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
   const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
   const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
@@ -69,54 +127,31 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     build: config.build
   });
 
-  const localizedEntries = project.localizedResources.map((resource) => ({
-    name: resource.name,
-    locales: resource.files.map((file) => file.locale)
-  }));
-
   const entryModuleIds: Record<string, string> = {};
   project.webParts.bundles.forEach((bundle, index) => {
     entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
   });
 
-  let manifestsJs = '';
-  let regeneration: Promise<void> | null = null;
-  const regenerateManifests = (): Promise<void> => {
-    regeneration ??= (async () => {
-      refreshRuntime?.preserveState();
-      try {
-        const manifests = await generateComponentManifests({
-          projectRoot: opts.projectRoot,
-          production: false,
-          baseUrls: { debug: `${origin}/dist/`, release: [] },
-          packageVersion: project.webParts.packageVersion,
-          bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
-          externals: ctx.externals,
-          localizedResources: localizedEntries,
-          webpartsDir: config.paths?.webpartsDir,
-          entryModuleIds
-        });
-        const debugManifests = await collectDebugManifests({
-          projectRoot: opts.projectRoot,
-          componentManifests: manifests,
-          serverOrigin: origin
-        });
-        manifestsJs = await generateManifestsJs(debugManifests);
-      } finally {
-        refreshRuntime?.restoreState();
-        regeneration = null;
-      }
-    })();
-    return regeneration;
-  };
-  await regenerateManifests();
+  const regenerator = createManifestRegenerator({
+    projectRoot: opts.projectRoot,
+    production: false,
+    origin: settings.origin,
+    packageVersion: project.webParts.packageVersion,
+    entries: project.webParts.entries,
+    externals: ctx.externals,
+    localizedResources: project.localizedResources,
+    webpartsDir: config.paths?.webpartsDir,
+    entryModuleIds,
+    refreshRuntime
+  });
+  await regenerator.regenerate();
 
   const server = await startDevServer(
     { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
     {
-      port,
-      hostname,
-      https,
+      port: settings.port,
+      hostname: settings.hostname,
+      https: settings.https,
       certs,
       hot: true,
       allowedHosts: 'all',
@@ -127,44 +162,24 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
             const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
             response.setHeader('Content-Type', 'application/javascript');
             response.setHeader('Cache-Control', 'no-store');
-            response.end(manifestsJs);
+            response.end(regenerator.manifestsJs);
           }
         }
       ],
       staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
     }
   );
-  origin = `${scheme}://${hostname}:${server.port}`;
+  const origin = `${settings.scheme}://${settings.hostname}:${server.port}`;
 
   server.onEmit(() => {
-    void regenerateManifests().catch((error) => {
+    void regenerator.regenerate().catch((error) => {
       logger.error(`Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`);
     });
   });
   await waitForFirstCompile(server);
-  await regenerateManifests();
+  await regenerator.regenerate();
 
-  const tenantDomain =
-    opts.tenantDomain ?? process.env.SPFX_SERVE_TENANT_DOMAIN ?? stripScheme(config.dev.tenantUrl);
-  const initialPage = serveJson?.initialPage ?? config.dev.initialPage;
-  let workbenchUrl: string | undefined;
-  if (config.dev.workbench ?? true) {
-    const page =
-      initialPage?.replace(/\{tenantdomain\}/gi, tenantDomain ?? '{tenantdomain}') ??
-      (tenantDomain ? `https://${tenantDomain}/_layouts/15/workbench.aspx` : undefined);
-    if (page && !page.includes('{tenantdomain}')) {
-      const url = new URL(page);
-      url.searchParams.set('debug', 'true');
-      url.searchParams.set('noredir', 'true');
-      url.searchParams.set('debugManifestsFile', `${origin}/temp/manifests.js`);
-      workbenchUrl = url.toString();
-    } else if (page) {
-      logger.warn(
-        'No tenant domain configured. Set tenantUrl in rspfx.config.ts (dev section), ' +
-          'pass --tenant, or set the SPFX_SERVE_TENANT_DOMAIN environment variable.'
-      );
-    }
-  }
+  const workbenchUrl = buildWorkbenchUrl({ ...settings, origin }, config);
 
   if (workbenchUrl && (opts.noBrowser ?? !(config.dev.openBrowser ?? true)) === false) {
     openBrowser(workbenchUrl);
@@ -197,7 +212,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
       `Playground entry not found at ${playgroundMain}. Run "rspfx new" or add a playground/ folder.`
     );
   }
-  const project = readProject(projectRoot, config.paths);
+  const project = readProject(projectRoot, config.paths, config.version);
   const port = opts.port ?? config.playground?.port ?? 3000;
   const scheme = 'http';
   const hostname = config.dev.hostname ?? 'localhost';
@@ -259,7 +274,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
   };
 }
 
-function stripScheme(url: string | undefined): string | undefined {
+export function stripScheme(url: string | undefined): string | undefined {
   if (!url) {
     return undefined;
   }
