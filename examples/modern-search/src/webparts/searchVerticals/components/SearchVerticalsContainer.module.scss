@@ -1,0 +1,13 @@
+.searchVerticalsContainer {
+  background: none;
+
+  .dataVerticals {
+    div[role=tablist] {
+      white-space: normal;
+    }
+
+    .isLink {
+      display: flex;
+    }
+  }
+}

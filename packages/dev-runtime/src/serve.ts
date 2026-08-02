@@ -58,6 +58,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     config,
     entries: project.webParts.entries,
     externals: [...findSpDependencies(opts.projectRoot).keys(), ...project.externals],
+    localizedAliases: project.localizedAliases,
     fastRefresh: opts.fastRefresh ?? config.dev.fastRefresh ?? false,
     production: false,
     serveMode: true,
@@ -201,6 +202,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
       }
     ],
     externals: [...findSpDependencies(projectRoot).keys(), ...project.externals],
+    localizedAliases: project.localizedAliases,
     fastRefresh: true,
     production: false,
     serveMode: true,

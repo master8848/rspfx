@@ -22,6 +22,7 @@ export interface DiscoveredWebParts {
 export interface ProjectConfigJson {
   bundles?: Record<string, { components: { entrypoint: string; manifest: string }[] }>;
   externals?: Record<string, unknown>;
+  localizedResources?: Record<string, string>;
 }
 
 export interface ProjectServeConfigJson {
@@ -37,6 +38,7 @@ export interface ReadProjectResult {
   configJson: ProjectConfigJson | undefined;
   serveJson: ProjectServeConfigJson | undefined;
   externals: string[];
+  localizedAliases: Record<string, string>;
 }
 
 export function readProject(projectRoot: string): ReadProjectResult {
@@ -59,7 +61,42 @@ export function readProject(projectRoot: string): ReadProjectResult {
   }
 
   const webParts = discoverWebParts(projectRoot, configJson);
-  return { webParts, configJson, serveJson, externals: readExternals(projectRoot, configJson) };
+  return {
+    webParts,
+    configJson,
+    serveJson,
+    externals: readExternals(projectRoot, configJson),
+    localizedAliases: readLocalizedAliases(projectRoot, configJson)
+  };
+}
+
+/**
+ * Maps `config.json` `localizedResources` entries (the official SPFx mechanism
+ * for localized string modules such as `import strings from 'XxxWebPartStrings'`)
+ * to the default-locale resource file. Official projects point these at the
+ * Heft output convention `lib/.../{locale}.js`; RSPFX resolves them to source
+ * (`src/.../en-us.js`/`.ts`), where the Rspack resolver then bundles the module.
+ * `node_modules/...` patterns (third-party localized resources) are kept as-is.
+ */
+export function readLocalizedAliases(
+  projectRoot: string,
+  configJson: ProjectConfigJson | undefined
+): Record<string, string> {
+  const aliases: Record<string, string> = {};
+  if (!configJson?.localizedResources) {
+    return aliases;
+  }
+  for (const [name, pattern] of Object.entries(configJson.localizedResources)) {
+    if (typeof pattern !== 'string' || !pattern.includes('{locale}')) {
+      continue;
+    }
+    let target = pattern.replace('{locale}', 'en-us');
+    if (target.startsWith('lib/')) {
+      target = 'src/' + target.slice('lib/'.length);
+    }
+    aliases[name] = path.resolve(projectRoot, target).replace(/\.(js|ts|tsx)$/, '');
+  }
+  return aliases;
 }
 
 function readExternals(projectRoot: string, configJson: ProjectConfigJson | undefined): string[] {
@@ -171,6 +208,7 @@ export function createCompileContext(opts: {
   config: RspfxConfig;
   entries: BundleEntry[];
   externals: string[];
+  localizedAliases?: Record<string, string>;
   fastRefresh: boolean;
   production: boolean;
   serveMode: boolean;
@@ -183,6 +221,7 @@ export function createCompileContext(opts: {
     production: opts.production,
     entries: opts.entries,
     externals: opts.externals,
+    aliases: opts.localizedAliases,
     build: opts.build,
     serveMode: opts.serveMode,
     tailwind: opts.config.styling === 'tailwind'

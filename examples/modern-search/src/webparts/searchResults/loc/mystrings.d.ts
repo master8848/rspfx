@@ -1,0 +1,156 @@
+declare interface ISearchResultsWebPartStrings {
+    General: {
+        PlaceHolder: {
+            EditLabel: string;
+            IconText: string;
+            Description: string;
+            ConfigureBtnLabel: string;
+        },
+        WebPartDefaultTitle: string;
+        ShowBlankEditInfoMessage: string;
+        CurrentVerticalNotSelectedMessage: string;
+        RollupSuggestionMessage: string;
+        RollupSuggestionLinkText: string;
+    },
+    PropertyPane: {
+        DataSourcePage: {
+            DataSourceConnectionGroupName: string;
+            PagingOptionsGroupName: string;
+            ItemsCountPerPageFieldName: string;
+            PagingRangeFieldName: string;
+            ShowPagingFieldName: string;
+            HidePageNumbersFieldName: string;
+            HideNavigationFieldName: string;
+            HideFirstLastPagesFieldName: string;
+            HideDisabledFieldName: string;
+            EnableQueryStringFieldName: string;
+            TemplateSlots: {
+                GroupName: string;
+                ConfigureSlotsLabel: string;
+                ConfigureSlotsBtnLabel: string;
+                MissingSlotsMessage: string;
+                ConfigureSlotsPanelHeader: string;
+                ConfigureSlotsPanelDescription: string;
+                SlotNameFieldName: string;
+                SlotFieldFieldName: string;
+                SlotFieldPlaceholderName: string;
+            },
+        },
+        LayoutPage: {
+            LayoutSelectionGroupName: string;
+            CommonOptionsGroupName: string;
+            ShowTitle: string;
+            TitleLinkTextFieldLabel: string;
+            TitleLinkUrlFieldLabel: string;
+            TitleLinkOpenInNewTab: string;
+            LayoutTemplateOptionsGroupName: string;
+            TemplateUrlFieldLabel: string;
+            TemplateUrlPlaceholder: string;
+            ErrorTemplateExtension: string;
+            ErrorTemplateResolve: string;
+            DialogButtonLabel: string;
+            DialogTitle: string;
+            MissingSlotsMessage: string;
+            ShowSelectedFilters: string;
+            ShowBlankIfNoResult: string;
+            ShowResultsCount: string;
+            HandlebarsRenderTypeLabel: string;
+            HandlebarsRenderTypeDesc: string;
+            AdaptiveCardsRenderTypeLabel: string;
+            AdaptiveCardsRenderTypeDesc: string;
+            Handlebars: {
+                UseMicrosoftGraphToolkit: string;
+                ResultTypes: {
+                    ResultTypeslabel: string;
+                    ResultTypesDescription: string;
+                    InlineTemplateContentLabel: string;
+                    EditResultTypesLabel: string;
+                    ConditionPropertyLabel: string;
+                    ConditionValueLabel: string;
+                    CondtionOperatorValue: string;
+                    ExternalUrlLabel: string;
+                    EqualOperator: string;
+                    NotEqualOperator: string;
+                    ContainsOperator: string;
+                    StartsWithOperator: string;
+                    NotNullOperator: string;
+                    GreaterOrEqualOperator: string;
+                    GreaterThanOperator: string;
+                    LessOrEqualOperator: string;
+                    LessThanOperator: string;
+                    CancelButtonText: string;
+                    DialogButtonText: string;
+                    DialogTitle: string;
+                    SaveButtonText: string;
+                },
+                AllowItemSelection: string;
+                AllowMultipleItemSelection: string;
+                SelectionPreservedOnEmptyClick: string;
+                SelectionModeLabel: string;
+                AsTokensSelectionMode: string;
+                AsDataFiltersSelectionMode: string;
+                AsDataFiltersDescription: string;
+                AsTokensDescription: string;
+                FilterValuesOperator: string;
+                FieldToConsumeLabel: string;
+                FieldToConsumeDescription: string;
+            },
+            AdaptiveCards: {
+                HostConfigFieldLabel: string;
+            }
+        },
+        ConnectionsPage: {
+            ConnectionsPageGroupName: string;
+            UseFiltersWebPartLabel: string;
+            UseFiltersFromComponentLabel: string;
+            UseDynamicFilteringsWebPartLabel: string;
+            UseDataResultsFromComponentsLabel: string;
+            UseDataResultsFromComponentsDescription: string;
+            UseSearchVerticalsWebPartLabel: string;
+            UseSearchVerticalsFromComponentLabel: string;
+            LinkToVerticalLabel: string;
+            LinkToVerticalLabelHoverMessage: string;
+            UseInputQueryText: string;
+            UseInputQueryTextHoverMessage: string;
+            SearchQueryTextFieldLabel: string;
+            SearchQueryTextFieldDescription: string;
+            SearchQueryPlaceHolderText: string;
+            InputQueryTextStaticValue: string;
+            InputQueryTextDynamicValue: string;
+            SearchQueryTextUseDefaultQuery: string;
+            SearchQueryTextDefaultValue: string;
+            SourceDestinationFieldLabel: string;
+            SourceDestinationFieldDescription: string;
+            AvailableFieldValuesFromResults: string;
+            BidirectionalConnectionWarning: string;
+        },
+        InformationPage: {
+            Extensibility: {
+                PanelHeader: string;
+                PanelDescription: string;
+            }
+        },
+        CustomQueryModifier: {
+            EditQueryModifiersLabel: string;
+            QueryModifiersLabel: string;
+            QueryModifiersDescription: string;
+            EnabledPropertyLabel: string;
+            ModifierNamePropertyLabel: string;
+            ModifierDescriptionPropertyLabel: string;
+            EndWhenSuccessfullPropertyLabel: string;
+        }
+    },
+    Styling: {
+        StylingOptionsGroupName: string;
+        ResultsBackgroundColorLabel: string;
+        ResultsBorderColorLabel: string;
+        ResultsBorderThicknessLabel: string;
+        ResetToDefaultLabel: string;
+        ResetToDefaultDescription: string;
+    }
+}
+
+declare module 'SearchResultsWebPartStrings' {
+    const strings: ISearchResultsWebPartStrings;
+    export = strings;
+}

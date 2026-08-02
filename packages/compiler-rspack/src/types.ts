@@ -16,6 +16,7 @@ export interface CompileContext {
   production: boolean;
   entries: BundleEntry[];
   externals: string[];
+  aliases?: Record<string, string>;
   build: BuildConfigType;
   serveMode?: boolean;
   additionalPlugins?: unknown[];

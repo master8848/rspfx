@@ -1,0 +1,582 @@
+import * as React from 'react';
+import styles from '../SearchBoxContainer.module.scss';
+import { ISearchBoxAutoCompleteState } from './ISearchBoxAutoCompleteState';
+import { ISearchBoxAutoCompleteProps } from './ISearchBoxAutoCompleteProps';
+import { Spinner, SpinnerSize, FocusZone, FocusZoneDirection, SearchBox, IconButton, Label, Icon, IconType, ISearchBox, DefaultButton } from '@fluentui/react';
+import { isEqual, debounce } from '@microsoft/sp-lodash-subset';
+import { ISuggestion } from '@pnp/modern-search-extensibility';
+import * as webPartStrings from 'SearchBoxWebPartStrings';
+import { DomPurifyHelper } from '../../../../helpers/DomPurifyHelper';
+
+const SUGGESTION_CHAR_COUNT_TRIGGER = 2;
+const SUGGESTION_UPDATE_DEBOUNCE_DELAY = 200;
+
+export default class SearchBoxAutoComplete extends React.Component<ISearchBoxAutoCompleteProps, ISearchBoxAutoCompleteState> {
+
+    private _onChangeDebounced = null;
+    private _containerElemRef: React.RefObject<any> = null;
+
+    /**
+     * Per-instance prefix used to keep generated DOM ids (suggestion groups/options) unique when
+     * multiple Search Box Web Parts are rendered on the same page, so that `aria-labelledby` and the
+     * `option` element references resolve to the correct instance for screen readers.
+     */
+    private get _idPrefix(): string {
+        return this.props.domElement?.id ? this.props.domElement.id : 'pnp-searchbox';
+    }
+
+    public constructor(props: ISearchBoxAutoCompleteProps) {
+
+        super(props);
+
+        this.state = {
+            proposedQuerySuggestions: [],
+            zeroTermQuerySuggestions: [],
+            hasRetrievedZeroTermSuggestions: false,
+            isRetrievingZeroTermSuggestions: false,
+            isRetrievingSuggestions: false,
+            searchInputValue: (props.inputValue) ? decodeURIComponent(props.inputValue) : '',
+            termToSuggestFrom: null,
+            errorMessage: null,
+            isSearchExecuted: false
+        };
+
+        this._updateQuerySuggestions = this._updateQuerySuggestions.bind(this);
+        this._selectQuerySuggestion = this._selectQuerySuggestion.bind(this);
+        this._handleOnClear = this._handleOnClear.bind(this);
+        this._containerElemRef = React.createRef();
+    }
+
+    private _renderSuggestionGroups(): JSX.Element {
+
+        let renderSuggestions: JSX.Element = null;
+
+        if (this.state.proposedQuerySuggestions.length > 0) {
+
+            const suggestionGroups = this.state.proposedQuerySuggestions.reduce<{ [key: string]: { groupName: string, suggestions: { suggestion: ISuggestion, index: number }[] } }>((groups, suggestion, index) => {
+                const groupName = suggestion && suggestion.groupName ? suggestion.groupName.trim() : webPartStrings.PropertyPane.QuerySuggestionsGroup.DefaultSuggestionGroupName;
+                if (!groups[groupName]) {
+                    groups[groupName] = {
+                        groupName,
+                        suggestions: []
+                    };
+                }
+                groups[groupName].suggestions.push({ suggestion, index });
+                return groups;
+            }, {});
+
+            // Total number of suggestions that will actually be rendered (capped per group). Used to
+            // expose `aria-setsize`/`aria-posinset` so screen readers announce "x of y" correctly.
+            const totalRenderedSuggestions = Object.keys(suggestionGroups).reduce((total, groupName) => {
+                return total + Math.min(suggestionGroups[groupName].suggestions.length, this.props.numberOfSuggestionsPerGroup);
+            }, 0);
+
+            let indexIncrementer = -1;
+            const renderedSuggestionGroups = Object.keys(suggestionGroups).map((groupName, groupIndex) => {
+                const currentGroup = suggestionGroups[groupName];
+                let renderedSuggestions: JSX.Element[] = [];
+
+                currentGroup.suggestions.forEach((item, i) => {
+
+                    if (i < this.props.numberOfSuggestionsPerGroup) {
+                        indexIncrementer++;
+                        renderedSuggestions.push(this._renderSuggestion(item.suggestion, indexIncrementer, totalRenderedSuggestions));
+                    }
+                });
+
+                const groupLabelId = `${this._idPrefix}-suggestion-group-${groupIndex}`;
+
+                return (
+                    // NOSONAR - intentional WAI-ARIA listbox grouping; native <optgroup>/<select> cannot render rich suggestion content (icons, sanitized HTML, links)
+                    <div key={groupLabelId} role="group" aria-labelledby={groupLabelId}>
+                        <Label id={groupLabelId} className={styles.suggestionGroupName}>{groupName}</Label>
+                        <div>
+                            {renderedSuggestions}
+                        </div>
+                    </div>
+                );
+            });
+
+            renderSuggestions = <div className={styles.suggestionPanel} role="listbox" aria-label={webPartStrings.SearchBox.DefaultPlaceholder}>
+                {renderedSuggestionGroups}
+            </div>;
+        }
+
+        return renderSuggestions;
+    }
+
+    private _renderSuggestion(suggestion: ISuggestion, suggestionIndex: number, totalSuggestions: number): JSX.Element {
+        const thisComponent = this;
+
+        const suggestionInner = <>
+            <div className={styles.suggestionContainer}>
+                <div className={styles.suggestionIcon}>
+                    {suggestion.iconSrc && <img src={suggestion.iconSrc} />}
+                </div>
+                <div className={styles.suggestionContent}>
+                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span className={styles.suggestionDisplayText} dangerouslySetInnerHTML={{ __html: DomPurifyHelper.instance.sanitize(suggestion.displayText) }}></span>
+                        <span className={styles.suggestionDescription}>{suggestion.description ? suggestion.description : ""}</span>
+                    </div>
+                </div>
+            </div>
+            <div className={styles.suggestionAction}>
+                {suggestion.targetUrl && (
+                    <Icon
+                        iconName='OpenInNewWindow'
+                        iconType={IconType.default}
+                    />
+                )}
+            </div>
+        </>;
+
+        const baseProps = {
+            key: suggestionIndex,
+            id: `${this._idPrefix}-suggestion-${suggestionIndex}`,
+            role: 'option',
+            'aria-setsize': totalSuggestions,
+            'aria-posinset': suggestionIndex + 1,
+            'aria-selected': false,
+            title: suggestion.hoverText ? suggestion.hoverText : "",
+            className: styles.suggestionItem,
+            'data-is-focusable': true, // Used by FocusZone component
+            onClick: () => thisComponent._selectQuerySuggestion(suggestion, !!suggestion.targetUrl)
+        };
+
+        return (!!suggestion.targetUrl
+            ? <a {...baseProps}
+                href={suggestion.targetUrl}
+                target="_blank"
+                rel="noreferrer"
+                data-interception="off" // Bypass SPFx page router (https://docs.microsoft.com/en-us/sharepoint/dev/spfx/hyperlinking)
+            >
+                {suggestionInner}
+            </a>
+            : <div {...baseProps}>
+                {suggestionInner}
+            </div>
+        );
+    }
+
+    private _renderLoadingIndicator(): JSX.Element {
+        return (
+            <div className={styles.suggestionPanel}>
+                <div className={styles.loadingIndicator}>
+                    <Spinner size={SpinnerSize.small} />
+                </div>
+            </div>
+        );
+    }
+
+    /**
+   * Handler when a user enters new keywords in the search box input
+   * @param inputValue
+   */
+    private async _updateQuerySuggestions(inputValue: string) {
+
+        const trimmedInputValue = inputValue ? inputValue.trim() : "";
+
+        if (trimmedInputValue && trimmedInputValue.length >= SUGGESTION_CHAR_COUNT_TRIGGER) {
+
+            try {
+
+                this.setState({
+                    isRetrievingSuggestions: true,
+                    errorMessage: null,
+                    proposedQuerySuggestions: [],
+                });
+
+                const allProviderPromises = this.props.suggestionProviders.map(async (provider) => {
+
+                    let suggestions = await provider.getSuggestions(trimmedInputValue);
+
+                    // Verify before updating proposed suggestions
+                    //  1) the input value hasn't been searched
+                    //  2) we have suggestions from this provider
+                    //  3) the input value hasn't changed while the provider was retrieving suggestions
+                    if (!this.state.isSearchExecuted && suggestions.length > 0 && (!this.state.termToSuggestFrom || inputValue === this.state.searchInputValue)) {
+                        this.setState({
+                            proposedQuerySuggestions: this.state.proposedQuerySuggestions.concat(suggestions), // Merge suggestions
+                            termToSuggestFrom: inputValue, // The term that was used as basis to get the suggestions from
+                            isRetrievingSuggestions: false
+                        });
+                    }
+                });
+
+                // After all suggestion providers have finished, hide the loading indicator if it hasn't already been hid
+                Promise.all(allProviderPromises).then(() => {
+                    if (this.state.isRetrievingSuggestions) {
+                        this.setState({
+                            isRetrievingSuggestions: false
+                        });
+                    }
+                });
+
+            } catch (error) {
+
+                this.setState({
+                    errorMessage: error.message,
+                    proposedQuerySuggestions: [],
+                    isRetrievingSuggestions: false
+                });
+            }
+
+        }
+        else {
+
+            try {
+
+                //render zero term query suggestions
+                if (this.state.hasRetrievedZeroTermSuggestions) {
+                    this.setState({
+                        errorMessage: null,
+                        proposedQuerySuggestions: trimmedInputValue.length === 0 ? this.state.zeroTermQuerySuggestions : [],
+                        isRetrievingSuggestions: false
+                    });
+                }
+                else {
+                    await this._ensureZeroTermQuerySuggestions();
+                }
+            } catch (error) {
+                this.setState({
+                    errorMessage: error.message,
+                    proposedQuerySuggestions: [],
+                    isRetrievingSuggestions: false
+                });
+            }
+        }
+
+    }
+
+    private async _ensureZeroTermQuerySuggestions(forceUpdate: boolean = false): Promise<void> {
+        if ((!this.state.hasRetrievedZeroTermSuggestions && !this.state.isRetrievingZeroTermSuggestions) || forceUpdate) {
+
+            // Verify we have at least one suggestion provider that has isZeroTermSuggestionsEnabled
+            if (this.props.suggestionProviders && this.props.suggestionProviders.some(sgp => sgp.isZeroTermSuggestionsEnabled)) {
+                this.setState({
+                    zeroTermQuerySuggestions: [],
+                    isRetrievingZeroTermSuggestions: true,
+                });
+
+                const allZeroTermSuggestions = await Promise.all(this.props.suggestionProviders.map(async (provider): Promise<ISuggestion[]> => {
+                    let zeroTermSuggestions = [];
+
+                    // Verify we have a valid suggestion provider and it is enabled
+                    if (provider && provider.isZeroTermSuggestionsEnabled) {
+                        zeroTermSuggestions = await provider.getZeroTermSuggestions();
+                    }
+
+                    return zeroTermSuggestions;
+                }));
+
+                // Flatten two-dimensional array of zero term suggestions
+                const mergedSuggestions = allZeroTermSuggestions.reduce((allSuggestions, suggestions) => allSuggestions.concat(suggestions), []);
+
+                this.setState({
+                    hasRetrievedZeroTermSuggestions: true,
+                    isRetrievingZeroTermSuggestions: false,
+                    zeroTermQuerySuggestions: mergedSuggestions,
+                });
+            }
+            else {
+                this.setState({
+                    zeroTermQuerySuggestions: [],
+                    hasRetrievedZeroTermSuggestions: true,
+                });
+            }
+        }
+    }
+
+    /**
+     * Handler when a suggestion is selected in the dropdown
+     * @param suggestion the suggestion value
+     */
+    private _selectQuerySuggestion(suggestion: ISuggestion, isClicked: boolean = false) {
+
+        const termToSuggestFromIndex = this.state.searchInputValue.indexOf(this.state.termToSuggestFrom);
+        let replacedSearchInputvalue = this._replaceAt(this.state.searchInputValue, termToSuggestFromIndex, suggestion.displayText);
+
+        // Remove inner HTML markup if there is
+        replacedSearchInputvalue = replacedSearchInputvalue.replace(/(<B>|<\/B>)/g, "");
+
+        // Check if our custom suggestion has a onSuggestionSelected handler
+        if (suggestion.onSuggestionSelected) {
+            try {
+                suggestion.onSuggestionSelected(suggestion);
+            }
+            catch (error) {
+                console.log(`Error occurred while executing custom onSuggestionSeleted() handler. ${error}`);
+            }
+        }
+
+        if (!suggestion.targetUrl) {
+            this.setState({
+                searchInputValue: replacedSearchInputvalue,
+                proposedQuerySuggestions: []
+            }, () => this.props.onSearch(this.state.searchInputValue));
+        }
+        else {
+            if (suggestion.targetUrl && !isClicked) {
+                window.open(suggestion.targetUrl, '_blank');
+            }
+            this.props.onSearch('', true);
+        }
+
+        this._clearSuggestions();
+    }
+
+    private renderSearchButton(): JSX.Element {
+        const displayMode = this.props.searchButtonDisplayMode || 'icon';
+        const buttonText = this.props.searchButtonText || 'Search';
+        const iconName = this.props.searchIconName || 'Forward';
+
+        const commonStyles = {
+            root: {
+                backgroundColor: this.props.searchButtonColor || undefined,
+                width: 'auto',
+                height: '100%',
+                minWidth: '32px',
+                padding: '0 12px', // More padding on left and right
+                color: 'white',
+                justifyContent: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                border: 'none'
+            }
+        };
+
+        const iconFontSize = this.props.searchBoxFontSize ? `${this.props.searchBoxFontSize}px` : '16px';
+        const textFontSize = this.props.searchBoxFontSize ? `${this.props.searchBoxFontSize}px` : '14px';
+
+        if (displayMode === 'icon') {
+            // Icon only
+            return (
+                <IconButton
+                    onClick={this._handleOnSearch}
+                    iconProps={{ iconName }}
+                    ariaLabel={webPartStrings.SearchBox.SearchButtonLabel}
+                    styles={{
+                        ...commonStyles,
+                        icon: {
+                            fontSize: iconFontSize,
+                            color: 'white'
+                        }
+                    }}
+                />
+            );
+        } else if (displayMode === 'text') {
+            // Text only
+            return (
+                <DefaultButton
+                    onClick={this._handleOnSearch}
+                    text={buttonText}
+                    ariaLabel={webPartStrings.SearchBox.SearchButtonLabel}
+                    styles={{
+                        ...commonStyles,
+                        label: {
+                            color: 'white',
+                            fontSize: textFontSize,
+                            fontWeight: '400'
+                        }
+                    }}
+                />
+            );
+        } else {
+            // Both text and icon - text first, then icon on the right
+            return (
+                <DefaultButton
+                    onClick={this._handleOnSearch}
+                    ariaLabel={webPartStrings.SearchBox.SearchButtonLabel}
+                    styles={{
+                        ...commonStyles,
+                        flexContainer: {
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexDirection: 'row' // Text first, icon second
+                        }
+                    }}
+                >
+                    <span style={{
+                        marginRight: '6px',
+                        color: 'white',
+                        fontSize: textFontSize,
+                        fontWeight: '400'
+                    }}>{buttonText}</span>
+                    <Icon
+                        iconName={iconName}
+                        style={{
+                            fontSize: iconFontSize,
+                            color: 'white'
+                        }}
+                    />
+                </DefaultButton>
+            );
+        }
+    }
+
+    private _replaceAt(string: string, index: number, replace: string) {
+        return string.substring(0, index) + replace;
+    }
+
+    private _clearSuggestions = () => {
+        if (this.state.proposedQuerySuggestions.length > 0) {
+            this.setState({ proposedQuerySuggestions: [] });
+        }
+    }
+
+    private _showZeroTermSuggestions = () => {
+        if (this.state.hasRetrievedZeroTermSuggestions && this.state.zeroTermQuerySuggestions.length > 0) {
+            if (!isEqual(this.state.proposedQuerySuggestions, this.state.zeroTermQuerySuggestions)) {
+                this.setState({ proposedQuerySuggestions: this.state.zeroTermQuerySuggestions });
+            }
+        }
+    }
+
+    private _handleOnFocus = () => {
+        if (!this.state.searchInputValue) {
+            this._showZeroTermSuggestions();
+        }
+    }
+
+    private _handleOnSearch = () => {
+        this.props.onSearch(this.state.searchInputValue);
+        this.setState({
+            isSearchExecuted: true,
+            proposedQuerySuggestions: []
+        });
+    }
+
+    private _handleOnClear = () => {
+        this._updateQuerySuggestions('');
+        this.setState({
+            searchInputValue: "",
+        });
+        this.props.onSearch('', true);
+    }
+
+    private _handleClickOutsideContainer = (event) => {
+        if (!this._containerElemRef.current.contains(event.target)) {
+            this._clearSuggestions();
+        }
+    }
+
+    public componentDidMount() {
+        this._ensureZeroTermQuerySuggestions();
+        document.addEventListener('click', this._handleClickOutsideContainer);
+    }
+
+    public componentWillUnmount() {
+        document.removeEventListener('click', this._handleClickOutsideContainer);
+    }
+
+    public componentDidUpdate(prevProps: ISearchBoxAutoCompleteProps) {
+        // Detect if any of our suggestion providers have changed
+        if (prevProps.suggestionProviders.length !== this.props.suggestionProviders.length
+            || !isEqual(prevProps.suggestionProviders, this.props.suggestionProviders)) {
+            this._ensureZeroTermQuerySuggestions(true);
+        }
+
+        if (!isEqual(prevProps.inputValue, this.props.inputValue)) {
+            // Reset the inout value
+            this.setState({
+                searchInputValue: this.props.inputValue
+            });
+        }
+    }
+
+    public render(): React.ReactElement<ISearchBoxAutoCompleteProps> {
+
+        const showLoadingIndicator = (this.state.isRetrievingSuggestions && this.state.proposedQuerySuggestions.length === 0)
+            || (this.state.isRetrievingZeroTermSuggestions && !this.state.searchInputValue);
+
+        // Edge case with SPFx
+        // Only in Chrome/Firefox the parent element class ".Canvas-slideUpIn" create a new stacking context due to a 'transform' operation preventing the inner content to overlap other WP
+        // We need to manually set a z-index on this element to render suggestions correctly above all content.
+        try {
+            const parentStackingContext = this.props.domElement.closest(".Canvas-slideUpIn");
+            if (parentStackingContext) {
+                parentStackingContext.classList.add(styles.parentStackingCtx);
+            }
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) { }
+
+        let searchBoxRef = React.createRef<ISearchBox>();
+
+        // Build dynamic styles
+        const dynamicSearchBoxWrapperStyle: React.CSSProperties = {
+            borderColor: this.props.searchBoxBorderColor || '#c2c2c2',
+            height: this.props.searchBoxHeight ? `${this.props.searchBoxHeight}px` : undefined
+        };
+
+        const dynamicSearchBoxTextStyle: React.CSSProperties = {
+            color: this.props.searchBoxTextColor || undefined,
+            height: this.props.searchBoxHeight ? `${this.props.searchBoxHeight - 2}px` : undefined, // Account for border
+            fontSize: this.props.searchBoxFontSize ? `${this.props.searchBoxFontSize}px` : undefined,
+            padding: '0 8px' // Add space before and after text
+        };
+
+        const dynamicPlaceholderStyle: React.CSSProperties = this.props.placeholderTextColor ? {
+            '--placeholder-color': this.props.placeholderTextColor
+        } as React.CSSProperties : {};
+
+        // Dynamic icon sizing for search icon and clear icon
+        const iconFontSize = this.props.searchBoxFontSize ? `${this.props.searchBoxFontSize}px` : '16px';
+        const dynamicIconStyle: React.CSSProperties = {
+            '--search-icon-size': iconFontSize,
+            '--clear-icon-size': iconFontSize
+        } as React.CSSProperties;
+
+        return (
+            <div ref={this._containerElemRef}>
+                <FocusZone
+                    direction={FocusZoneDirection.bidirectional}
+                    isCircularNavigation={true}
+                    defaultActiveElement={`.ms-SearchBox.${styles.searchTextField}`}
+                >
+                    <div className={styles.searchBoxWrapper} style={dynamicSearchBoxWrapperStyle}>
+                        <SearchBox
+                            componentRef={searchBoxRef}
+                            placeholder={this.props.placeholderText ? this.props.placeholderText : webPartStrings.SearchBox.DefaultPlaceholder}
+                            ariaLabel={this.props.placeholderText ? this.props.placeholderText : webPartStrings.SearchBox.DefaultPlaceholder}
+                            className={styles.searchTextField}
+                            value={this.state.searchInputValue}
+                            autoComplete="off"
+                            style={{ ...dynamicSearchBoxTextStyle, ...dynamicPlaceholderStyle, ...dynamicIconStyle }}
+                            //data-is-focusable={this.state.proposedQuerySuggestions.length > 0}
+                            onChange={(event) => {
+                                if (!this._onChangeDebounced) {
+                                    this._onChangeDebounced = debounce((newValue) => {
+                                        this._updateQuerySuggestions(newValue);
+                                    }, SUGGESTION_UPDATE_DEBOUNCE_DELAY);
+                                }
+                                this._onChangeDebounced(event && event.currentTarget ? event.currentTarget.value : "");
+                                this.setState({
+                                    searchInputValue: event && event.currentTarget ? event.currentTarget.value : "",
+                                    isRetrievingSuggestions: true,
+                                    isSearchExecuted: false,
+                                });
+                            }}
+                            onFocus={this._handleOnFocus}
+                            onSearch={this._handleOnSearch}
+                            onClear={() => {
+                                this._handleOnClear();
+                                searchBoxRef.current.focus();
+                            }}
+                        />
+                        {(this.state.searchInputValue || this.props.showSearchButtonWhenEmpty) &&
+                            <div className={styles.searchButton}>
+                                {this.renderSearchButton()}
+                            </div>
+                        }
+                    </div>
+                    {!this.state.isSearchExecuted && (!!this.state.searchInputValue || this.state.proposedQuerySuggestions.length > 0)
+                        ? showLoadingIndicator
+                            ? this._renderLoadingIndicator()
+                            : this._renderSuggestionGroups()
+                        : null}
+                </FocusZone>
+            </div>
+        );
+    }
+
+}

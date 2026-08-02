@@ -76,7 +76,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   };
   const rules: RuleSetRule[] = [];
   const plugins: Configuration['plugins'] = [];
-  const alias: Record<string, string> = { ...BUILD_TIME_ALIASES };
+  const alias: Record<string, string> = { ...BUILD_TIME_ALIASES, ...(ctx.aliases ?? {}) };
   const extensions: string[] = [...BASE_EXTENSIONS];
 
   for (const contribution of ctx.swcContributions ?? []) {
@@ -147,6 +147,8 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
       ]
     });
   }
+
+  rules.push({ test: /\.html$/, type: 'asset/source' });
 
   plugins.unshift(new rspack.DefinePlugin(define));
   if (ctx.additionalPlugins) {

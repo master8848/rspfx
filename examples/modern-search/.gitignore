@@ -1,0 +1,13 @@
+node_modules/
+dist/
+release/
+temp/
+solution/
+sharepoint/solution/
+.rspfx/
+.rspack-cache/
+*.sppkg
+*.log
+.env
+.env.local
+.env.*.local

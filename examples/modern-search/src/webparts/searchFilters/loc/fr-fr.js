@@ -1,0 +1,89 @@
+define([], function () {
+    return {
+        General: {
+            PlaceHolder: {
+                EditLabel: "Modifier",
+                IconText: "Filtres de recherche par @PnP",
+                Description: "Affiche les filtres d'un composant Web connecté des résultats de recherche ",
+                ConfigureBtnLabel: "Configurer"
+            },
+            NoAvailableFilterMessage: "Aucun filtre disponible à afficher.",
+            WebPartDefaultTitle: "Composant Web des filtres de recherche"
+        },
+        PropertyPane: {
+            ConnectionsPage: {
+                UseDataResultsWebPartLabel: "Se connecter à un composant Web des résultats des données",
+                UseDataResultsFromComponentsLabel: "Utiliser les données de ces composants Web",
+                UseDataResultsFromComponentsDescription: "Si vous connectez plusieurs composants Web, les valeurs et les nombres de filtres seront fusionnés avec les noms de filtres similaires",
+                UseDataVerticalsWebPartLabel: "Se connecter à un composant WebPart de verticales",
+                UseDataVerticalsFromComponentLabel: "Utiliser les verticales de ce composant",
+                LinkToVerticalLabel: "Afficher les données uniquement lorsque les verticales suivantes sont sélectionnées",
+                LinkToVerticalLabelHoverMessage: "Les filtres ne seront affichés que si la verticale sélectionnée correspond à celles configurées pour ce composant WebPart. Sinon, le composant WebPart restera vide (pas de marge ni de remplissage) en mode affichage.",
+                BidirectionalConnectionWarning: "Un ou plusieurs composants WebPart de résultats de recherche connectés n'ont pas été configurés pour se reconnecter à ce composant WebPart de filtres. Les deux composants WebPart doivent être connectés l'un à l'autre pour que les filtres fonctionnent correctement."
+            },
+            FiltersSettingsPage: {
+                SettingsGroupName: "Paramètres des filtres",
+                FilterOperator: "Opérateur à utiliser entre les filtres"
+            },
+            DataFilterCollection: {
+                SelectFilterComboBoxLabel: "Sélectionner un champ",
+                FilterNameLabel: "Champ de filtre",
+                FilterMaxBuckets: "Nombre de valeurs",
+                FilterMaxBucketsWarning: "Le nombre maximum de valeurs est 1000",
+                FilterLimitReachedWarningToggle: "Afficher un avertissement lorsque la limite est atteinte",
+                FilterLimitReachedWarningMessage: "Limite de résultats atteinte — tous les éléments correspondants ne sont pas affichés. Affinez votre recherche pour réduire la liste.",
+                PeopleTemplateQUserMappingWarning: "Avertissement du modèle Personnes : les valeurs ne ressemblent pas à des identités utilisateur. Cette propriété n'est probablement pas mappée à une propriété analysée Q_USER.",
+                FilterDisplayName: "Nom d'affichage",
+                FilterTemplate: "Modèle",
+                FilterExpandByDefault: "Agrandir par défaut",
+                ExpandAllNodesByDefault: "Développer tous les nœuds par défaut",
+                HideNodesNotInDataSet: "Masquer les nœuds absents du jeu de données actuel",
+                FilterType: "Type de filtre",
+                FilterTypeRefiner: "Ce modèle de filtre sert de raffineur et reçoit/envoie les valeurs disponibles/sélectionnées à partir de/vers la source de données connectée.",
+                FilterTypeStaticFilter: "Ce modèle de filtre agit comme un filtre statique et envoie uniquement les valeurs sélectionnées de façon arbitraire à la source de données connectée. Les valeurs des filtres entrants ne sont pas prises en compte",
+                CustomizeFiltersBtnLabel: "Modifier",
+                CustomizeFiltersHeader: "Modifier les filtres",
+                CustomizeFiltersDescription: "Configurez les filtres de recherche en ajoutant ou en supprimant des lignes Vous pouvez sélectionner des champs dans les résultats de la source de données (si vous l’avez déjà fait) ou utiliser des valeurs statiques pour les filtres. For more details see https://microsoft-search.github.io/pnp-modern-search/usage/search-filters/#filter-settings",
+                CustomizeFiltersFieldLabel: "Personnaliser les filtres",
+                ShowCount: "Afficher le nombre",
+                Operator: "Opérateur entre les valeurs",
+                ANDOperator: "ET",
+                OROperator: "OU",
+                IsMulti: "Valeur multiple",
+                Templates: {
+                    CheckBoxTemplate: "Case à cocher",
+                    DateRangeTemplate: "Période",
+                    ComboBoxTemplate: "Zone de liste modifiable",
+                    DateIntervalTemplate: "Intervalle de dates",
+                    PeopleTemplate: "Modèle de personne",
+                    TaxonomyPickerTemplate: "Sélecteur de taxonomie",
+                    HierarchicalFilterTemplate: "Filtre hiérarchique"
+                },
+                SortBy: "Trier les valeurs par",
+                SortDirection: "Sens de tri",
+                SortByName: "Par nom",
+                SortByCount: "Par nombre",
+                SortAscending: "Croissant",
+                SortDescending: "Décroissant"
+            },
+            LayoutPage: {
+                AvailableLayoutsGroupName: "Mises en page disponibles",
+                LayoutTemplateOptionsGroupName: "Options de mise en page",
+                TemplateUrlFieldLabel: "Utiliser une adresse URL de modèle externe",
+                TemplateUrlPlaceholder: "https://myfile.html",
+                ErrorTemplateExtension: "Le modèle doit être un fichier .txt, .htm ou .html valide",
+                ErrorTemplateResolve: "Impossible de résoudre le modèle indiqué. Renseignements sur l'erreur '{0}'",
+                FiltersTemplateFieldLabel: "Modifier le modèle de filtres",
+                FiltersTemplatePanelHeader: "Modifier le modèle de filtres"
+            }
+        },
+        Styling: {
+            StylingOptionsGroupName: "Options de style",
+            FilterBackgroundColorLabel: "Couleur d'arrière-plan du filtre",
+            FilterBorderColorLabel: "Couleur de bordure du filtre",
+            FilterBorderThicknessLabel: "Épaisseur de bordure du filtre",
+            ResetToDefaultLabel: "Réinitialiser le style par défaut",
+            ResetToDefaultDescription: "Réinitialiser toutes les options de style à leurs valeurs par défaut"
+        }
+    }
+});

@@ -1,0 +1,127 @@
+import { IDataSource, IDataFilterResult, LayoutRenderType } from "@pnp/modern-search-extensibility";
+import ISearchResultsWebPartProps from "../ISearchResultsWebPartProps";
+import { IReadonlyTheme } from '@microsoft/sp-component-base';
+import { IDataContext } from "@pnp/modern-search-extensibility";
+import { PageContext } from "@microsoft/sp-page-context";
+import { ServiceScope } from "@microsoft/sp-core-library";
+import { IWebPartTitleProps } from "@pnp/spfx-controls-react/lib/WebPartTitle";
+import * as React from 'react';
+
+export interface ISearchResultsContainerProps {
+
+  /**
+   * The current Web Part data context
+   */
+  dataContext: IDataContext;
+
+  /**
+   * A page-wide id that changes every time a connected Search Box submits (Enter or the Search
+   * button), even when the query text is unchanged. Lets the results re-query on re-submission (issue #4790).
+   */
+  lastSubmittedQueryId?: number;
+
+  /**
+   * The current page context
+   */
+  pageContext: PageContext;
+
+  /**
+   * The current page context
+   */
+  teamsContext: any;
+
+  /**
+   * The selected data source instance
+   */
+  dataSource: IDataSource;
+
+  /**
+   * The selected data source key
+   */
+  dataSourceKey: string;
+
+  /**
+   * The template content before processing
+   */
+  templateContent: string;
+
+  /**
+   * The Web Part properties so they can be used in Handlebars template
+   */
+  properties: ISearchResultsWebPartProps;
+
+  /**
+   * The current theme information
+   */
+  themeVariant: IReadonlyTheme;
+
+  /**
+   * The Web Part instance ID
+   */
+  instanceId: string;
+
+  /**
+   * Handler when the data have been retrieved from the source. Useful to list all available fields from the source.
+   */
+  onDataRetrieved: (availableDataSourceFields: string[], filters?: IDataFilterResult[], pageNumber?: number) => void;
+
+  /**
+   * Handler when a item has been selected from results
+   */
+  onItemSelected: (currentSelectedItems: {[key: string]: any}[]) => void; 
+  
+  /**
+   * Handler when no results have been found
+   */
+  onNoResultsFound: () => void;
+
+  /**
+   * The current service scope
+   */
+  serviceScope: ServiceScope;
+
+  /**
+   * The Web Part Title props
+   */
+  webPartTitleProps: IWebPartTitleProps;
+
+  /**
+   * Optional action rendered on the right side of the title bar
+   */
+  titleAction?: React.ReactNode;
+
+  /**
+   * The layout render type (Handlebars, Adaptive Cards, etc.)
+   */
+  renderType: LayoutRenderType;
+
+  /**
+   * Results panel background color
+   */
+  resultsBackgroundColor?: string;
+
+  /**
+   * Results panel border color
+   */
+  resultsBorderColor?: string;
+
+  /**
+   * Results panel border thickness in pixels
+   */
+  resultsBorderThickness?: number;
+
+  /**
+   * Title font family
+   */
+  titleFont?: string;
+
+  /**
+   * Title font size in pixels
+   */
+  titleFontSize?: number;
+
+  /**
+   * Title font color
+   */
+  titleFontColor?: string;
+}

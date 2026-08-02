@@ -24,6 +24,7 @@ function makeCtx(): CompileContext {
       }
     ],
     externals: ['@microsoft/sp-core-library'],
+    aliases: { XxxWebPartStrings: path.join(FIXTURE, 'src', 'loc', 'en-us') },
     build: {
       sourcemap: false,
       minify: false,
@@ -72,6 +73,25 @@ describe('build', () => {
     const bundlePath = path.join(FIXTURE, OUT_DIR, 'testwebpart.js');
     const content = fs.readFileSync(bundlePath, 'utf8');
     expect(content).not.toContain('sourceMappingURL=testwebpart.js.map');
+  });
+
+  it('inlines HTML template imports as raw strings (asset/source)', async () => {
+    const result = await build(makeCtx());
+    const bundlePath = path.join(FIXTURE, OUT_DIR, 'testwebpart.js');
+    const content = fs.readFileSync(bundlePath, 'utf8');
+
+    expect(result.outputFiles).not.toContain('testwebpart.html');
+    expect(content).toContain('Hello from an HTML template');
+  });
+
+  it('resolves localized string modules via config.json localizedResources aliases', async () => {
+    const result = await build(makeCtx());
+    const bundlePath = path.join(FIXTURE, OUT_DIR, 'testwebpart.js');
+    const content = fs.readFileSync(bundlePath, 'utf8');
+
+    expect(result.outputFiles).toContain('testwebpart.js');
+    expect(content).toContain('Localized title');
+    expect(content).toContain('Localized description');
   });
 
   it('emits a distinct AMD define name per entry in multi-bundle projects', async () => {

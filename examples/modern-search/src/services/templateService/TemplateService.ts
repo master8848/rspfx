@@ -1,0 +1,1526 @@
+"use client";
+/* eslint-disable no-lone-blocks */
+import { FileFormat, ITemplateService } from "./ITemplateService";
+import {
+    Log,
+    ServiceKey,
+    ServiceScope,
+} from "@microsoft/sp-core-library";
+import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
+import * as Handlebars from "handlebars";
+import {
+    trimEnd,
+    get,
+} from "@microsoft/sp-lodash-subset";
+import dayjs from "dayjs";
+import advancedFormat from "dayjs/plugin/advancedFormat";
+import { DateHelper } from "../../helpers/DateHelper";
+
+// Ensure `advancedFormat` is registered on the shared dayjs singleton before any
+// helper that uses tokens like `X` / `x` runs. Without this, `dayjs(...).format('X')`
+// would echo back the literal "X" — breaking handlebars templates that compare
+// Unix timestamps (see #4741).
+dayjs.extend(advancedFormat);
+import { PageContext } from "@microsoft/sp-page-context";
+import {
+    IComponentDefinition,
+    IExtensibilityLibrary,
+    IResultTemplates,
+    LayoutRenderType,
+} from "@pnp/modern-search-extensibility";
+import { IComponentFieldsConfiguration } from "../../models/common/IComponentFieldsConfiguration";
+import { initializeFileTypeIcons } from "@fluentui/react-file-type-icons";
+import { FileTypeIconHelper } from "../../helpers/FileTypeIconHelper";
+import { GlobalSettings } from "@fluentui/react";
+import {
+    IDataResultType,
+    ResultTypeOperator,
+} from "../../models/common/IDataResultType";
+import {
+    ISearchResultsTemplateContext,
+    ISearchFiltersTemplateContext,
+} from "../../models/common/ITemplateContext";
+import { ObjectHelper } from "../../helpers/ObjectHelper";
+import { Constants, TestConstants } from "../../common/Constants";
+import { getHandlebarsHelpers } from "../../helpers/HandlebarsHelpers";
+import { ServiceScopeHelper } from "../../helpers/ServiceScopeHelper";
+import { DomPurifyHelper } from "../../helpers/DomPurifyHelper";
+import { IAdaptiveCardAction } from "@pnp/modern-search-extensibility";
+
+const TemplateService_ServiceKey = "PnPModernSearchTemplateService";
+const TemplateService_LogSource = "PnPModernSearch:TemplateService";
+
+/**
+ * The CSS identifer to load the template markup from a layout html file
+ */
+const Template_Content_Id = "data-content";
+
+/**
+ * The CSS identifer to load the placeholder markup from a layout html file
+ */
+const Template_PlaceHolder_Id = "placeholder-content";
+
+export class TemplateService implements ITemplateService {
+    private spHttpClient: SPHttpClient;
+    private pageContext: PageContext;
+    private dateHelper: DateHelper;
+    private serviceScope: ServiceScope;
+
+    private _adaptiveCardsNS;
+    private _markdownIt;
+    private _adaptiveCardsTemplating;
+    private _serializationContext;
+    private _extendedHelpersPromise: Promise<void> | null = null;
+
+    /**
+     * The dayjs library reference. Initialized synchronously to the imported
+     * singleton so helpers that depend on it (e.g. `getDate`, `dayDiff`) can be
+     * invoked from templates rendered before `dateHelper.moment()` resolves its
+     * locale chunk. The async assignment below still runs and updates the same
+     * singleton's locale configuration.
+     */
+    private dayjs: any = dayjs;
+
+    private timeZoneBias = {
+        WebBias: 0,
+        UserBias: 0,
+        WebDST: 0,
+        UserDST: 0,
+    };
+
+    private dayLightSavings = true;
+
+    /**
+     * A no conflict instance of Handlebars
+     */
+    private _handlebars: typeof Handlebars;
+
+    private _customElementHelper;
+    private _customElementHelperPromise: Promise<void>;
+
+    // Resolves once the async service initialization (Handlebars namespace creation and
+    // out-of-the-box helper/partial registration) has completed. Declaration order matters:
+    // `_initResolve` must be declared before `_initPromise` so the promise executor can assign
+    // it without a later field initializer resetting it to undefined.
+    private _initResolve: () => void;
+    private _initPromise: Promise<void> = new Promise<void>((resolve) => { this._initResolve = resolve; });
+
+    get Handlebars(): typeof Handlebars {
+        return this._handlebars;
+    }
+
+    /**
+     * Collection of event handlers for adaptive cards, if any
+     */
+    private _adaptiveCardsExtensibilityLibraries: IExtensibilityLibrary[] = [];
+
+    get AdaptiveCardsExtensibilityLibraries(): IExtensibilityLibrary[] {
+        return this._adaptiveCardsExtensibilityLibraries;
+    }
+
+    set AdaptiveCardsExtensibilityLibraries(value: IExtensibilityLibrary[]) {
+        this._adaptiveCardsExtensibilityLibraries = value;
+    }
+
+    get TEMPLATE_ID_PREFIX(): string {
+        return "pnp-template_";
+    }
+
+    get MgtCustomElementHelper() {
+        return this._customElementHelper;
+    }
+
+    public static ServiceKey: ServiceKey<ITemplateService> = ServiceKey.create(
+        TemplateService_ServiceKey,
+        TemplateService
+    );
+
+    public constructor(serviceScope: ServiceScope) {
+        this.serviceScope = serviceScope;
+
+        serviceScope.whenFinished(async () => {
+            // Wrapped in try/finally so the readiness promise is always settled — even if a step
+            // below throws — and callers awaiting ensureHandlebarsHelpersLoaded() never hang.
+            try {
+            // Consume from the root scope
+            this.pageContext = serviceScope.consume<PageContext>(
+                PageContext.serviceKey
+            );
+            this.spHttpClient = serviceScope.consume<SPHttpClient>(
+                SPHttpClient.serviceKey
+            );
+
+            this.dateHelper = serviceScope.consume<DateHelper>(DateHelper.ServiceKey); // Resolved in the same scope
+            this.dayLightSavings = this.dateHelper.isDST();
+
+            this.timeZoneBias = {
+                WebBias: this.pageContext.legacyPageContext.webTimeZoneData.Bias
+                    ? this.pageContext.legacyPageContext.webTimeZoneData.Bias
+                    : 0,
+                WebDST: this.pageContext.legacyPageContext.webTimeZoneData.DaylightBias
+                    ? this.pageContext.legacyPageContext.webTimeZoneData.DaylightBias
+                    : 0,
+                UserBias: null,
+                UserDST: null,
+            };
+
+            if (this.pageContext.legacyPageContext.userTimeZoneData) {
+                this.timeZoneBias.UserBias = this.pageContext.legacyPageContext
+                    .userTimeZoneData.Bias
+                    ? this.pageContext.legacyPageContext.userTimeZoneData.Bias
+                    : 0;
+                this.timeZoneBias.UserDST = this.pageContext.legacyPageContext
+                    .userTimeZoneData.DaylightBias
+                    ? this.pageContext.legacyPageContext.userTimeZoneData.DaylightBias
+                    : 0;
+            }
+
+            // Get a global dayjs instance
+            if (!this.dayjs) {
+                this.dateHelper.moment().then((dayjs) => {
+                    this.dayjs = dayjs;
+                });
+            }
+
+            // Create a distinct version of the Handlebars namespace to avoid conflcit with multiple versions
+            this._handlebars = Handlebars.create();
+
+            const helpers = getHandlebarsHelpers();
+
+            // Registers all internalized helpers
+            Object.keys(helpers).forEach((helperName) => {
+                this._handlebars.registerHelper(helperName, helpers[helperName]);
+            });
+
+            // Register helpers
+            this.registerCustomHelpers();
+
+            // Graceful fallbacks for missing helpers. When an enabled
+            // extensibility library fails to load, its custom Handlebars
+            // helpers (e.g. {{myExt-foo}}) are not registered. The default
+            // Handlebars behavior throws ("Missing helper: ..."), which
+            // crashes the entire template render and bombs the web part.
+            // Instead, render an inline placeholder so the rest of the
+            // template still renders and the problem is discoverable.
+            const hb: any = this._handlebars;
+            const escapeFn = hb.Utils?.escapeExpression ?? String;
+            // Shared placeholder builder so the helperMissing and
+            // blockHelperMissing fallbacks stay visually consistent and
+            // easy to maintain in one place.
+            const buildMissingPlaceholder = (label: string, name: string, title: string): string =>
+                `<span style="color:#a4262c;background:#fde7e9;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:11px;" title="${title}">[missing ${label}: ${escapeFn(name)}]</span>`;
+            const placeholderTitle = "Handlebars helper not registered. If this comes from an extensibility library, the library may have failed to load.";
+            hb.registerHelper("helperMissing", function (this: any, ...args: any[]) {
+                // Handlebars calls helperMissing for BOTH:
+                //   (a) genuine missing helper calls with params/hash:
+                //       {{foo "x" y=1}}    -> args = [arg, ..., options]   (length >= 2)
+                //   (b) bare expressions where Handlebars couldn't resolve the name
+                //       as a property on the current context AND no helper of that
+                //       name is registered:
+                //       {{Title}}          -> args = [options]              (length === 1)
+                //       {{myExt-foo}}      -> args = [options]              (length === 1)
+                //
+                // Case (b) ambiguously covers both "data field that's undefined"
+                // (very common when data hasn't loaded yet) and "arg-less helper
+                // that was never registered" (e.g. an extensibility library failed
+                // to load). To minimise false positives while still surfacing
+                // genuinely broken helpers, we use a name heuristic: hyphen-
+                // delimited names (e.g. `myExt-foo`, `pnp-iconfile`) are almost
+                // certainly helpers/components, while typical data fields are
+                // single-word identifiers (`Title`, `Path`) or camel/Pascal-case.
+                // NOTE: `args.at(-1)` would be cleaner but is an ES2022 runtime
+                // feature; this code is shipped to ES2017-targeted bundles so we
+                // keep the index-based form to avoid relying on a polyfill in
+                // older runtimes. SonarCloud S7755 (prefer-at) is suppressed below.
+                const options = args[args.length - 1]; // NOSONAR
+                const name = options?.name ?? "(unknown)";
+                const looksLikeHelperOrComponent = name.includes("-");
+                if (args.length <= 1 && !looksLikeHelperOrComponent) {
+                    // Likely an undefined data field \u2014 stay silent to match
+                    // Handlebars' default behaviour and avoid red noise on every
+                    // missing property reference.
+                    return undefined;
+                }
+                console.warn(`[TemplateService] Missing Handlebars helper '${name}'. The template references a helper that is not registered. If '${name}' comes from an extensibility library, the library may have failed to load \u2014 check earlier console output.`);
+                // Use the per-WP instance's SafeString so the value is
+                // produced by the same Handlebars instance that renders it.
+                return new hb.SafeString(buildMissingPlaceholder("helper", name, placeholderTitle));
+            });
+            hb.registerHelper("blockHelperMissing", function (this: any, context: any, options: any) {
+                const name = options?.name ?? "(unknown)";
+                console.warn(`[TemplateService] Missing Handlebars block helper '#${name}'. Rendering {{else}} fallback (if any) and an inline placeholder. If '${name}' comes from an extensibility library, the library may have failed to load \u2014 check earlier console output.`);
+                // Default Handlebars behaviour for an unresolved block helper is:
+                //   - if context is truthy, render the main body (options.fn)
+                //   - if context is falsy, render the {{else}} block (options.inverse)
+                // Returning "" would silently drop any {{else}} fallback the author
+                // provided. Delegate to options.inverse(this) so {{else}} content
+                // still renders, then append a small placeholder so the missing
+                // helper is discoverable.
+                const inverse = options && typeof options.inverse === "function"
+                    ? options.inverse(this)
+                    : "";
+                return new hb.SafeString(inverse + buildMissingPlaceholder("block helper", `#${name}`, placeholderTitle));
+            });
+
+            // Provide the SharePoint CDN prefix so file type icons are served from the same CDN host
+            // SharePoint uses (more likely reachable in restricted environments). The version-correct
+            // icon path still comes from Fluent. This is reused by FileIconComponent via
+            // FileTypeIconHelper.getBaseUrl(), so it must be set even when another component on the page
+            // already initialized the Fluent file type icons (otherwise getBaseUrl() falls back to the
+            // Fluent default host).
+            FileTypeIconHelper.setCdnPrefix(this.pageContext?.legacyPageContext?.cdnPrefix);
+
+            // Register icons and pull the fonts from the default SharePoint cdn.
+            // Do not load icons twice as it may generate warnings
+            if (!GlobalSettings.getValue("fileTypeIconsInitialized")) {
+                initializeFileTypeIcons(FileTypeIconHelper.getBaseUrl());
+                GlobalSettings.setValue("fileTypeIconsInitialized", true);
+            }
+            } finally {
+                // Signal that initialization has completed (or failed) so awaiters never hang.
+                this._initResolve();
+            }
+        });
+    }
+
+    /**
+     * Ensures the Handlebars namespace is initialized and every out-of-the-box helper
+     * (base, custom and the lazily-loaded extended set) and partial is registered.
+     * Used to reliably tell out-of-the-box Handlebars customizations apart from those
+     * contributed by an extensibility library before deciding whether to load one.
+     */
+    public async ensureHandlebarsHelpersLoaded(): Promise<void> {
+        await this._initPromise;
+        await this._ensureExtendedHelpers();
+    }
+
+    /**
+     * Ensures extended handlebars helpers are loaded (lazy webpack chunk).
+     * Called before first template render. Subsequent calls are no-ops.
+     */
+    private _ensureExtendedHelpers(): Promise<void> {
+        if (!this._extendedHelpersPromise) {
+            this._extendedHelpersPromise = (async () => {
+                const { getExtendedHandlebarsHelpers } = await import(
+                    /* webpackChunkName: 'pnp-modern-search-handlebars-helpers-extended' */
+                    "../../helpers/HandlebarsHelpersExtended"
+                );
+                const helpers = getExtendedHandlebarsHelpers();
+                for (const [name, fn] of Object.entries(helpers)) {
+                    if (!this._handlebars.helpers[name]) {
+                        this._handlebars.registerHelper(name, fn);
+                    }
+                }
+            })();
+        }
+        return this._extendedHelpersPromise;
+    }
+
+    private async _initMgtCustomElementHelper(): Promise<void> {
+        if (!this._customElementHelper) {
+            // Only the lightweight mgt-element customElementHelper (element-name prefix
+            // plumbing) is loaded here. The heavy mgt-components / fast-foundation bundle
+            // is loaded separately via loadMsGraphToolkit, gated by useMicrosoftGraphToolkit.
+            const { customElementHelper } = await import(
+                /* webpackChunkName: 'pnp-modern-search-mgt-element' */
+                "@microsoft/mgt-element/dist/es6/components/customElementHelper"
+            );
+            this._customElementHelper = customElementHelper;
+        }
+    }
+
+    private async _ensureMgtCustomElementHelper(): Promise<void> {
+        // Lazily load the helper on first actual need (disambiguation / adaptive cards)
+        // instead of eagerly on every render, so pages that don't use MGT never load it.
+        if (!this._customElementHelperPromise) {
+            this._customElementHelperPromise = this._initMgtCustomElementHelper();
+        }
+        await this._customElementHelperPromise;
+    }
+
+    /**
+     * Safely reads the CSS rules from a stylesheet. Accessing `cssRules` can
+     * throw (e.g. a SecurityError for a cross-origin stylesheet), which would
+     * otherwise abort template rendering. Returns null when the rules cannot be
+     * read so callers can fall back to text-based parsing.
+     */
+    private safeGetCssRules(sheet: CSSStyleSheet | null | undefined): CSSRuleList | null {
+        try {
+            return sheet?.cssRules ?? null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Re-parses raw CSS text through a throwaway, inert DOMParser document to
+     * obtain a populated CSSOM stylesheet. This is used when a style element is
+     * detached (e.g. created via Range.createContextualFragment) and therefore
+     * exposes a null `style.sheet`. Going through the browser's real CSS engine
+     * preserves modern features such as CSS nesting, which the regex fallback
+     * cannot handle. The document produced by DOMParser is inert (scripts never
+     * run) and the CSS text is assigned via textContent, so no markup breakout
+     * or code execution is possible.
+     */
+    private parseCssTextToSheet(cssText: string): CSSStyleSheet | null {
+        if (!cssText?.trim()) {
+            return null;
+        }
+
+        try {
+            // Build the throwaway <style> inside an inert DOMParser document. It
+            // is never attached to the live document, so it triggers no
+            // @import/url() network fetches and does not affect the page.
+            // Appending it to that document's head is what populates its sheet.
+            const doc = new DOMParser().parseFromString(
+                "<!DOCTYPE html><html><head></head><body></body></html>",
+                "text/html"
+            );
+            const styleEl = doc.createElement("style");
+            styleEl.textContent = cssText;
+            doc.head.appendChild(styleEl);
+
+            return (styleEl.sheet as CSSStyleSheet) ?? null;
+        } catch {
+            return null;
+        }
+    }
+
+    public legacyStyleParser(
+        style: HTMLStyleElement,
+        elementPrefixId: string
+    ): string {
+        let prefixedStyles: string[] = [];
+
+        let sheet: CSSStyleSheet | null = style.sheet as CSSStyleSheet;
+
+        // When the style element is detached (e.g. created via
+        // Range.createContextualFragment), style.sheet is null and the CSSOM is
+        // unavailable. Re-parse the CSS text through a throwaway DOMParser
+        // document to obtain a populated sheet so the CSSOM path below can run.
+        // This preserves modern CSS features such as nesting, which the regex
+        // fallback further down cannot handle.
+        let cssRules = this.safeGetCssRules(sheet);
+
+        if (!cssRules) {
+            sheet = this.parseCssTextToSheet(style.textContent || style.innerText || "");
+            cssRules = this.safeGetCssRules(sheet);
+        }
+
+        // Try to use CSSOM if available (for live DOM elements)
+        if (cssRules) {
+            for (let j = 0; j < cssRules.length; j++) {
+                const cssRule: CSSRule = cssRules.item(j);
+
+                // CSS Media rule
+                if ((cssRule as CSSMediaRule).media) {
+                    const cssMediaRule = cssRule as CSSMediaRule;
+
+                    let cssPrefixedMediaRules = "";
+                    for (let k = 0; k < cssMediaRule.cssRules.length; k++) {
+                        const cssRuleMedia = cssMediaRule.cssRules.item(k);
+                        cssPrefixedMediaRules += `#${elementPrefixId} ${cssRuleMedia.cssText}`;
+                    }
+
+                    prefixedStyles.push(
+                        `@media ${cssMediaRule.conditionText} { ${cssPrefixedMediaRules} }`
+                    );
+                } else {
+                    if (
+                        cssRule.cssText.indexOf(TestConstants.SearchResultsErrorMessage) !==
+                        -1
+                    ) {
+                        // Special handling for error message as it's outside the template container to allow user override
+                        prefixedStyles.push(`${cssRule.cssText}`);
+                    } else {
+                        prefixedStyles.push(`#${elementPrefixId} ${cssRule.cssText}`);
+                    }
+                }
+            }
+        } else {
+            // Fallback: Parse CSS text directly (for detached DOM elements from DOMParser)
+            // This handles templates created via DOMParser where style.sheet is null
+            const cssText = style.textContent || style.innerText || '';
+
+            if (cssText.trim()) {
+                // Simple CSS parser - prefix all selectors
+                // Handle @media queries
+                const mediaRegex = /@media\s+([^{]+)\s*\{([\s\S]+?)\}\s*\}/g;
+                let processedCss = cssText;
+                const mediaMatches: Array<{ match: string, mediaQuery: string, content: string }> = [];
+
+                let mediaMatch;
+                while ((mediaMatch = mediaRegex.exec(cssText)) !== null) {
+                    mediaMatches.push({
+                        match: mediaMatch[0],
+                        mediaQuery: mediaMatch[1].trim(),
+                        content: mediaMatch[2]
+                    });
+                    // Replace with placeholder to avoid processing it again
+                    processedCss = processedCss.replace(mediaMatch[0], '');
+                }
+
+                // Process regular CSS rules (outside @media)
+                // Match CSS rules: selector { properties }
+                const ruleRegex = /([^{}\s][^{}]*?)\s*\{([^{}]*)\}/g;
+                let ruleMatch;
+
+                while ((ruleMatch = ruleRegex.exec(processedCss)) !== null) {
+                    const selector = ruleMatch[1].trim();
+                    const properties = ruleMatch[2].trim();
+
+                    if (selector && properties) {
+                        // Special handling for error message selector
+                        if (selector.indexOf(TestConstants.SearchResultsErrorMessage) !== -1) {
+                            prefixedStyles.push(`${selector} { ${properties} }`);
+                        } else {
+                            // Split multiple selectors (e.g., ".class1, .class2")
+                            const selectors = selector.split(',').map(s => s.trim());
+                            const prefixedSelectors = selectors.map(s => `#${elementPrefixId} ${s}`).join(', ');
+                            prefixedStyles.push(`${prefixedSelectors} { ${properties} }`);
+                        }
+                    }
+                }
+
+                // Process @media queries
+                mediaMatches.forEach(media => {
+                    const innerRules: string[] = [];
+                    let innerMatch;
+                    const innerRegex = /([^{}\s][^{}]*?)\s*\{([^{}]*)\}/g;
+
+                    while ((innerMatch = innerRegex.exec(media.content)) !== null) {
+                        const selector = innerMatch[1].trim();
+                        const properties = innerMatch[2].trim();
+
+                        if (selector && properties) {
+                            const selectors = selector.split(',').map(s => s.trim());
+                            const prefixedSelectors = selectors.map(s => `#${elementPrefixId} ${s}`).join(', ');
+                            innerRules.push(`${prefixedSelectors} { ${properties} }`);
+                        }
+                    }
+
+                    if (innerRules.length > 0) {
+                        prefixedStyles.push(`@media ${media.mediaQuery} { ${innerRules.join(' ')} }`);
+                    }
+                });
+            }
+        }
+
+        return prefixedStyles.join(" ");
+    }
+
+    /**
+     * Synchronously replaces MGT element names with disambiguated versions.
+     * This assumes the MGT helper is already initialized.
+     * Used internally by replaceDisambiguatedMgtElementNames and by components that need synchronous processing.
+     */
+    private _replaceDisambiguatedMgtElementNamesSync(template: Document): void {
+        if (
+            !this._customElementHelper ||
+            !this._customElementHelper.isDisambiguated
+        ) {
+            return;
+        }
+
+        const handleElement = (element: Element) => {
+            if (
+                element.tagName.toLowerCase().startsWith("mgt-") &&
+                !element.tagName
+                    .toLowerCase()
+                    .startsWith(`${this._customElementHelper.prefix}-`)
+            ) {
+                // Create a new element with the replaced tag name
+                const newTagName = `${this._customElementHelper.prefix
+                    }-${element.tagName.toLowerCase().slice(4)}`;
+
+                const newElement = template.createElement(newTagName);
+
+                // Copy all attributes of the old element to the new one
+                for (let i = 0; i < element.attributes.length; i++) {
+                    const attr = element.attributes[i];
+                    newElement.setAttribute(attr.name, attr.value);
+                }
+
+                // Move all child nodes of the old element to the new one
+                while (element.firstChild) {
+                    newElement.appendChild(element.firstChild);
+                }
+
+                // Replace the old element with the new one
+                element.parentNode.replaceChild(newElement, element);
+            }
+
+            // Check if the element is a template with a content property
+            if (element instanceof HTMLTemplateElement) {
+                // Get all elements in the content DocumentFragment
+                const contentElements = element.content.querySelectorAll("*");
+
+                // Recursively loop over all content elements
+                contentElements.forEach((contentElement) => {
+                    handleElement(contentElement);
+                });
+            }
+        };
+
+        // Get all elements in the document
+        const allElements = template.querySelectorAll("*");
+
+        // Loop over all elements
+        allElements.forEach((element) => {
+            handleElement(element);
+        });
+    }
+
+    public async replaceDisambiguatedMgtElementNames(
+        template: Document
+    ): Promise<void> {
+        await this._ensureMgtCustomElementHelper();
+        this._replaceDisambiguatedMgtElementNamesSync(template);
+    }
+
+    public applyDisambiguatedMgtPrefixIfNeeded(elementName: string): string {
+        if (!elementName || typeof elementName !== 'string' || !this.MgtCustomElementHelper) {
+            return elementName;
+        }
+        const prefix = this.MgtCustomElementHelper.prefix;
+
+        // Fix for issue #4504: Only replace "mgt-" when it appears as an element selector
+        // The original regex was replacing ALL instances of "mgt-" including in class names like ".test-mgt-template"
+        // New regex uses lookbehind/lookahead to ensure we only match actual element selectors
+        const regex = new RegExp(`(?<![\\.#\\w-])mgt-(?!${prefix.slice(4)})(?=\\w)`, "g");
+
+        return elementName.replace(regex, `${prefix}-`);
+    }
+
+    /**
+     * Gets the template HTML markup in the full template content
+     * @param templateContent the full template content
+     */
+    public getTemplateMarkup(templateContent: string): string {
+        const domParser = new DOMParser();
+        const htmlContent: Document = domParser.parseFromString(
+            templateContent,
+            "text/html"
+        );
+
+        let templates: any = htmlContent.getElementById(Template_Content_Id);
+        if (templates && templates.innerHTML) {
+            // Need to unescape '&gt;' for handlebars partials
+            return templates.innerHTML.replace(/\&gt;/g, ">");
+        } else {
+            return templateContent;
+        }
+    }
+
+    /**
+     * Gets the placeholder HTML markup in the full template content
+     * @param templateContent the full template content
+     */
+    public getPlaceholderMarkup(templateContent: string): string {
+        const domParser = new DOMParser();
+        const htmlContent: Document = domParser.parseFromString(
+            templateContent,
+            "text/html"
+        );
+
+        const placeHolders = htmlContent.getElementById(Template_PlaceHolder_Id);
+        if (placeHolders && placeHolders.innerHTML) {
+            // Need to unescape '&gt;' for handlebars partials
+            return placeHolders.innerHTML.replace(/\&gt;/g, ">");
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Gets the external file content from the specified URL
+     * @param fileUrl the file URL
+     * @param fileFormat the file format to retrieve
+     */
+    public async getFileContent(
+        fileUrl: string,
+        fileFormat: FileFormat
+    ): Promise<string> {
+        let headers: HeadersInit = {
+            "X-ClientService-ClientTag": Constants.X_CLIENTSERVICE_CLIENTTAG,
+            UserAgent: Constants.X_CLIENTSERVICE_CLIENTTAG,
+        };
+
+        if (fileFormat === FileFormat.Json) {
+            headers["Content-Type"] = "application/json";
+            headers["Accept"] = "application/json";
+        }
+
+        const response: SPHttpClientResponse = await this.spHttpClient.get(
+            fileUrl,
+            SPHttpClient.configurations.v1,
+            {
+                headers,
+            }
+        );
+
+        if (response.ok) {
+            let content;
+
+            switch (fileFormat) {
+                // Get file content as JSON
+                case FileFormat.Json:
+                    content = await response.json();
+                    content = JSON.stringify(content);
+                    break;
+
+                // Get file content as raw text
+                case FileFormat.Text:
+                    content = await response.text();
+                    break;
+
+                default:
+                    break;
+            }
+
+            return content;
+        } else {
+            throw response.statusText;
+        }
+    }
+
+    /**
+     * Ensures the file is accessible trough the specified URL
+     * @param filePath the file URL
+     */
+    public async ensureFileResolves(fileUrl: string): Promise<void> {
+        const response: SPHttpClientResponse = await this.spHttpClient.get(
+            fileUrl,
+            SPHttpClient.configurations.v1,
+            {
+                headers: {
+                    "X-ClientService-ClientTag": Constants.X_CLIENTSERVICE_CLIENTTAG,
+                    UserAgent: Constants.X_CLIENTSERVICE_CLIENTTAG,
+                },
+            }
+        );
+        if (response.ok) {
+            if (response.url.indexOf("AccessDenied.aspx") > -1) {
+                // eslint-disable-next-line no-throw-literal
+                throw "Access Denied";
+            }
+
+            return;
+        } else {
+            throw response.statusText;
+        }
+    }
+
+    /**
+     * Verifies if the template file path is correct
+     * @param filePath the file path string
+     * @param validExtensions the file extensions considered as valid
+     */
+    public isValidTemplateFile(
+        filePath: string,
+        validExtensions: string[]
+    ): boolean {
+        let path = filePath.toLowerCase().trim();
+        let pathExtension = path.substring(path.lastIndexOf("."));
+        return validExtensions.indexOf(pathExtension) !== -1;
+    }
+
+    /**
+     * Compile the specified Handlebars template with the associated context object¸
+     * @returns the compiled HTML template string
+     */
+    public async processTemplate(
+        templateContext:
+            | ISearchResultsTemplateContext
+            | ISearchFiltersTemplateContext,
+        templateContent: string,
+        renderType: LayoutRenderType
+    ): Promise<string | HTMLElement> {
+        await this._ensureExtendedHelpers();
+        let processedTemplate: string | HTMLElement = templateContent;
+
+        switch (renderType) {
+            case LayoutRenderType.Handlebars:
+                processedTemplate = this._renderHandlebarsTemplate(
+                    templateContext,
+                    templateContent
+                );
+
+                break;
+
+            case LayoutRenderType.AdaptiveCards:
+                processedTemplate = await this._renderAdaptiveCardsTemplate(
+                    templateContext,
+                    templateContent
+                );
+                break;
+
+            default:
+                break;
+        }
+
+        return processedTemplate;
+    }
+
+    /**
+     * Registers web components on the current page to be able to use them in the Handlebars template
+     */
+    public async registerWebComponents(
+        webComponents: IComponentDefinition<any>[],
+        instanceId: string
+    ): Promise<void> {
+        return new Promise<void>((resolve) => {
+            // List of serice keys we want to expose to web components
+            // Because multiple Web Part types can call the template service in separate bundles, using TemplateService.ServiceKey in a web component would result of a race condition and incoherent results as multiple keys will be created and last created would be used
+            // See https://github.com/SharePoint/sp-dev-docs/issues/1419#issuecomment-371584038
+            const availableServiceKeys: { [key: string]: ServiceKey<any> } = {
+                TemplateService: TemplateService.ServiceKey,
+            };
+
+            this.serviceScope.whenFinished(() => {
+                // Registers custom HTML elements
+                webComponents.forEach((wc) => {
+                    const component = window.customElements.get(wc.componentName);
+
+                    if (!component) {
+                        // Set arbitrary properties to all component instances via prototype
+
+                        // To be able to get the right service scope and service keys for a particular web component corresponding to its parent Web Part (i.e. the Web Part currently rendering it), we need to an array of Web Part instance Ids references.
+                        // This implies this instance ID has to be passed in the web component HTML attribute to retrieve the correct context for the current Web Part (ex: data-instance-id="{{@root.instanceId}}")
+                        wc.componentClass.prototype._webPartServiceScopes = new Map<
+                            string,
+                            ServiceScope
+                        >();
+                        wc.componentClass.prototype._webPartServiceScopes.set(
+                            instanceId,
+                            this.serviceScope
+                        );
+
+                        wc.componentClass.prototype._webPartServiceKeys = new Map<
+                            string,
+                            { [key: string]: ServiceKey<any> }
+                        >();
+                        wc.componentClass.prototype._webPartServiceKeys.set(
+                            instanceId,
+                            availableServiceKeys
+                        );
+
+                        // Set the root service scope for common services (SPHttpClient, HttpClient, etc.)
+                        wc.componentClass.prototype._serviceScope =
+                            ServiceScopeHelper.getRootServiceScope(this.serviceScope);
+
+                        wc.componentClass.prototype._dayjs = this.dayjs;
+                        window.customElements.define(wc.componentName, wc.componentClass);
+                    } else {
+                        // Update the instances array for all calling Web Parts
+                        if (
+                            component.prototype._webPartServiceScopes &&
+                            !component.prototype._webPartServiceScopes.get(instanceId)
+                        ) {
+                            component.prototype._webPartServiceScopes.set(
+                                instanceId,
+                                this.serviceScope
+                            );
+                        }
+
+                        if (
+                            component.prototype._webPartServiceScopes &&
+                            !component.prototype._webPartServiceKeys.get(instanceId)
+                        ) {
+                            component.prototype._webPartServiceKeys.set(
+                                instanceId,
+                                availableServiceKeys
+                            );
+                        }
+                    }
+                });
+
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * Replaces item field values with field mapping values configuration
+     * @param fieldsConfigurationAsString the fields configuration as stringified object
+     * @param itemAsString the item context as stringified object
+     * @param themeVariant the current theme variant
+     */
+    public processFieldsConfiguration<T>(
+        fieldsConfiguration: IComponentFieldsConfiguration[],
+        item: { [key: string]: any },
+        context?: ISearchResultsTemplateContext | any
+    ): T {
+        let processedProps = {};
+
+        // Use configuration
+        fieldsConfiguration.forEach((configuration) => {
+            let processedValue = ObjectHelper.byPath(item, configuration.value);
+
+            if (configuration.useHandlebarsExpr && configuration.value) {
+                try {
+                    let templateContext: ISearchResultsTemplateContext | any = context
+                        ? context
+                        : {};
+                    // Create a temp context with the current so we can use global registered helpers on the current item
+                    const tempTemplateContent = `{{#with item as |item|}}${configuration.value}{{/with}}`;
+                    let template = this.Handlebars.compile(tempTemplateContent, {
+                        noEscape: true, // Need to disable escaping to allow markup - which is later sanitized. XSS not possible
+                    });
+
+                    // Pass the current item as context
+                    processedValue = template(
+                        { item: item },
+                        {
+                            data: {
+                                root: {
+                                    slots: templateContext.slots,
+                                    theme: templateContext.theme,
+                                    context: templateContext.context,
+                                    instanceId: templateContext.instanceId,
+                                    properties: templateContext.properties,
+                                    utils: templateContext.utils,
+                                },
+                            },
+                        }
+                    );
+
+                    processedValue = processedValue ? processedValue.trim() : null;
+                } catch (error) {
+                    processedValue = `###Error: ${error.message}###`;
+                }
+            }
+
+            processedProps[configuration.field] = processedValue;
+        });
+
+        return processedProps as T;
+    }
+
+    /**
+     * Sanitizes HTML content while preserving <style> tags using extract/restore pattern.
+     * This is needed because DomPurify 3.x strips <style> tags in fragment mode (WHOLE_DOCUMENT: false).
+     * 
+     * @param html The HTML content to sanitize
+     * @returns Sanitized HTML with style tags preserved
+     */
+    public sanitizeHtmlWithStylePreservation(html: string): string {
+        if (!html) return html;
+
+        // Extract all <style> tags before sanitization
+        const styleTags: string[] = [];
+        let templateWithoutStyles = html;
+        const styleRegex = /<style(?:\s[^>]*)?>[\s\S]*?<\/style[^>]*>/gi;
+        let match;
+
+        while ((match = styleRegex.exec(html)) !== null) {
+            // Sanitize CSS content before storing to block exfiltration vectors
+            styleTags.push(DomPurifyHelper.sanitizeCssContent(match[0]));
+            templateWithoutStyles = templateWithoutStyles.replace(
+                match[0],
+                `<div data-style-placeholder="${styleTags.length - 1}"></div>`
+            );
+        }
+
+        // Sanitize the template without style tags
+        let sanitized = DomPurifyHelper.sanitize(templateWithoutStyles);
+
+        // Restore all style tags
+        let restoredTemplate = sanitized;
+        styleTags.forEach((styleTag, index) => {
+            restoredTemplate = restoredTemplate.replace(
+                `<div data-style-placeholder="${index}"></div>`,
+                styleTag
+            );
+        });
+
+        return restoredTemplate;
+    }
+
+    /**
+     * Builds and registers the result types as this.Handlebars partials
+     * Based on https://github.com/helpers/handlebars-helpers/ operators
+     * @param resultTypes the configured result types from the property pane
+     */
+    public async registerResultTypes(
+        resultTypes: IDataResultType[]
+    ): Promise<void> {
+        await this._ensureExtendedHelpers();
+        this.Handlebars.unregisterPartial("resultTypes");
+
+        if (resultTypes.length > 0) {
+            let content = await this._buildCondition(resultTypes, resultTypes[0], 0);
+            let template = this.Handlebars.compile(content);
+
+            this.Handlebars.registerPartial("resultTypes", template);
+        } else {
+            this.Handlebars.registerPartial("resultTypes", "{{> @partial-block }}");
+        }
+
+        return;
+    }
+
+    private _renderHandlebarsTemplate(
+        templateContext:
+            | ISearchResultsTemplateContext
+            | ISearchFiltersTemplateContext,
+        templateContent: string
+    ): string {
+        const template = this.Handlebars.compile(templateContent);
+        return template(templateContext);
+    }
+
+    private async _renderAdaptiveCardsTemplate(
+        templateContext:
+            | ISearchResultsTemplateContext
+            | ISearchFiltersTemplateContext,
+        templateContent: string
+    ): Promise<HTMLElement> {
+        let renderTemplateContent: HTMLElement = null;
+
+        // Load dynamic resources
+        await this._initAdaptiveCardsResources();
+
+        let hostConfiguration: { [key: string]: any } = {
+            fontFamily: "Segoe UI, Helvetica Neue, sans-serif",
+        };
+
+        if (
+            (templateContext as ISearchResultsTemplateContext).utils
+                .adaptiveCardsHostConfig
+        ) {
+            hostConfiguration = (templateContext as ISearchResultsTemplateContext)
+                .utils.adaptiveCardsHostConfig;
+        }
+
+        hostConfiguration = new this._adaptiveCardsNS.HostConfig(hostConfiguration);
+
+        // If result templates are present, process each individual item and return the HTML output
+        if (
+            (templateContext as ISearchResultsTemplateContext).data?.resultTemplates
+        ) {
+            renderTemplateContent = this._buildAdaptiveCardsResultTypes(
+                templateContent,
+                templateContext as ISearchResultsTemplateContext,
+                (templateContext as ISearchResultsTemplateContext).data
+                    ?.resultTemplates,
+                hostConfiguration
+            );
+        } else {
+            if (!templateContent) {
+                console.warn("Adaptive Cards template content is undefined or empty");
+                return renderTemplateContent;
+            }
+
+            // Guard against undefined templating library
+            if (!this._adaptiveCardsTemplating || !this._adaptiveCardsTemplating.Template) {
+                console.error("Adaptive Cards templating library is not properly initialized");
+                return renderTemplateContent;
+            }
+
+            let parsedTemplate;
+            try {
+                parsedTemplate = JSON.parse(templateContent);
+            } catch (parseError) {
+                console.error("Failed to parse Adaptive Cards template as JSON:", parseError);
+                return renderTemplateContent;
+            }
+
+            let template;
+            try {
+                template = new this._adaptiveCardsTemplating.Template(
+                    parsedTemplate
+                );
+            } catch (templateError) {
+                console.error("Failed to create Adaptive Cards template:", templateError);
+                return renderTemplateContent;
+            }
+
+            // The root context will be available in the the card implicitly
+            const context = {
+                $root: templateContext,
+            };
+
+            const card = template.expand(context);
+            let adaptiveCard = new this._adaptiveCardsNS.AdaptiveCard();
+            adaptiveCard.hostConfig = hostConfiguration;
+
+            adaptiveCard = this.registerActionHandler(adaptiveCard);
+
+            adaptiveCard.parse(card, this._serializationContext);
+            renderTemplateContent = adaptiveCard.render();
+        }
+
+        return renderTemplateContent;
+    }
+
+    private registerActionHandler(adaptiveCard) {
+        // Register the dynamic list of event handlers for Adaptive Cards actions, if any
+        if (
+            this.AdaptiveCardsExtensibilityLibraries != null &&
+            this.AdaptiveCardsExtensibilityLibraries.length > 0
+        ) {
+            adaptiveCard.onExecuteAction = (action: any) => {
+                let actionResult: IAdaptiveCardAction;
+                const type = action.getJsonTypeName();
+                switch (type) {
+                    case this._adaptiveCardsNS.OpenUrlAction.JsonTypeName:
+                        {
+                            actionResult = {
+                                type: type,
+                                title: action.title,
+                                url: action.url,
+                            };
+                        }
+                        break;
+
+                    case this._adaptiveCardsNS.SubmitAction.JsonTypeName:
+                        {
+                            actionResult = {
+                                type: type,
+                                title: action.title,
+                                data: action.data,
+                            };
+                        }
+                        break;
+                    case this._adaptiveCardsNS.ExecuteAction.JsonTypeName:
+                        {
+                            actionResult = {
+                                type: type,
+                                title: action.title,
+                                data: action.data,
+                                verb: action.verb,
+                            };
+                        }
+                        break;
+                }
+
+                this.AdaptiveCardsExtensibilityLibraries.forEach((l) =>
+                    l.invokeCardAction(actionResult)
+                );
+            };
+        } else {
+            adaptiveCard.onExecuteAction = (action: any) => {
+                Log.info(
+                    TemplateService_LogSource,
+                    `Triggered an event from an Adaptive Card, with action: '${action.title}'. Please, register a custom Extension Library in order to handle it.`,
+                    this.serviceScope
+                );
+            };
+        }
+
+        return adaptiveCard;
+    }
+
+    /**
+     * Builds the Handlebars nested conditions recursively to reflect the result types configuration
+     * @param resultTypes the configured result types from the property pane
+     * @param currentResultType the current processed result type
+     * @param currentIdx current index
+     */
+    private async _buildCondition(
+        resultTypes: IDataResultType[],
+        currentResultType: IDataResultType,
+        currentIdx: number
+    ): Promise<string> {
+        let conditionBlockContent;
+        let templateContent = currentResultType.inlineTemplateContent;
+
+        if (currentResultType.externalTemplateUrl) {
+            templateContent = await this.getFileContent(
+                currentResultType.externalTemplateUrl,
+                FileFormat.Text
+            );
+        }
+
+        if (currentResultType.value) {
+            let handlebarsToken = currentResultType.value.match(/^\{\{(.*)\}\}$/);
+
+            let operator = currentResultType.operator;
+            let param1 = currentResultType.property;
+
+            // Use a token or a string value
+            let param2 = handlebarsToken
+                ? handlebarsToken[1]
+                : `"${currentResultType.value}"`;
+
+            // Operator: "Not null"
+            if (currentResultType.operator === ResultTypeOperator.NotNull) {
+                param2 = null;
+            }
+
+            let baseCondition = `{{#${operator} (slot item '${param1}') ${param2 || ""
+                }}}
+                ${templateContent}`;
+
+            // Operator: "Starts With"
+            if (currentResultType.operator === ResultTypeOperator.StartsWith) {
+                param1 = `"${currentResultType.value}"`;
+                param2 = `${currentResultType.property}`;
+
+                baseCondition = `{{#${operator} ${param1 || ""
+                    } (slot item '${param2}') }}
+                    ${templateContent}`;
+            }
+
+            if (currentIdx === resultTypes.length - 1) {
+                // Renders inner content set in the 'resultTypes' partial
+                conditionBlockContent = "{{> @partial-block }}";
+            } else {
+                conditionBlockContent = await this._buildCondition(
+                    resultTypes,
+                    resultTypes[currentIdx + 1],
+                    currentIdx + 1
+                );
+            }
+
+            return `${baseCondition}
+                    {{else}}
+                        ${conditionBlockContent}
+                    {{/${operator}}}`;
+        } else {
+            return "";
+        }
+    }
+
+    /**
+     * Registers custom Handlebars helpers in the global context
+     */
+    private registerCustomHelpers() {
+        // Return the formatted date according to current locale using dayjs
+        // <p>{{getDate Created "LL"}}</p>
+        this.Handlebars.registerHelper(
+            "getDate",
+            ((date: string, format: string, timeHandling?: number, isZ?: boolean) => {
+                const originalDate = date;
+                try {
+                    if (isZ && !date.toUpperCase().endsWith("Z")) {
+                        if (date.indexOf(" ") !== -1) {
+                            date += " ";
+                        }
+                        date += "Z";
+                    }
+
+                    let itemDate = new Date(date);
+                    if (itemDate.toISOString() !== new Date(null).toISOString()) {
+                        if (typeof timeHandling === "number") {
+                            if (timeHandling === 1) {
+                                // show as Z in UI
+                                date = trimEnd(date, "Z");
+                            } else if (timeHandling === 2) {
+                                // strip time part
+                                let idx = date.indexOf("T");
+                                date = date.substr(0, idx) + "T00:00:00";
+                            } else if (timeHandling === 3) {
+                                // show as web region
+                                date = this.dateHelper
+                                    .addMinutes(
+                                        this.dayLightSavings,
+                                        itemDate,
+                                        -this.timeZoneBias.WebBias,
+                                        -this.timeZoneBias.WebDST
+                                    )
+                                    .toISOString();
+                                date = trimEnd(date, "Z");
+                            } else if (timeHandling === 4 && this.timeZoneBias.UserBias) {
+                                // show as user region if any
+                                date = this.dateHelper
+                                    .addMinutes(
+                                        this.dayLightSavings,
+                                        itemDate,
+                                        -this.timeZoneBias.UserBias,
+                                        -this.timeZoneBias.UserDST
+                                    )
+                                    .toISOString();
+                                date = trimEnd(date, "Z");
+                            }
+                        }
+
+                        const resolvedDate = new Date(date);
+                        if (Number.isNaN(resolvedDate.getTime())) {
+                            return originalDate;
+                        }
+
+                        return this.dayjs(resolvedDate).format(format);
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                } catch (error) {
+                    return originalDate;
+                }
+            }).bind(this)
+        );
+
+        // Support urlParse with an empty string to use current URL
+        const origParse = this.Handlebars.helpers["urlParse"];
+        this.Handlebars.unregisterHelper("urlParse");
+        this.Handlebars.registerHelper("urlParse", (url: string) => {
+            if (url && typeof url === "object") {
+                url = window.location.href;
+            }
+            return origParse(url);
+        });
+
+        // Return SPFx page context variable
+        // Usage:
+        //   {{getPageContext "user.displayName"}}
+        //   {{getPageContext "cultureInfo.currentUICultureName"}}
+        this.Handlebars.registerHelper("getPageContext", (name: string) => {
+            if (!name) return "";
+            let value = get(this.pageContext, name);
+            if (value) return value;
+            return "";
+        });
+
+        this.Handlebars.registerHelper(
+            "dayDiff",
+            (date1: string, date2: string) => {
+                let dayCount = this.dayjs(date1).diff(this.dayjs(date2), "days");
+                return Math.abs(dayCount);
+            }
+        );
+
+        const hb: any = this._handlebars;
+        const escapeFn = hb.Utils?.escapeExpression ?? String;
+
+        this.Handlebars.registerHelper("hierarchicalOperator", (filter: any, instanceId: string, theme: any) => {
+            if (!filter?.isMulti) {
+                return "";
+            }
+
+            return new hb.SafeString(`
+                <div class="filter--option">
+                    <pnp-filteroperator
+                        data-instance-id="${escapeFn(instanceId)}"
+                        data-filter-name="${escapeFn(filter.filterName)}"
+                        data-operator="${escapeFn(filter.operator)}"
+                        data-theme-variant="${escapeFn(JSON.stringify(theme))}"
+                    ></pnp-filteroperator>
+                </div>
+            `);
+        });
+
+        this.Handlebars.registerHelper("hierarchicalMultiselect", (filter: any, instanceId: string, theme: any) => {
+            if (!filter?.isMulti) {
+                return "";
+            }
+
+            return new hb.SafeString(`
+                <pnp-filtermultiselect
+                    data-instance-id="${escapeFn(instanceId)}"
+                    data-filter-name="${escapeFn(filter.filterName)}"
+                    data-apply-disabled="${filter.canApply ? 'false' : 'true'}"
+                    data-clear-disabled="${filter.canClear ? 'false' : 'true'}"
+                    data-theme-variant="${escapeFn(JSON.stringify(theme))}"
+                >
+                </pnp-filtermultiselect>
+            `);
+        });
+    }
+
+    private async _initAdaptiveCardsResources(): Promise<void> {
+        // Initialize the serialization context for the Adaptive Cards, if needed
+        if (!this._serializationContext) {
+            const {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                Action,
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                CardElement,
+                CardObjectRegistry,
+                GlobalRegistry,
+                SerializationContext,
+            } = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "adaptivecards"
+            );
+
+            const { useLocalFluentUI } = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "../../controls/TemplateRenderer/fluentUI"
+            );
+
+            this._serializationContext = new SerializationContext();
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            let actionType: InstanceType<typeof Action>;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            let cardElementType: InstanceType<typeof CardElement>;
+
+            let elementRegistry = new CardObjectRegistry<typeof cardElementType>();
+            let actionRegistry = new CardObjectRegistry<typeof actionType>();
+
+            GlobalRegistry.populateWithDefaultElements(elementRegistry);
+            GlobalRegistry.populateWithDefaultActions(actionRegistry);
+
+            useLocalFluentUI(elementRegistry, actionRegistry);
+            this._serializationContext.setElementRegistry(elementRegistry);
+            this._serializationContext.setActionRegistry(actionRegistry);
+        }
+
+        if (!this._adaptiveCardsNS) {
+            // Load dynamic resources
+            this._adaptiveCardsNS = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "adaptivecards"
+            );
+
+            // Initialize the serialization context for the Adaptive Cards, if needed
+            if (!this._serializationContext) {
+                const { CardObjectRegistry, GlobalRegistry, SerializationContext } =
+                    await import(
+                        /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                        "adaptivecards"
+                    );
+
+                const { useLocalFluentUI } = await import(
+                    /* webpackChunkName: 'pnp-modern-search-fluentui-bundle' */
+                    "../../controls/TemplateRenderer/fluentUI"
+                );
+
+                this._serializationContext = new SerializationContext();
+
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const CardElementType = this._adaptiveCardsNS.CardElement;
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const ActionElementType = this._adaptiveCardsNS.Action;
+
+                let elementRegistry = new CardObjectRegistry<
+                    InstanceType<typeof CardElementType>
+                >();
+                let actionRegistry = new CardObjectRegistry<
+                    InstanceType<typeof ActionElementType>
+                >();
+
+                GlobalRegistry.populateWithDefaultElements(elementRegistry);
+                GlobalRegistry.populateWithDefaultActions(actionRegistry);
+
+                useLocalFluentUI(elementRegistry, actionRegistry);
+                this._serializationContext.setElementRegistry(elementRegistry);
+                this._serializationContext.setActionRegistry(actionRegistry);
+            }
+
+            // Ensure MGT helper is initialized before setting up the callback
+            await this._ensureMgtCustomElementHelper();
+
+            this._adaptiveCardsNS.AdaptiveCard.onProcessMarkdown = (
+                text: string,
+                result
+            ) => {
+                // Special case with HitHighlightedSummary field
+                text = text
+                    .replace(/<c0\>/g, "<strong>")
+                    .replace(/<\/c0\>/g, "</strong>")
+                    .replace(/<ddd\/>/g, "&#8230;");
+
+                // We use Markdown here to render HTML and use web components
+                let rawHtml = this._markdownIt
+                    .render(text)
+                    .replace(/\&lt;/g, "<")
+                    .replace(/\&gt;/g, ">");
+
+                // MGT helper is guaranteed to be initialized at this point
+                rawHtml = this.applyDisambiguatedMgtPrefixIfNeeded(rawHtml);
+
+                result.outputHtml = this.sanitizeHtmlWithStylePreservation(rawHtml);
+                result.didProcess = true;
+            };
+
+            // IMPORTANT: Use the AdaptiveCardsLoader module which ensures that
+            // adaptive-expressions and adaptivecards-templating are loaded together
+            // in the correct order. This is necessary because adaptivecards-templating
+            // has a static import of adaptive-expressions, and dynamic imports may
+            // not properly link the modules if loaded separately.
+            const acLoader = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "./AdaptiveCardsLoader"
+            );
+
+            this._adaptiveCardsTemplating = acLoader.AdaptiveCardsTemplating;
+
+            const MarkdownIt = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "markdown-it"
+            );
+
+            this._markdownIt = new MarkdownIt.default();
+        }
+
+        // Ensure adaptivecards-templating is loaded even if _adaptiveCardsNS was already initialized
+        if (!this._adaptiveCardsTemplating) {
+            const acLoader = await import(
+                /* webpackChunkName: 'pnp-modern-search-adaptive-cards-bundle' */
+                "./AdaptiveCardsLoader"
+            );
+
+            this._adaptiveCardsTemplating = acLoader.AdaptiveCardsTemplating;
+        }
+    }
+
+    private _buildAdaptiveCardsResultTypes(
+        templateContent: string,
+        templateContext: ISearchResultsTemplateContext,
+        resultTemplates: IResultTemplates,
+        hostConfiguration
+    ): HTMLElement {
+        // Parse and render the main card template
+        const mainCard = new this._adaptiveCardsNS.AdaptiveCard();
+        mainCard.hostConfig = hostConfiguration;
+        const template = new this._adaptiveCardsTemplating.Template(
+            JSON.parse(templateContent)
+        );
+
+        const context = {
+            $root: templateContext,
+        };
+
+        let card;
+        try {
+            card = template.expand(context);
+        } catch (expandError) {
+            console.error("Failed to expand Adaptive Cards template:", expandError);
+            throw expandError;
+        }
+        mainCard.parse(card, this._serializationContext);
+
+        const mainHtml = mainCard.render();
+
+        // Build dictionary of available result template
+        const templateDictionary = new Map(Object.entries(resultTemplates));
+
+        for (let item of templateContext.data.items) {
+            const templateId = item.resultTemplateId;
+            const templatePayload = templateDictionary.get(templateId).body;
+
+            // Check if item should use a result template
+            if (templatePayload && templateId !== "connectordefault") {
+                const itemTemplate = new this._adaptiveCardsTemplating.Template(
+                    templatePayload
+                );
+
+                const itemContext = {
+                    $root: item.resource.properties,
+                };
+
+                const itemCardPayload = itemTemplate.expand(itemContext);
+
+                let itemAdaptiveCard = new this._adaptiveCardsNS.AdaptiveCard();
+                itemAdaptiveCard.hostConfig = hostConfiguration;
+
+                itemAdaptiveCard.parse(itemCardPayload, this._serializationContext);
+                itemAdaptiveCard = this.registerActionHandler(itemAdaptiveCard);
+
+                // Partial match as we can't use the complete ID due to special characters "/" and "==""
+                const defaultItem: HTMLElement = mainHtml.querySelector(
+                    `[id^="${item.hitId.substring(0, 15)}"]`
+                );
+
+                // Replace the HTML element corresponding to the item by its result type
+                if (defaultItem) {
+                    const itemHtml: HTMLElement = itemAdaptiveCard.render();
+                    defaultItem.replaceWith(itemHtml);
+                }
+            }
+        }
+
+        return mainHtml;
+    }
+}

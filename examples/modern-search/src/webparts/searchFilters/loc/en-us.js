@@ -1,0 +1,89 @@
+define([], function () {
+    return {
+        General: {
+            PlaceHolder: {
+                EditLabel: "Edit",
+                IconText: "Search Filters by @PnP",
+                Description: "Displays filters from a connected search results Web Part",
+                ConfigureBtnLabel: "Configure"
+            },
+            NoAvailableFilterMessage: "No available filter to display.",
+            WebPartDefaultTitle: "Search Filters Web Part"
+        },
+        PropertyPane: {
+            ConnectionsPage: {
+                UseDataResultsWebPartLabel: "Connect to a search results Web Part",
+                UseDataResultsFromComponentsLabel: "Use data from these Web Parts",
+                UseDataResultsFromComponentsDescription: "If you connect more than one Web Part, the filter values and counts will be merged for similar filter names.",
+                LinkToVerticalLabel: "Display filters only when the following verticals are selected",
+                LinkToVerticalLabelHoverMessage: "The filters will be displayed only if the selected vertical matches with the ones configured for this Web Part. Otherwise, the Web part will be blank (no margin and no padding) in display mode.",
+                BidirectionalConnectionWarning: "One or more connected search results Web Parts have not been configured to connect back to this filters Web Part. Both web parts must be connected to each other for filters to work correctly."
+            },
+            FiltersSettingsPage: {
+                SettingsGroupName: "Filters settings",
+                FilterOperator: "Operator to use between filters"
+            },
+            DataFilterCollection: {
+                SelectFilterComboBoxLabel: "Select field",
+                FilterNameLabel: "Filter field",
+                FilterMaxBuckets: "# of values",
+                FilterMaxBucketsWarning: "The maximum number of values is 1000",
+                FilterLimitReachedWarningToggle: "Show warning when limit is reached",
+                FilterLimitReachedWarningMessage: "Result limit reached — not all matching items are shown. Refine your search to narrow the list",
+                PeopleTemplateQUserMappingWarning: "People template warning: values do not look like user identities. This property may not be mapped to a Q_USER crawled property.",
+                FilterDisplayName: "Display name",
+                FilterTemplate: "Template",
+                FilterExpandByDefault: "Expand by default",
+                ExpandAllNodesByDefault: "Expand all nodes by default",
+                HideNodesNotInDataSet: "Hide nodes not in the current data set",
+                // FilterType: "Filter type",
+                FilterTypeRefiner: "This filter template acts as a refiner and receives/sends available/selected values from/to the connected data source.",
+                FilterTypeStaticFilter: "This filter template acts as a static filter and only sends arbitrary selected values to the connected data source. Incoming filter values are not taken into account.",
+                CustomizeFiltersBtnLabel: "Edit",
+                CustomizeFiltersHeader: "Edit filters",
+                CustomizeFiltersDescription: "Configure search filters by adding or removing rows. You can select fields from the data source results (if already selected) or use static values for filters.For more details see https://microsoft-search.github.io/pnp-modern-search/usage/search-filters/#filter-settings",
+                CustomizeFiltersFieldLabel: "Customize filters",
+                ShowCount: "Show count",
+                TermSetId: "Termset id",
+                TermGroupId: "Term group id",
+                Operator: "Operator between values",
+                ANDOperator: "AND",
+                OROperator: "OR",
+                IsMulti: "Multi values",
+                Templates: {
+                    CheckBoxTemplate: "Check box",
+                    DateRangeTemplate: "Date range",
+                    ComboBoxTemplate: "Combo box",
+                    DateIntervalTemplate: "Date interval",
+                    PeopleTemplate: "People Template",
+                    TaxonomyPickerTemplate: "Taxonomy picker",
+                    HierarchicalFilterTemplate: "Hierarchical filter"
+                },
+                SortBy: "Sort values by",
+                SortDirection: "Sort direction",
+                SortByName: "By name",
+                SortByCount: "By count",
+                SortAscending: "Ascending",
+                SortDescending: "Descending"
+            },
+            LayoutPage: {
+                AvailableLayoutsGroupName: "Available layouts",
+                LayoutTemplateOptionsGroupName: "Layout options",
+                TemplateUrlFieldLabel: "Use an external template URL",
+                TemplateUrlPlaceholder: "https://myfile.html",
+                ErrorTemplateExtension: "The template must be a valid .txt, .htm or .html file",
+                ErrorTemplateResolve: "Unable to resolve the specified template. Error details: '{0}'",
+                FiltersTemplateFieldLabel: "Edit filters template",
+                FiltersTemplatePanelHeader: "Edit filters template"
+            }
+        },
+        Styling: {
+            StylingOptionsGroupName: "Styling Options",
+            FilterBackgroundColorLabel: "Filter Background Color",
+            FilterBorderColorLabel: "Filter Border Color",
+            FilterBorderThicknessLabel: "Filter Border Thickness",
+            ResetToDefaultLabel: "Reset to Default",
+            ResetToDefaultDescription: "Reset all content styling options to their default values"
+        }
+    }
+});

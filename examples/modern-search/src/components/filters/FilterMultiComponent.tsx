@@ -1,0 +1,146 @@
+import * as React from "react";
+import { BaseWebComponent, ExtensibilityConstants } from "@pnp/modern-search-extensibility";
+import * as ReactDOM from "react-dom";
+import { DefaultButton, PrimaryButton, ITheme, getTheme } from '@fluentui/react';
+import { IReadonlyTheme } from '@microsoft/sp-component-base';
+import styles from "./FilterMultiComponent.module.scss";
+import * as strings from 'CommonStrings';
+
+
+type FilterMultiEventCallback = () => void;
+
+export interface IFilterMultiProps {
+
+    /**
+     * The filter name to use for applying selected values
+     */
+    filterName?: string;
+
+    /**
+     * The current theme settings
+     */
+    themeVariant?: IReadonlyTheme;
+
+    /**
+     * Callback handlers for filter multi events
+     */
+    onApply: FilterMultiEventCallback;
+    onClear: FilterMultiEventCallback;
+
+    /**
+     * Enable or disable buttons
+     */
+    applyDisabled?: boolean;
+    clearDisabled?: boolean;
+}
+
+export interface IFilterMultiState {
+}
+
+export class FilterMulti extends React.Component<IFilterMultiProps, IFilterMultiState> {
+    private static readonly GLOBAL_BUSY_CURSOR_STYLE_ID = 'pnp-modern-search-busy-cursor-style';
+
+    private _setImmediateProgressCursor(): void {
+        if (!globalThis.document) {
+            return;
+        }
+
+        if (globalThis.document.documentElement) {
+            globalThis.document.documentElement.style.setProperty('cursor', 'progress', 'important');
+        }
+
+        if (globalThis.document.body) {
+            globalThis.document.body.style.setProperty('cursor', 'progress', 'important');
+        }
+
+        const styleId = FilterMulti.GLOBAL_BUSY_CURSOR_STYLE_ID;
+        if (!globalThis.document.getElementById(styleId)) {
+            const styleElement = globalThis.document.createElement('style');
+            styleElement.id = styleId;
+            styleElement.textContent = '* { cursor: progress !important; }';
+            globalThis.document.head.appendChild(styleElement);
+        }
+    }
+
+    public constructor(props: IFilterMultiProps) {
+        super(props);
+        this._applyFilters = this._applyFilters.bind(this);
+        this._clearFilters = this._clearFilters.bind(this);
+    }
+
+    public render() {
+        return <div className={styles.filterMultiActions}>
+            <PrimaryButton
+                className={styles.applyBtn}
+                disabled={this.props.applyDisabled}
+                theme={(this.props.themeVariant as ITheme) || getTheme()}
+                onClick={this._applyFilters}>
+                {strings.Filters.ApplyAllFiltersButtonLabel}
+            </PrimaryButton>
+            <DefaultButton
+                className={styles.clearBtn}
+                theme={(this.props.themeVariant as ITheme) || getTheme()}
+                disabled={this.props.clearDisabled}
+                onClick={this._clearFilters}>
+                {strings.Filters.ClearAllFiltersButtonLabel}
+            </DefaultButton>
+        </div>;
+    }
+
+    /**
+     * Applies all selected filter values for the current filter
+     */
+    private _applyFilters() {
+        this._setImmediateProgressCursor();
+        this.props.onApply();
+    }
+
+    /**
+     * Clears all selected filters for the current refiner
+     */
+    private _clearFilters() {
+        this._setImmediateProgressCursor();
+        this.props.onClear();
+    }
+}
+
+export class FilterMultiWebComponent extends BaseWebComponent {
+
+    public constructor() {
+        super();
+    }
+
+    public async connectedCallback() {
+
+        let props = this.resolveAttributes();
+        const filterMulti = <FilterMulti {...props}
+            onApply={(() => {
+                // Bubble event through the DOM
+                this.dispatchEvent(new CustomEvent(ExtensibilityConstants.EVENT_FILTER_APPLY_ALL, {
+                    detail: {
+                        filterName: props.filterName,
+                        instanceId: props.instanceId
+                    },
+                    bubbles: true,
+                    cancelable: true
+                }));
+            }).bind(this)}
+            onClear={(() => {
+                // Bubble event through the DOM
+                this.dispatchEvent(new CustomEvent(ExtensibilityConstants.EVENT_FILTER_CLEAR_ALL, {
+                    detail: {
+                        filterName: props.filterName,
+                        instanceId: props.instanceId
+                    },
+                    bubbles: true,
+                    cancelable: true
+                }));
+            }).bind(this)}
+        />;
+        ReactDOM.render(filterMulti, this);
+    }
+
+    protected onDispose(): void {
+        ReactDOM.unmountComponentAtNode(this);
+    }
+}

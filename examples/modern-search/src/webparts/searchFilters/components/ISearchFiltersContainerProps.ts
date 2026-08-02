@@ -1,0 +1,105 @@
+import { IDataFilterConfiguration, IDataFilter, IDataFilterResult } from "@pnp/modern-search-extensibility";
+import ISearchFiltersWebPartProps from "../ISearchFiltersWebPartProps";
+import { IReadonlyTheme } from '@microsoft/sp-component-base';
+import { ITemplateService } from "../../../services/templateService/ITemplateService";
+import { IWebPartTitleProps } from "@pnp/spfx-controls-react/lib/WebPartTitle";
+import { WebPartContext } from '@microsoft/sp-webpart-base';
+import { ITaxonomyService } from '../../../services/taxonomyService/ITaxonomyService';
+
+export interface ISearchFiltersContainerProps {
+
+  /**
+   * The template content before processing
+   */
+  templateContent: string;
+
+  /**
+   * The filters to display
+   */
+  availableFilters: IDataFilterResult[];
+
+  /**
+   * The filters configuration
+   */
+  filtersConfiguration: IDataFilterConfiguration[];
+
+  /**
+   * The Web Part DOM element
+   */
+  domElement: HTMLElement;
+
+  /**
+   * The Web Part instance ID
+   */
+  instanceId: string;
+
+  /**
+   * The selected layout key
+   */
+  selectedLayoutKey: string;
+
+  /**
+   * The Web Part properties so they can be used in Handlebars template
+   */
+  properties: ISearchFiltersWebPartProps;
+
+  /**
+   * The current theme information
+   */
+  themeVariant: IReadonlyTheme;
+
+  /**
+   * The Web Part context
+   */
+  context: WebPartContext;
+
+  /**
+   * Handler method when a filter value is updated in children components
+   */
+  onUpdateFilters: (filters: IDataFilter[]) => void;
+
+  /**
+   * A template service instance
+   */
+  templateService: ITemplateService;
+
+  /**
+   * A taxonomy service instance
+   */
+  taxonomyService: ITaxonomyService;
+
+  /**
+   * The Web Part Title props
+   */
+  webPartTitleProps: IWebPartTitleProps;
+
+  /**
+   * Filter panel background color
+   */
+  filterBackgroundColor?: string;
+
+  /**
+   * Filter panel border color
+   */
+  filterBorderColor?: string;
+
+  /**
+   * Filter panel border thickness in pixels
+   */
+  filterBorderThickness?: number;
+
+  /**
+   * Title font family
+   */
+  titleFont?: string;
+
+  /**
+   * Title font size in pixels
+   */
+  titleFontSize?: number;
+
+  /**
+   * Title font color
+   */
+  titleFontColor?: string;
+}

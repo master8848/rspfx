@@ -1,0 +1,87 @@
+define([], function () {
+    return {
+        General: {
+            PlaceHolder: {
+                EditLabel: "Redigera",
+                IconText: "Sökfilter av @PnP",
+                Description: "Visar datafilter från ansluten webbdel för sökresultat",
+                ConfigureBtnLabel: "Konfigurera"
+            },
+            NoAvailableFilterMessage: "Inget tillgängligt filter att visa.",
+            WebPartDefaultTitle: "Sökfilters webbdel"
+        },
+        PropertyPane: {
+            ConnectionsPage: {
+                UseDataResultsWebPartLabel: "Anslut till en webbdel för dataresultat",
+                UseDataResultsFromComponentsLabel: "Använd data från dessa webbdelar",
+                UseDataResultsFromComponentsDescription: "Om du ansluter mer än en webbdel slås filtervärden samman till liknande filternamn.",
+                LinkToVerticalLabel: "Visa filter endast när följande vertikaler är valda",
+                LinkToVerticalLabelHoverMessage: "Filtren kommer endast att visas om den valda vertikalen matchar de som konfigurerats för den här webbdelen. Annars kommer webbdelen att vara tom (ingen marginal och ingen utfyllnad) i visningsläge.",
+                BidirectionalConnectionWarning: "En eller flera anslutna sökresultatwebbdelar har inte konfigurerats för att ansluta tillbaka till denna filterwebbdel. Båda webbdelarna måste vara anslutna till varandra för att filtren ska fungera korrekt."
+            },
+            FiltersSettingsPage: {
+                SettingsGroupName: "Filterinställningar",
+                FilterOperator: "Operator för användning mellan filter"
+            },
+            DataFilterCollection: {
+                SelectFilterComboBoxLabel: "Välj fält",
+                FilterNameLabel: "Fält för filter",
+                FilterMaxBuckets: "# av värden",
+                FilterMaxBucketsWarning: "Det maximala antalet värden är 1000",
+                FilterLimitReachedWarningToggle: "Visa varning när gränsen uppnås",
+                FilterLimitReachedWarningMessage: "Resultatgränsen har nåtts — alla matchande objekt visas inte. Förfina sökningen för att begränsa listan.",
+                PeopleTemplateQUserMappingWarning: "Varning för personmall: värdena ser inte ut som användaridentiteter. Den här egenskapen är troligen inte mappad till en Q_USER-genomsökt egenskap.",
+                FilterDisplayName: "Visningsnamn",
+                FilterTemplate: "Filtermall",
+                FilterExpandByDefault: "Expandera som standard",
+                ExpandAllNodesByDefault: "Expandera alla noder som standard",
+                HideNodesNotInDataSet: "Dölj noder som inte finns i den aktuella datamängden",
+                FilterType: "Filtertyp",
+                FilterTypeRefiner: "Denna filtermall fungerar som en raffinör och tar emot/skickar tillgängliga/valda värden från/till den anslutna datakällan.",
+                FilterTypeStaticFilter: "Denna filtermall fungerar som ett statiskt filter och skickar endast slumpmässigt valda värden till den anslutna datakällan. Inkommande filtervärden beaktas inte.",
+                CustomizeFiltersBtnLabel: "Redigera",
+                CustomizeFiltersHeader: "Redigera filter",
+                CustomizeFiltersDescription: "Konfigurera sökfilter genom att lägga till eller ta bort rader. Du kan välja fält från datakällans resultat (om dessa redan är markerade), eller så kan du använda statiska värden. For more details see https://microsoft-search.github.io/pnp-modern-search/usage/search-filters/#filter-settings",
+                CustomizeFiltersFieldLabel: "Anpassa filter",
+                ShowCount: "Visa antal",
+                Operator: "Operator mellan värden",
+                ANDOperator: "OCH",
+                OROperator: "ELLER",
+                IsMulti: "Flera värden",
+                Templates: {
+                    CheckBoxTemplate: "Kryssruta",
+                    DateRangeTemplate: "Datumintervall",
+                    ComboBoxTemplate: "Kombinationsruta",
+                    DateIntervalTemplate: "Datumintervall (fasta intervall)",
+                    PeopleTemplate: "Person mall",
+                    TaxonomyPickerTemplate: "Taxonomiväljare",
+                    HierarchicalFilterTemplate: "Hierarkiskt filter"
+                },
+                SortBy: "Sorteringsordning",
+                SortDirection: "Sorteringsriktning",
+                SortByName: "Efter namn",
+                SortByCount: "Efter antal",
+                SortAscending: "Stigande",
+                SortDescending: "Fallande"
+            },
+            LayoutPage: {
+                AvailableLayoutsGroupName: "Tillgängliga layouter",
+                LayoutTemplateOptionsGroupName: "Layoutalternativ",
+                TemplateUrlFieldLabel: "Använd en extern URL för mall",
+                TemplateUrlPlaceholder: "https://myfile.html",
+                ErrorTemplateExtension: "Mallen måste vara en giltig .txt, .htm eller .html-fil",
+                ErrorTemplateResolve: "Det går inte att visa den angivna mallen. Felinformation: '{0}'",
+                FiltersTemplateFieldLabel: "Redigera filtermall",
+                FiltersTemplatePanelHeader: "Redigera filtermall"
+            }
+        },
+        Styling: {
+            StylingOptionsGroupName: "Stilalternativ",
+            FilterBackgroundColorLabel: "Filter bakgrundsfärg",
+            FilterBorderColorLabel: "Filter kantfärg",
+            FilterBorderThicknessLabel: "Filter kanttjocklek",
+            ResetToDefaultLabel: "Återställ till standardstil",
+            ResetToDefaultDescription: "Återställ alla stilalternativ till sina standardvärden"
+        }
+    }
+});

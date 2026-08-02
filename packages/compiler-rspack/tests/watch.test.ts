@@ -22,6 +22,7 @@ function makeCtx(): CompileContext {
       }
     ],
     externals: ['@microsoft/sp-core-library'],
+    aliases: { XxxWebPartStrings: path.join(FIXTURE, 'src', 'loc', 'en-us') },
     build: {
       sourcemap: false,
       minify: false,

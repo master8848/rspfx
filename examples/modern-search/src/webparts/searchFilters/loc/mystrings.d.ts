@@ -1,0 +1,92 @@
+declare interface ISearchFiltersWebPartStrings {
+    General: {
+        PlaceHolder: {
+            EditLabel: string;
+            IconText: string;
+            Description: string;
+            ConfigureBtnLabel: string;
+        },
+        NoAvailableFilterMessage: string;
+        WebPartDefaultTitle: string;
+    },
+    PropertyPane: {
+        ConnectionsPage: {
+            UseDataResultsWebPartLabel: string;
+            UseDataResultsFromComponentsLabel: string;
+            UseDataResultsFromComponentsDescription: string;
+            LinkToVerticalLabel: string;
+            LinkToVerticalLabelHoverMessage: string;
+            BidirectionalConnectionWarning: string;
+        },
+        FiltersSettingsPage: {
+            SettingsGroupName: string;
+            FilterOperator: string;
+        },
+        DataFilterCollection: {
+            SelectFilterComboBoxLabel: string;
+            FilterNameLabel: string;
+            FilterMaxBuckets: string;
+            FilterMaxBucketsWarning: string;
+            FilterLimitReachedWarningToggle: string;
+            FilterLimitReachedWarningMessage: string;
+            PeopleTemplateQUserMappingWarning: string;
+            FilterDisplayName: string;
+            FilterTemplate: string;
+            FilterExpandByDefault: string;
+            ExpandAllNodesByDefault: string;
+            HideNodesNotInDataSet: string;
+            FilterType: string;
+            FilterTypeRefiner: string;
+            FilterTypeStaticFilter: string;
+            CustomizeFiltersBtnLabel: string;
+            CustomizeFiltersHeader: string;
+            CustomizeFiltersDescription: string;
+            CustomizeFiltersFieldLabel: string;
+            ShowCount: string;
+            TermSetId: string;
+            TermGroupId: string;
+            Operator: string;
+            ANDOperator: string;
+            OROperator: string;
+            IsMulti: string;
+            Templates: {
+                CheckBoxTemplate: string;
+                DateRangeTemplate: string;
+                ComboBoxTemplate: string;
+                PeopleTemplate: string;
+                DateIntervalTemplate: string;
+                TaxonomyPickerTemplate: string;
+                HierarchicalFilterTemplate: string;
+            },
+            SortBy: string;
+            SortDirection: string;
+            SortByName: string;
+            SortByCount: string;
+            SortAscending: string;
+            SortDescending: string;
+        },
+        LayoutPage: {
+            AvailableLayoutsGroupName: string;
+            LayoutTemplateOptionsGroupName: string;
+            TemplateUrlFieldLabel: string;
+            TemplateUrlPlaceholder: string;
+            ErrorTemplateExtension: string;
+            ErrorTemplateResolve: string;
+            FiltersTemplateFieldLabel: string;
+            FiltersTemplatePanelHeader: string;
+        }
+    },
+    Styling: {
+        StylingOptionsGroupName: string;
+        FilterBackgroundColorLabel: string;
+        FilterBorderColorLabel: string;
+        FilterBorderThicknessLabel: string;
+        ResetToDefaultLabel: string;
+        ResetToDefaultDescription: string;
+    }
+}
+
+declare module 'SearchFiltersWebPartStrings' {
+    const strings: ISearchFiltersWebPartStrings;
+    export = strings;
+}

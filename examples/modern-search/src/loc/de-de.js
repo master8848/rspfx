@@ -1,0 +1,451 @@
+define([], function () {
+    return {
+        Tokens: {
+            SelectTokenLabel: "Wähle ein Token...",
+            Context: {
+                ContextTokensGroupName: "Kontext Token",
+                SiteAbsoluteUrl: "Absolute Seiten URL",
+                SiteRelativeUrl: "Relative Serverseiten URL",
+                WebAbsoluteUrl: "Absolute Web URL",
+                WebRelativeUrl: "Relative Web Server URL",
+                WebTitle: "Web Titel",
+                InputQueryText: "Eingabe Query Text"
+            },
+            Custom: {
+                CustomTokensGroupName: "Benutzerdefinerter Wert",
+                CustomValuePlaceholder: "Wert eingeben...",
+                InvalidtokenFormatErrorMessage: "Bitte geben Sie den Token im unterstützten Format ein: {' und '}'. (z.B.: {Today})"
+            },
+            Date: {
+                DateTokensGroupName: "Datums Token",
+                Today: "Heute",
+                Yesterday: "Gestern",
+                Tomorrow: "Morgen",
+                OneWeekAgo: "Vor einer Woche",
+                OneMonthAgo: "Vor einem Monat",
+                OneYearAgo: "Vor einem Jahr"
+            },
+            Page: {
+                PageTokensGroupName: "Seiten Token",
+                PageId: "Seiten ID",
+                PageTitle: "Seiten Title",
+                PageCustom: "Andere Seiten Spalte",
+            },
+            User: {
+                UserTokensGroupName: "Benutzer Token",
+                UserName: "Benutzer Name",
+                Me: "Ich",
+                UserDepartment: "Benutzer Abteilung",
+                UserCustom: "Benutzerdefinerte Eigenschaft"
+            }
+        },
+        General: {
+            OnTextLabel: "An",
+            OffTextLabel: "Aus",
+            StaticArrayFieldName: "Array ähnliches Feld",
+            About: "Über",
+            Authors: "Autor(en)",
+            Version: "Version",
+            InstanceId: "Web Part Instanz-ID",
+            Resources: {
+                GroupName: "Ressourcen",
+                Documentation: "Dokumentation",
+                PleaseReferToDocumentationMessage: "Bitte beachten Sie die offizielle Dokumentation."
+            },
+            Extensibility: {
+                InvalidDataSourceInstance: "Die ausgewählte Datenquelle '{0}' implementiert die abstrakte Klasse 'BaseDataSource' nicht korrekt. Es fehlen einige Methoden.",
+                DataSourceDefinitionNotFound: "Die benutzerdefinierte Datenquelle mit dem Schlüssel '{0}' wurde nicht gefunden. Stellen Sie sicher, dass die Lösung korrekt für den App-Katalog bereitgestellt und die Manifest-ID für dieses Webpart registriert ist.",
+                LayoutDefinitionNotFound: "Das benutzerdefinierte Layout mit dem Schlüssel '{0}' wurde nicht gefunden. Stellen Sie sicher, dass die Lösung korrekt für den App-Katalog bereitgestellt und die Manifest-ID für dieses Webpart registriert ist.",
+                InvalidLayoutInstance: "Das ausgewählte Layout '{0}' implementiert die abstrakte Klasse 'BaseLayout' nicht korrekt. Es fehlen einige Methoden.",
+                DefaultExtensibilityLibraryName: "Standard-Erweiterungsbibliothek",
+                InvalidProviderInstance: "Der ausgewählte Vorschlagsprovider '{0}' implementiert die abstrakte Klasse 'BaseSuggestionProvider' nicht korrekt. Es fehlen einige Methoden.",
+                ProviderDefinitionNotFound: "Der benutzerdefinierte Vorschlagsprovider mit dem Schlüssel '{0}' wurde nicht gefunden. Stellen Sie sicher, dass die Lösung korrekt für den App-Katalog bereitgestellt und die Manifest-ID für dieses Webpart registriert ist.",
+                QueryModifierDefinitionNotFound: "Der benutzerdefinierte Abfragemodifikator mit dem Schlüssel '{0}' wurde nicht gefunden. Stellen Sie sicher, dass die Lösung korrekt für den App-Katalog bereitgestellt und die Manifest-ID für dieses Webpart registriert ist.",
+                InvalidQueryModifierInstance: "Der ausgewählte Abfragemodifikator '{0}' implementiert die abstrakte Klasse 'BaseQueryModifier' nicht korrekt. Es fehlen einige Methoden.",
+            },
+            DateFromLabel: "Von",
+            DateTolabel: "Bis",
+            DatePickerStrings: {
+                months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+                shortMonths: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
+                days: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+                shortDays: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+                goToToday: 'Weiter zu heute',
+                prevMonthAriaLabel: 'Zum vorherigeren Monat',
+                nextMonthAriaLabel: 'Zum nächsten Monat',
+                prevYearAriaLabel: 'Zum vorherigen Jahr',
+                nextYearAriaLabel: 'Zum nächsten Jahr',
+                closeButtonAriaLabel: 'Datumspicker schließen',
+                isRequiredErrorMessage: 'Start Datum ist erforderlich.',
+                invalidInputErrorMessage: 'Ungültiges Datumsformat.'
+            },
+            DateIntervalStrings: {
+                AnyTime: "Jederzeit",
+                PastDay: "Letzte 24 Stunden",
+                PastWeek: "Von den letzten 24 Stunden bis zur vergangenen Woche",
+                PastMonth: "Von der vergangenen Woche zum vergangenen Monat",
+                Past3Months: "Vom letzten Monat bis zu den letzten 3 Monaten",
+                PastYear: "Von den letzten 3 Monaten bis zum vergangenen Jahr",
+                Older: "Älter als ein Jahr"
+            },
+            SameTabOpenBehavior: "Die aktuelle Registerkarte verwenden",
+            NewTabOpenBehavior: "In einer neuen Registerkarte öffnen",
+            PageOpenBehaviorLabel: "Öffnungsverhalten",
+            EmptyFieldErrorMessage: "Dieses Feld darf nicht leer bleiben.",
+            TagPickerStrings: {
+                NoResultsSearchMessage: "Keine Ergebnisse gefunden",
+                SearchPlaceholder: "Suche einen Wert..."
+            },
+            CurrentVerticalNotSelectedMessage: "Das derzeit ausgewählte Vertikal passt nicht zu den zu diesem Web Part ({0}) zugeordneten Vertikalen. Es wird im Anzeige Modus als leer angezeigt.",
+            True: "Ja",
+            False: "Nei"
+        },
+        DataSources: {
+            SharePointSearch: {
+                SourceName: "SharePoint Suche",
+                SourceConfigurationGroupName: "Quell Konfiguration",
+                QueryTextFieldLabel: "Query Text",
+                QueryTextFieldInfoMessage: "Verwenden Sie die Registerkarte <strong>Verfügbare Verbindungen</strong> für die Konfiguration des Webparts, um entweder einen statischen Wert oder einen Wert aus einer dynamischen Komponente auf der Seite wie einem Suchfeld anzugeben",
+                QueryTemplateFieldLabel: "Query Vorlage",
+                QueryTemplatePlaceHolderText: "z.B.: Path:{Site}",
+                QueryTemplateFieldDescription: "Die Vorlage für die Suchanfrage. Sie können auch {<Tokens>} verwenden, um eine dynamische Abfrage zu erstellen.",
+                ResultSourceIdLabel: "ID der Ergebnisquelle / Scope|Name",
+                ResultSourceIdDescription: "Verwenden Sie eine standardmäßige SharePoint-Ergebnisquellen-ID, geben Sie Ihren eigenen GUID-Wert ein oder den SCOPE und NAMEN der Quelle getrennt durch '|' (z.B.: SPSite|News). Erlaubte Scopes sind [SPSiteSubscription, SPSite, SPWeb]. Drücken Sie zum Speichern die [Eingabetaste].",
+                InvalidResultSourceIdMessage: "Der angegebene Wert ist keine gültige GUID oder nicht in der Form 'SCOPE|NAME' formatiert.",
+                EnableQueryRulesLabel: "Abfrageregeln aktivieren",
+                RefinementFilters: "Verfeinerungsfilter",
+                RefinementFiltersDescription: "Initiale Verfeinerungsfilter, die auf die Abfrage angewendet werden sollen. Diese werden nicht in den ausgewählten Filtern angezeigt. Verwenden Sie für String-Ausdrücke doppelte Anführungszeichen (\") anstelle von einfachen Anführungszeichen (').",
+                EnableLocalizationLabel: "Lokalisierung einschalten",
+                EnableLocalizationOnLabel: "An",
+                EnableLocalizationOffLabel: "Aus",
+                QueryCultureLabel: "Sprache der Suchanfrage",
+                QueryCultureUseUiLanguageLabel: "Sprache der Benutzeroberfläche verwenden",
+                SelectedPropertiesFieldLabel: "Ausgewählte Eigenschaften",
+                SelectedPropertiesFieldDescription: "Gibt die Eigenschaften an, die aus den Suchergebnissen abgerufen werden sollen.",
+                SelectedPropertiesPlaceholderLabel: "Eigenschaften auswählen",
+                HitHighlightedPropertiesFieldLabel: "Hervorgehobene Eigenschaften",
+                HitHighlightedPropertiesFieldDescription: "Liste der verwalteten Eigenschaften zum Hervorheben (i.e. Department,UserName).",
+                TermNotFound: "(Begriff mit ID '{0}' nicht gefunden)",
+                ApplyQueryTemplateBtnText: "Übernehmen",
+                EnableAudienceTargetingTglLabel: "Zielgruppenadressierung aktivieren",
+                TrimDuplicates: "Duplikate kürzen",
+                CollapseSpecificationLabel: "Spezifikation einklappen",
+                CacheTimeoutLabel: "Cache timeout in minutes (Set to 0 for no caching)"
+            },
+            MicrosoftSearch: {
+                QueryTextFieldLabel: "Abfragetext",
+                QueryTextFieldInfoMessage: "Verwenden Sie die Registerkarte <strong>Verfügbare Verbindungen</strong> für die Konfiguration des Webparts, um entweder einen statischen Wert oder einen Wert aus einer dynamischen Komponente auf der Seite wie einem Suchfeld anzugeben",
+                SourceName: "Microsoft Suche",
+                SourceConfigurationGroupName: "Microsoft Suche",
+                EntityTypesField: "Zu durchsuchende Entitätstypen",
+                SelectedFieldsPropertiesFieldLabel: "Ausgewählte Felder",
+                SelectedFieldsPropertiesFieldDescription: "Gibt die Felder an, die aus den Suchergebnissen abgerufen werden sollen.",
+                SelectedFieldsPlaceholderLabel: "Felder auswählen",
+                EnableTopResultsLabel: "Top-Ergebnisse aktivieren",
+                ContentSourcesFieldLabel: "Inhaltsquellen",
+                ContentSourcesFieldDescriptionLabel: "IDs von Verbindungen, die im Verwaltungsportal von Microsoft Search Connectors definiert sind.",
+                ContentSourcesFieldPlaceholderLabel: "Bspw.: 'MeineAngepassteVerbindungsId'",
+                EnableSuggestionLabel: "Rechtschreibevorschläge aktivieren",
+                EnableModificationLabel: "Rechtschreibemodifikationen aktivieren",
+                QueryTemplateFieldLabel: "Query Vorlage",
+                QueryTemplatePlaceHolderText: "z.B.: {searchTerms} IsDocument:true",
+                QueryTemplateFieldDescription: "Die Suchvorlage. Es können auch {<tokens>} und KQL für die Erstellung einer dynamischen Query benutzt werden.",
+                ApplyQueryTemplateBtnText: "Anwenden",
+                UseBetaEndpoint: "Benutze den Beta-Endpunkt",
+                TrimDuplicates: "Duplikate kürzen",
+                showSPEmbeddedContentLabel: "SharePoint Embedded (ausgeblendet) in den Suchergebnissen anzeigen",
+                showMSArchivedContentLabel: "Von MS archivierte Inhalte in den Suchergebnissen anzeigen",
+                CollapseProperties: {
+                    EditCollapsePropertiesLabel: "Bearbeiten Sie die Minimierungseinstellungen",
+                    CollapsePropertiesDescription: "Geben Sie die Minimierungseinstellungen für die Suchergebnisse an. Sie können entweder ein Feld aus der Dropdown-Liste auswählen (nur wenn die Daten der Datenquelle bereits abgerufen wurden) oder einen eigenen Wert eingeben (drücken Sie 'Enter', um Ihre Eingabe zu speichern).",
+                    CollapsePropertiesPropertyPaneFieldLabel: "Minimierungseinstellungen",
+                    CollapseLimitFieldLabel: "Grenze",
+                    CollapsePropertiesFieldColumnPlaceholder: "Nach Feld reduzieren"
+                }
+            },
+            SearchCommon: {
+                Sort: {
+                    SortPropertyPaneFieldLabel: "Sortierung",
+                    SortListDescription: "Geben Sie die Sortierung der Suchergebnisse an. Sie können entweder ein Feld aus der Dropdown-Liste auswählen (nur wenn die Daten der Datenquelle bereits abgerufen wurden) oder einen eigenen Wert eingeben (drücken Sie 'Enter', um Ihre Eingabe zu speichern).",
+                    SortDirectionAscendingLabel: "Aufsteigend",
+                    SortDirectionDescendingLabel: "Absteigend",
+                    SortErrorMessage: "Ungültige Sucheigenschaft (prüfen Sie, ob die verwaltete Eigenschaft sortierbar ist).",
+                    SortPanelSortFieldLabel: "Nach Feld sortieren",
+                    SortPanelSortFieldAria: "Sortiere nach",
+                    SortPanelSortFieldPlaceHolder: "Sortiere nach",
+                    SortPanelSortDirectionLabel: "Sortierrichtung",
+                    SortDirectionColumnLabel: "Richtung",
+                    SortFieldColumnLabel: "Feldname",
+                    SortFieldDefaultSortLabel: "Standardmäßig sortieren",
+                    SortFieldFriendlyNameLabel: "Anzeigename des Sortierfelds",
+                    SortFieldUserSortLabel: "Sortierung durch Benutzer",
+                    EditSortLabel: "Sortierung bearbeiten",
+                    SortInvalidSortableFieldMessage: "Diese Eigenschaft ist nicht sortierbar",
+                    SortFieldColumnPlaceholder: "Wähle Feld..."
+                }
+            }
+        },
+        Controls: {
+            TextDialogButtonText: "Handlebar Ausdruck hinzufügen",
+            TextDialogTitle: "Handlebar Ausdruck bearbeiten",
+            TextDialogCancelButtonText: "Abbrechen",
+            TextDialogSaveButtonText: "Speichern",
+            SelectItemComboPlaceHolder: "Eigenschaft auswählen",
+            AddStaticDataLabel: "Statische Daten hinzufügen",
+            TextFieldApplyButtonText: "Übernehmen",
+            SortByPlaceholderText: "Standardsortierung",
+            SortByDefaultOptionText: "Standard",
+            DownloadButtonText: "Herunterladen",
+            DownloadCSVButtonText: "Als CSV herunterladen"
+        },
+        Layouts: {
+            Debug: {
+                Name: "Debug"
+            },
+            CustomHandlebars: {
+                Name: "Benutzerdefiniert"
+            },
+            CustomAdaptiveCards: {
+                Name: "Benutzerdefiniert"
+            },
+            SimpleList: {
+                Name: "Liste",
+                ShowFileIconLabel: "Dateisymbol anzeigen",
+                ShowItemThumbnailLabel: "Vorschaubild anzeigen"
+            },
+            DetailsList: {
+                Name: "Detailliste",
+                UseHandlebarsExpressionLabel: "Benutze Handlebar Ausdruck",
+                MinimumWidthColumnLabel: "Minimum Breite (px)",
+                MaximumWidthColumnLabel: "Maximum Breite (px)",
+                SortableColumnLabel: "Sortierbar",
+                ResizableColumnLabel: "Größenveränderbar",
+                MultilineColumnLabel: "Mehrzeilig",
+                LinkToItemColumnLabel: "Link zum Item",
+                CompactModeLabel: "Kompaktmodus",
+                ShowFileIcon: "Dateisymbol anzeigen",
+                ManageDetailsListColumnDescription: "Hinzufügen, Aktualisieren oder Entfernen von Spalten für das Layout der Detailliste. Sie können entweder Eigenschaftswerte in der Liste direkt und ohne Transformation verwenden oder einen Handlebar-Ausdruck im Wertefeld einsetzen. HTML wird ebenfalls für alle Felder unterstützt.",
+                ManageDetailsListColumnLabel: "Spalten verwalten",
+                ValueColumnLabel: "Spalten Wert",
+                ValueSortingColumnLabel: "Sortierfeld auswählen...",
+                ValueSortingColumnNoFieldsLabel: "Keine Sortierfelder verfügbar",
+                DisplayNameColumnLabel: "Spaltenanzeigename",
+                FileExtensionFieldLabel: "Zu verwendendes Feld für die Dateierweiterung",
+                GroupByFieldLabel: "Gruppierung nach Feld",
+                GroupByOthersGroupFieldLabel: "Gruppentitel für andere Elemente",
+                GroupByOthersGroupDefaultValue: "Kein Wert",
+                AdditionalGroupByButtonLabel: "Weitere Gruppierung hinzufügen",
+                AdditionalGroupByFieldsLabel: "Zusätzliche Gruppierungsfelder",
+                AdditionalGroupByFieldsDescription: "Fügen Sie zusätzliche Gruppierungsfelder hinzu, um die Gruppierungsebene zu erhöhen. Die Reihenfolge der Gruppierungsfelder entspricht der Reihenfolge der Gruppierungsebenen.",
+                EnableGrouping: "Gruppierung aktivieren",
+                GroupingDescription: "Stellen Sie sicher, dass im Ergebnis-Webpart Daten angezeigt werden, damit eine Liste der anzuzeigenden Eigenschaften angezeigt wird.",
+                CollapsedGroupsByDefault: "Eingeklappt anzeigen",
+                ResetFieldsBtnLabel: "Felder auf Standardwerte zurücksetzen",
+                EnableStickyHeader: "Fixierte Kopfzeile aktivieren",
+                StickyHeaderListViewHeight: "Höhe der Listenansicht (px)",
+                EnableDownload: "Download aktivieren",
+                UseAlternatingBackgroundColor: "Verwenden Sie abwechselnde Hintergrundfarben"
+            },
+            Cards: {
+                Name: "Karten",
+                ManageTilesFieldsLabel: "Verwaltete Kartenfelder",
+                ManageTilesFieldsPanelDescriptionLabel: "Hier können Sie jeden Feldwert mit den entsprechenden Kartenplatzhaltern abbilden. Sie können entweder eine Ergebniseigenschaft direkt ohne Transformation verwenden oder einen Handlebars-Ausdruck als Feldwert verwenden. Wenn angegeben, können Sie auch Ihren eigenen HTML-Code in kommentierte Felder einfügen.",
+                PlaceholderNameFieldLabel: "Name",
+                SupportHTMLColumnLabel: "Erlaube HTML",
+                PlaceholderValueFieldLabel: "Wert",
+                UseHandlebarsExpressionLabel: "Benutze Handlebar Ausdruck",
+                EnableItemPreview: "Ergebnisvorschau einschalten",
+                EnableItemPreviewHoverMessage: "Die Aktivierung dieser Option kann sich auf die Leistung auswirken, wenn zu viele Elemente auf einmal angezeigt werden und Sie das Slot-Feld 'AutoPreviewUrl' verwenden. Wir empfehlen Ihnen, diese Option bei einer geringen Anzahl von Elementen zu verwenden oder vordefinierte Vorschau-URLs aus Ihren Datenquellenfeldern in Slots zu verwenden.",
+                ShowFileIcon: "Dateisymbol anzeigen",
+                CompactModeLabel: "Kompaktmodus",
+                PreferedCardNumberPerRow: "Bevorzugte Anzahl von Karten pro Reihe",
+                Fields: {
+                    Title: "Titel",
+                    Location: "Ort",
+                    Tags: "Tags",
+                    PreviewImage: "Vorschaubild",
+                    PreviewUrl: "Vorschau Url",
+                    Url: "Url",
+                    Date: "Datum",
+                    Author: "Autor",
+                    ProfileImage: "Profil Bild Url",
+                    FileExtension: "Dateiendung",
+                    IsContainer: "Ist-Ordner"
+                },
+                ResetFieldsBtnLabel: "Felder auf Standardwerte zurücksetzen"
+            },
+            Slider: {
+                Name: "Slideshow",
+                SliderAutoPlay: "Automatische Wiedergabe",
+                SliderAutoPlayDuration: "Automatische Wiedergabe Dauer (in Sekunden)",
+                SliderPauseAutoPlayOnHover: "Pause beim Hovern",
+                SliderGroupCells: "Anzahl der Elemente, die in Dias zusammengefasst werden sollen",
+                SliderShowPageDots: "Seitenpunkte anzeigen",
+                SliderWrapAround: "Unendlicher Bildlauf",
+                SlideHeight: "Slide Höhe (in px)",
+                SlideWidth: "Slide Breite (in px)",
+                PreviousPageLabel: "Vorherige Seite",
+                NextPageLabel: "Nächste Seite",
+                GoToPageLabel: "Gehe zu Seite {0}"
+            },
+            People: {
+                Name: "People",
+                ManagePeopleFieldsLabel: "Personenfelder verwalten",
+                ManagePeopleFieldsPanelDescriptionLabel: "Hier können Sie jeden Feldwert mit den entsprechenden Persona-Platzhaltern abbilden. Sie können entweder den Wert des Feldes der Datenquelle direkt ohne Transformation verwenden oder einen Handlebar-Ausdruck im Wertfeld verwenden.",
+                PlaceholderNameFieldLabel: "Name",
+                PlaceholderValueFieldLabel: "Wert",
+                UseHandlebarsExpressionLabel: "Benutze Handlebar-Ausdruck",
+                PersonaSizeOptionsLabel: "Komponentengrösse",
+                PersonaSizeExtraSmall: "Extra klein",
+                PersonaSizeSmall: "Klein",
+                PersonaSizeRegular: "Regulär",
+                PersonaSizeLarge: "Groß",
+                PersonaSizeExtraLarge: "Extra groß",
+                ShowInitialsToggleLabel: "Initialen anzeigen, wenn kein Bild vorhanden",
+                SupportHTMLColumnLabel: "HTML erlauben",
+                ResetFieldsBtnLabel: "Felder auf Standardwerte zurücksetzen",
+                ShowPersonaCardOnHover: "Persona-Karte bei Hover anzeigen",
+                ShowPersonaCardOnHoverCalloutMsg: "Diese Funktion verwendet Microsoft Graph, um Informationen über den Benutzer anzuzeigen. Sie benötigt die folgenden API-Berechtigungen in Ihrem Mandanten, um zu funktionieren: ['User.Read','People.Read','Contacts.Read','User.Read.All'].",
+                ShowPersonaCardOnHoverNative: "Persona-Karte bei Hover anzeigen (LPC)",
+                ShowPersonaCardOnHoverCalloutMsgNative: "Diese Funktion verwendet die Standard-Komponente von SharePoint, um die LivePersona-Karte anzuzeigen. Beachten Sie den Disclaimer unter https://pnp.github.io/sp-dev-fx-controls-react/controls/LivePersona/.",
+                ShowPersonaPresenceInfo: "Präsenz anzeigen",
+                ShowPersonaPresenceInfoCalloutMsg: "Diese Funktion benötigt die folgende API-Berechtigungen in Ihrem Mandanten, um zu funktionieren: ['Presence.Read.All']",
+                ShowHoverOnPictureOnly: "Hover nur auf Bild anzeigen",
+                ShowHoverOnPictureOnlyCalloutMsg: "Wenn aktiviert, öffnet sich die Personenkarte nur beim Hovern über das Persona-Bild (Coin).",
+                Fields: {
+                    ImageUrl: "Bild URL",
+                    PrimaryText: "Primärer Text",
+                    SecondaryText: "Sekundärer Text",
+                    TertiaryText: "Tertiärer Text",
+                    OptionalText: "Optionaler Text",
+                    UPN: "UPN"
+                }
+            },
+            Vertical: {
+                Name: "Vertikal"
+            },
+            Horizontal: {
+                Name: "Horizontal",
+                PreferedFilterNumberPerRow: "Bevorzugte Anzahl von Filtern pro Zeile",
+            },
+            Panel: {
+                Name: "Panel",
+                IsModal: "Modal",
+                IsLightDismiss: "Leicht entfernt",
+                Size: "Panel Grösse",
+                ButtonLabel: "Zeige Filter",
+                ButtonLabelFieldName: "Beschriftung der angezeigten Schaltfläche",
+                HeaderText: "Filter",
+                HeaderTextFieldName: "Text in der Kopfzeile des Panels",
+                SizeOptions: {
+                    SmallFixedFar: 'Klein (default)',
+                    SmallFixedNear: 'Klein, nahe Seite',
+                    Medium: 'Medium',
+                    Large: 'Gross',
+                    LargeFixed: 'Gross mit fester Breite',
+                    ExtraLarge: 'Extra Gross',
+                    SmallFluid: 'Volle Breite (flüssig)'
+                }
+            },
+            PersonCard: {
+                SendEmailLinkSubtitle: "E-Mail senden",
+                StartChatLinkSubtitle: "Chat starten",
+                ShowMoreSectionButton: "Mehr anzeigen",
+                ContactSectionTitle: "Kontakt",
+                ReportsToSectionTitle: "Berichtet an",
+                DirectReportsSectionTitle: "Direkt unterstellte Mitarbeiter",
+                OrganizationSectionTitle: "Organisation",
+                YouWorkWithSubSectionTitle: "Sie arbeiten mit",
+                UserWorksWithSubSectionTitle: "arbeitet mit",
+                EmailsSectionTitle: "E-Mails",
+                FilesSectionTitle: "Dateien",
+                SharedTextSubtitle: "Geteilt",
+                SkillsAndExperienceSectionTitle: "Fähigkeiten & Erfahrung",
+                AboutCompactSectionTitle: "Über",
+                SkillsSubSectionTitle: "Fähigkeiten",
+                LanguagesSubSectionTitle: "Sprachen",
+                WorkExperienceSubSectionTitle: "Berufserfahrung",
+                EducationSubSectionTitle: "Ausbildung",
+                ProfessionalInterestsSubSectionTitle: "Berufliche Interessen",
+                PersonalInterestsSubSectionTitle: "Persönliche Interessen",
+                BirthdaySubSectionTitle: "Geburtstag",
+                CurrentYearSubtitle: "Aktuell",
+                EndOfCard: "Ende der Karte",
+                QuickMessage: "Schnelle Nachricht senden",
+                ExpandDetailsLabel: "Details erweitern",
+                SendMessageLabel: "Nachricht senden",
+                EmailButtonLabel: "E-Mail",
+                CallButtonLabel: "Anrufen",
+                ChatButtonLabel: "Chat",
+                CloseCardLabel: "Karte schließen",
+                VideoButtonLabel: "Video",
+                GoBackLabel: "Zurück",
+                EmailTitle: "E-Mail",
+                ChatTitle: "Teams",
+                BusinessPhoneTitle: "Geschäftstelefon",
+                CellPhoneTitle: "Mobiltelefon",
+                DepartmentTitle: "Abteilung",
+                PersonTitle: "Titel",
+                OfficeLocationTitle: "Bürostandort",
+                CopyToClipboardButton: "In die Zwischenablage kopieren",
+                ShowMoreSubtitle: "Weitere Elemente anzeigen",
+                SocialMediaSubSectionTitle: "Soziale Medien"
+            }
+        },
+        HandlebarsHelpers: {
+            CountMessageLong: "<b>{0}</b> Ergebnisse für '<em>{1}</em>'",
+            CountMessageShort: "<b>{0}</b> Ergebnisse",
+        },
+        PropertyPane: {
+            ConnectionsPage: {
+                DataConnectionsGroupName: "Verfügbare Verbindungen",
+                UseDataVerticalsWebPartLabel: "Verbinde ein Vertikal Web Part.",
+                UseDataVerticalsFromComponentLabel: "Benutze Vertikale von dieser Komponente."
+            },
+            InformationPage: {
+                Extensibility: {
+                    GroupName: "Konfiguration der Erweiterbarkeit",
+                    FieldLabel: "Zu ladende Erweiterungsbibliotheken",
+                    ManageBtnLabel: "Konfigurieren",
+                    Columns: {
+                        Name: "Name/Zweck",
+                        Id: "Manifest GUID",
+                        Enabled: "Eingeschalten/Ausgeschalten"
+                    }
+                },
+                ImportExport: "Einstellungen importieren/exportieren"
+            },
+            AudienceTargeting: {
+                GroupName: "Zielgruppenansprache",
+                TargetAudienceLabel: "Zielgruppe",
+                CacheDurationLabel: "Cache-Dauer (Stunden)",
+                CacheDurationDescription: "Dauer in Stunden für die Zwischenspeicherung der Zielgruppenmitgliedschaft"
+            },
+            TitleFontDefault: "Standard",
+            TitleStylingGroupName: "Webpart-Titelstyling",
+            TitleFont: "Titelschriftart",
+            TitleFontSize: "Titelschriftgröße (px)",
+            TitleFontColor: "Titelschriftfarbe",
+            ResetTitleStylingToDefault: "Titelstyling auf Standard zurücksetzen"
+        },
+        Filters: {
+            ApplyAllFiltersButtonLabel: "Anwenden",
+            ClearAllFiltersButtonLabel: "Zurücksetzen",
+            FilterNoValuesMessage: "Keine Werte für diesen Filter",
+            OrOperator: "ODER",
+            AndOperator: "UND",
+            ComboBoxPlaceHolder: "Wert auswählen",
+            UseAndOperatorValues: "Benutze einen UND Operator zwischen den Werten.",
+            UseOrOperatorValues: "Benutze einen ODER Operator zwischen den Werten.",
+            UseValuesOperators: "Wähle einen Operator, der zwischen den Filterwerten angewandt werden soll.",
+            LoadingMessage: "Laden...",
+            SearchPlaceholder: "Suchen..."
+        },
+        SuggestionProviders: {
+            SharePointStatic: {
+                ProviderName: "SharePoint Statische Suchvorschläge",
+                ProviderDescription: "Abrufen von statischen, benutzerdefinierten SharePoint-Suchvorschlägen"
+            }
+        }
+    }
+})

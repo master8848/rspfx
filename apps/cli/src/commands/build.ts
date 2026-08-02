@@ -42,6 +42,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     production: true,
     entries: project.webParts.entries,
     externals,
+    aliases: project.localizedAliases,
     build: { ...config.build, minify: opts.minify, sourcemap: opts.sourcemap },
     swcContributions: [contributions as Record<string, unknown>]
   });

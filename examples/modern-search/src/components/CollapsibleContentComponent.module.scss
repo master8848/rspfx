@@ -1,0 +1,34 @@
+.collapsible {
+
+    min-height: 35px;
+
+    &__filterPanel {
+        &__body {
+            overflow: auto;
+
+            &__headerIcon {
+                text-align: right;
+                margin-top: 5px;
+                padding-left: 10px;
+                padding-right: 10px;
+                cursor: pointer;
+            }
+
+            &__group {
+
+                display: block;
+
+                &__header {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 10px;
+                }
+
+                &__item {
+                    padding-left: 15px;
+                    padding-top: 10px;
+                }
+            }
+        }
+    }
+}

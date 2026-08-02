@@ -1,0 +1,37 @@
+<content id="data-content">
+
+	{{#each @root.filters as |filter|}}    
+	
+		<div><strong>{{filter.filterName}}</strong></div>
+
+		<pnp-filtersearchbox data-filter="{{JSONstringify filter}}" data-instance-id="{{@root.instanceId}}"></pnp-filtersearchbox>
+	
+		<div role="{{#if filter.isMulti}}group{{else}}radiogroup{{/if}}" aria-label="{{filter.displayName}}">
+		{{#each filter.values}}
+			<pnp-filtercheckbox 
+				data-filter-name="{{filter.filterName}}" 
+				data-name="{{name}}" 
+				data-value="{{value}}" 
+				data-selected="{{selected}}" 
+				data-disabled="{{disabled}}"
+				data-is-multi="{{../isMulti}}"
+				data-value-count="{{../values.length}}"
+				data-value-index="{{@index}}"
+				data-theme-variant="{{JSONstringify @root.theme}}"
+			>
+			</pnp-filtercheckbox>
+		{{/each}}
+		</div>
+		
+		{{#eq filter.values.length 0}}
+			<div>{{@root.strings.FilterNoValuesMessage}}</div>
+		{{else}}
+		
+			{{#if filter.isMulti}}
+				<pnp-filter-multi data-filter-name="{{filter.filterName}}" data-theme-variant="{{JSONstringify @root.theme}}"></pnp-filter-multi>
+			{{/if}}
+		{{/eq}}
+
+	{{/each}}
+
+</content>

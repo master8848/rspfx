@@ -1,0 +1,87 @@
+define([], function () {
+    return {
+        General: {
+            PlaceHolder: {
+                EditLabel: "Redigér",
+                IconText: "PnP-søgefiltre",
+                Description: "Viser datafiltre fra en forbundet søgeresultats-webpart",
+                ConfigureBtnLabel: "Konfigurér"
+            },
+            NoAvailableFilterMessage: "Ingen tilgængelige filtre at vise.",
+            WebPartDefaultTitle: "Søgefiltre-webpart"
+        },
+        PropertyPane: {
+            ConnectionsPage: {
+                UseDataResultsWebPartLabel: "Forbind til en dataresultat-webpart",
+                UseDataResultsFromComponentsLabel: "Anvend data fra disse webparts",
+                UseDataResultsFromComponentsDescription: "Hvis du forbinder mere end en webpart, flettes filterværdier til lignende filternavne.",
+                LinkToVerticalLabel: "Vis kun filtre, når følgende vertikaler er valgt",
+                LinkToVerticalLabelHoverMessage: "Filtrene vil kun blive vist, hvis den valgte vertikal matcher med dem, der er konfigureret til denne webdel. Ellers vil webdelen være tom (ingen margen og ingen polstring) i visningstilstand.",
+                BidirectionalConnectionWarning: "En eller flere tilsluttede søgeresultatwebdele er ikke konfigureret til at forbinde tilbage til denne filterwebdel. Begge webdele skal være forbundet til hinanden, for at filtre kan fungere korrekt."
+            },
+            FiltersSettingsPage: {
+                SettingsGroupName: "Indstillinger til filtre",
+                FilterOperator: "Operatør til anvendelse mellem filtre"
+            },
+            DataFilterCollection: {
+                SelectFilterComboBoxLabel: "Vælg felt",
+                FilterNameLabel: "Felt til filter",
+                FilterDisplayName: "Visningsnavn",
+                FilterMaxBuckets: "Antal værdier",
+                FilterMaxBucketsWarning: "Det maksimale antal værdier er 1000",
+                FilterLimitReachedWarningToggle: "Vis advarsel, når grænsen er nået",
+                FilterLimitReachedWarningMessage: "Resultatgrænsen er nået — ikke alle matchende elementer vises. Forfin din søgning for at indsnævre listen.",
+                PeopleTemplateQUserMappingWarning: "Advarsel for personskabelon: værdierne ligner ikke brugeridentiteter. Egenskaben er sandsynligvis ikke knyttet til en Q_USER-crawlet egenskab.",
+                FilterTemplate: "Skabelon",
+                FilterExpandByDefault: "Udvid som standard",
+                ExpandAllNodesByDefault: "Udvid alle noder som standard",
+                HideNodesNotInDataSet: "Skjul noder, der ikke findes i det aktuelle datasæt",
+                // FilterType: "Filtertype",
+                FilterTypeRefiner: "Denne skabelon til filtre agerer som en refiner og modtager/sender tilgængelige/valgte værdier fra/til the forbundne datakilde.",
+                FilterTypeStaticFilter: "Denne skabelon til filtre agerer som et statisk filter og sender kun vilkårligt udvalgte værdier til den forbundne datakilde. Indgående filterværdier bliver ikke taget i betragtning.",
+                CustomizeFiltersBtnLabel: "Redigér",
+                CustomizeFiltersHeader: "Redigér filtre",
+                CustomizeFiltersDescription: "Konfigurér filtre til søgning ved at tilføje eller fjerne rækker. Du kan vælge felter fra datakildens resultater (hvis disse allerede er valgt), eller du kan anvende statiske værdier.For yderligere detaljer, se https://microsoft-search.github.io/pnp-modern-search/usage/search-filters/#filter-settings",
+                CustomizeFiltersFieldLabel: "Tilpas filtre",
+                ShowCount: "Vis antal",
+                Operator: "Operatør mellem værdier",
+                ANDOperator: "OG",
+                OROperator: "ELLER",
+                IsMulti: "Multiværdier",
+                Templates: {
+                    CheckBoxTemplate: "Checkboks",
+                    DateRangeTemplate: "Datointerval",
+                    ComboBoxTemplate: "Combo-boks",
+                    DateIntervalTemplate: "Datointerval",
+                    PeopleTemplate: "Personskabelon",
+                    TaxonomyPickerTemplate: "Taksonomivælger",
+                    HierarchicalFilterTemplate: "Hierarkisk filter"
+                },
+                SortBy: "Sortér værdier efter",
+                SortDirection: "Sortér efter retning",
+                SortByName: "Efter navn",
+                SortByCount: "Efter antal",
+                SortAscending: "Stigende",
+                SortDescending: "Faldende"
+            },
+            LayoutPage: {
+                AvailableLayoutsGroupName: "Mulige layouts",
+                LayoutTemplateOptionsGroupName: "Layout-muligheder",
+                TemplateUrlFieldLabel: "Anvend en ekstern URL til skabelonen",
+                TemplateUrlPlaceholder: "https://myfile.html",
+                ErrorTemplateExtension: "Skabelonen skal være en valid .htm eller .html fil",
+                ErrorTemplateResolve: "Ude af stand til at vise den specifikke skabelon. Fejloplysninger: '{0}'",
+                FiltersTemplateFieldLabel: "Redigér skabelon til filtre",
+                FiltersTemplatePanelHeader: "Redigér skabelon til filtre"
+            }
+        },
+        Styling: {
+            StylingOptionsGroupName: "Stilindstillinger",
+            FilterBackgroundColorLabel: "Filter baggrundsfarve",
+            FilterBorderColorLabel: "Filter kantfarve",
+            FilterBorderThicknessLabel: "Filter kanttykkelse",
+            ResetToDefaultLabel: "Gendan til standardstil",
+            ResetToDefaultDescription: "Gendan alle stilmuligheder til deres standardværdier"
+        }
+    }
+});
