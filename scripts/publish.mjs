@@ -152,10 +152,10 @@ if (versions.size > 1) {
   fatal(`Publishable packages have inconsistent versions: ${[...versions].join(', ')} — bump them all to one version first.`);
 }
 const currentVersion = [...versions][0];
-// Resume detection: if the current version is already partially published
-// (e.g. a previous run failed halfway), keep it — never bump past an
-// in-progress release.
-const resumed = [...set.values()].some((pkg) => isPublished(pkg.name, currentVersion));
+// Resume detection: a partially published release (previous run failed
+// halfway) stays on the same version; a fully published one gets bumped.
+const liveAtCurrent = [...set.values()].filter((pkg) => isPublished(pkg.name, currentVersion)).length;
+const resumed = liveAtCurrent > 0 && liveAtCurrent < set.size;
 const targetVersion = versionFlag ?? (resumed ? currentVersion : bumpVersion(currentVersion, bumpKind));
 
 console.log(`Publishing ${set.size} packages (${DRY_RUN ? 'DRY RUN — nothing will be published' : 'LIVE'})`);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { program } from 'commander';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
@@ -159,6 +160,6 @@ async function main(): Promise<void> {
 }
 
 const entry = process.argv[1];
-if (entry && import.meta.url === pathToFileURL(entry).href) {
+if (entry && import.meta.url === pathToFileURL(fs.realpathSync(entry)).href) {
   void main();
 }
