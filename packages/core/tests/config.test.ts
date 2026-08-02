@@ -1,5 +1,41 @@
 import { describe, it, expect } from 'vitest';
-import { defineConfig, resolveConfig } from '../src/index.js';
+import { configDefaults, defineConfig, resolveConfig, resolvePathDefaults } from '../src/index.js';
+
+describe('configDefaults', () => {
+  it('holds the canonical default values', () => {
+    expect(configDefaults).toEqual({
+      dev: {
+        port: 4321,
+        https: true,
+        hostname: 'localhost',
+        workbench: true,
+        fastRefresh: false,
+        openBrowser: true
+      },
+      build: {
+        sourcemap: false,
+        minify: true,
+        splitChunks: false,
+        outDir: 'dist',
+        releaseDir: 'release'
+      },
+      paths: {
+        srcDir: 'src',
+        webpartsDir: 'src/webparts',
+        configDir: 'config'
+      }
+    });
+  });
+
+  it('is what a minimal config resolves to', () => {
+    const config = resolveConfig({ name: 'x' });
+    expect({
+      dev: config.dev,
+      build: config.build,
+      paths: config.paths
+    }).toEqual(configDefaults);
+  });
+});
 
 describe('resolveConfig', () => {
   it('fills all defaults for a minimal config', () => {
@@ -25,6 +61,11 @@ describe('resolveConfig', () => {
         splitChunks: false,
         outDir: 'dist',
         releaseDir: 'release'
+      },
+      paths: {
+        srcDir: 'src',
+        webpartsDir: 'src/webparts',
+        configDir: 'config'
       }
     });
   });
@@ -60,6 +101,23 @@ describe('resolveConfig', () => {
       splitChunks: false,
       outDir: 'dist',
       releaseDir: 'release'
+    });
+  });
+
+  it('resolves paths defaults and partial overrides', () => {
+    const config = resolveConfig({
+      name: 'x',
+      paths: { srcDir: 'components', webpartsDir: 'components/widgets' }
+    });
+    expect(config.paths).toEqual({
+      srcDir: 'components',
+      webpartsDir: 'components/widgets',
+      configDir: 'config'
+    });
+    expect(resolvePathDefaults()).toEqual({
+      srcDir: 'src',
+      webpartsDir: 'src/webparts',
+      configDir: 'config'
     });
   });
 

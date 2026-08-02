@@ -8,6 +8,7 @@ export type {
 } from './types.js';
 export { RspfxError } from './errors.js';
 export { createRspackConfig } from './config.js';
+export { spfx, type SpfxPluginOptions } from './plugin.js';
 export { build } from './build.js';
 export { watch } from './watch.js';
 export { startDevServer } from './dev-server.js';

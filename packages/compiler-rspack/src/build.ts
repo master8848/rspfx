@@ -2,6 +2,9 @@ import { rspack, type Compiler, type Configuration, type Stats } from '@rspack/c
 import type { BuildResult, CompileContext } from './types.js';
 import { RspfxError } from './errors.js';
 import { createRspackConfig } from './config.js';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
+
+const logger = createLogger('compiler-rspack');
 
 function runCompiler(compiler: Compiler): Promise<Stats> {
   return new Promise((resolve, reject) => {
@@ -27,7 +30,7 @@ export async function build(ctx: CompileContext): Promise<BuildResult> {
   if (stats.hasWarnings()) {
     const warnings = stats.toJson({ all: false, warnings: true }).warnings ?? [];
     for (const warning of warnings) {
-      console.warn(`[compiler-rspack] warning: ${warning.message}`);
+      logger.warn(`warning: ${warning.message}`);
     }
   }
   if (stats.hasErrors()) {

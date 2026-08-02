@@ -2,7 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
-import { startDevServer } from '@mbsks/rspfx-compiler-rspack';
+import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
 import {
   collectDebugManifests,
   findSpDependencies,
@@ -12,6 +12,7 @@ import {
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
+import { createRefreshRuntime } from './refresh.js';
 import { openBrowser } from './browser.js';
 
 export interface DevRuntimeOptions {
@@ -34,7 +35,7 @@ const logger = createLogger('rspfx');
 
 export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
   const config = resolveConfig(opts.config);
-  const project = readProject(opts.projectRoot);
+  const project = readProject(opts.projectRoot, config.paths);
 
   const serveJson = project.serveJson;
   const port = opts.port ?? serveJson?.port ?? config.dev.port ?? 4321;
@@ -45,10 +46,12 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
 
   const scheme = https ? 'https' : 'http';
   let origin = `${scheme}://${hostname}:${port}`;
+  const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
+  const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
   const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
   const contributions = resolveContributionLoaders(
     frameworkPreset.preset.contributions({
-      fastRefresh: opts.fastRefresh ?? config.dev.fastRefresh ?? false
+      fastRefresh
     }) as Record<string, unknown>,
     frameworkPreset.moduleUrl
   );
@@ -59,28 +62,45 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     entries: project.webParts.entries,
     externals: [...findSpDependencies(opts.projectRoot).keys(), ...project.externals],
     localizedAliases: project.localizedAliases,
-    fastRefresh: opts.fastRefresh ?? config.dev.fastRefresh ?? false,
+    fastRefresh,
     production: false,
     serveMode: true,
     build: config.build
   });
 
+  const entryModuleIds: Record<string, string> = {};
+  project.webParts.bundles.forEach((bundle, index) => {
+    entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
+  });
+
   let manifestsJs = '';
-  const regenerateManifests = async (): Promise<void> => {
-    const manifests = await generateComponentManifests({
-      projectRoot: opts.projectRoot,
-      production: false,
-      baseUrls: { debug: `${origin}/dist/`, release: [] },
-      packageVersion: project.webParts.packageVersion,
-      bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
-      externals: ctx.externals
-    });
-    const debugManifests = await collectDebugManifests({
-      projectRoot: opts.projectRoot,
-      componentManifests: manifests,
-      serverOrigin: origin
-    });
-    manifestsJs = await generateManifestsJs(debugManifests);
+  let regeneration: Promise<void> | null = null;
+  const regenerateManifests = (): Promise<void> => {
+    regeneration ??= (async () => {
+      refreshRuntime?.preserveState();
+      try {
+        const manifests = await generateComponentManifests({
+          projectRoot: opts.projectRoot,
+          production: false,
+          baseUrls: { debug: `${origin}/dist/`, release: [] },
+          packageVersion: project.webParts.packageVersion,
+          bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
+          externals: ctx.externals,
+          webpartsDir: config.paths?.webpartsDir,
+          entryModuleIds
+        });
+        const debugManifests = await collectDebugManifests({
+          projectRoot: opts.projectRoot,
+          componentManifests: manifests,
+          serverOrigin: origin
+        });
+        manifestsJs = await generateManifestsJs(debugManifests);
+      } finally {
+        refreshRuntime?.restoreState();
+        regeneration = null;
+      }
+    })();
+    return regeneration;
   };
   await regenerateManifests();
 
@@ -109,22 +129,12 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   );
   origin = `${scheme}://${hostname}:${server.port}`;
 
-  const firstCompile = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new RspfxError('DEV_COMPILE_TIMEOUT', 'Initial compilation timed out after 120s')),
-      120000
-    );
-    server.onEmit(() => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
   server.onEmit(() => {
     void regenerateManifests().catch((error) => {
       logger.error(`Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`);
     });
   });
-  await firstCompile;
+  await waitForFirstCompile(server);
   await regenerateManifests();
 
   const tenantDomain =
@@ -163,6 +173,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     port: server.port,
     workbenchUrl,
     close: async () => {
+      refreshRuntime?.dispose();
       await server.close();
     }
   };
@@ -179,7 +190,7 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
       `Playground entry not found at ${playgroundMain}. Run "rspfx new" or add a playground/ folder.`
     );
   }
-  const project = readProject(projectRoot);
+  const project = readProject(projectRoot, config.paths);
   const port = opts.port ?? config.playground?.port ?? 3000;
   const scheme = 'http';
   const hostname = config.dev.hostname ?? 'localhost';
@@ -222,19 +233,10 @@ export async function startPlayground(opts: DevRuntimeOptions): Promise<DevRunti
   );
   origin = `${scheme}://${hostname}:${server.port}`;
 
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new RspfxError('DEV_COMPILE_TIMEOUT', 'Initial compilation timed out after 120s')),
-      120000
-    );
-    server.onEmit(() => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
+  await waitForFirstCompile(server);
 
   const url = fsExists(playgroundHtml) ? `${origin}/playground/index.html` : origin;
-  if (opts.noBrowser ?? false === false) {
+  if ((opts.noBrowser ?? !(config.dev.openBrowser ?? true)) === false) {
     openBrowser(url);
   }
   logger.success(`Playground running at ${url}`);
@@ -254,6 +256,20 @@ function stripScheme(url: string | undefined): string | undefined {
     return undefined;
   }
   return url.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+function waitForFirstCompile(server: StartDevServerResult): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new RspfxError('DEV_COMPILE_TIMEOUT', 'Initial compilation timed out after 120s')),
+      120000
+    );
+    const unsubscribe = server.onEmit(() => {
+      clearTimeout(timer);
+      unsubscribe();
+      resolve();
+    });
+  });
 }
 
 function fsExists(filePath: string): boolean {

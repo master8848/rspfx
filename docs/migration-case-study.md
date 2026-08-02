@@ -80,10 +80,12 @@ These are the honest limits (tracked in [why-not-to-migrate.md](why-not-to-migra
 2. **`pkg:` SCSS imports** need a one-line rewrite (bundled sass-loader <16.5).
 3. **Bundle-name constraint.** Bundle keys must equal web part folder names
    (RSPFX's `entryModuleId` convention) — a mechanical rename in `config.json`.
-4. **No `spfx-customize-webpack.js` equivalent.** All five aliases in the
-   upstream file turned out to be unnecessary under Rspack, but a project with
-   genuinely custom webpack behavior has no extension point yet (plugin-api
-   hooks are not wired into the CLI).
+4. **No `spfx-customize-webpack.js` equivalent — but an escape hatch now.**
+   All five aliases in the upstream file turned out to be unnecessary under
+   Rspack. For genuinely custom behavior, `spfx()` from
+   `@mbsks/rspfx-compiler-rspack` returns a full Rspack configuration to extend
+   in your own `rspack.config.ts`, and `plugin-api` hooks
+   (`beforeCompile`/`afterStats`/`beforePackage`) are wired into the CLI.
 
 ## What did NOT need changing
 

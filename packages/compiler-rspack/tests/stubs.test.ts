@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRspackConfig, type CompileContext } from '../src/index.js';
 import type { Configuration } from '@rspack/core';
 
@@ -46,6 +46,24 @@ describe('build-time alias stubs', () => {
       expect(alias![key]).toBeDefined();
       expect(alias![key]).toContain('stubs');
       expect(alias![key]).not.toContain('node_modules');
+    }
+  });
+
+  it('warns that fast refresh is disabled when a stub is loaded', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const cases: Array<[string, string]> = [
+        ['../src/stubs/react-refresh.js?stub-react', '@rspack/plugin-react-refresh'],
+        ['../src/stubs/preact-refresh.js?stub-preact', '@rspack/plugin-preact-refresh'],
+        ['../src/stubs/vue-loader.js?stub-vue', 'vue-loader']
+      ];
+      for (const [specifier, packageName] of cases) {
+        const mod = (await import(specifier)) as { default: { name: string } | undefined };
+        expect(mod.default?.name).toBeDefined();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining(packageName));
+      }
+    } finally {
+      warn.mockRestore();
     }
   });
 

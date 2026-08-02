@@ -41,7 +41,7 @@ function findNonSpExternalManifest(
 }
 
 export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
-  const webpartsDir = path.join(ctx.projectRoot, 'src', 'webparts');
+  const webpartsDir = path.join(ctx.projectRoot, ctx.webpartsDir ?? 'src/webparts');
   let webpartDirs: fs.Dirent[];
   try {
     webpartDirs = fs.readdirSync(webpartsDir, { withFileTypes: true });
@@ -74,7 +74,9 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
     if (source.version === '*') {
       source.version = stripPreReleaseVersion(ctx.packageVersion);
     }
-    const entryModuleId = dirEntry.name;
+    const manifestId = typeof source.id === 'string' ? source.id : undefined;
+    const entryModuleId =
+      (manifestId !== undefined ? ctx.entryModuleIds?.[manifestId] : undefined) ?? dirEntry.name;
     const scriptResources: Record<string, unknown> = {
       [entryModuleId]: {
         type: 'path',

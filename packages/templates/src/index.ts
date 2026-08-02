@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { configDefaults } from '@mbsks/rspfx-core';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 
 export interface TemplateVars {
@@ -240,19 +241,19 @@ function rspfxConfig(vars: TemplateVars): string {
     `  language: '${vars.language}',`,
     `  styling: '${vars.styling}',`,
     '  dev: {',
-    '    port: 4321,',
-    '    https: true,',
-    '    hostname: \'localhost\',',
-    '    workbench: true,',
-    '    openBrowser: true',
+    `    port: ${configDefaults.dev.port},`,
+    `    https: ${configDefaults.dev.https},`,
+    `    hostname: '${configDefaults.dev.hostname}',`,
+    `    workbench: ${configDefaults.dev.workbench},`,
+    `    openBrowser: ${configDefaults.dev.openBrowser}`,
     ...(vars.tenantUrl ? [`    tenantUrl: '${vars.tenantUrl}'`] : []),
     '  },',
     '  build: {',
-    '    sourcemap: false,',
-    '    minify: true,',
-    '    splitChunks: false,',
-    '    outDir: \'dist\',',
-    '    releaseDir: \'release\'',
+    `    sourcemap: ${configDefaults.build.sourcemap},`,
+    `    minify: ${configDefaults.build.minify},`,
+    `    splitChunks: ${configDefaults.build.splitChunks},`,
+    `    outDir: '${configDefaults.build.outDir}',`,
+    `    releaseDir: '${configDefaults.build.releaseDir}'`,
     '  }',
     '};'
   ];

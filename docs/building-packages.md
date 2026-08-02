@@ -11,7 +11,7 @@ artifacts are, and how to wire it into CI. For the day-to-day flow see
 |---|---|---|
 | `rspfx build` | `dist/` bundles + `release/manifests/*.manifest.json` + `release/assets/*` | Production compile; `--no-minify`, `--sourcemap` flags |
 | `rspfx package` | `<paths.zippedPackage>` (default `sharepoint/solution/<name>.sppkg`) | Implies `build`; `--no-build` to skip |
-| `rspfx deploy` | Uploads the `.sppkg` to the app catalog | REST creds via `config.deploy` or env vars; prints manual steps without them |
+| `rspfx deploy` | Uploads the `.sppkg` to the app catalog | Bearer-token upload (`RSPFX_ACCESS_TOKEN`); prints manual steps without a token |
 | `rspfx analyze` | Bundle size report as console table + `.rspfx/analyze.html` | Implies `build` |
 | `rspfx clean` | Removes `dist/`, `release/`, `temp/`, `.rspfx/`, `node_modules/.cache` | — |
 | `rspfx doctor` | Environment/config checks, exit code 1 on failure | CI-friendly preflight |
@@ -19,13 +19,40 @@ artifacts are, and how to wire it into CI. For the day-to-day flow see
 All commands load `rspfx.config.ts` and merge CLI flags over it
 (`build.minify`/`build.sourcemap`, `dev.port`, etc.).
 
+## Project layout
+
+RSPFX assumes the official SPFx folder layout by default, but every part of it
+is configurable via the `paths` section of `rspfx.config.ts`:
+
+| Option | Default | Used for |
+|---|---|---|
+| `paths.srcDir` | `src` | Rewriting `localizedResources` `lib/...` patterns to source files |
+| `paths.webpartsDir` | `src/webparts` | Fallback web part auto-discovery (`config.json` has no `bundles`) and the component manifest scan |
+| `paths.configDir` | `config` | Reading `config.json` and `serve.json` |
+
+```ts
+export default defineConfig({
+  name: 'my-app',
+  paths: {
+    srcDir: 'src',
+    webpartsDir: 'src/webparts',
+    configDir: 'config'
+  }
+});
+```
+
+With the default layout, a web part folder `src/webparts/hello/` maps to a
+bundle named `hello`. With `config.json` bundles (or a custom `paths.webpartsDir`),
+the **bundle name** is authoritative: `loaderConfig.entryModuleId` is derived
+from the bundle entry name rather than the folder name.
+
 ## What `rspfx build` does
 
-1. **Reads the project** (`config/config.json`): bundle entrypoints, externals,
-   `localizedResources`. Entrypoints in the official Heft convention
+1. **Reads the project** (`<paths.configDir>/config.json`): bundle entrypoints,
+   externals, `localizedResources`. Entrypoints in the official Heft convention
    (`./lib/...WebPart.js`) are migrated to source (`./src/...WebPart.ts`) by
    `scripts/migrate-to-rspfx.mjs`; without `config.json` bundles, web parts are
-   auto-discovered from `src/webparts/*`.
+   auto-discovered from `<paths.webpartsDir>/*` (default `src/webparts/*`).
 2. **Loads the framework preset** (`@mbsks/rspfx-framework-<id>`): swc JSX/TS
    transform, define flags, resolve contributions — the same compiler config
    dev mode uses.
@@ -37,7 +64,8 @@ All commands load `rspfx.config.ts` and merge CLI flags over it
    in `config.json` is externalized and referenced from the manifest.
 4. **Generates component manifests** into `release/manifests/`:
    - `version: "*"` in the source manifest → package.json version
-   - `loaderConfig.entryModuleId` = the web part folder name
+   - `loaderConfig.entryModuleId` = the bundle entry name (the web part folder
+     name in the default layout; the `config.json` bundle name otherwise)
    - `scriptResources`: the bundle (`"type": "path"`) + one
      `"type": "component"` entry per external (sp-* IDs/versions harvested from
      `node_modules` manifests, with `reference/sp-component-ids.json` as
@@ -95,18 +123,18 @@ reports entry count on success.
 
 ## Deploying from CLI
 
-`rspfx deploy` automates the upload with REST credentials:
+`rspfx deploy` automates the upload with a bearer access token:
 
 ```sh
-RSPFX_TENANT=https://contoso.sharepoint.com \
-RSPFX_USERNAME=user@contoso.onmicrosoft.com \
-RSPFX_PASSWORD=... \
+RSPFX_ACCESS_TOKEN=<token> \
+RSPFX_APP_CATALOG_URL=https://contoso.sharepoint.com/sites/appcatalog \
 rspfx deploy
 ```
 
-or via `config.deploy` (`tenantUrl`, `username`, `password`,
-`appCatalogSiteUrl`). **Without credentials `rspfx deploy` prints the manual
-upload steps instead** — it never fails the pipeline on missing secrets.
+or `config.deploy.appCatalogSiteUrl` for the catalog URL (prompted otherwise).
+**Without a token `rspfx deploy` prints the manual upload steps instead** — it
+never fails the pipeline on missing secrets. The catalog URL is validated before
+upload, and the upload fails fast after a 120s timeout.
 
 ## CI usage
 
@@ -145,5 +173,5 @@ on a laptop (`rspfx build`), including manifest generation.
 | `Module not found: Can't resolve 'XxxWebPartStrings'` | `config.json` `localizedResources` entry missing or not in the `lib/.../{locale}.js` shape — RSPFX maps each entry to the default-locale source file |
 | `@import 'pkg:...'` fails | sass-loader <16.5 doesn't support the `pkg:` scheme — the migration script rewrites these to relative `node_modules` paths |
 | `.html` import fails to parse | Fixed by the built-in `asset/source` rule; if you still hit it, you're on a stale CLI — rebuild |
-| Workbench shows a 404 on the bundle | `config.json` bundle name ≠ web part folder name — rename the bundle (see the migration guide) |
+| Workbench shows a 404 on the bundle | `config.json` bundle name doesn't match the emitted bundle — `entryModuleId` follows the bundle name, so the bundle key, the emitted `.js` file and the manifest must agree (default layout: bundle key == web part folder name) |
 | `rspfx package` writes to `solution/` not `sharepoint/solution/` | `paths.zippedPackage` in `config/package-solution.json` is authoritative — that's the official behavior |

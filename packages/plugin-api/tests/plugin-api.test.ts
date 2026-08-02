@@ -132,4 +132,21 @@ describe('RspfxPlugin hooks', () => {
     });
     expect(called).toEqual(['beforeCompile', 'afterStats', 'beforePackage:1:1']);
   });
+
+  it('beforeCompile can mutate a compile context in place', () => {
+    const plugin: RspfxPlugin = {
+      name: 'ctx-mutator',
+      compilerHooks: {
+        beforeCompile: (config) => {
+          const ctx = config as { additionalPlugins: unknown[]; swcContributions: unknown[] };
+          ctx.additionalPlugins.push('virtual-module');
+          ctx.swcContributions.push({ jsc: {} });
+        }
+      }
+    };
+    const ctx = { additionalPlugins: [] as unknown[], swcContributions: [] as unknown[] };
+    plugin.compilerHooks!.beforeCompile!(ctx);
+    expect(ctx.additionalPlugins).toEqual(['virtual-module']);
+    expect(ctx.swcContributions).toEqual([{ jsc: {} }]);
+  });
 });

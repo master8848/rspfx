@@ -34,5 +34,5 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 - `examples/*` are git-tracked source (only their build outputs are gitignored) and are CLI-driven smoke apps with `@microsoft/sp-*` @ 1.22, while package dev/peer deps are @ 1.23.2 — version drift is intentional.
 - `apps/cli` is the composition root (commander; commands in `apps/cli/src/commands/`); `packages/templates` scaffolds projects via inline string builders in `src/index.ts` (not template files on disk).
 - Framework packages: per docs/roadmap.md the adapter APIs aren't final until M5 — don't treat them as stable.
-- Env vars: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN` (dev serve); deploy reads `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` (implemented) — `RSPFX_TENANT`/`RSPFX_USERNAME`/`RSPFX_PASSWORD` appear in `docs/commands.md` but are **not implemented**.
+- Env vars: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN` (dev serve); deploy reads `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` (implemented) — the `RSPFX_TENANT`/`RSPFX_USERNAME`/`RSPFX_PASSWORD` vars from the original design are **not implemented** (docs don't reference them).
 - Core constraint: webpack / Heft / gulp strings must never appear in runtime, build output, or generated `node_modules` — only `@microsoft/sp-*` runtime deps are allowed in generated projects.

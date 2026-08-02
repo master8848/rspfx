@@ -145,7 +145,7 @@ export async function startDevServer(
   const compiler = rspack({ ...config, devServer: devServerConfig });
   const server = new RspackDevServer(devServerConfig, compiler);
 
-  let emitListeners: ((stats: unknown) => void)[] = [];
+  const emitListeners: ((stats: unknown) => void)[] = [];
   compiler.hooks.done.tap('rspfx-on-emit', (stats) => {
     for (const listener of emitListeners) {
       listener(stats);
@@ -161,8 +161,14 @@ export async function startDevServer(
     },
     port: getActualPort(server, port),
     compiler,
-    onEmit(cb: (stats: unknown) => void): void {
+    onEmit(cb: (stats: unknown) => void): () => void {
       emitListeners.push(cb);
+      return () => {
+        const index = emitListeners.indexOf(cb);
+        if (index !== -1) {
+          emitListeners.splice(index, 1);
+        }
+      };
     }
   };
 }

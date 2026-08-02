@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { RspfxError } from '@mbsks/rspfx-diagnostics';
+import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { globFiles } from './glob.js';
 import {
   buildAppManifestXml,
@@ -75,6 +75,8 @@ interface NormalizedFeature {
   explicitComponentIds: boolean;
   assets: { elementManifests: string[]; elementFiles: string[] };
 }
+
+const logger = createLogger('sppkg-builder');
 
 const REL_PACKAGE_MANIFEST = 'http://schemas.microsoft.com/sharepoint/2012/app/relationships/package-manifest';
 const REL_MANIFEST_FEATURE = 'http://schemas.microsoft.com/sharepoint/2012/app/relationships/manifest-feature';
@@ -381,8 +383,8 @@ function normalizeFeatures(solution: Record<string, unknown>, manifests: Compone
       for (const componentId of configFeature.componentIds as string[]) {
         const component = componentMap.get(componentId);
         if (!component) {
-          console.warn(
-            `[sppkg-builder] Skipping component id '${componentId}' in feature '${feature.title}': no matching manifest`
+          logger.warn(
+            `Skipping component id '${componentId}' in feature '${feature.title}': no matching manifest`
           );
           continue;
         }

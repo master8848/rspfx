@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { scaffoldProject, type TemplateVars } from '@mbsks/rspfx-templates';
@@ -82,6 +83,12 @@ export async function runNew(opts: NewOptions): Promise<string> {
   }
 
   const destDir = path.join(cwd, opts.name);
+  if (fs.existsSync(destDir) && fs.readdirSync(destDir).length > 0) {
+    throw new RspfxError(
+      'DEST_EXISTS',
+      `Target directory already exists and is not empty: ${destDir}`
+    );
+  }
   const namePascal = toPascalCase(opts.name);
   const vars: TemplateVars = {
     name: opts.name,

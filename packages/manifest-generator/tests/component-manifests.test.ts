@@ -5,6 +5,7 @@ import type { ManifestContext } from '../src/index.js';
 
 const fixtureRoot = fileURLToPath(new URL('./fixtures/proj', import.meta.url));
 const multiRoot = fileURLToPath(new URL('./fixtures/multi', import.meta.url));
+const customRoot = fileURLToPath(new URL('./fixtures/custom', import.meta.url));
 
 function ctx(overrides: Partial<ManifestContext> = {}): ManifestContext {
   return {
@@ -137,6 +138,23 @@ describe('generateComponentManifests', () => {
     ).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(RspfxError);
     expect((error as RspfxError).code).toBe('MULTIPLE_MANIFESTS');
+  });
+
+  it('honors a custom webpartsDir and entryModuleIds override', async () => {
+    const manifests = await generateComponentManifests(
+      ctx({
+        projectRoot: customRoot,
+        webpartsDir: 'components',
+        entryModuleIds: { 'aaaaaaaa-1111-4222-8333-444444444444': 'widget-bundle' },
+        bundleFiles: new Map([['widget-bundle', 'widget-bundle.js']]),
+        externals: []
+      })
+    );
+    expect(manifests).toHaveLength(1);
+    expect(manifests[0]!.loaderConfig.entryModuleId).toBe('widget-bundle');
+    expect(manifests[0]!.loaderConfig.scriptResources).toEqual({
+      'widget-bundle': { type: 'path', path: 'widget-bundle.js' }
+    });
   });
 
   it('returns an empty array for a project without src/webparts', async () => {

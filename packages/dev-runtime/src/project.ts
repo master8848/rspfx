@@ -3,7 +3,13 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
-import type { BuildConfig, FrameworkId, RspfxConfig } from '@mbsks/rspfx-core';
+import {
+  resolvePathDefaults,
+  type BuildConfig,
+  type FrameworkId,
+  type PathsConfig,
+  type RspfxConfig
+} from '@mbsks/rspfx-core';
 import type { BundleEntry, CompileContext } from '@mbsks/rspfx-compiler-rspack';
 
 export interface WebPartBundle {
@@ -41,32 +47,33 @@ export interface ReadProjectResult {
   localizedAliases: Record<string, string>;
 }
 
-export function readProject(projectRoot: string): ReadProjectResult {
+export function readProject(projectRoot: string, paths?: PathsConfig): ReadProjectResult {
+  const resolvedPaths = resolvePathDefaults(paths);
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
   if (fs.existsSync(packageJsonPath)) {
     packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   }
 
-  const configJsonPath = path.join(projectRoot, 'config', 'config.json');
+  const configJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'config.json');
   let configJson: ProjectConfigJson | undefined;
   if (fs.existsSync(configJsonPath)) {
     configJson = JSON.parse(fs.readFileSync(configJsonPath, 'utf8'));
   }
 
-  const serveJsonPath = path.join(projectRoot, 'config', 'serve.json');
+  const serveJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'serve.json');
   let serveJson: ProjectServeConfigJson | undefined;
   if (fs.existsSync(serveJsonPath)) {
     serveJson = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
   }
 
-  const webParts = discoverWebParts(projectRoot, configJson);
+  const webParts = discoverWebParts(projectRoot, configJson, resolvedPaths.webpartsDir, packageJson);
   return {
     webParts,
     configJson,
     serveJson,
     externals: readExternals(projectRoot, configJson),
-    localizedAliases: readLocalizedAliases(projectRoot, configJson)
+    localizedAliases: readLocalizedAliases(projectRoot, configJson, resolvedPaths.srcDir)
   };
 }
 
@@ -80,7 +87,8 @@ export function readProject(projectRoot: string): ReadProjectResult {
  */
 export function readLocalizedAliases(
   projectRoot: string,
-  configJson: ProjectConfigJson | undefined
+  configJson: ProjectConfigJson | undefined,
+  srcDir = 'src'
 ): Record<string, string> {
   const aliases: Record<string, string> = {};
   if (!configJson?.localizedResources) {
@@ -92,7 +100,7 @@ export function readLocalizedAliases(
     }
     let target = pattern.replace('{locale}', 'en-us');
     if (target.startsWith('lib/')) {
-      target = 'src/' + target.slice('lib/'.length);
+      target = srcDir + '/' + target.slice('lib/'.length);
     }
     aliases[name] = path.resolve(projectRoot, target).replace(/\.(js|ts|tsx)$/, '');
   }
@@ -111,7 +119,9 @@ function readExternals(projectRoot: string, configJson: ProjectConfigJson | unde
 
 export function discoverWebParts(
   projectRoot: string,
-  configJson: ProjectConfigJson | undefined
+  configJson: ProjectConfigJson | undefined,
+  webpartsDir = 'src/webparts',
+  packageJson?: { version?: string }
 ): DiscoveredWebParts {
   const bundleMap: WebPartBundle[] = [];
   if (configJson?.bundles) {
@@ -129,13 +139,13 @@ export function discoverWebParts(
       }
     }
   } else {
-    const webpartsDir = path.join(projectRoot, 'src', 'webparts');
-    if (fs.existsSync(webpartsDir)) {
-      for (const dir of fs.readdirSync(webpartsDir, { withFileTypes: true })) {
+    const resolvedWebpartsDir = path.join(projectRoot, webpartsDir);
+    if (fs.existsSync(resolvedWebpartsDir)) {
+      for (const dir of fs.readdirSync(resolvedWebpartsDir, { withFileTypes: true })) {
         if (!dir.isDirectory() || dir.name.startsWith('.')) {
           continue;
         }
-        const dirPath = path.join(webpartsDir, dir.name);
+        const dirPath = path.join(resolvedWebpartsDir, dir.name);
         const manifests = fs
           .readdirSync(dirPath)
           .filter((file) => file.endsWith('.manifest.json') && !file.startsWith('.'));
@@ -159,8 +169,13 @@ export function discoverWebParts(
     throw new Error('No web part bundles found. Expected src/webparts/<name>/<name>WebPart.ts + <name>.manifest.json');
   }
 
-  const packageJsonPath = path.join(projectRoot, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as { version?: string };
+  if (packageJson === undefined) {
+    packageJson = {};
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as { version?: string };
+    }
+  }
   const packageVersion = (packageJson.version ?? '1.0.0').split('-')[0]!;
 
   const entries: BundleEntry[] = bundleMap.map((bundle) => ({
@@ -237,32 +252,22 @@ export async function loadFrameworkPreset(
   framework: FrameworkId,
   projectRoot?: string
 ): Promise<FrameworkPresetModule> {
-  try {
-    const mod = (await importFramework(framework, projectRoot)) as {
-      preset?: { contributions(opts: { fastRefresh: boolean }): unknown };
-    };
-    if (!mod.preset) {
-      throw new Error(`Framework package @mbsks/rspfx-framework-${framework} does not export a preset`);
-    }
+  const mod = (await importFramework(framework, projectRoot)) as
+    | { preset?: { contributions(opts: { fastRefresh: boolean }): unknown }; __rspfxModuleUrl?: string }
+    | undefined;
+  if (!mod?.preset) {
+    createLogger('rspfx').warn(
+      `Framework package @mbsks/rspfx-framework-${framework} has no preset; running without framework compiler contributions.`
+    );
     return {
-      preset: mod.preset as FrameworkPresetModule['preset'],
-      moduleUrl: (mod as { __rspfxModuleUrl?: string }).__rspfxModuleUrl ?? ''
+      preset: { contributions: (): Record<string, unknown> => ({}) },
+      moduleUrl: ''
     };
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.includes('Cannot find') || error.message.includes('does not export a preset'))
-    ) {
-      createLogger('rspfx').warn(
-        `Framework package @mbsks/rspfx-framework-${framework} has no preset; running without framework compiler contributions.`
-      );
-      return {
-        preset: { contributions: (): Record<string, unknown> => ({}) },
-        moduleUrl: ''
-      };
-    }
-    throw error;
   }
+  return {
+    preset: mod.preset as FrameworkPresetModule['preset'],
+    moduleUrl: mod.__rspfxModuleUrl ?? ''
+  };
 }
 
 export function resolveContributionLoaders(
@@ -272,6 +277,10 @@ export function resolveContributionLoaders(
   if (!frameworkModuleUrl) {
     return contributions;
   }
+  contributions = {
+    ...contributions,
+    rules: Array.isArray(contributions.rules) ? [...(contributions.rules as unknown[])] : contributions.rules
+  };
   const requireFromFramework = createRequire(frameworkModuleUrl);
   const resolveLoader = (value: unknown): unknown => {
     if (typeof value === 'string' && !value.startsWith('builtin:')) {
@@ -341,23 +350,48 @@ function resolveBabelItem(
   }
 }
 
-function importFramework(framework: FrameworkId, projectRoot?: string): Promise<unknown> {
+async function importFramework(framework: FrameworkId, projectRoot?: string): Promise<unknown> {
   const specifier = `@mbsks/rspfx-framework-${framework}`;
   if (projectRoot) {
+    let resolved: string;
     try {
       const requireFromProject = createRequire(
         pathToFileURL(path.join(projectRoot, 'package.json')).href
       );
-      const resolved = requireFromProject.resolve(specifier);
-      return import(pathToFileURL(resolved).href).then((mod) => ({
-        ...mod,
-        __rspfxModuleUrl: pathToFileURL(resolved).href
-      }));
+      resolved = requireFromProject.resolve(specifier);
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes('Cannot find')) {
-        throw error;
+      if (isResolutionFailure(error)) {
+        return undefined;
       }
+      throw error;
+    }
+    try {
+      const mod = await import(pathToFileURL(resolved).href);
+      return { ...mod, __rspfxModuleUrl: pathToFileURL(resolved).href };
+    } catch (error) {
+      throw error instanceof Error
+        ? new Error(`Failed to load framework preset for '${specifier}': ${error.message}`, { cause: error })
+        : error;
     }
   }
-  return import(specifier);
+  try {
+    return await import(specifier);
+  } catch (error) {
+    if (isResolutionFailure(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function isResolutionFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const code = (error as NodeJS.ErrnoException).code;
+  return (
+    code === 'MODULE_NOT_FOUND' ||
+    code === 'ERR_MODULE_NOT_FOUND' ||
+    code === 'ERR_PACKAGE_PATH_NOT_EXPORTED'
+  );
 }

@@ -175,6 +175,23 @@ describe('startServe', () => {
       await handle.close();
     }
   });
+
+  it('serves manifests with fastRefresh enabled', async () => {
+    const handle = await startServe({
+      projectRoot: FIXTURE,
+      config: makeConfig({ dev: { https: false, fastRefresh: true } }),
+      noBrowser: true,
+      port: 0
+    });
+
+    try {
+      const res = await fetch(`${handle.url}/temp/manifests.js`);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+    } finally {
+      await handle.close();
+    }
+  });
 });
 
 describe('startPlayground', () => {
@@ -214,13 +231,38 @@ if (root) { root.textContent = 'playground-mount'; }
 });
 
 describe('createRefreshRuntime', () => {
-  it('returns a no-op runtime for every framework', async () => {
+  it('tracks preserve/restore transitions and stays inert after dispose for every framework', async () => {
     const { createRefreshRuntime } = await import('../src/refresh.js');
     for (const framework of ['vanilla', 'react', 'solid', 'preact', 'vue', 'svelte'] as const) {
-      const runtime = createRefreshRuntime(framework);
+      const events: string[] = [];
+      const runtime = createRefreshRuntime(framework, {
+        onPreserve: () => events.push('preserve'),
+        onRestore: () => events.push('restore')
+      });
+      expect(runtime.preserved).toBe(false);
+      expect(runtime.disposed).toBe(false);
+      expect(runtime.epoch).toBe(0);
+
+      runtime.preserveState();
+      expect(runtime.preserved).toBe(true);
+      expect(runtime.epoch).toBe(0);
+      expect(events).toEqual(['preserve']);
+
+      runtime.restoreState();
+      expect(runtime.preserved).toBe(false);
+      expect(runtime.epoch).toBe(1);
+      expect(events).toEqual(['preserve', 'restore']);
+
       expect(() => runtime.dispose()).not.toThrow();
-      expect(() => runtime.preserveState()).not.toThrow();
-      expect(() => runtime.restoreState()).not.toThrow();
+      expect(runtime.disposed).toBe(true);
+      expect(() => runtime.dispose()).not.toThrow();
+      expect(runtime.preserved).toBe(false);
+
+      runtime.preserveState();
+      runtime.restoreState();
+      expect(runtime.preserved).toBe(false);
+      expect(runtime.epoch).toBe(1);
+      expect(events).toEqual(['preserve', 'restore']);
     }
   });
 });
@@ -250,6 +292,61 @@ describe('readProject', () => {
       );
     } finally {
       fs.rmSync(configDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads config, bundles and localized resources from a custom layout', async () => {
+    const customConfigDir = path.join(FIXTURE, 'config-custom');
+    const widgetDir = path.join(FIXTURE, 'components', 'widget');
+    fs.mkdirSync(customConfigDir, { recursive: true });
+    fs.mkdirSync(widgetDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(customConfigDir, 'config.json'),
+      JSON.stringify({
+        bundles: {
+          'widget-bundle': {
+            components: [
+              {
+                entrypoint: './components/widget/widgetWidget.ts',
+                manifest: './components/widget/widget.manifest.json'
+              }
+            ]
+          }
+        },
+        localizedResources: { WidgetStrings: 'lib/widget/loc/{locale}.js' }
+      }, null, 2)
+    );
+    fs.writeFileSync(
+      path.join(widgetDir, 'widget.manifest.json'),
+      JSON.stringify({
+        id: 'bbbbbbbb-2222-4333-8444-555555555555',
+        alias: 'WidgetWebPart',
+        componentType: 'WebPart',
+        version: '1.0.0',
+        manifestVersion: 2
+      }, null, 2)
+    );
+    fs.writeFileSync(
+      path.join(widgetDir, 'widgetWidget.ts'),
+      `export default class WidgetWebPart {\n  public render(): void {}\n}\n`
+    );
+    try {
+      const { readProject } = await import('../src/project.js');
+      const result = readProject(FIXTURE, {
+        configDir: 'config-custom',
+        webpartsDir: 'components',
+        srcDir: 'components'
+      });
+      expect(result.webParts.bundles).toHaveLength(1);
+      expect(result.webParts.bundles[0]!.bundleName).toBe('widget-bundle');
+      expect(result.webParts.manifestIds).toEqual(['bbbbbbbb-2222-4333-8444-555555555555']);
+      expect(result.webParts.entries[0]!.name).toBe('widget-bundle');
+      expect(result.localizedAliases['WidgetStrings']).toBe(
+        path.join(FIXTURE, 'components', 'widget', 'loc', 'en-us')
+      );
+    } finally {
+      fs.rmSync(customConfigDir, { recursive: true, force: true });
+      fs.rmSync(path.join(FIXTURE, 'components'), { recursive: true, force: true });
     }
   });
 });

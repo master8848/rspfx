@@ -56,8 +56,9 @@ outside the two documented rewrites, never installs anything):
 2. **config/config.json** —
    - entrypoints `./lib/webparts/<name>/<Name>WebPart.js` (Heft output
      convention) → `./src/webparts/<name>/<Name>WebPart.ts`,
-   - bundle keys renamed to match web part folder names (RSPFX requires
-     bundle name == `src/webparts/<name>` folder).
+   - bundle keys renamed to match web part folder names (in the default layout
+     RSPFX requires bundle name == `src/webparts/<name>` folder; a custom
+     layout can decouple the two via `paths` — see below).
 3. **SCSS** — `@import 'pkg:<pkg>/<path>'` (sass-loader ≥16.5 syntax) rewritten
    to a relative `node_modules` path.
 4. **Deletes** the Heft-only config files above.
@@ -117,7 +118,7 @@ directly:
 }
 // after
 "bundles": {
-  "searchResults": {               // must equal the src/webparts/<name> folder
+  "searchResults": {               // default layout: equals the src/webparts/<name> folder
     "components": [{
       "entrypoint": "./src/webparts/searchResults/SearchResultsWebPart.ts",
       "manifest": "./src/webparts/searchResults/SearchResultsWebPart.manifest.json"
@@ -125,6 +126,15 @@ directly:
   }
 }
 ```
+
+`loaderConfig.entryModuleId` in the generated manifests follows the **bundle
+name**, so `searchResults` here is the entry module id. In the default layout
+the bundle name must equal the web part folder name (that's what the bundle key
+above is). If your project uses a different folder structure — e.g. manifests
+under `components/` or a bundle name that differs from the folder — configure
+it once in `rspfx.config.ts` (`paths.webpartsDir`, `paths.configDir`,
+`paths.srcDir`) and the bundle name becomes authoritative for
+`entryModuleId` regardless of folder naming.
 
 ### 4. Delete Heft-only files
 
@@ -178,7 +188,7 @@ appear in `AppManifest.xml` (`RequestedWebApiPermission` entries).
 |---|---|
 | `entrypoint not found` | config.json still points at `./lib/...` — rewrite to `./src/...` |
 | `Can't resolve 'XxxWebPartStrings'` | `localizedResources` missing from config.json, or pattern isn't `lib/.../{locale}.js`-shaped |
-| Manifest references `<bundle>.js` that doesn't exist | bundle name ≠ web part folder name — rename the bundle key |
+| Manifest references `<bundle>.js` that doesn't exist | bundle name ≠ web part folder name in the default layout — rename the bundle key (or decouple via `paths`) |
 | Build fails on `@import 'pkg:…'` | see step 5 |
 | sp-* code in bundle | sp-* is auto-externalized from `node_modules`; check the package is installed (not hoisted away) or you added a `resolve` alias colliding with it |
 | `Module parse failed` on `.html` | stale CLI — HTML is handled by `asset/source`; rebuild the CLI |

@@ -20,4 +20,6 @@ export interface ManifestContext {
   packageVersion: string;
   bundleFiles: Map<string, string>;
   externals: string[];
+  webpartsDir?: string;
+  entryModuleIds?: Record<string, string>;
 }

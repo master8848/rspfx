@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "aaaaaaaa-1111-4222-8333-444444444444",
+  "alias": "WidgetWebPart",
+  "componentType": "WebPart",
+  "version": "1.0.0",
+  "manifestVersion": 2,
+  "preconfiguredEntries": [
+    {
+      "group": { "default": "Other" },
+      "title": { "default": "Widget" },
+      "description": { "default": "Widget web part" },
+      "properties": {}
+    }
+  ]
+}

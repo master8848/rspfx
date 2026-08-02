@@ -53,6 +53,74 @@ describe('build', () => {
     expect(fs.existsSync(path.join(dir, 'release', 'assets', 'hello.js.map'))).toBe(false);
     rmRf(dir);
   });
+
+  it('honors a custom project layout configured via paths', async () => {
+    const dir = await makeFixture();
+    fs.writeFileSync(
+      path.join(dir, 'rspfx.config.ts'),
+      [
+        'export default {',
+        "  name: 'hello',",
+        "  framework: 'vanilla',",
+        "  spfxVersion: '1.22',",
+        '  fluent: false,',
+        "  language: 'typescript',",
+        "  styling: 'scss',",
+        "  paths: { srcDir: 'src', webpartsDir: 'components/widgets', configDir: 'config-custom' },",
+        "  dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: true },",
+        "  build: { sourcemap: false, minify: true, splitChunks: false, outDir: 'dist', releaseDir: 'release' }",
+        '};'
+      ].join('\n')
+    );
+    const widgetDir = path.join(dir, 'components', 'widgets', 'widget');
+    fs.mkdirSync(widgetDir, { recursive: true });
+    fs.mkdirSync(path.join(dir, 'config-custom'), { recursive: true });
+    fs.writeFileSync(
+      path.join(widgetDir, 'widget.manifest.json'),
+      JSON.stringify({
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json',
+        id: COMPONENT_ID,
+        alias: 'WidgetWebPart',
+        componentType: 'WebPart',
+        version: '1.0.0',
+        manifestVersion: 2,
+        preconfiguredEntries: [{ title: { default: 'Widget' }, properties: {} }]
+      }, null, 2)
+    );
+    fs.writeFileSync(
+      path.join(widgetDir, 'widgetWebPart.ts'),
+      `export default class WidgetWebPart {\n  public render(): void {\n    document.title = 'widget';\n  }\n}\n`
+    );
+    fs.writeFileSync(
+      path.join(dir, 'config-custom', 'config.json'),
+      JSON.stringify({
+        bundles: {
+          'widget-bundle': {
+            components: [
+              {
+                entrypoint: './components/widgets/widget/widgetWebPart.ts',
+                manifest: './components/widgets/widget/widget.manifest.json'
+              }
+            ]
+          }
+        }
+      }, null, 2)
+    );
+
+    const output = await runBuild(dir, {});
+    expect(output.outputFiles).toContain('widget-bundle.js');
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(dir, 'release', 'manifests', `${COMPONENT_ID}.manifest.json`), 'utf8')
+    ) as {
+      loaderConfig: { entryModuleId: string; scriptResources: Record<string, unknown> };
+    };
+    expect(manifest.loaderConfig.entryModuleId).toBe('widget-bundle');
+    expect(manifest.loaderConfig.scriptResources).toEqual({
+      'widget-bundle': { type: 'path', path: 'widget-bundle.js' }
+    });
+    rmRf(dir);
+  });
 });
 
 describe('package', () => {

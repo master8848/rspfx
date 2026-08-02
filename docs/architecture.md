@@ -25,14 +25,14 @@ no dependency cycles.
          │              │                 │                 │
          ▼              ▼                 ▼                 ▼
      Rspack        manifests.js      solution.sppkg   ┌─────────────┐
-     (the ONLY      (component         (valid ZIP)    │manifest-    │
-      bundler)      manifests)                        │server :4321 │
+     (the ONLY      (component         (valid ZIP)    │dev server   │
+      bundler)      manifests)                        │on :4321     │
                                                       └──────┬──────┘
                                                              │ HTTPS
 ┌────────────────────  RUNTIME (SharePoint tenant)  ─────────────────────┐
 │  Workbench (_layouts/15/workbench.aspx)                                │
 │    └─ debugManifestsFile ──▶ https://localhost:4321/temp/manifests.js │
-│         └─ loaderConfig ──▶ https://localhost:8080/bundles/*.js        │
+│         └─ loaderConfig ──▶ https://localhost:4321/dist/*.js          │
 │              (dev)   or  relative paths inside installed .sppkg (prod) │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -47,7 +47,7 @@ no dependency cycles.
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, swc TS/JSX, SCSS/CSS-modules, assets, caching, framework plugin stubs |
 | `manifest-generator` | build | core, diagnostics | component manifests, manifests.js, loaderConfig, sp-* dependency discovery |
 | `sppkg-builder` | build (priority 1) | manifest-generator, core | package-solution.json → AppManifest/features/ZIP `.sppkg` |
-| `manifest-server` | dev | core, diagnostics | `:4321` HTTPS server, manifests.js endpoint, node_modules proxy, certs |
+| `manifest-server` | dev | core, diagnostics | dev certificates in `~/.rspfx/certs` only; `:4321` serving is handled by the compiler dev server |
 | `dev-runtime` | dev | core, compiler-rspack, manifest-server, manifest-generator | serve emulation, websocket refresh, fast-refresh runtime, workbench URL |
 | `framework-vanilla\|react\|solid\|preact\|vue\|svelte` | framework | core, plugin-api | DOM adapter + framework-specific refresh runtime |
 | `framework-angular` | framework | — | **DEFERRED** (separate AOT compiler track) |
@@ -107,20 +107,21 @@ everything.
 ```
 File save → Rspack incremental rebuild → refresh event (ws) → browser update
 
-Manifest server (:4321, HTTPS, self-signed cert in ~/.rspfx/certs):
+Dev server on :4321 (HTTPS, self-signed cert from manifest-server's
+ensureCertificates):
   GET /temp/manifests.js   → cumulative debug manifests (project + sp-*)
-  GET /node_modules/*      → proxied sp-* package manifests/bundles
   GET /dist/*              → compiled bundles (writeToDisk)
+  GET /node_modules/*      → sp-* package manifests/bundles
 
 Workbench loads:
   <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true
     &debugManifestsFile=<enc>https://localhost:4321/temp/manifests.js
-  → loaderConfig → https://localhost:8080/bundles/*.js (dev bundle server)
+  → loaderConfig → https://localhost:4321/dist/*.js
 ```
 
-Workbench-first: `localhost:8080` is a bundle server only, never the primary
-surface. `manifests.js` is regenerated after each rebuild (bundle names are
-stable `[name].js` so loader entries stay valid).
+Workbench-first: `localhost:4321` serves bundles and manifests, but is never
+the primary surface. `manifests.js` is regenerated after each rebuild (bundle
+names are stable `[name].js` so loader entries stay valid).
 
 ## Production flow
 

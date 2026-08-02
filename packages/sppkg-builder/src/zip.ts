@@ -14,6 +14,9 @@ export interface SppkgValidationResult {
 export async function writeZip(outputPath: string, entries: ZipFileEntry[]): Promise<void> {
   const record: Record<string, Uint8Array> = {};
   for (const entry of entries) {
+    if (entry.name in record) {
+      throw new Error(`Duplicate zip entry name '${entry.name}' — the .sppkg would be corrupt.`);
+    }
     record[entry.name] = entry.buffer;
   }
   await writeFile(outputPath, zipSync(record, { level: 9 }));

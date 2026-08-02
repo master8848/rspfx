@@ -4,7 +4,13 @@ import { build } from '@mbsks/rspfx-compiler-rspack';
 import { generateComponentManifests, findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import type { ComponentManifest } from '@mbsks/rspfx-manifest-generator';
 import { createLogger, formatBytes } from '@mbsks/rspfx-diagnostics';
-import { readProject, loadFrameworkPreset, resolveContributionLoaders } from '@mbsks/rspfx-dev-runtime';
+import {
+  readProject,
+  loadFrameworkPreset,
+  resolveContributionLoaders,
+  createCompileContext
+} from '@mbsks/rspfx-dev-runtime';
+import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import { loadConfig } from '../config.js';
 
 const logger = createLogger('rspfx');
@@ -26,8 +32,7 @@ export interface BuildOutput {
 
 export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<BuildOutput> {
   const config = await loadConfig(cwd);
-  const project = readProject(cwd);
-  const externals = [...findSpDependencies(cwd).keys(), ...project.externals];
+  const project = readProject(cwd, config.paths);
 
   const frameworkPreset = await loadFrameworkPreset(config.framework, cwd);
   const contributions = resolveContributionLoaders(
@@ -35,17 +40,32 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     frameworkPreset.moduleUrl
   );
 
-  const result = await build({
+  const ctx = createCompileContext({
     projectRoot: cwd,
-    framework: config.framework,
+    config,
+    entries: project.webParts.entries,
+    externals: [...findSpDependencies(cwd).keys(), ...project.externals],
+    localizedAliases: project.localizedAliases,
     fastRefresh: false,
     production: true,
-    entries: project.webParts.entries,
-    externals,
-    aliases: project.localizedAliases,
-    build: { ...config.build, minify: opts.minify, sourcemap: opts.sourcemap },
-    swcContributions: [contributions as Record<string, unknown>]
+    serveMode: false,
+    build: {
+      ...config.build,
+      ...(opts.minify !== undefined ? { minify: opts.minify } : {}),
+      ...(opts.sourcemap !== undefined ? { sourcemap: opts.sourcemap } : {})
+    }
   });
+  ctx.swcContributions = [contributions as Record<string, unknown>];
+
+  for (const plugin of getPlugins()) {
+    plugin.compilerHooks?.beforeCompile?.(ctx);
+  }
+
+  const result = await build(ctx);
+
+  for (const plugin of getPlugins()) {
+    plugin.compilerHooks?.afterStats?.(result.stats);
+  }
 
   const distDir = path.join(cwd, config.build.outDir ?? 'dist');
   const releaseDir = path.join(cwd, config.build.releaseDir ?? 'release');
@@ -53,13 +73,19 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
   const releaseAssetsDir = path.join(releaseDir, 'assets');
 
   const cdnBasePath = readCdnBasePath(cwd);
+  const entryModuleIds: Record<string, string> = {};
+  project.webParts.bundles.forEach((bundle, index) => {
+    entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
+  });
   const manifests = await generateComponentManifests({
     projectRoot: cwd,
     production: true,
     baseUrls: { debug: '', release: cdnBasePath },
     packageVersion: project.webParts.packageVersion,
     bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
-    externals
+    externals: ctx.externals,
+    webpartsDir: config.paths?.webpartsDir,
+    entryModuleIds
   });
 
   fs.mkdirSync(releaseManifestsDir, { recursive: true });
@@ -69,7 +95,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     fs.writeFileSync(path.join(releaseManifestsDir, `${manifest.id}.manifest.json`), content);
   }
 
-  fs.mkdirSync(releaseAssetsDir, { recursive: true });
+  const packageFiles: { path: string; content: Uint8Array }[] = [];
   for (const file of fs.readdirSync(distDir)) {
     if (file.endsWith('.map') || file.endsWith('.manifest.json')) {
       continue;
@@ -79,6 +105,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
       continue;
     }
     fs.copyFileSync(source, path.join(releaseAssetsDir, file));
+    packageFiles.push({ path: file, content: fs.readFileSync(source) });
   }
 
   for (const file of result.outputFiles) {
@@ -86,6 +113,10 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     if (fs.existsSync(bundlePath)) {
       logger.info(`${file}: ${formatBytes(fs.statSync(bundlePath).size)}`);
     }
+  }
+
+  for (const plugin of getPlugins()) {
+    plugin.packageHooks?.beforePackage?.({ manifests, files: packageFiles });
   }
 
   return {

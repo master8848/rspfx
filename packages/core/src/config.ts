@@ -25,6 +25,12 @@ export interface PlaygroundConfig {
   enabled?: boolean;
 }
 
+export interface PathsConfig {
+  srcDir?: string;
+  webpartsDir?: string;
+  configDir?: string;
+}
+
 export interface DeployConfig {
   tenantUrl?: string;
   username?: string;
@@ -41,12 +47,44 @@ export interface RspfxConfig {
   styling: 'css' | 'scss' | 'tailwind';
   dev: DevConfig;
   build: BuildConfig;
+  paths?: PathsConfig;
   playground?: PlaygroundConfig;
   deploy?: DeployConfig;
 }
 
 export function defineConfig(config: RspfxConfig): RspfxConfig {
   return config;
+}
+
+export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { paths: Required<PathsConfig> } = {
+  dev: {
+    port: 4321,
+    https: true,
+    hostname: 'localhost',
+    workbench: true,
+    fastRefresh: false,
+    openBrowser: true
+  },
+  build: {
+    sourcemap: false,
+    minify: true,
+    splitChunks: false,
+    outDir: 'dist',
+    releaseDir: 'release'
+  },
+  paths: {
+    srcDir: 'src',
+    webpartsDir: 'src/webparts',
+    configDir: 'config'
+  }
+};
+
+export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> {
+  return {
+    srcDir: paths?.srcDir ?? configDefaults.paths.srcDir,
+    webpartsDir: paths?.webpartsDir ?? configDefaults.paths.webpartsDir,
+    configDir: paths?.configDir ?? configDefaults.paths.configDir
+  };
 }
 
 export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
@@ -61,22 +99,23 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     language: config.language ?? 'typescript',
     styling: config.styling ?? 'scss',
     dev: {
-      port: config.dev?.port ?? 4321,
-      https: config.dev?.https ?? true,
-      hostname: config.dev?.hostname ?? 'localhost',
-      workbench: config.dev?.workbench ?? true,
-      fastRefresh: config.dev?.fastRefresh ?? false,
-      openBrowser: config.dev?.openBrowser ?? true,
+      port: config.dev?.port ?? configDefaults.dev.port,
+      https: config.dev?.https ?? configDefaults.dev.https,
+      hostname: config.dev?.hostname ?? configDefaults.dev.hostname,
+      workbench: config.dev?.workbench ?? configDefaults.dev.workbench,
+      fastRefresh: config.dev?.fastRefresh ?? configDefaults.dev.fastRefresh,
+      openBrowser: config.dev?.openBrowser ?? configDefaults.dev.openBrowser,
       ...(config.dev?.tenantUrl !== undefined ? { tenantUrl: config.dev.tenantUrl } : {}),
       ...(config.dev?.initialPage !== undefined ? { initialPage: config.dev.initialPage } : {})
     },
     build: {
-      sourcemap: config.build?.sourcemap ?? false,
-      minify: config.build?.minify ?? true,
-      splitChunks: config.build?.splitChunks ?? false,
-      outDir: config.build?.outDir ?? 'dist',
-      releaseDir: config.build?.releaseDir ?? 'release'
+      sourcemap: config.build?.sourcemap ?? configDefaults.build.sourcemap,
+      minify: config.build?.minify ?? configDefaults.build.minify,
+      splitChunks: config.build?.splitChunks ?? configDefaults.build.splitChunks,
+      outDir: config.build?.outDir ?? configDefaults.build.outDir,
+      releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir
     },
+    paths: resolvePathDefaults(config.paths),
     ...(config.playground !== undefined ? { playground: config.playground } : {}),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {})
   };

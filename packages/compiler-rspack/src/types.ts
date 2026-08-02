@@ -48,5 +48,5 @@ export interface StartDevServerResult {
   close(): Promise<void>;
   port: number;
   compiler: unknown;
-  onEmit(cb: (stats: unknown) => void): void;
+  onEmit(cb: (stats: unknown) => void): () => void;
 }

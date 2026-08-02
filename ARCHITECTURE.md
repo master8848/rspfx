@@ -26,14 +26,14 @@ Scope decision (accepted): **Angular is removed from milestone 1.** Start with V
          │              │                 │                 │
          ▼              ▼                 ▼                 ▼
      Rspack        manifests.js      solution.sppkg   ┌─────────────┐
-     (the ONLY      (component         (valid ZIP)    │manifest-    │
-      bundler)      manifests)                        │server :4321 │
+     (the ONLY      (component         (valid ZIP)    │dev server   │
+      bundler)      manifests)                        │on :4321     │
                                                       └──────┬──────┘
                                                              │ HTTPS
 ┌────────────────────  RUNTIME (SharePoint tenant)  ─────────────────────┐
 │  Workbench (_layouts/15/workbench.aspx)                                │
 │    └─ debugManifestsFile ──▶ https://localhost:4321/temp/manifests.js │
-│         └─ loaderConfig ──▶ https://localhost:8080/bundles/*.js        │
+│         └─ loaderConfig ──▶ https://localhost:4321/dist/*.js          │
 │              (dev)   or  relative paths inside installed .sppkg (prod) │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -42,11 +42,13 @@ Scope decision (accepted): **Angular is removed from milestone 1.** Start with V
 
 ```
 File save → Rspack incremental rebuild → HMR/refresh event (ws) → browser update
-Manifest server (:4321, HTTPS, self-signed cert) serves:
+Dev server on :4321 (HTTPS, self-signed cert from manifest-server's
+ensureCertificates) serves:
   /temp/manifests.js            → merged debug manifests
-  /node_modules/@microsoft/...  → proxied sp-* package manifests (local resolution)
-Workbench (tenants) is the primary dev environment. localhost:8080 is a bundle
-server only — never the primary surface.
+  /dist/*.js                    → compiled bundles (writeToDisk)
+  /node_modules/@microsoft/...  → sp-* package manifests/bundles (local resolution)
+Workbench (tenants) is the primary dev environment — the dev server only serves
+bundles and manifests; it is never the primary surface.
 ```
 
 **Production flow:**
@@ -114,7 +116,7 @@ Rules:
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, TS via swc, sourcemaps, tree-shaking, splitting, CSS/SCSS/CSS-modules, assets, caching | `createCompiler()`, `watch()` |
 | `manifest-generator` | build | core, diagnostics | manifests.js, component manifests, loaderConfig, asset references | `generateManifests()` |
 | `sppkg-builder` | build (PRIORITY 1) | manifest-generator, core | package-solution.json, solution feature metadata, package manifest, ZIP, `.sppkg` | `buildPackage()` |
-| `manifest-server` | dev | core, diagnostics | :4321 HTTPS server, manifests.js endpoint, node_modules manifest proxy, certs | `startManifestServer()` |
+| `manifest-server` | dev | core, diagnostics | certs + dev certificates only; serving is handled by the compiler dev server | `ensureCertificates()` |
 | `dev-runtime` | dev | core, compiler-rspack, manifest-server | serve emulation, websocket hub, browser refresh, fast-refresh runtime, workbench URL | `startDev()`, `FastRefreshRuntime` |
 | `framework-vanilla` | framework | core, plugin-api | DOM mount/unmount adapter | adapter |
 | `framework-react` | framework | core, plugin-api | react adapter + fast refresh (react-refresh) | adapter |
@@ -191,9 +193,10 @@ Phase 4  CLI build+package surface
          - React + Solid adapters (build-only)
 
 Phase 5  Dev mode
-         - manifest-server (:4321 HTTPS, certs, manifests.js, sp-* proxy)
+         - :4321 dev server (in compiler-rspack) with certs from manifest-server;
+           manifests.js, sp-* proxy
          - dev-runtime: serve emulation, workbench URL + auto-open, ws refresh
-         ✅ GATE: workbench loads web part from localhost:8080 bundles, edits
+         ✅ GATE: workbench loads web part from localhost:4321 bundles, edits
            hot-reload without restart.
 
 Phase 6  dev --refresh + playground

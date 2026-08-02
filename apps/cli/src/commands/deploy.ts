@@ -31,7 +31,14 @@ export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<
   }
 
   const fileName = path.basename(result.outputPath);
-  const uploadUrl = `${tenant.replace(/\/+$/, '')}/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='${fileName}',overwrite=true)`;
+  let tenantUrl: URL;
+  try {
+    tenantUrl = new URL(tenant);
+  } catch {
+    throw new RspfxError('DEPLOY_INVALID_URL', `Invalid app catalog URL: ${tenant}`);
+  }
+  const basePath = tenantUrl.pathname.replace(/\/+$/, '');
+  const uploadUrl = `${tenantUrl.origin}${basePath}/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='${fileName}',overwrite=true)`;
   const body = fs.readFileSync(result.outputPath);
 
   logger.info(`Uploading ${fileName} to ${uploadUrl}...`);
@@ -41,7 +48,13 @@ export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/octet-stream'
     },
-    body
+    body,
+    signal: AbortSignal.timeout(120_000)
+  }).catch((error: unknown) => {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new RspfxError('DEPLOY_TIMEOUT', 'Upload to the app catalog timed out after 120s');
+    }
+    throw error;
   });
   if (!response.ok) {
     const detail = await response.text();

@@ -3,6 +3,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import type { RspfxConfig } from '@mbsks/rspfx-core';
 import { readProject } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
 import { version } from '../version.js';
@@ -30,10 +31,14 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
   const packageJsonExists = fs.existsSync(packageJsonPath);
   checks.push({ name: 'package.json exists', ok: packageJsonExists });
 
-  let config = { framework: 'vanilla', spfxVersion: '1.22' };
+  let config: RspfxConfig | undefined;
   try {
     config = await loadConfig(cwd);
-    checks.push({ name: 'rspfx.config.ts loads', ok: true, detail: `${config.framework} / SPFx ${config.spfxVersion}` });
+    checks.push({
+      name: 'rspfx.config.ts loads',
+      ok: true,
+      detail: `${config.framework} / SPFx ${config.spfxVersion}`
+    });
   } catch (error) {
     checks.push({
       name: 'rspfx.config.ts loads',
@@ -42,13 +47,15 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
     });
   }
 
-  checks.push(checkFrameworkPackage(config.framework));
+  const framework = config?.framework ?? 'vanilla';
+  const spfxVersion = config?.spfxVersion ?? '1.22';
+  checks.push(checkFrameworkPackage(framework));
 
   if (packageJsonExists) {
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
       dependencies?: Record<string, string>;
     };
-    checks.push(checkSpDependencies(packageJson.dependencies ?? {}, config.spfxVersion));
+    checks.push(checkSpDependencies(packageJson.dependencies ?? {}, spfxVersion));
   } else {
     checks.push({ name: 'sp-* dependency versions', ok: false, detail: 'no package.json to inspect' });
   }
@@ -64,11 +71,11 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
     });
   }
 
-  const [port4321, port8080] = await Promise.all([isPortFree(4321), isPortFree(8080)]);
-  checks.push({ name: 'port 4321 free (dev server)', ok: port4321 });
-  checks.push({ name: 'port 8080 free', ok: port8080 });
+  const devPort = config?.dev.port ?? 4321;
+  const portFree = await isPortFree(devPort);
+  checks.push({ name: `port ${devPort} free (dev server)`, ok: portFree });
 
-  checks.push(checkDistWritable(cwd));
+  checks.push(checkDistWritable(cwd, config?.build.outDir ?? 'dist'));
 
   const failed = checks.filter((check) => !check.ok).length;
   const ok = failed === 0;
@@ -162,17 +169,17 @@ function isPortFree(port: number): Promise<boolean> {
   });
 }
 
-function checkDistWritable(cwd: string): DoctorCheck {
-  const distDir = path.join(cwd, 'dist');
+function checkDistWritable(cwd: string, outDir: string): DoctorCheck {
+  const distDir = path.join(cwd, outDir);
   const probe = path.join(distDir, `.rspfx-write-probe`);
   try {
     fs.mkdirSync(distDir, { recursive: true });
     fs.writeFileSync(probe, 'ok');
     fs.rmSync(probe, { force: true });
-    return { name: 'dist writable', ok: true };
+    return { name: `${outDir} writable`, ok: true };
   } catch (error) {
     return {
-      name: 'dist writable',
+      name: `${outDir} writable`,
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
     };

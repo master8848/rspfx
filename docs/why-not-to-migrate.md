@@ -20,8 +20,8 @@ right call, or at least the low-risk one.
 
 | Feature | Status | Consequence |
 |---|---|---|
-| **Custom gulp pipelines** | ⚠️ No gulp task ecosystem | Arbitrary gulp tasks (release automation, multi-stage bundling, custom deploy scripts) have no equivalent. RSPFX exposes compiler/package hooks via `plugin-api` (`compilerHooks`, `packageHooks`), but they are not wired into the CLI yet — today there is **no** project-level extension point for the compiler config. |
-| **`spfx-customize-webpack.js` / webpack config surgery** | ⚠️ Dropped | The old webpack file is deleted. Most aliases turn out unnecessary under Rspack, but if yours was doing something exotic (custom loaders, module federation), you cannot replicate it today. |
+| **Custom gulp pipelines** | ⚠️ No gulp task ecosystem | Arbitrary gulp tasks (release automation, multi-stage bundling, custom deploy scripts) have no gulp equivalent. Project-level extension points exist: `plugin-api` hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI, and `spfx()` (see below) lets you own the Rspack config — but scripting-style pipelines are still yours to write. |
+| **`spfx-customize-webpack.js` / webpack config surgery** | ⚠️ Escape hatch exists | The old webpack file is deleted. Most aliases turn out unnecessary under Rspack, but for real custom work there is now an escape hatch: export a `rspack.config.ts` that calls `spfx()` from `@mbsks/rspfx-compiler-rspack` (returns a full Rspack configuration; extend it with `additionalPlugins`/`swcContributions` or merge your own rules). Caveat: webpack-specific configs don't port automatically — loaders/plugins that only exist for webpack (and webpack-shaped module-federation configs) still need Rspack equivalents. |
 | **Multi-locale runtime switching** | ⚠️ Single-locale | String modules resolve to the default locale (`en-us`) and are bundled. RSPFX does not yet emit `localizedPath` manifest entries from `config.json` `localizedResources`, so sp-loader won't swap locale modules at runtime. UI strings render in the default language. |
 | **SPFx version pinning** | ⚠️ 1.20–1.22 only | `spfxVersion` is typed to those three targets. If your tenant requires a newer patch level than 1.22 (e.g. 1.23), you can still point the config at the nearest supported target (versions are harvested from `node_modules`), but it's untested territory. |
 | **React 18/19 mixed tenants** | ⚠️ Same as official | Bundle React per web part (official behavior); check for React version conflicts on legacy pages — unchanged from official tooling. |
@@ -65,7 +65,7 @@ right call, or at least the low-risk one.
 | 4 web parts, localization, PnP controls (like Modern Search) | ✅ Migrate (single-locale) |
 | Any extension or library component | ❌ Don't |
 | Angular web part | ❌ Don't |
-| Custom webpack config doing real work | ❌ Not yet (no compiler extension point) |
+| Custom webpack config doing real work | ⚠️ Try it — `rspack.config.ts` + `spfx()`; webpack-only plugins/loaders still need Rspack equivalents |
 | SPFx 1.16 / 2019 / on-prem | ❌ Don't |
 | Enterprise, risk-averse, no capacity to babysit a new toolchain | ❌ Don't — revisit when RSPFX hits a stable release with real-tenant CI |
 

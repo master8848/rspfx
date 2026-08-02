@@ -1,41 +1,69 @@
 # Fast Refresh
 
-## Design
+## What is real today
 
 Fast refresh in RSPFX mirrors the semantics of a modern HMR pipeline while
 keeping the SharePoint workbench as the primary surface:
 
 ```
-save → Rspack incremental rebuild → websocket refresh event → adapter re-mount
-  ├─ framework runtime preserves component state where supported
-  └─ otherwise → fallback: full page reload
+save → Rspack incremental rebuild → onEmit → manifest regeneration → websocket refresh event → adapter re-mount
+  ├─ fast refresh enabled: framework HMR plugin (react/preact/vue/svelte) patches the component tree in place
+  └─ otherwise: fallback → full page reload
 ```
 
-- `dev-runtime` owns the refresh orchestration: it listens for rebuild events
-  (via `compiler-rspack`'s `watch`/dev-server `onEmit`), regenerates
-  `temp/manifests.js`, and pushes a refresh message over the websocket.
-- `createRefreshRuntime(framework)` returns a per-framework `RefreshRuntime`
-  (`preserveState()` / `restoreState()` / `dispose()`). The framework adapter's
-  `supportsFastRefresh()` decides whether the runtime is state-preserving.
-- **Fallback is mandatory and automatic**: if a framework runtime errors, or the
-  framework has no runtime, the page does a full reload — the workbench must
-  never sit blank.
+### Refresh cycle (dev-runtime)
 
-The manifest server and workbench are unaffected by refresh mode; only the
-client-side update path changes.
+- `startServe` creates one `RefreshRuntime` per serve session — but **only when
+  fast refresh is enabled** (`--refresh` or `dev.fastRefresh`). Without the
+  flag, no runtime exists and nothing extra happens.
+- The runtime is wired into the manifest-regeneration cycle: `preserveState()`
+  fires before `temp/manifests.js` is regenerated, `restoreState()` after
+  (including on failure), and `dispose()` when the server closes. `epoch`
+  counts completed regeneration cycles since serve started.
+- The runtime is **framework-agnostic bookkeeping**. It does not snapshot
+  component state: per-framework state preservation happens in the browser via
+  the framework's HMR plugin (see table below). The `framework` argument and
+  the `onPreserve`/`onRestore` option callbacks exist so a future integration
+  (e.g. a push over the dev-server websocket) can hook into the cycle — nothing
+  consumes them yet.
 
-## Per-framework runtime notes
+### Fast refresh in the browser
 
-| Framework | Runtime | Behavior on save |
+| Framework | Browser-side refresh | Behavior on save |
 |---|---|---|
-| React | `@rspack/plugin-react-refresh` | Component state preserved; hooks/effects replayed; props from `getComponentProps()` re-applied via `update()` |
+| React | `@rspack/plugin-react-refresh` (added by the preset when `fastRefresh`) | Component state preserved; hooks/effects replayed |
 | Preact | `@rspack/plugin-preact-refresh` | Same model as React — state-preserving re-render |
 | Vue | `vue-loader` HMR (peer `@vue/compiler-sfc`) | Component tree patched in place; state kept |
 | Svelte | `svelte-loader` `hotReload` (`svelte-hmr`) | Component instance re-created with preserved state |
-| Solid | `babel-preset-solid` (+ solid-refresh in dev) | ⚠️ Partial — compiler support present, but refresh currently resolves to **full reload** |
-| Vanilla | none (`RefreshRuntime` is a no-op) | Full reload |
+| Solid | none in RSPFX (solid-refresh not wired) | Full reload |
+| Vanilla | none | Full reload |
 
-Per-framework failure → full reload (automatic).
+Per-framework failure → full reload (automatic). The workbench never sits blank.
+
+### Missing plugin → loud fallback
+
+The refresh plugins are build-time-only imports. When the real package is not
+installed in the project, rspack resolves them to an empty stub instead of
+failing the build — the stub logs a warning on the terminal:
+
+```
+[rspfx] fast-refresh plugin for react is not installed in this project — HMR
+fast refresh is disabled; fallback to full reload. Install
+@rspack/plugin-react-refresh to enable it.
+```
+
+(same for `@rspack/plugin-preact-refresh` and `vue-loader`). The class shapes
+are byte-identical to the real plugins' usage (`ReactRefreshRspackPlugin`,
+`PreactRefreshRspackPlugin`, `VueLoaderPlugin`), so bundle output is unchanged
+when the real package is present — the stub only ever loads when it is not.
+
+### Not implemented (out of scope)
+
+- Server-side state snapshotting / restore: `preserveState()`/`restoreState()`
+  track the cycle; they do not capture component state. Vanilla JS state
+  preservation hooks are not implemented.
+- A refresh event pushed over the websocket: the dev server exposes `onEmit`;
+  the client update path is the framework plugin's own HMR client.
 
 ## `rspfx dev --refresh` vs `rspfx dev`
 
@@ -44,9 +72,14 @@ Per-framework failure → full reload (automatic).
 | Config | `dev.fastRefresh` false (default) | `dev.fastRefresh` true / `--refresh` flag |
 | Save → update | Rebuild → websocket event → reload path | Rebuild → websocket event → state-preserving refresh (framework runtime) |
 | Frameworks affected | all | React/Preact/Vue/Svelte get state preservation; Solid and vanilla reload |
+| RefreshRuntime | not created | tracks the regeneration cycle (preserve/restore/dispose) |
 | Failure mode | full reload | full reload (same) |
 
 `--refresh` is a superset: everything in plain `dev` still works; the framework
 runtime is just an extra client-side layer. Use plain `dev` when you want maximal
 predictability (e.g. debugging a property-pane or theme interaction), and
 `--refresh` for component iteration.
+
+`supportsFastRefresh()` on a framework adapter reports whether the framework
+has a refresh-capable runtime — it does not mean the plugin package is
+installed; the stub warning above is the source of truth for the actual wiring.

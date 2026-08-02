@@ -1,7 +1,11 @@
 # Command Reference
 
 Global: `rspfx --version`, `rspfx --help`. All commands read `rspfx.config.ts`
-(loaded via jiti) and merge CLI flags over config.
+(loaded via jiti) and merge CLI flags over config. The optional `paths` section
+customizes the project folder layout: `paths.srcDir` (default `src`),
+`paths.webpartsDir` (default `src/webparts`), `paths.configDir` (default
+`config`) — see [building-packages.md](building-packages.md) for what each one
+controls.
 
 ## `rspfx new <name>`
 
@@ -93,15 +97,16 @@ rspfx package --no-build
 
 ## `rspfx deploy`
 
-Package + upload the `.sppkg` to the app catalog via REST. Credentials come from
-`config.deploy` (`tenantUrl`, `username`, `password`, `appCatalogSiteUrl`) or the
-env vars `RSPFX_TENANT`, `RSPFX_USERNAME`, `RSPFX_PASSWORD`. **Without
-credentials it prints the manual upload steps instead.**
+Package + upload the `.sppkg` to the app catalog via REST, authenticated with a
+bearer access token. The app catalog URL comes from
+`config.deploy.appCatalogSiteUrl` or the `RSPFX_APP_CATALOG_URL` env var
+(interactively prompted otherwise); the token from `RSPFX_ACCESS_TOKEN`.
+**Without a token it prints the manual upload steps instead.** The catalog URL
+is validated before upload and the upload fails fast after a 120s timeout.
 
 ```sh
 rspfx deploy
-RSPFX_TENANT=https://contoso.sharepoint.com RSPFX_USERNAME=u@contoso.onmicrosoft.com \
-RSPFX_PASSWORD=... rspfx deploy
+RSPFX_ACCESS_TOKEN=<token> RSPFX_APP_CATALOG_URL=https://contoso.sharepoint.com/sites/appcatalog rspfx deploy
 ```
 
 ## `rspfx analyze`
@@ -115,8 +120,10 @@ rspfx analyze
 
 ## `rspfx doctor`
 
-Environment/config/port/dependency checks (Node ≥ 20, config files, ports, certs,
-deps, sp-* resolution). Exit code **1** on failures.
+Environment/config/port/dependency checks: Node ≥ 20, `rspfx.config.ts` loads,
+framework package resolvable, sp-* versions match the target, web part bundles
+discovered, the configured dev port (`dev.port`) free, `build.outDir` writable.
+Exit code **1** on failures.
 
 ```sh
 rspfx doctor
@@ -124,8 +131,48 @@ rspfx doctor
 
 ## `rspfx clean`
 
-Remove build artifacts: `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache`.
+Remove build artifacts: `build.outDir` (`dist`), `build.releaseDir`
+(`release`), `temp`, `.rspfx`, `node_modules/.cache`, `sharepoint/solution`.
+Refuses to run outside a project and respects the configured output dirs.
 
 ```sh
 rspfx clean
 ```
+
+## Bundler plugin surface (`spfx()`)
+
+`@mbsks/rspfx-compiler-rspack` exports `spfx(options)` — the first step toward
+"bring your own bundler config". It returns a **full Rspack `Configuration`**
+(the same one the CLI builds internally), ready to drop into your own
+`rspack.config.ts`:
+
+```ts
+// rspack.config.ts
+import { spfx } from '@mbsks/rspfx-compiler-rspack';
+
+export default await spfx({
+  projectRoot: process.cwd(),
+  framework: 'react',
+  entries: [
+    {
+      name: 'hello',
+      import: './src/webparts/hello/HelloWebPart.ts',
+      componentIds: [],
+      version: '1.0.0'
+    }
+  ],
+  production: false,
+  fastRefresh: true
+});
+```
+
+Options mirror the compile context: `projectRoot`, `framework`, `entries`
+(bundle name → entrypoint, manifest ids, version), `externals?`, `aliases?`,
+`fastRefresh?` (default false), `production?` (default true), `serveMode?`
+(default false), `build?` (minify/sourcemap/splitChunks/outDir/releaseDir
+defaults), `additionalPlugins?`, `swcContributions?`.
+
+The CLI remains the opinionated default — `rspfx build` / `rspfx dev` are
+unchanged. The plugin surface is the escape hatch for projects that need to
+extend the compiler config (extra loaders, plugins, module-federation-style
+setups). vite/turbopack variants are future work.

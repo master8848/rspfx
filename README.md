@@ -72,7 +72,7 @@ packages/diagnostics      logger, errors, telemetry, benchmarks
 packages/compiler-rspack  Rspack config factory, TS via swc, SCSS, assets
 packages/manifest-generator  component manifests, manifests.js, sp-* deps
 packages/sppkg-builder    .sppkg ZIP assembly (AppManifest, features, assets)
-packages/manifest-server  :4321 HTTPS server, certs, node_modules proxy
+packages/manifest-server  dev certificates in ~/.rspfx/certs (serving is handled by the compiler dev server)
 packages/dev-runtime      serve emulation, websocket refresh, fast-refresh runtime
 packages/framework-*      per-framework adapters (vanilla, react, solid, preact, vue, svelte)
 packages/fluent-adapter   optional Fluent UI web part base (React-only)
@@ -82,6 +82,14 @@ examples/                 smoke apps (react, solid, vue, svelte, preact, shadcn,
 reference/                captured SPFx format ground truth (FORMATS.md, component IDs)
 docs/                     user + architecture documentation
 ```
+
+- **Custom folder layouts** — `paths` in `rspfx.config.ts` (`srcDir`,
+  `webpartsDir`, `configDir`) relocates the default `src/` + `src/webparts/` +
+  `config/` layout.
+- **Bundler plugin surface** — `spfx()` from `@mbsks/rspfx-compiler-rspack`
+  returns a full Rspack `Configuration` for use in your own `rspack.config.ts`
+  (vite/turbopack variants are future work; the CLI stays the opinionated
+  default).
 
 `examples/modern-search` is a real production solution — PnP Modern Search
 (4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft +

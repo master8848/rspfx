@@ -1,10 +1,11 @@
 export type { FrameworkAdapter } from './base-web-part.js';
-export { defineConfig, resolveConfig } from './config.js';
+export { configDefaults, defineConfig, resolveConfig, resolvePathDefaults } from './config.js';
 export type {
   BuildConfig,
   DeployConfig,
   DevConfig,
   FrameworkId,
+  PathsConfig,
   PlaygroundConfig,
   RspfxConfig,
   SpfxTarget

@@ -51,6 +51,20 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   if (ctx.entries.length === 0) {
     throw new RspfxError('COMPILE_NO_ENTRIES', 'compiler-rspack: at least one bundle entry is required');
   }
+  for (const entry of ctx.entries) {
+    if (entry.componentIds.length === 0) {
+      throw new RspfxError(
+        'COMPILE_ENTRY_NO_COMPONENT_ID',
+        `compiler-rspack: bundle entry "${entry.name}" has no component id — check its .manifest.json "id" field`
+      );
+    }
+    if (!entry.version) {
+      throw new RspfxError(
+        'COMPILE_ENTRY_NO_VERSION',
+        `compiler-rspack: bundle entry "${entry.name}" has no version`
+      );
+    }
+  }
   const build = ctx.build;
   const mode = ctx.production ? 'production' : 'development';
   const outDir = build.outDir ?? 'dist';

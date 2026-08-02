@@ -57,6 +57,10 @@ my-app/
 └── playground/                  # playground host (index.html, main.ts)
 ```
 
+Every path above is a default — `paths` in `rspfx.config.ts` (`srcDir`,
+`webpartsDir`, `configDir`) relocates the source, web parts, and config folders;
+see [building-packages.md](building-packages.md).
+
 `rspfx.config.ts` uses `defineConfig`:
 
 ```ts
@@ -80,9 +84,9 @@ Key defaults: `dev.port` **4321**, `dev.https` true, `dev.fastRefresh` false,
 rspfx dev
 ```
 
-This starts the Rspack dev server (bundles on `localhost:8080`) and the HTTPS
-manifest server on **`https://localhost:4321`**, then opens the workbench in your
-browser.
+This starts the dev server on **`https://localhost:4321`** (HTTPS, self-signed
+cert): it serves the compiled bundles under `/dist/*` and the debug manifests at
+`/temp/manifests.js`, then opens the workbench in your browser.
 
 ### The workbench URL
 
@@ -118,7 +122,8 @@ Trust it so the workbench can fetch `https://localhost:4321` without errors:
 - **Windows:** `certutil -addstore Root <cert>` (or via `certlm.msc` → Trusted
   Root Certification Authorities → Import).
 
-Run `rspfx doctor` to verify the cert is in place and trusted.
+`rspfx doctor` verifies the rest of the dev environment (config, port,
+dependencies) — cert trust itself is the browser's job.
 
 ### Editing
 
@@ -150,9 +155,9 @@ Install it:
 3. On any site: *Add an app* → your solution → *Add to page*.
 
 `rspfx deploy` automates the upload: it packages and uploads to the app catalog
-via REST using `config.deploy` (tenantUrl / username / password /
-appCatalogSiteUrl) or the env vars `RSPFX_TENANT`, `RSPFX_USERNAME`,
-`RSPFX_PASSWORD`. Without credentials it prints the manual upload steps instead.
+via REST using `config.deploy.appCatalogSiteUrl` (or the `RSPFX_APP_CATALOG_URL`
+env var) with a bearer access token from `RSPFX_ACCESS_TOKEN`. Without a token
+it prints the manual upload steps instead.
 
 ## 5. Doctor
 
@@ -162,12 +167,13 @@ rspfx doctor
 
 Runs the same checks the dev/package pipeline depends on:
 
-- Node version ≥ 20, pnpm/npm/yarn present
-- `rspfx.config.ts` loads and resolves (`resolveConfig` defaults)
-- Required config files exist (`config/package-solution.json`, `config/serve.json`)
-- Ports 4321 / 8080 free
-- `~/.rspfx/certs` exists and is trusted
-- `node_modules` dependencies present; sp-* versions resolvable
-- `dist`/`release` writable
+- Node version ≥ 20
+- `package.json` present; `rspfx.config.ts` loads and resolves
+  (`resolveConfig` defaults)
+- Framework package resolvable; sp-* dependency versions match `spfxVersion`
+- Web part bundles discovered (`config.json` bundles or `src/webparts/*`
+  scanning)
+- Configured dev port (`dev.port`, default 4321) free
+- `build.outDir` writable
 
 Exit code is **1** if any check fails — usable in CI.

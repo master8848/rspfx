@@ -134,7 +134,7 @@ export interface FrameworkPreset {
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
 }
 export interface CompilerHooks {
-  beforeCompile?(config: unknown): unknown;       // mutate rspack config object, return it
+  beforeCompile?(config: unknown): unknown;       // invoked with the resolved CompileContext; mutate it in place
   afterStats?(stats: unknown): void;
 }
 export interface PackageHooks {
@@ -147,9 +147,22 @@ export interface RspfxPlugin {
   packageHooks?: PackageHooks;
 }
 export function definePlugin(plugin: RspfxPlugin): RspfxPlugin;
-export function registerPlugin(plugin: RspfxPlugin): void;      // global registry (CLI wires)
+export function registerPlugin(plugin: RspfxPlugin): void;      // global registry; read by the CLI before each build/package
 export function getPlugins(): RspfxPlugin[];
 ```
+
+The CLI wires these hooks at fixed points (`apps/cli/src/commands/build.ts`,
+`apps/cli/src/commands/package.ts`); with no registered plugins the loops are empty
+no-ops and behavior is unchanged:
+
+- `compilerHooks.beforeCompile` — invoked with the resolved `CompileContext` before
+  `build()` runs; plugins mutate it in place (e.g. push into `additionalPlugins` or
+  `swcContributions`). The return value is ignored.
+- `compilerHooks.afterStats` — invoked with the rspack stats once `build()` resolves.
+- `packageHooks.beforePackage` — invoked with `{ manifests, files }` before the release
+  layout is finalized (`runBuild`) and again before the `.sppkg` is assembled
+  (`runPackage`); `manifests` are the release component manifests, `files` are the
+  release assets as `{ path, content }` so plugins can add or transform package files.
 
 ## @mbsks/rspfx-diagnostics (depends on core only)
 
@@ -168,7 +181,7 @@ export function formatBytes(bytes: number): string;
 
 ```ts
 export interface BundleEntry {
-  name: string;                       // bundleName = webpart folder name (entryModuleId)
+  name: string;                       // bundleName — manifests' loaderConfig.entryModuleId follows the bundle name (config.json bundle key, else webpart folder name)
   import: string;                     // absolute path to entry .ts/.tsx
   componentIds: string[];             // manifest ids in this bundle (for library name)
   version: string;                    // package version (library name: `${id}_${version}`)
@@ -186,6 +199,21 @@ export interface CompileContext {
   swcContributions?: Record<string, unknown>[];  // from framework presets
 }
 export async function createRspackConfig(ctx: CompileContext): Promise<unknown>;
+// Bundler plugin surface ("bring your own bundler config"): options mirror CompileContext with defaults
+export interface SpfxPluginOptions {
+  projectRoot: string;
+  framework: FrameworkId;
+  entries: BundleEntry[];
+  externals?: string[];                // default []
+  fastRefresh?: boolean;               // default false
+  production?: boolean;                // default true
+  aliases?: Record<string, string>;    // default {}
+  build?: Partial<BuildConfig>;        // minify/sourcemap/splitChunks/outDir/releaseDir defaults
+  serveMode?: boolean;                 // default false
+  additionalPlugins?: unknown[];
+  swcContributions?: Record<string, unknown>[];
+}
+export async function spfx(options: SpfxPluginOptions): Promise<unknown>;  // full Rspack Configuration for rspack.config.ts
 export async function build(ctx: CompileContext): Promise<{ stats: unknown; outputFiles: string[] }>; // writes dist/
 export function watch(ctx: CompileContext, onDone: (stats: unknown, errors: unknown[]) => void): { close(): Promise<void> };
 // dev server (rspack + @rspack/dev-server) — called by dev-runtime; returns started server
@@ -215,8 +243,11 @@ export interface ManifestContext {
   baseUrls: { debug: string; release: string[] };   // debug: 'https://localhost:4321/dist/'; release: cdn or []
   packageVersion: string;                            // package.json version
   bundleFiles: Map<string, string>;                  // bundleName -> emitted js filename
+  externals: string[];                               // externalized names → "type": "component" scriptResources
+  webpartsDir?: string;                              // overrides default 'src/webparts' (config.paths.webpartsDir)
+  entryModuleIds?: Record<string, string>;           // manifestId -> bundleName; overrides the folder-name default
 }
-export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]>; // reads src/webparts/*/*.manifest.json
+export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]>; // reads <webpartsDir>/*/*.manifest.json
 export async function generateManifestsJs(manifests: ComponentManifest[], metadata?: unknown): Promise<string>; // exact template from reference/FORMATS.md §3
 export function findSpDependencies(projectRoot: string): Map<string, { id: string; version: string; manifestPath: string }>; // node_modules/@microsoft/sp-*/dist/*.manifest.json; fallback reference/sp-component-ids.json
 export function rewriteSpManifestForDebug(spManifest: unknown, relativePath: string, baseUrl: string): unknown; // prepend base url per ManifestUrlProcessor
@@ -246,23 +277,15 @@ export function validateSppkg(zipPath: string): Promise<{ ok: boolean; errors: s
 
 ## @mbsks/rspfx-manifest-server (depends on core, diagnostics)
 
-```ts
-export interface ManifestServerOptions {
-  port: number; hostname: string; https: boolean;
-  projectRoot: string;
-  certsDir: string;                 // default ~/.rspfx/certs
-  manifestsJs: () => Promise<string>;       // dynamic — regenerated after each build
-  extraStatic?: { path: string; urlPrefix: string }[];  // e.g. dist folders
-}
-export async function startManifestServer(opts: ManifestServerOptions): Promise<{ port: number; url: string; close(): Promise<void>; }>;
-export async function ensureCertificates(certsDir: string): Promise<{ key: string; cert: string }>; // selfsigned; cache; print trust instructions once
-```
+Certs-only package: the historical `:4321` HTTP server was removed; the
+compiler dev server (`compiler-rspack` `startDevServer`) owns `:4321` serving
+(bundles, `/temp/manifests.js`, `node_modules` static proxy).
 
-Routes (http/https, CORS `*` + `Access-Control-Allow-Private-Network: true`):
-- `GET /temp/manifests.js` → manifestsJs()
-- `GET /node_modules/*` → file from projectRoot/node_modules/* (for sp-* debug bundles)
-- `GET /dist/*` → projectRoot/dist/* (writeToDisk) — optional if dev server serves it
-- everything else → 404 JSON
+```ts
+export async function ensureCertificates(certsDir: string): Promise<{ key: string; cert: string }>;
+// selfsigned (localhost + 127.0.0.1 SANs, 825 days); cached in certsDir (~/.rspfx/certs);
+// writes cert.pem.trust.txt + logs trust instructions on first generation
+```
 
 ## @mbsks/rspfx-dev-runtime (depends on core, compiler-rspack, manifest-server, manifest-generator, diagnostics)
 
@@ -281,8 +304,20 @@ export async function startServe(opts: DevRuntimeOptions): Promise<{ url: string
 // On each compiler rebuild: regenerate manifests.js (dist files may change names; official keeps [name].js so stable).
 export async function startPlayground(opts: DevRuntimeOptions): Promise<{ url: string; close(): Promise<void> }>;
 // Standalone: dev server on config.playground.port (default 3000) + generated playground page (see templates)
-export interface RefreshRuntime { dispose(): void; preserveState(): void; restoreState(): void; }
-export function createRefreshRuntime(framework: FrameworkId): RefreshRuntime; // no-op for vanilla
+export interface RefreshRuntime {
+  dispose(): void;
+  preserveState(): void;
+  restoreState(): void;
+  readonly preserved: boolean;
+  readonly disposed: boolean;
+  readonly epoch: number;              // completed preserve→restore cycles
+}
+export function createRefreshRuntime(framework: FrameworkId, options?: {
+  onPreserve?: () => void; onRestore?: () => void;
+}): RefreshRuntime;
+// framework-agnostic state machine; created only when fast refresh is enabled;
+// wired into startServe's manifest-regeneration cycle (preserveState before,
+// restoreState in finally, dispose on close)
 export interface FrameworkPresetModule {
   preset: FrameworkPreset;      // loaded preset (no-op when the framework package is missing)
   moduleUrl: string;            // resolved framework package path ('' when missing)
@@ -390,7 +425,7 @@ Bin `rspfx`. Commands (commander):
 - `rspfx playground` — startPlayground; `--port <n>`
 - `rspfx build` — production compile to dist + release (manifests/assets); `--no-minify --sourcemap`
 - `rspfx package` — build + package → sppkg; `--no-build`
-- `rspfx deploy` — package + upload to app catalog (REST, creds from config.deploy or env RSPFX_TENANT/RSPFX_USERNAME/RSPFX_PASSWORD); prints manual steps if no creds
+- `rspfx deploy` — package + upload to app catalog (REST, bearer token from `RSPFX_ACCESS_TOKEN`; catalog URL from `config.deploy.appCatalogSiteUrl` or `RSPFX_APP_CATALOG_URL`, prompted otherwise; URL validated, 120s upload timeout); prints manual steps without a token
 - `rspfx analyze` — build + bundle report (sizes, chunk list) to `.rspfx/analyze.html` + console table
 - `rspfx doctor` — env/config/ports/deps checks, exit code 1 on failures
 - `rspfx clean` — rm dist release temp .rspfx node_modules/.cache
