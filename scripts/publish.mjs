@@ -183,9 +183,9 @@ console.log('─ version bump ────────────────�
 const changedFiles = [];
 for (const pkg of set.values()) {
   const pkgJsonPath = path.join(pkg.dir, 'package.json');
-  const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-  pkg.version = targetVersion;
-  writeJson(pkgJsonPath, pkg);
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  pkgJson.version = targetVersion;
+  writeJson(pkgJsonPath, pkgJson);
   changedFiles.push(pkgJsonPath);
   console.log(`  ${pkg.name}: ${currentVersion} → ${targetVersion}`);
 }
