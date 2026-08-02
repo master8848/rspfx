@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "d99bcafc-d61a-413b-82d7-607dab38b205",
+  "alias": "SolidTodoWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "safeWithCustomScriptDisabled": true,
+  "supportedHosts": ["SharePointWebPart", "TeamsPersonalApp", "TeamsTab", "SharePointFullPage"],
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c31a052-22b4-4f36-8f7d-4b4d8c7c2e7a",
+      "group": { "default": "Other" },
+      "title": { "default": "Solid Todos" },
+      "description": { "default": "Todo list backed by a SharePoint list, built with Solid" },
+      "officeFabricIconFontName": "CheckList",
+      "properties": {}
+    }
+  ]
+}

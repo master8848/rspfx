@@ -7,6 +7,14 @@
           "manifest": "src/webparts/hello/hello.manifest.json"
         }
       ]
+    },
+    "todo": {
+      "components": [
+        {
+          "entrypoint": "src/webparts/todo/TodoWebPart.ts",
+          "manifest": "src/webparts/todo/todo.manifest.json"
+        }
+      ]
     }
   }
 }
