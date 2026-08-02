@@ -15,9 +15,20 @@ import {
   type BundleEntry,
   type LocalizedResource
 } from '@mbsks/rspfx-compiler-rspack';
-import { readProject, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
+import {
+  readProject,
+  createManifestRegenerator,
+  createReloadController,
+  resolveServeSettings,
+  buildWorkbenchUrl,
+  openBrowser,
+  type ReadProjectResult
+} from '@mbsks/rspfx-dev-runtime';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
+
+const logger = createLogger('rspfx');
 
 export interface RsbuildRspfxPlugin extends RspfxBundlerPluginLike {
   name: string;
@@ -46,6 +57,99 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           return undefined;
         }
       };
+
+      const settings = resolveServeSettings({ config: resolved }, read()?.serveJson);
+      const reload = createReloadController();
+      const originRef: { value: string } = { value: settings.origin };
+
+      let regenerator: ReturnType<typeof createManifestRegenerator> | undefined;
+      const ensureRegenerator = (): ReturnType<typeof createManifestRegenerator> | undefined => {
+        if (regenerator) {
+          return regenerator;
+        }
+        const project = read();
+        if (!project) {
+          return undefined;
+        }
+        const entryModuleIds: Record<string, string> = {};
+        project.webParts.bundles.forEach((bundle, index) => {
+          entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
+        });
+        regenerator = createManifestRegenerator({
+          projectRoot: root,
+          production: false,
+          origin: () => originRef.value,
+          packageVersion: project.webParts.packageVersion,
+          entries: project.webParts.entries,
+          externals: collectExternals(root, project.externals, project.localizedResources),
+          localizedResources: project.localizedResources,
+          webpartsDir: resolved.paths?.webpartsDir,
+          entryModuleIds,
+          bundleUrlSuffix: () => `?t=${reload.current}`
+        });
+        return regenerator;
+      };
+
+      const regenerateAndTick = async (): Promise<void> => {
+        const regen = ensureRegenerator();
+        if (!regen) {
+          return;
+        }
+        await regen.regenerate();
+        reload.tick();
+      };
+
+      api.onBeforeStartDevServer(({ server }) => {
+        server.middlewares.use('/temp/manifests.js', (_req, res, next) => {
+          const regen = ensureRegenerator();
+          if (!regen) {
+            next();
+            return;
+          }
+          const response = res as {
+            setHeader(k: string, v: string): void;
+            end(b: string): void;
+            statusCode?: number;
+          };
+          void regen
+            .regenerate()
+            .then(() => {
+              response.setHeader('Content-Type', 'application/javascript');
+              response.setHeader('Cache-Control', 'no-store');
+              response.end(regen.manifestsJs + reload.clientScript);
+            })
+            .catch((error: unknown) => {
+              response.statusCode = 500;
+              response.end(error instanceof Error ? error.message : String(error));
+            });
+        });
+        server.middlewares.use(reload.path, (req, res) => {
+          reload.handle(req, res as Parameters<typeof reload.handle>[1]);
+        });
+      });
+
+      api.onAfterStartDevServer(({ port }) => {
+        originRef.value = `${settings.scheme}://${settings.hostname}:${port}`;
+        void regenerateAndTick().catch((error: unknown) => {
+          logger.error(
+            `Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+        const workbenchUrl = buildWorkbenchUrl({ ...settings, origin: originRef.value }, resolved);
+        if (workbenchUrl && resolved.dev.openBrowser) {
+          openBrowser(workbenchUrl);
+          logger.info(`Workbench: ${workbenchUrl}`);
+        }
+        logger.success(`Manifest server running at ${originRef.value}/temp/manifests.js`);
+      });
+
+      api.onAfterDevCompile(() => {
+        void regenerateAndTick().catch((error: unknown) => {
+          logger.error(
+            `Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+      });
 
       api.modifyRsbuildConfig((config) => {
         config.tools = { ...(config.tools ?? {}), htmlPlugin: false };
@@ -97,6 +201,9 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           config.resolve.alias = { ...(config.resolve.alias ?? {}), ...localizedAliases };
         }
         const production = utils.isProd;
+        if (!production) {
+          config.optimization = { ...config.optimization, minimize: false };
+        }
         config.plugins.push(
           new rspack.DefinePlugin({
             DEBUG: JSON.stringify(!production),
@@ -131,8 +238,10 @@ function collectExternals(
   localizedResources: LocalizedResource[]
 ): string[] {
   return [
-    ...findSpDependencies(root).keys(),
-    ...projectExternals,
-    ...localizedResources.map((resource) => resource.name)
+    ...new Set([
+      ...findSpDependencies(root).keys(),
+      ...projectExternals,
+      ...localizedResources.map((resource) => resource.name)
+    ])
   ];
 }

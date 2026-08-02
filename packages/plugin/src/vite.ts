@@ -265,9 +265,11 @@ function collectExternals(
   localizedResources: { name: string }[]
 ): string[] {
   return [
-    ...findSpDependencies(root).keys(),
-    ...projectExternals,
-    ...localizedResources.map((resource) => resource.name)
+    ...new Set([
+      ...findSpDependencies(root).keys(),
+      ...projectExternals,
+      ...localizedResources.map((resource) => resource.name)
+    ])
   ];
 }
 

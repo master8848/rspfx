@@ -42,20 +42,48 @@ function writeFixtureProject(dir: string): void {
   fs.mkdirSync(path.join(dir, 'src', 'strings'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'src', 'strings', 'en-us.js'), 'export default { title: "Hello" };');
   fs.writeFileSync(path.join(dir, 'src', 'strings', 'zh-cn.js'), 'export default { title: "你好" };');
+  fs.mkdirSync(path.join(dir, 'node_modules', '@microsoft', 'sp-lodash-subset', 'dist'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'node_modules', '@microsoft', 'sp-lodash-subset', 'package.json'),
+    JSON.stringify({ name: '@microsoft/sp-lodash-subset', version: '1.23.2' })
+  );
+  fs.writeFileSync(
+    path.join(dir, 'node_modules', '@microsoft', 'sp-lodash-subset', 'dist', 'manifest.manifest.json'),
+    JSON.stringify({
+      id: 'bbbbbbbb-1111-4222-8333-444444444444',
+      alias: 'SPLodashSubset',
+      componentType: 'Library',
+      version: '1.23.2',
+      manifestVersion: 2,
+      loaderConfig: { internalModuleBaseUrls: [], entryModuleId: 'sp-lodash-subset', scriptResources: {} }
+    })
+  );
 }
 
 function captureHooks(plugin: { setup(api: unknown): void | Promise<void> }) {
   const hooks: {
     modifyRsbuildConfig?: (config: Record<string, unknown>) => void;
     modifyRspackConfig?: (config: Record<string, unknown>, utils: Record<string, unknown>) => void;
+    onBeforeStartDevServer?: (params: { server: { middlewares: { use(route: string, handler: unknown): void } } }) => void;
+    onAfterStartDevServer?: (params: { port: number }) => void;
+    onAfterDevCompile?: () => void;
   } = {};
   const api = {
-    logger: { warn: (): void => undefined },
+    logger: { warn: (): void => undefined, error: (): void => undefined, info: (): void => undefined, success: (): void => undefined },
     modifyRsbuildConfig: (cb: (config: Record<string, unknown>) => void): void => {
       hooks.modifyRsbuildConfig = cb;
     },
     modifyRspackConfig: (cb: (config: Record<string, unknown>, utils: Record<string, unknown>) => void): void => {
       hooks.modifyRspackConfig = cb;
+    },
+    onBeforeStartDevServer: (cb: (params: { server: { middlewares: { use(route: string, handler: unknown): void } } }) => void): void => {
+      hooks.onBeforeStartDevServer = cb;
+    },
+    onAfterStartDevServer: (cb: (params: { port: number }) => void): void => {
+      hooks.onAfterStartDevServer = cb;
+    },
+    onAfterDevCompile: (cb: () => void): void => {
+      hooks.onAfterDevCompile = cb;
     }
   };
   plugin.setup(api as never);
@@ -111,6 +139,79 @@ describe('rspfxRsbuild', () => {
       HelloStrings: path.join(dir, 'src', 'strings', 'en-us')
     });
     expect((config.plugins as unknown[]).length).toBe(3);
+    rmRf(dir);
+  });
+
+  it('keeps dev builds unminified', () => {
+    const dir = makeTmpDir('rsbuild-minify');
+    writeFixtureProject(dir);
+    const plugin = rspfxRsbuild({ name: 'rsbuild-proj', projectRoot: dir });
+    const hooks = captureHooks(plugin);
+    const config: Record<string, unknown> = { entry: {}, output: {}, resolve: {}, plugins: [] };
+    hooks.modifyRspackConfig?.(config, { isProd: false });
+    expect(config.optimization).toMatchObject({ minimize: false });
+    rmRf(dir);
+  });
+
+  it('serves manifests.js with the reload client and ticks the build counter on compile', async () => {
+    const dir = makeTmpDir('rsbuild-serve');
+    writeFixtureProject(dir);
+    const plugin = rspfxRsbuild({ name: 'rsbuild-proj', projectRoot: dir });
+    const hooks = captureHooks(plugin);
+
+    const handlers = new Map<string, (req: unknown, res: unknown) => void>();
+    const server = {
+      middlewares: {
+        use(route: string, handler: unknown): void {
+          handlers.set(route, handler as (req: unknown, res: unknown) => void);
+        }
+      }
+    };
+    hooks.onBeforeStartDevServer?.({ server });
+
+    expect(handlers.has('/temp/manifests.js')).toBe(true);
+    expect(handlers.has('/__rspfx_hot.json')).toBe(true);
+
+    const manifestHandler = handlers.get('/temp/manifests.js')!;
+    const headers: Record<string, string> = {};
+    let manifestBody = '';
+    await new Promise<void>((resolve) => {
+      manifestHandler(null, {
+        setHeader(name: string, value: string): void {
+          headers[name] = value;
+        },
+        end(body: string): void {
+          manifestBody = body;
+          resolve();
+        }
+      });
+    });
+    expect(headers['Cache-Control']).toBe('no-store');
+    expect(manifestBody).toContain('self.debugManifests');
+    expect(manifestBody).toContain('aaaaaaaa-0000-0000-0000-000000000001');
+    expect(manifestBody).toContain('location.reload');
+    expect(manifestBody).toContain('?t=');
+
+    const hotHandler = handlers.get('/__rspfx_hot.json')!;
+    const readHot = async (): Promise<{ build: number }> => {
+      let hotBody = '';
+      await new Promise<void>((resolve) => {
+        hotHandler(null, {
+          setHeader(): void {
+            // no-op
+          },
+          end(body: string): void {
+            hotBody = body;
+            resolve();
+          }
+        });
+      });
+      return JSON.parse(hotBody) as { build: number };
+    };
+    expect((await readHot()).build).toBe(0);
+    hooks.onAfterDevCompile?.();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect((await readHot()).build).toBe(1);
     rmRf(dir);
   });
 

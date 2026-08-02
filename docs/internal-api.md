@@ -489,5 +489,10 @@ Per-command bundler awareness: for Vite configs, `dev`/`build`/`package` spawn
 the project-local `vite`/`vite build` (one build per web part bundle); for
 Rsbuild configs a single `rsbuild build` runs and `dev` spawns `rsbuild dev`;
 for Rspack configs the internal Rspack pipeline runs as before. `rspfx
-playground` is Rspack-only for now.
+playground` is Rspack-only for now. The Rsbuild plugin mirrors the Vite dev
+features: serves `/temp/manifests.js` + the `/__rspfx_hot.json` reload counter
+via `onBeforeStartDevServer` middlewares, regenerates manifests and ticks the
+counter on `onAfterDevCompile`, keeps dev unminified (`optimization.minimize:
+false`), and opens the workbench when `dev.openBrowser` is set (via
+`onAfterStartDevServer`).
 Guid generation: `crypto.randomUUID`.
