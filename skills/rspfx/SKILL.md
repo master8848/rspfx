@@ -9,7 +9,7 @@ description: Create and build SharePoint Framework (SPFx) web parts with RSPFX �
 
 - **RSPFX is a community toolchain — NOT supported by Microsoft.** Microsoft only supports the official Heft toolchain (last section). No MS docs, MS support tickets, or Stack Overflow for Heft/webpack apply to RSPFX builds.
 - Pick RSPFX for: **speed** (Rust-based Rspack, ~5–10× faster builds than webpack), **any frontend** (React, Vue, Svelte, Solid, Preact, vanilla — official SPFx is React-only), **any bundler** (Rspack default, Vite, Turbopack), one config file instead of gulp + Heft + webpack. Most users choose it for the faster, modern toolchain.
-- Limitations: web parts only (no `ApplicationCustomizer`, `ListViewCommandSet`, library components, Angular), SPFx 1.20–1.22 only, single-locale UI strings.
+- Limitations: web parts only (no `ApplicationCustomizer`, `ListViewCommandSet`, library components, Angular), SPFx 1.20–1.23 only, single-locale UI strings.
 
 ## 1. Install
 
@@ -37,7 +37,7 @@ rspfx new my-app --framework react --language ts --styling tailwind --fluent --s
 | `--language` | `ts` \| `js` |
 | `--styling` | `css` \| `scss` \| `tailwind` |
 | `--fluent` | Fluent UI adapter (React only) |
-| `--spfx-version` | `1.20` \| `1.21` \| `1.22` (default 1.22) |
+| `--spfx-version` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default 1.23) |
 | `--pm` | `pnpm` \| `npm` \| `yarn` |
 | `--no-install` | skip dependency install |
 
@@ -127,5 +127,5 @@ heft test                               # unit tests
 
 | Need | Toolchain |
 |---|---|
-| Speed, modern tooling, any frontend/bundler, web parts only, SPFx 1.20–1.22 | **RSPFX** |
+| Speed, modern tooling, any frontend/bundler, web parts only, SPFx 1.20–1.23 | **RSPFX** |
 | Microsoft support, extensions/ACEs/library components/Angular, older SPFx, on-prem | **Official Heft** (or gulp for ≤1.21.1) |

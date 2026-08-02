@@ -20,7 +20,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ```ts
 export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
-export type SpfxTarget = '1.20' | '1.21' | '1.22';
+export type SpfxTarget = '1.20' | '1.21' | '1.22' | '1.23';
 
 export interface DevConfig {
   port?: number;                 // default 4321 (manifest+bundle server, like official serve)
@@ -49,7 +49,7 @@ export interface RspfxConfig {
   name: string;                  // project name (npm name)
   version?: string;              // build-time version for AMD library names + manifests; overrides package.json
   framework: FrameworkId;
-  spfxVersion: SpfxTarget;       // default '1.22'
+  spfxVersion: SpfxTarget;       // default '1.23'
   fluent: boolean;               // default false
   language: 'typescript' | 'javascript';
   styling: 'css' | 'scss' | 'tailwind';

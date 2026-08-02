@@ -43,7 +43,7 @@ describe('resolveConfig', () => {
     expect(config).toEqual({
       name: 'test-webpart',
       framework: 'vanilla',
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       fluent: false,
       language: 'typescript',
       styling: 'scss',
@@ -157,7 +157,7 @@ describe('defineConfig', () => {
     const config = {
       name: 'identity',
       framework: 'svelte',
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       fluent: false,
       language: 'typescript',
       styling: 'scss',

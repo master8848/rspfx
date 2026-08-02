@@ -21,7 +21,7 @@ RSPFX. It was written from a real migration of
 | `config/config.json` | bundles + externals + `localizedResources` honored (entrypoint paths rewritten, see below) |
 | `config/write-manifests.json` | `cdnBasePath` used for release base URLs |
 | `sharepoint/` solution assets | unchanged |
-| `@microsoft/sp-*` dependencies | stay pinned to your SPFx target (1.20 / 1.21 / 1.22) |
+| `@microsoft/sp-*` dependencies | stay pinned to your SPFx target (1.20 / 1.21 / 1.22 / 1.23) |
 | Localized string modules (`import strings from 'XxxWebPartStrings'`) | resolve natively from `config.json` `localizedResources` (default locale `en-us`) |
 | Lazy `import()` chunks, `*.module.scss`, HTML template imports, `require('*.json')` | supported |
 
@@ -97,7 +97,7 @@ export default {
     new RspfxPlugin({
       name: 'my-app',
       framework: 'react',          // vanilla | react | solid | preact | vue | svelte
-      spfxVersion: '1.22',         // 1.20 | 1.21 | 1.22 — match installed sp-* versions
+      spfxVersion: '1.22',         // 1.20 | 1.21 | 1.22 | 1.23 — match installed sp-* versions
       dev: { tenantUrl: 'https://contoso.sharepoint.com' }
     })
   ]

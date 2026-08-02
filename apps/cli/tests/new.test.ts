@@ -14,7 +14,7 @@ describe('new', () => {
       language: 'ts',
       styling: 'scss',
       fluent: false,
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       pm: 'pnpm',
       install: false,
       tenant: 'https://contoso.sharepoint.com'
@@ -25,6 +25,7 @@ describe('new', () => {
       'package.json',
       'tsconfig.json',
       'rspack.config.ts',
+'.npmrc',
       '.gitignore',
       'README.md',
       'config/package-solution.json',
@@ -48,7 +49,7 @@ describe('new', () => {
     };
     expect(packageJson.name).toBe('my-app');
     expect(packageJson.version).toBe('1.0.0');
-    expect(packageJson.dependencies?.['@microsoft/sp-property-pane']).toBe('1.22.0');
+    expect(packageJson.dependencies?.['@microsoft/sp-property-pane']).toBe('1.23.0');
 
     const solutionConfig = JSON.parse(
       fs.readFileSync(path.join(dest, 'config', 'package-solution.json'), 'utf8')

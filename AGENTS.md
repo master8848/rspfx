@@ -39,6 +39,7 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 ## Structure gotchas
 
 - `examples/*` are git-tracked source (only their build outputs are gitignored) and are CLI-driven smoke apps with `@microsoft/sp-*` @ 1.22, while package dev/peer deps are @ 1.23.2 — version drift is intentional.
+- SPFx version matrix lives in ONE place: `packages/core/src/versions.ts` (`SPFX_VERSIONS`, `SPFX_DEFAULT_TARGET` = 1.23, `spfxNpmVersion`). Never scatter version literals; add a new SPFx target per `docs/supporting-a-new-spfx-version.md`.
 - `apps/cli` is the composition root (commander; commands in `apps/cli/src/commands/`); `packages/templates` scaffolds projects via inline string builders in `src/index.ts` (not template files on disk).
 - Framework packages: per docs/roadmap.md the web part class / preset APIs aren't final until M5 — don't treat them as stable.
 - Env vars: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN` (dev serve); deploy reads `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` (implemented) — the `RSPFX_TENANT`/`RSPFX_USERNAME`/`RSPFX_PASSWORD` vars from the original design are **not implemented** (docs don't reference them).

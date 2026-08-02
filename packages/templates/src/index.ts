@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { configDefaults } from '@mbsks/rspfx-core';
+import { configDefaults, spfxNpmVersion } from '@mbsks/rspfx-core';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 
 export interface TemplateVars {
@@ -92,6 +92,7 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: 'tsconfig.json', content: tsconfigJson(vars) },
     { path: 'rspack.config.ts', content: rspackConfig(vars) },
     { path: '.gitignore', content: gitignore() },
+    { path: '.npmrc', content: npmrc() },
     { path: 'README.md', content: readme(vars) },
     { path: 'config/package-solution.json', content: packageSolution(vars) },
     { path: 'config/serve.json', content: serveJson(vars) },
@@ -160,7 +161,7 @@ function componentExtension(vars: TemplateVars): string {
 }
 
 function packageJson(vars: TemplateVars): string {
-  const spVersion = `${vars.spfxVersion}.0`;
+  const spVersion = spfxNpmVersion(vars.spfxVersion);
   const tailwindDeps = vars.styling === 'tailwind' ? { tailwindcss: '^4.0.0' } : {};
   const framework = frameworkDeps(vars);;
   const shadcnDeps = isShadcn(vars)
@@ -296,6 +297,15 @@ function gitignore(): string {
     '*.sppkg',
     '.DS_Store'
   ].join('\n');
+}
+
+/**
+ * The @microsoft/sp-* packages declare exact-version peers on each other;
+ * npm >= 7 fails those with ERESOLVE. The official SPFx community fix is
+ * legacy-peer-deps, which also auto-installs framework peers (react, vue...).
+ */
+function npmrc(): string {
+  return 'legacy-peer-deps=true\n';
 }
 
 function readme(vars: TemplateVars): string {

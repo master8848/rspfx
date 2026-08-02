@@ -57,7 +57,7 @@ existing project carries over as-is.
        new RspfxPlugin({
          name: 'my-app',
          framework: 'react',
-         spfxVersion: '1.22',
+         spfxVersion: '1.23',
          dev: { tenantUrl: 'https://contoso.sharepoint.com' },
        }),
      ],

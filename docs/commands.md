@@ -20,7 +20,7 @@ Scaffold a new SPFx project and install dependencies.
 | `--language <lang>` | `ts` (typescript) \| `js` (javascript) |
 | `--styling <style>` | `css` \| `scss` \| `tailwind` |
 | `--fluent` | Enable the Fluent UI adapter (React only) |
-| `--spfx-version <v>` | `1.20` \| `1.21` \| `1.22` (default `1.22`) |
+| `--spfx-version <v>` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default `1.23`) |
 | `--pm <pm>` | `pnpm` \| `npm` \| `yarn` (dependency install) |
 | `--no-install` | Skip dependency installation |
 | `--yes` | Accept all defaults; non-interactive |

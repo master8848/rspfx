@@ -17,7 +17,7 @@ function makeVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     namePascal: 'HelloWorld',
     nameCamel: 'helloWorld',
     framework: 'vanilla',
-    spfxVersion: '1.22',
+    spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
     styling: 'css',
@@ -52,6 +52,7 @@ describe('scaffoldProject', () => {
       'package.json',
       'rspack.config.ts',
       'tsconfig.json',
+'.npmrc',
       '.gitignore',
       'README.md',
       'config/package-solution.json',
@@ -80,9 +81,9 @@ describe('scaffoldProject', () => {
     expect(pkg['name']).toBe('@contoso/hello');
     expect(pkg['version']).toBe('0.0.1');
     const deps = pkg['dependencies'] as Record<string, string>;
-    expect(deps['@microsoft/sp-core-library']).toBe('1.22.0');
-    expect(deps['@microsoft/sp-webpart-base']).toBe('1.22.0');
-    expect(deps['@microsoft/sp-property-pane']).toBe('1.22.0');
+    expect(deps['@microsoft/sp-core-library']).toBe('1.23.0');
+    expect(deps['@microsoft/sp-webpart-base']).toBe('1.23.0');
+    expect(deps['@microsoft/sp-property-pane']).toBe('1.23.0');
     const devDeps = pkg['devDependencies'] as Record<string, string>;
     const toolchainVersion = JSON.parse(
       fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')

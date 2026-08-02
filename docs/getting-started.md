@@ -17,7 +17,7 @@ rspfx new my-app
 
 Runs interactively: prompts for framework (vanilla / react / solid / preact / vue /
 svelte), language (typescript / javascript), styling (css / scss / tailwind),
-Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22), and package manager. Then it
+Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22 / 1.23), and package manager. Then it
 scaffolds the project and installs dependencies.
 
 Non-interactive (useful for CI):
@@ -74,7 +74,7 @@ export default {
     new RspfxPlugin({
       name: 'my-app',
       framework: 'react',
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       dev: { tenantUrl: 'https://contoso.sharepoint.com' },
     }),
   ],

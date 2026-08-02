@@ -3,6 +3,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { SPFX_DEFAULT_TARGET } from '@mbsks/rspfx-core';
 import { readProject } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig, type LoadedProject } from '../config.js';
 import { resolveViteBin } from '../vite.js';
@@ -63,7 +64,7 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
   }
 
   const framework = config?.framework ?? 'vanilla';
-  const spfxVersion = config?.spfxVersion ?? '1.22';
+  const spfxVersion = config?.spfxVersion ?? SPFX_DEFAULT_TARGET;
   checks.push(checkFrameworkPackage(framework));
 
   if (packageJsonExists) {

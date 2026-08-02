@@ -1,5 +1,7 @@
+import { SPFX_DEFAULT_TARGET } from './versions.js';
+import type { SpfxTarget } from './versions.js';
+
 export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
-export type SpfxTarget = '1.20' | '1.21' | '1.22';
 
 export interface DevConfig {
   port?: number;
@@ -97,7 +99,7 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     name: config.name,
     ...(config.version !== undefined ? { version: config.version } : {}),
     framework: config.framework ?? 'vanilla',
-    spfxVersion: config.spfxVersion ?? '1.22',
+    spfxVersion: config.spfxVersion ?? SPFX_DEFAULT_TARGET,
     fluent: config.fluent ?? false,
     language: config.language ?? 'typescript',
     styling: config.styling ?? 'scss',

@@ -21,7 +21,7 @@ export function baseVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     namePascal: 'Hello',
     nameCamel: 'hello',
     framework: 'vanilla',
-    spfxVersion: '1.22',
+    spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
     styling: 'scss',

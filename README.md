@@ -58,7 +58,7 @@ rspfx package     # production build → .sppkg
 ## Supported targets
 
 - **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte (Angular deferred)
-- **SPFx targets:** 1.20, 1.21, 1.22
+- **SPFx targets:** 1.20, 1.21, 1.22, 1.23 (default)
 - **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
 
 ## Project structure

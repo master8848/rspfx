@@ -146,7 +146,7 @@ paths, playground, deploy). No config or no plugin → CLI error with guidance.
 | # | Risk | Severity | Mitigation |
 |---|---|---|---|
 | R1 | **Bundle wrapper incompatibility.** SPFx's module loader expects a specific AMD-style `define(...)` wrapper and module-id convention that official webpack emits via a custom plugin. If Rspack's `library` output doesn't match, the web part silently fails to load. | CRITICAL | Phase 0 reference capture: unzip a real `.sppkg`, diff wrapper byte-for-byte; wrap Rspack output with a small output plugin if needed. Automated fixture test compares against captured artifact. |
-| R2 | **sp-* dependency IDs/versions drift** across SPFx 1.20/1.21/1.22. Wrong `component` id/version in loaderConfig → loader fails at runtime. | CRITICAL | Harvest from node_modules `.manifest.json` files, not hardcoded tables; version matrix tests per target. |
+| R2 | **sp-* dependency IDs/versions drift** across SPFx 1.20–1.23. Wrong `component` id/version in loaderConfig → loader fails at runtime. | CRITICAL | Harvest from node_modules `.manifest.json` files, not hardcoded tables; version matrix tests per target. |
 | R3 | **Rspack output-format gaps** (AMD interop, iife/var combos, `output.library.type: 'amd'` behavior) vs webpack. | HIGH | Verify in Phase 2 spike before building anything else; fallback = custom chunk wrapper. |
 | R4 | **Silent dev-mode failure**: wrong cert/URL/port → blank workbench with no error (hard to debug, no local UI tests). | HIGH | `rspfx doctor` runs the same checks SPFx uses; keep the serve pipeline byte-compatible with official behavior. |
 | R5 | **Fast Refresh per framework** needs framework-specific runtimes (react-refresh, solid-refresh, vue HMR, svelte HMR) — 5 runtimes, 5 failure modes. | HIGH | Framework packages own their runtime; fallback to full page refresh is mandatory and automatic. |
@@ -161,7 +161,7 @@ paths, playground, deploy). No config or no plugin → CLI error with guidance.
 
 1. Exact byte-level format of the production bundle wrapper (AMD? named module? `define` signature) and how `entryModuleId` maps to it. → Capture from real `.sppkg`.
 2. Exact ZIP layout of `.sppkg` (root `manifest.json` schema, component manifest filenames, presence/absence of feature.xml, `_locales/`, `assets/`). → Capture.
-3. `manifests.js` global shape (`window['__MANIFESTS__']`? version field?) and full component-manifest schema for 1.20/1.21/1.22. → Capture from `temp/manifests.js` of a reference project.
+3. `manifests.js` global shape (`window['__MANIFESTS__']`? version field?) and full component-manifest schema for 1.20–1.23. → Capture from `temp/manifests.js` of a reference project.
 4. Whether Rspack `output.library.type: 'amd'` + `externals` reproduces the official wrapper without a custom output plugin. → 1-day spike (R3).
 5. How official serve mode resolves local sp-* manifests through :4321 (`node_modules` proxy path shape) — must mirror it for offline-ish workbench. → Capture `temp/serve.json`, curl :4321 endpoints.
 6. Exact `package-solution.json` → `feature.xml` semantics (SPFx generates features server-side from solution metadata; confirm nothing client-side is needed beyond package-solution.json).
@@ -175,7 +175,7 @@ paths, playground, deploy). No config or no plugin → CLI error with guidance.
 
 ```
 Phase 0  Reference capture (no product code)
-         - scaffold official SPFx 1.20/1.21/1.22 projects (vanilla + React)
+         - scaffold official SPFx 1.20–1.23 projects (vanilla + React)
          - capture: built .sppkg, dist bundles, temp/manifests.js, serve endpoints,
            node_modules sp-* manifest inventory → tests/fixtures/reference/
          - 1-day Rspack AMD output spike (Unknown #4)
@@ -252,7 +252,7 @@ Phase 9  Benchmarks + full test suite + docs
 | M6 | Angular (deferred) | Angular web part class + preset on separate compiler track |
 | M7 | Benchmarks, full test suite, docs | Targets met; docs site; migration guide; examples for all frameworks |
 
-Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20/1.21/1.22), framework tests, benchmarks (scripted).
+Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20–1.23), framework tests, benchmarks (scripted).
 
 ---
 
