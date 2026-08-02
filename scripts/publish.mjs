@@ -137,9 +137,9 @@ function isPublished(name, version) {
 }
 
 function verifyPublished(name, version) {
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 15; attempt++) {
     if (isPublished(name, version)) return true;
-    execSync('sleep 1');
+    execSync('sleep 2');
   }
   return false;
 }
@@ -204,6 +204,7 @@ console.log(`  rspfx (root): ${currentVersion} → ${targetVersion}`);
 console.log('\n─ publish ──────────────────────────────────────────────────────────');
 const order = dependencyOrder(set);
 const published = [];
+const unverified = [];
 const failed = [];
 for (const name of order) {
   const pkg = set.get(name);
@@ -231,13 +232,25 @@ for (const name of order) {
     console.error(`  ✗ ${name} failed (exit ${status})`);
     break;
   }
-  if (!verifyPublished(name, targetVersion)) {
-    failed.push(name);
-    console.error(`  ✗ ${name} published but could not be verified on the registry`);
-    break;
-  }
   published.push(name);
-  console.log(`  ✓ ${name}@${targetVersion} verified on npm`);
+  if (verifyPublished(name, targetVersion)) {
+    console.log(`  ✓ ${name}@${targetVersion} verified on npm`);
+  } else {
+    // npm's read-after-write can lag well past a successful publish —
+    // defer the verdict to the final sweep instead of aborting the run.
+    unverified.push(name);
+    console.log(`  ~ ${name}@${targetVersion} published (registry visibility lagging — will re-check)`);
+  }
+}
+
+// Final sweep: give lagging packuments time to settle before declaring failure.
+for (const name of unverified) {
+  if (verifyPublished(name, targetVersion)) {
+    console.log(`  ✓ ${name}@${targetVersion} verified on npm (final sweep)`);
+  } else {
+    failed.push(name);
+    console.error(`  ✗ ${name}@${targetVersion} still not visible on the registry`);
+  }
 }
 
 if (failed.length > 0) {
