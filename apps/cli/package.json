@@ -1,7 +1,7 @@
 {
   "name": "@mbsks/rspfx-cli",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -36,5 +36,10 @@
     "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
     "commander": "^12.1.0",
     "jiti": "^2.4.0"
+  },
+  "description": "rspfx CLI - SPFx-compatible build toolchain powered by Rspack",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/master8848/rspfx.git"
   }
 }

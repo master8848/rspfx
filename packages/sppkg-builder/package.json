@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-sppkg-builder",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -25,5 +25,10 @@
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "fflate": "^0.8.2"
+  },
+  "description": "RSPFX .sppkg package assembly (AppManifest, features, assets)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/master8848/rspfx.git"
   }
 }

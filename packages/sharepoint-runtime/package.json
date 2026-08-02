@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-sharepoint-runtime",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -32,5 +32,10 @@
   "devDependencies": {
     "@microsoft/sp-webpart-base": "1.23.2",
     "@microsoft/sp-core-library": "1.23.2"
+  },
+  "description": "RSPFX shims/bridges for @microsoft/sp-* packages",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/master8848/rspfx.git"
   }
 }

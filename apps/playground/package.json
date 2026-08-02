@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-playground",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "In-repo RSPFX smoke-test app (vanilla web part + playground page)",

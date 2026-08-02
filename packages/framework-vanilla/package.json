@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-framework-vanilla",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -29,5 +29,10 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*"
+  },
+  "description": "RSPFX vanilla JS framework adapter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/master8848/rspfx.git"
   }
 }

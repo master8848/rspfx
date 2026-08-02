@@ -25,7 +25,7 @@ function makeVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     solutionId: '22222222-2222-4222-8222-222222222222',
     featureId: '33333333-3333-4333-8333-333333333333',
     packageName: '@contoso/hello',
-    packageVersion: '0.1.0',
+    packageVersion: '0.0.1',
     ...overrides
   };
 }
@@ -78,7 +78,7 @@ describe('scaffoldProject', () => {
   it('writes a package.json with the package name and pinned sp deps', () => {
     const pkg = readJson(vanillaDir, 'package.json');
     expect(pkg['name']).toBe('@contoso/hello');
-    expect(pkg['version']).toBe('0.1.0');
+    expect(pkg['version']).toBe('0.0.1');
     const deps = pkg['dependencies'] as Record<string, string>;
     expect(deps['@microsoft/sp-core-library']).toBe('1.22.0');
     expect(deps['@microsoft/sp-webpart-base']).toBe('1.22.0');

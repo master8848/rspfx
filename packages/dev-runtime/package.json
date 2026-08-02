@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-dev-runtime",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -35,5 +35,10 @@
     "@mbsks/rspfx-framework-preact": "workspace:*",
     "@mbsks/rspfx-framework-vue": "workspace:*",
     "@mbsks/rspfx-framework-svelte": "workspace:*"
+  },
+  "description": "RSPFX dev runtime: serve emulation, websocket refresh, fast refresh",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/master8848/rspfx.git"
   }
 }

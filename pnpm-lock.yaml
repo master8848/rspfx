@@ -62,6 +62,15 @@ importers:
 
   apps/playground:
     dependencies:
+      '@mbsks/rspfx-core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@mbsks/rspfx-framework-vanilla':
+        specifier: workspace:*
+        version: link:../../packages/framework-vanilla
+      '@mbsks/rspfx-sharepoint-runtime':
+        specifier: workspace:*
+        version: link:../../packages/sharepoint-runtime
       '@microsoft/sp-component-base':
         specifier: ~1.22.0
         version: 1.22.2(@microsoft/microsoft-graph-client@3.0.2)(@types/node@22.20.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(scheduler@0.23.2)
@@ -74,15 +83,6 @@ importers:
       '@microsoft/sp-webpart-base':
         specifier: ~1.22.0
         version: 1.22.2(@microsoft/microsoft-graph-client@3.0.2)(@types/node@22.20.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(scheduler@0.23.2)
-      '@mbsks/rspfx-core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@mbsks/rspfx-framework-vanilla':
-        specifier: workspace:*
-        version: link:../../packages/framework-vanilla
-      '@mbsks/rspfx-sharepoint-runtime':
-        specifier: workspace:*
-        version: link:../../packages/sharepoint-runtime
     devDependencies:
       '@mbsks/rspfx-cli':
         specifier: workspace:*
@@ -370,12 +370,6 @@ importers:
 
   packages/compiler-rspack:
     dependencies:
-      '@rspack/core':
-        specifier: ^1.2.0
-        version: 1.7.12(@swc/helpers@0.5.23)
-      '@rspack/dev-server':
-        specifier: ^1.0.0
-        version: 1.2.1(@rspack/core@1.7.12(@swc/helpers@0.5.23))(tslib@2.8.1)(webpack@5.109.2(lightningcss@1.32.0)(postcss@8.5.25))
       '@mbsks/rspfx-core':
         specifier: workspace:*
         version: link:../core
@@ -385,6 +379,12 @@ importers:
       '@mbsks/rspfx-plugin-api':
         specifier: workspace:*
         version: link:../plugin-api
+      '@rspack/core':
+        specifier: ^1.2.0
+        version: 1.7.12(@swc/helpers@0.5.23)
+      '@rspack/dev-server':
+        specifier: ^1.0.0
+        version: 1.2.1(@rspack/core@1.7.12(@swc/helpers@0.5.23))(tslib@2.8.1)(webpack@5.109.2(lightningcss@1.32.0)(postcss@8.5.25))
       '@tailwindcss/postcss':
         specifier: ^4.0.0
         version: 4.3.3
@@ -507,15 +507,15 @@ importers:
 
   packages/framework-preact:
     dependencies:
-      '@rspack/plugin-preact-refresh':
-        specifier: ^1.0.0
-        version: 1.1.6(@prefresh/core@1.5.10(preact@10.29.8))(@prefresh/utils@1.2.1)
       '@mbsks/rspfx-core':
         specifier: workspace:*
         version: link:../core
       '@mbsks/rspfx-plugin-api':
         specifier: workspace:*
         version: link:../plugin-api
+      '@rspack/plugin-preact-refresh':
+        specifier: ^1.0.0
+        version: 1.1.6(@prefresh/core@1.5.10(preact@10.29.8))(@prefresh/utils@1.2.1)
     devDependencies:
       preact:
         specifier: ^10.24.0
@@ -523,15 +523,15 @@ importers:
 
   packages/framework-react:
     dependencies:
-      '@rspack/plugin-react-refresh':
-        specifier: ^1.0.0
-        version: 1.6.2(react-refresh@0.18.0)
       '@mbsks/rspfx-core':
         specifier: workspace:*
         version: link:../core
       '@mbsks/rspfx-plugin-api':
         specifier: workspace:*
         version: link:../plugin-api
+      '@rspack/plugin-react-refresh':
+        specifier: ^1.0.0
+        version: 1.6.2(react-refresh@0.18.0)
     devDependencies:
       '@types/react':
         specifier: ^18.3.0

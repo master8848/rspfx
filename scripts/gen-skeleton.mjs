@@ -94,7 +94,7 @@ function writePkg(dir, name, extra) {
   mkdirSync(join(ROOT, dir), { recursive: true });
   const pkg = {
     name,
-    version: '0.1.0',
+    version: '0.0.1',
     private: dir.startsWith('apps/'),
     type: 'module',
     main: './dist/index.js',

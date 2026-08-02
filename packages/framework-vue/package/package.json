@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-framework-vue",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -24,8 +24,8 @@
   "dependencies": {
     "vue-loader": "^17.4.2",
     "@vue/compiler-sfc": "^3.5.13",
-    "@mbsks/rspfx-core": "0.1.0",
-    "@mbsks/rspfx-plugin-api": "0.1.0"
+    "/core": "0.0.1",
+    "/plugin-api": "0.0.1"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

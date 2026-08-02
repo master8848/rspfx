@@ -7,7 +7,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ## Shared conventions
 
-- Packages: `@mbsks/rspfx-<name>`, version `0.1.0`, ESM, `main`/`types` → `dist/`.
+- Packages: `@mbsks/rspfx-<name>`, version `0.0.1`, ESM, `main`/`types` → `dist/`.
 - All packages build with `tsc` to `dist/`; typecheck: `pnpm -w exec tsc --noEmit -p <pkg>/tsconfig.json`.
 - Errors: throw `RspfxError(code, message, cause?)` from `@mbsks/rspfx-diagnostics`.
 - Tests: vitest, colocated `tests/*.test.ts`, happy-dom only where DOM needed.

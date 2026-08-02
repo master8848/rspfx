@@ -47,7 +47,7 @@ describe('config loading', () => {
 });
 
 describe('version', () => {
-  it('reads 0.1.0 from package.json', () => {
-    expect(version).toBe('0.1.0');
+  it('reads 0.0.1 from package.json', () => {
+    expect(version).toBe('0.0.1');
   });
 });

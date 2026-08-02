@@ -70,7 +70,7 @@ function frameworkDeps(vars: TemplateVars): Record<string, string> {
   if (!runtime) {
     return {};
   }
-  return { [`@mbsks/rspfx-framework-${vars.framework}`]: '^0.1.0', ...runtime };
+  return { [`@mbsks/rspfx-framework-${vars.framework}`]: '^0.0.1', ...runtime };
 }
 
 function buildFiles(vars: TemplateVars): TemplateFile[] {
