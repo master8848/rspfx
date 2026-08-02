@@ -9,7 +9,7 @@ A Svelte web part demonstrating the RSPFX framework support.
 - `rspfx.config.ts` configuration (framework, spfx target, dev/build/playground settings)
 - Manifest auto-discovery (`src/webparts/hello/hello.manifest.json` + `helloWebPart.ts`)
 - Property pane (`PropertyPaneTextField`) via `getPropertyPaneConfiguration`
-- Standalone playground page (`playground/`) using the framework adapter + `createMockWebPartContext`
+- Standalone playground page (`playground/`) using a self-mounting playground entry + `createMockWebPartContext`
 
 ## Commands
 

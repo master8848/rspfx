@@ -10,7 +10,13 @@ class TestVanillaWebPart extends VanillaWebPart<{ title: string }> {
   }
 }
 
-function initialize(webPart: TestVanillaWebPart, domElement: HTMLElement): void {
+class TestStringVanillaWebPart extends VanillaWebPart<{ title: string }> {
+  protected renderComponent(props: { title: string }): string {
+    return props.title;
+  }
+}
+
+function initialize(webPart: VanillaWebPart<{ title: string }>, domElement: HTMLElement): void {
   (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({
     domElement,
     manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }
@@ -27,7 +33,22 @@ describe('VanillaWebPart', () => {
     const webPart = new TestVanillaWebPart();
     initialize(webPart, domElement);
     webPart.render();
+    expect(domElement.childNodes.length).toBe(1);
     expect(domElement.textContent).toBe('Hello');
+  });
+
+  it('re-renders with updated properties, replacing the previous content', () => {
+    const domElement = document.createElement('div');
+    const webPart = new TestVanillaWebPart();
+    initialize(webPart, domElement);
+    webPart.render();
+    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({
+      properties: { title: 'Updated' },
+      dataVersion: '1.0'
+    });
+    webPart.render();
+    expect(domElement.childNodes.length).toBe(1);
+    expect(domElement.textContent).toBe('Updated');
   });
 
   it('unmounts the component on dispose', () => {
@@ -39,17 +60,13 @@ describe('VanillaWebPart', () => {
     expect(domElement.childNodes.length).toBe(0);
   });
 
-  it('re-renders with updated properties', () => {
+  it('renders a string return value as a text node', () => {
     const domElement = document.createElement('div');
-    const webPart = new TestVanillaWebPart();
+    const webPart = new TestStringVanillaWebPart();
     initialize(webPart, domElement);
     webPart.render();
-    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({
-      properties: { title: 'Updated' },
-      dataVersion: '1.0'
-    });
-    webPart.render();
-    expect(domElement.childNodes.length).toBe(2);
-    expect(domElement.textContent).toBe('HelloUpdated');
+    expect(domElement.childNodes.length).toBe(1);
+    expect(domElement.childNodes[0]!.nodeType).toBe(3);
+    expect(domElement.textContent).toBe('Hello');
   });
 });

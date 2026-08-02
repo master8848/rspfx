@@ -94,6 +94,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const plugins: Configuration['plugins'] = [];
   const alias: Record<string, string> = { ...BUILD_TIME_ALIASES, ...(ctx.aliases ?? {}) };
   const extensions: string[] = [...BASE_EXTENSIONS];
+  const frameworkRules: RuleSetRule[] = [];
 
   for (const contribution of ctx.swcContributions ?? []) {
     const contrib = contribution as FrameworkRspackContributions;
@@ -105,6 +106,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     }
     if (contrib.rules) {
       rules.push(...(contrib.rules as RuleSetRule[]));
+      frameworkRules.push(...(contrib.rules as RuleSetRule[]));
     }
     if (contrib.plugins) {
       plugins.push(...(contrib.plugins as NonNullable<Configuration['plugins']>));
@@ -117,11 +119,21 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     }
     if (contrib.moduleTest?.test) {
       rules.push({ test: contrib.moduleTest.test, type: contrib.moduleTest.type });
+      frameworkRules.push({ test: contrib.moduleTest.test, type: contrib.moduleTest.type });
     }
   }
 
+  const claimsJsx = (test: unknown): boolean => {
+    if (test instanceof RegExp) {
+      return test.test('file.tsx') || test.test('file.jsx');
+    }
+    return typeof test === 'string' && (test.includes('.tsx') || test.includes('.jsx'));
+  };
+  const frameworkHandlesJsx = frameworkRules.some((rule) => claimsJsx(rule.test));
+
+  const jsSourceTest = frameworkHandlesJsx ? /\.(ts|js)$/ : /\.(ts|tsx|jsx|js)$/;
   rules.push({
-    test: /\.(ts|tsx|jsx|js)$/,
+    test: jsSourceTest,
     loader: 'builtin:swc-loader',
     options: { jsc: swcJsc }
   });

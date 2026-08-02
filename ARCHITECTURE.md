@@ -72,7 +72,7 @@ src/ → compiler-rspack → dist/ (bundles + assets)
           ▼              ▼                 ▼                  ▼
    ┌────────────┐  ┌────────────┐  ┌─────────────┐   ┌──────────────┐
    │diagnostics │  │ plugin-api │  │sharepoint-  │   │framework-*   │
-   │(log/error/ │  │(adapters,  │  │runtime      │   │(vanilla,     │
+   │(log/error/ │  │(presets,   │  │runtime      │   │(vanilla,     │
    │ telemetry) │  │ loaders,   │  │(sp-* shims, │   │ react, solid,│
    └────────────┘  │ hooks)     │  │ webpart id  │   │ preact, vue, │
                    └────────────┘  │ mapping)    │   │ svelte,      │
@@ -112,19 +112,19 @@ Rules:
 |---|---|---|---|---|
 | `core` | foundation | — | SPFx interfaces, `BaseClientSideWebPart`, `WebPartContext`, property pane contracts, `Environment`, `ThemeProvider`, types | `defineConfig`, `BaseWebPart`, types |
 | `diagnostics` | foundation | core | logger, error codes, telemetry (opt-out), timers | `Logger`, `trace()` |
-| `plugin-api` | foundation | core, diagnostics | FrameworkAdapter interface, loader/transform hooks, packaging hooks | `FrameworkAdapter`, hook types |
+| `plugin-api` | foundation | core, diagnostics | FrameworkPreset interface, loader/transform hooks, packaging hooks | `FrameworkPreset`, hook types |
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, TS via swc, sourcemaps, tree-shaking, splitting, CSS/SCSS/CSS-modules, assets, caching | `createCompiler()`, `watch()` |
 | `manifest-generator` | build | core, diagnostics | manifests.js, component manifests, loaderConfig, asset references | `generateManifests()` |
 | `sppkg-builder` | build (PRIORITY 1) | manifest-generator, core | package-solution.json, solution feature metadata, package manifest, ZIP, `.sppkg` | `buildPackage()` |
 | `manifest-server` | dev | core, diagnostics | certs + dev certificates only; serving is handled by the compiler dev server | `ensureCertificates()` |
 | `dev-runtime` | dev | core, compiler-rspack, manifest-server | serve emulation, websocket hub, browser refresh, fast-refresh runtime, workbench URL | `startDev()`, `FastRefreshRuntime` |
-| `framework-vanilla` | framework | core, plugin-api | DOM mount/unmount adapter | adapter |
-| `framework-react` | framework | core, plugin-api | react adapter + fast refresh (react-refresh) | adapter |
-| `framework-solid` | framework | core, plugin-api | solid adapter + fast refresh (solid-refresh) | adapter |
-| `framework-preact` | framework | core, plugin-api | preact adapter + refresh | adapter |
-| `framework-vue` | framework | core, plugin-api | vue adapter + vue HMR | adapter |
-| `framework-svelte` | framework | core, plugin-api | svelte adapter + svelte HMR | adapter |
-| `framework-angular` | framework | core, plugin-api | **DEFERRED** — separate compiler track (AOT, ngc/ng-packagr) | adapter |
+| `framework-vanilla` | framework | core, plugin-api | vanilla web part class (replaceChildren) | preset |
+| `framework-react` | framework | core, plugin-api | react web part class (createRoot) + fast refresh (react-refresh) | preset |
+| `framework-solid` | framework | core, plugin-api | solid web part class (render + dispose); no refresh | preset |
+| `framework-preact` | framework | core, plugin-api | preact web part class (render / render-null) + refresh | preset |
+| `framework-vue` | framework | core, plugin-api | vue web part class (createApp + unmount) + vue HMR | preset |
+| `framework-svelte` | framework | core, plugin-api | svelte web part class (new Component + $destroy) + svelte HMR | preset |
+| `framework-angular` | framework | core, plugin-api | **DEFERRED** — separate compiler track (AOT, ngc/ng-packagr) | preset |
 | `fluent-adapter` | optional | framework-react | Fluent UI web part boilerplate, theme sync | `FluentWebPart` |
 | `sharepoint-runtime` | runtime | core | shims/bridges for sp-* npm packages, framework→SPFx glue | helpers |
 | `templates` | scaffolding | — | project templates (per framework, per language, per styling) | template files |
@@ -181,7 +181,7 @@ Phase 2  Packaging core (PRIORITY #1 — the "prove .sppkg works" milestone)
          - sppkg-builder + manifest-generator
          - fixture-driven: fixture src → dist → solution.sppkg
          - unit + packaging tests against captured reference artifacts
-         - vanilla adapter
+         - vanilla web part class
          ✅ GATE: generated .sppkg installs in a real tenant app catalog,
            web part renders, property pane opens, no console errors.
 
@@ -190,7 +190,7 @@ Phase 3  Compiler
 
 Phase 4  CLI build+package surface
          - rspfx new / build / package / clean / analyze / doctor
-         - React + Solid adapters (build-only)
+         - React + Solid web part classes (build-only)
 
 Phase 5  Dev mode
          - :4321 dev server (in compiler-rspack) with certs from manifest-server;
@@ -204,7 +204,7 @@ Phase 6  dev --refresh + playground
          - playground: standalone localhost sandbox, no SharePoint
 
 Phase 7  Framework breadth
-         - Preact, Vue, Svelte adapters + refresh
+         - Preact, Vue, Svelte web part classes + refresh
          - Fluent adapter
 
 Phase 8  Angular (deferred track, only after Phases 2–6 proven)
@@ -241,8 +241,8 @@ Phase 9  Benchmarks + full test suite + docs
 | M2 | Compiler + build/package CLI + React/Solid | `rspfx new` → `rspfx build` → `rspfx package` one-command happy path for 3 frameworks |
 | M3 | Dev mode | Workbench-first live editing, auto browser open, <2s cold start, <300ms rebuild |
 | M4 | Fast refresh + playground | State-preserving refresh <150ms; sandbox mode without tenant |
-| M5 | Framework breadth + Fluent | Preact/Vue/Svelte adapters; Fluent web part scaffold |
-| M6 | Angular (deferred) | Angular adapter on separate compiler track |
+| M5 | Framework breadth + Fluent | Preact/Vue/Svelte web part classes; Fluent web part scaffold |
+| M6 | Angular (deferred) | Angular web part class + preset on separate compiler track |
 | M7 | Benchmarks, full test suite, docs | Targets met; docs site; migration guide; examples for all frameworks |
 
 Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20/1.21/1.22), framework tests, benchmarks (scripted).

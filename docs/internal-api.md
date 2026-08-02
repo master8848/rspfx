@@ -82,7 +82,7 @@ export interface ThemeProvider {
   addChangeListener(listener: () => void): void;
   removeChangeListener(listener: (() => void)): void;
 }
-export interface WebPartContextLike {   // minimal surface used by adapters/templates
+export interface WebPartContextLike {   // minimal surface used by web parts/templates
   instanceId: string;
   webPartTag: string;
   domElement: HTMLElement;
@@ -97,29 +97,21 @@ export interface WebPartContextLike {   // minimal surface used by adapters/temp
 // Base web part (extends real @microsoft/sp-webpart-base BaseClientSideWebPart when available)
 export abstract class BaseWebPart<TProps extends Record<string, unknown> = Record<string, unknown>> {
   // Provided by @microsoft/sp-webpart-base at runtime; declared here as dependency contract
-  protected abstract get frameworkAdapter(): import('@mbsks/rspfx-plugin-api').FrameworkAdapter | null;
-  protected abstract createComponent(): unknown;            // framework root component instance
   protected abstract getComponentProps(): TProps;           // props derived from this.properties
-  public render(): void;                                    // mount via adapter into this.domElement
-  protected onDispose(): void;                              // unmount via adapter
+  protected abstract renderInto(root: HTMLElement): void;   // mount the framework root component into root
+  protected abstract disposeFrom(root: HTMLElement): void;  // tear down; dispose effects, remove listeners
+  public render(): void;                                    // mounts via renderInto(this.domElement)
+  protected onDispose(): void;                              // disposeFrom(this.domElement) then super
 }
 ```
 
-`BaseWebPart` and the `FrameworkAdapter` type live in `src/base-web-part.ts`,
-exported via the `@mbsks/rspfx-core/webpart` subpath (browser side); the index
-re-exports `FrameworkAdapter` as a type only and never imports the web part
-runtime.
+`BaseWebPart` lives in `src/base-web-part.ts`, exported via the
+`@mbsks/rspfx-core/webpart` subpath (browser side); the index never imports the
+web part runtime.
 
 ## @mbsks/rspfx-plugin-api (depends on core only)
 
 ```ts
-export interface FrameworkAdapter {
-  name: string;
-  mount(root: HTMLElement, component: unknown): void;
-  unmount(root: HTMLElement): void;
-  update(root: HTMLElement): void;
-  supportsFastRefresh(): boolean;
-}
 export interface FrameworkRspackContributions {   // structural; typed loosely to stay compiler-agnostic
   rules?: unknown[];        // rspack RuleSetRule[]
   plugins?: unknown[];      // rspack plugin instances
@@ -130,7 +122,6 @@ export interface FrameworkRspackContributions {   // structural; typed loosely t
 }
 export interface FrameworkPreset {
   name: import('@mbsks/rspfx-core').FrameworkId;
-  adapter(): FrameworkAdapter;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
 }
 export interface CompilerHooks {
@@ -335,15 +326,14 @@ export function resolveContributionLoaders(contributions: Record<string, unknown
 Each package `@mbsks/rspfx-framework-react|solid|preact|vue|svelte|vanilla` exposes two
 entry points:
 
-- Index (`@mbsks/rspfx-framework-<fw>`) — Node-safe; exports only the preset + adapter,
+- Index (`@mbsks/rspfx-framework-<fw>`) — Node-safe; exports only the preset,
   never imports `@mbsks/rspfx-core/webpart`:
 
 ```ts
 export const preset: FrameworkPreset;       // name = '<framework>'
-export const adapter: FrameworkAdapter;      // singleton
 ```
 
-- Subpath (`@mbsks/rspfx-framework-<fw>/webpart`) — the web part base classes
+- Subpath (`@mbsks/rspfx-framework-<fw>/webpart`) — the web part base class
   (browser side):
 
 ```ts
@@ -353,13 +343,24 @@ export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> {
 
 - Svelte's `/webpart` subpath also exports
   `type SvelteWebPartComponent<TProps extends Record<string, unknown>>` — the
-  `{ component, props }` shape the adapter mounts.
-- `framework-vanilla`: mount = append component (HTMLElement|string), no refresh.
-- React: react ^18, react-dom ^18 (peers); mount via `createRoot(root).render(component)`; update re-renders with new props (render again); fast refresh: `@rspack/plugin-react-refresh` contribution when fastRefresh.
-- Solid: `render(() => component, root)` from solid-js/web; refresh: babel-loader + babel-preset-solid (+ solid-refresh in dev).
-- Preact: `render(component, root)` from preact; refresh: `@rspack/plugin-preact-refresh`.
-- Vue: `createApp(component).mount(root)`; refresh: vue-loader HMR (peer @vue/compiler-sfc; contribution: vue-loader rule).
-- Svelte: `new Component({ target: root, props })`; refresh: svelte-loader `hotReload` (svelte-hmr).
+  `{ component, props }` shape the web part class mounts.
+- `framework-vanilla`: `VanillaWebPart.renderInto` replaces children — the
+  component is an `HTMLElement | string`; no refresh.
+- React: react ^18, react-dom ^18 (peers); `ReactWebPart.renderInto` mounts via
+  `createRoot(root).render(...)` (root cached in a WeakMap); re-render re-renders
+  in place with new props; fast refresh: `@rspack/plugin-react-refresh`
+  contribution when fastRefresh.
+- Solid: `SolidWebPart.renderInto` uses `render(() => component, root)` from
+  solid-js/web, with a disposers WeakMap — dispose-then-recreate on re-render;
+  refresh: babel-loader + babel-preset-solid (no fast-refresh contribution).
+- Preact: `PreactWebPart.renderInto` uses `render(vnode, root)` from preact;
+  `disposeFrom` renders `null`; refresh: `@rspack/plugin-preact-refresh`.
+- Vue: `VueWebPart.renderInto` uses `createApp(Component).mount(root)` with an
+  apps WeakMap — unmount-then-create on re-render; refresh: vue-loader HMR (peer
+  @vue/compiler-sfc; contribution: vue-loader rule).
+- Svelte: `SvelteWebPart.renderInto` does `new Component({ target: root, props })`
+  with an instances WeakMap — `$destroy()` then recreate on re-render; refresh:
+  svelte-loader `hotReload` (svelte-hmr).
 - Each preset's `contributions` must return compiler rules/plugins/swc for JSX/refresh — compilers merge them.
 
 ## @mbsks/rspfx-sharepoint-runtime (depends on core; peer @microsoft/sp-*)

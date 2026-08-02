@@ -30,7 +30,7 @@
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*"
   },
-  "description": "RSPFX vanilla JS framework adapter",
+  "description": "RSPFX vanilla JS framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

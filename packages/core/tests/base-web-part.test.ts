@@ -2,40 +2,19 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { BaseWebPart } from '../src/base-web-part.js';
 
-interface MockAdapter {
-  name: string;
-  mount: ReturnType<typeof vi.fn>;
-  unmount: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  supportsFastRefresh: () => boolean;
-}
-
-function createMockAdapter(): MockAdapter {
-  return {
-    name: 'mock',
-    mount: vi.fn(),
-    unmount: vi.fn(),
-    update: vi.fn(),
-    supportsFastRefresh: () => false
-  };
-}
-
 class TestWebPart extends BaseWebPart<{ title: string }> {
   public constructor(
-    private readonly adapter: MockAdapter | null,
-    private readonly component: unknown
+    public readonly onRenderInto: (root: HTMLElement) => void,
+    public readonly onDisposeFrom: (root: HTMLElement) => void
   ) {
     super();
   }
-
-  protected get frameworkAdapter() {
-    return this.adapter;
+  protected renderInto(root: HTMLElement): void {
+    this.onRenderInto(root);
   }
-
-  protected createComponent(): unknown {
-    return this.component;
+  protected disposeFrom(root: HTMLElement): void {
+    this.onDisposeFrom(root);
   }
-
   protected getComponentProps(): { title: string } {
     return this.properties;
   }
@@ -53,44 +32,43 @@ function initialize(webPart: TestWebPart, domElement: unknown): void {
 }
 
 describe('BaseWebPart', () => {
-  it('mounts the component into the domElement via the framework adapter on render()', () => {
-    const adapter = createMockAdapter();
-    const component = { kind: 'mock-component' };
+  it('invokes renderInto with the domElement on render()', () => {
+    const renderInto = vi.fn();
     const domElement = {} as HTMLElement;
-    const webPart = new TestWebPart(adapter, component);
+    const webPart = new TestWebPart(renderInto, vi.fn());
     initialize(webPart, domElement);
 
     webPart.render();
 
-    expect(adapter.mount).toHaveBeenCalledTimes(1);
-    expect(adapter.mount).toHaveBeenCalledWith(domElement, component);
+    expect(renderInto).toHaveBeenCalledTimes(1);
+    expect(renderInto).toHaveBeenCalledWith(domElement);
   });
 
-  it('unmounts the component via the framework adapter on onDispose()', () => {
-    const adapter = createMockAdapter();
+  it('invokes disposeFrom with the domElement on onDispose()', () => {
+    const disposeFrom = vi.fn();
     const domElement = {} as HTMLElement;
-    const webPart = new TestWebPart(adapter, {});
+    const webPart = new TestWebPart(vi.fn(), disposeFrom);
     initialize(webPart, domElement);
 
     (webPart as unknown as { onDispose(): void }).onDispose();
 
-    expect(adapter.unmount).toHaveBeenCalledTimes(1);
-    expect(adapter.unmount).toHaveBeenCalledWith(domElement);
+    expect(disposeFrom).toHaveBeenCalledTimes(1);
+    expect(disposeFrom).toHaveBeenCalledWith(domElement);
   });
 
-  it('is a no-op when no framework adapter is available', () => {
-    const adapter = createMockAdapter();
+  it('render() does not throw and passes the domElement through', () => {
+    const renderInto = vi.fn();
     const domElement = {} as HTMLElement;
-    const webPart = new TestWebPart(null, {});
+    const webPart = new TestWebPart(renderInto, vi.fn());
     initialize(webPart, domElement);
 
     expect(() => webPart.render()).not.toThrow();
-    expect(adapter.mount).not.toHaveBeenCalled();
+    expect(renderInto).toHaveBeenCalledTimes(1);
+    expect(renderInto).toHaveBeenCalledWith(domElement);
   });
 
   it('derives component props from this.properties', () => {
-    const adapter = createMockAdapter();
-    const webPart = new TestWebPart(adapter, null);
+    const webPart = new TestWebPart(vi.fn(), vi.fn());
     initialize(webPart, {} as HTMLElement);
 
     const props = (webPart as unknown as { getComponentProps(): { title: string } }).getComponentProps();

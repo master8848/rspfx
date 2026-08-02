@@ -67,14 +67,14 @@ rspfx package     # production build → .sppkg
 apps/cli                  the rspfx binary (composition root)
 apps/playground           standalone playground host
 packages/core             SPFx types, base web part, config — zero dependencies
-packages/plugin-api       FrameworkAdapter / FrameworkPreset / plugin hooks
+packages/plugin-api       FrameworkPreset / plugin hooks
 packages/diagnostics      logger, errors, telemetry, benchmarks
 packages/compiler-rspack  Rspack config factory, TS via swc, SCSS, assets
 packages/manifest-generator  component manifests, manifests.js, sp-* deps
 packages/sppkg-builder    .sppkg ZIP assembly (AppManifest, features, assets)
 packages/manifest-server  dev certificates in ~/.rspfx/certs (serving is handled by the compiler dev server)
 packages/dev-runtime      serve emulation, websocket refresh, fast-refresh runtime
-packages/framework-*      per-framework adapters (vanilla, react, solid, preact, vue, svelte)
+packages/framework-*      per-framework presets + web part classes (vanilla, react, solid, preact, vue, svelte)
 packages/fluent-adapter   optional Fluent UI web part base (React-only)
 packages/sharepoint-runtime  shims/bridges for sp-* packages
 packages/templates        project scaffolding templates
@@ -107,7 +107,7 @@ webpack + gulp to RSPFX with zero web part code changes. See its README and
 | Migration overview | [docs/migration-from-spfx.md](docs/migration-from-spfx.md) |
 | Real-world case study (PnP Modern Search) | [docs/migration-case-study.md](docs/migration-case-study.md) |
 | Why you should NOT migrate (yet) | [docs/why-not-to-migrate.md](docs/why-not-to-migrate.md) |
-| Framework adapters | [docs/frameworks.md](docs/frameworks.md) |
+| Framework support | [docs/frameworks.md](docs/frameworks.md) |
 | Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
 | Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |

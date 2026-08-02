@@ -6,7 +6,7 @@ Fast refresh in RSPFX mirrors the semantics of a modern HMR pipeline while
 keeping the SharePoint workbench as the primary surface:
 
 ```
-save → Rspack incremental rebuild → onEmit → manifest regeneration → websocket refresh event → adapter re-mount
+save → Rspack incremental rebuild → onEmit → manifest regeneration → websocket refresh event → web part re-render
   ├─ fast refresh enabled: framework HMR plugin (react/preact/vue/svelte) patches the component tree in place
   └─ otherwise: fallback → full page reload
 ```
@@ -80,6 +80,7 @@ runtime is just an extra client-side layer. Use plain `dev` when you want maxima
 predictability (e.g. debugging a property-pane or theme interaction), and
 `--refresh` for component iteration.
 
-`supportsFastRefresh()` on a framework adapter reports whether the framework
-has a refresh-capable runtime — it does not mean the plugin package is
+Fast refresh is a per-package **compiler contribution** only (the react/preact/
+vue/svelte presets add their HMR plugin when `fastRefresh` is enabled; solid and
+vanilla have none — nothing runtime). It does not mean the plugin package is
 installed; the stub warning above is the source of truth for the actual wiring.

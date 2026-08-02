@@ -1,6 +1,5 @@
 export type {
   CompilerHooks,
-  FrameworkAdapter,
   FrameworkPreset,
   FrameworkRspackContributions,
   PackageHooks,

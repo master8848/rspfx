@@ -27,7 +27,7 @@ await handle.close();
 - `startServe(project, opts)` — dev server + manifest server + workbench launch
 - `startPlayground(project, opts)` — standalone localhost sandbox (no SharePoint)
 - `readProject(dir)` — load and validate `rspfx.config.ts`
-- `loadFrameworkPreset(framework)` — resolve framework adapter
+- `loadFrameworkPreset(framework)` — resolve framework preset (compiler contributions)
 - `createRefreshRuntime(project)` — websocket refresh runtime
 - `discoverWebParts(project)` — find web part entry points
 - `DevRuntimeHandle`, `DevRuntimeOptions` — types

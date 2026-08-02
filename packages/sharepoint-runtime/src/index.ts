@@ -29,25 +29,18 @@ export function createMockWebPartContext(
 }
 
 export function createPlaygroundLoader(
-  webpartModule: unknown,
-  adapter?: { mount(root: HTMLElement, component: unknown): void; unmount(root: HTMLElement): void }
+  mountComponent: (root: HTMLElement) => void,
+  unmountComponent?: (root: HTMLElement) => void
 ): { mount(root: HTMLElement): void; unmount(): void } {
-  const component = (webpartModule as { default?: unknown } | undefined)?.default ?? webpartModule;
   let mountedRoot: HTMLElement | undefined;
   return {
     mount(root: HTMLElement): void {
-      if (!adapter) {
-        throw new RspfxError(
-          'PLAYGROUND_ADAPTER_REQUIRED',
-          'The playground loader needs a framework adapter to mount the web part component.'
-        );
-      }
       mountedRoot = root;
-      adapter.mount(root, component);
+      mountComponent(root);
     },
     unmount(): void {
-      if (adapter && mountedRoot) {
-        adapter.unmount(mountedRoot);
+      if (unmountComponent && mountedRoot) {
+        unmountComponent(mountedRoot);
       }
     }
   };

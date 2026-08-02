@@ -27,10 +27,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
     "babel-loader": "^9.2.1",
-    "@babel/core": "^7.26.0",
     "babel-preset-solid": "^1.9.4"
   },
   "peerDependencies": {
@@ -39,7 +40,7 @@
   "devDependencies": {
     "solid-js": "^1.9.4"
   },
-  "description": "RSPFX Solid framework adapter",
+  "description": "RSPFX Solid framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

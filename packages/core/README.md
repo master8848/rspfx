@@ -32,7 +32,7 @@ const config = resolveConfig(
 - `FrameworkId`, `SpfxTarget` — framework and SPFx target unions
 - `EnvironmentType`, `PropertyPaneFieldType` — SPFx-compatible enums
 - `Version` — SPFx-style version parsing/comparison
-- Base web part (`BaseWebPart`, `FrameworkAdapter` type) — extend to build your own web parts
+- Base web part (`BaseWebPart` with `renderInto`/`disposeFrom`/`getComponentProps` hooks) — extend to build your own web parts
 
 ## Links
 

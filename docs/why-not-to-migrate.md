@@ -30,8 +30,9 @@ right call, or at least the low-risk one.
 
 - **The toolchain is new.** Fewer battle-tested users than `gulp serve` +
   spfx-fast-serve. You become the beta tester.
-- **Adapters aren't final.** Framework adapter APIs are explicitly unstable
-  until milestone M5 — the framework packages can change under you.
+- **Framework APIs aren't final.** The web part class / preset surface is
+  explicitly unstable until milestone M5 — the framework packages can change
+  under you.
 - **No extension ecosystem.** No spfx-fast-serve, no PnP CLI build plugins,
   no custom heft rigs. The PnP tooling you may rely on (PnPjs, controls) works,
   but PnP-ecosystem *build* tooling doesn't apply.

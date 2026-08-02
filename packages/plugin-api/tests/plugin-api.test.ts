@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { definePlugin, getPlugins, registerPlugin } from '../src/index.js';
-import type { FrameworkAdapter, FrameworkPreset, RspfxPlugin } from '../src/index.js';
+import type { FrameworkPreset, RspfxPlugin } from '../src/index.js';
 
 describe('registerPlugin / getPlugins', () => {
   it('roundtrips registered plugins', () => {
@@ -40,22 +40,9 @@ describe('definePlugin', () => {
 });
 
 describe('FrameworkPreset structural compliance', () => {
-  it('exposes a name, adapter factory and contributions factory', () => {
-    const adapter: FrameworkAdapter = {
-      name: 'react',
-      mount: (root: HTMLElement, component: unknown) => {
-        expect(root.tagName).toBe('DIV');
-        expect(component).toBe('component');
-      },
-      unmount: (root: HTMLElement) => {
-        expect(root).toBeTruthy();
-      },
-      update: () => {},
-      supportsFastRefresh: () => true
-    };
+  it('exposes a name and a contributions factory', () => {
     const preset: FrameworkPreset = {
       name: 'react',
-      adapter: () => adapter,
       contributions: (opts) => ({
         rules: [{ test: /\.tsx$/ }],
         plugins: ['react-refresh'],
@@ -69,7 +56,6 @@ describe('FrameworkPreset structural compliance', () => {
     registerPlugin(plugin);
     expect(getPlugins()).toContain(plugin);
     expect(preset.name).toBe('react');
-    expect(preset.adapter()).toBe(adapter);
 
     const refresh = preset.contributions({ fastRefresh: true });
     expect(refresh.rules).toHaveLength(1);
@@ -82,19 +68,11 @@ describe('FrameworkPreset structural compliance', () => {
 
     const prod = preset.contributions({ fastRefresh: false });
     expect(prod.define?.['__DEV__']).toBe('false');
-    expect(adapter.supportsFastRefresh()).toBe(true);
   });
 
-  it('accepts a preset with only an adapter', () => {
+  it('accepts a preset with only a name and contributions factory', () => {
     const preset: FrameworkPreset = {
       name: 'vanilla',
-      adapter: () => ({
-        name: 'vanilla',
-        mount: () => {},
-        unmount: () => {},
-        update: () => {},
-        supportsFastRefresh: () => false
-      }),
       contributions: () => ({})
     };
     const plugin: RspfxPlugin = { name: 'framework-vanilla', frameworkPreset: preset };

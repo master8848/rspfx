@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-svelte
 
-Svelte framework adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Svelte framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
 Provides the `SvelteWebPart` base class with `svelte-loader` + `svelte-hmr` support.
 
@@ -16,7 +16,7 @@ Requires `svelte` `^4.2` as a peer dependency.
 
 ```ts
 import { SvelteWebPart } from '@mbsks/rspfx-framework-svelte/webpart';
-import { adapter, preset } from '@mbsks/rspfx-framework-svelte';
+import { preset } from '@mbsks/rspfx-framework-svelte';
 
 export default class MyWebPart extends SvelteWebPart {
   protected async renderComponent(root: HTMLElement): Promise<void> {
@@ -28,7 +28,7 @@ export default class MyWebPart extends SvelteWebPart {
 ## API
 
 - `SvelteWebPart` — base web part class (from `@mbsks/rspfx-framework-svelte/webpart`)
-- `adapter` / `preset` — `FrameworkAdapter` / `FrameworkPreset` registrations
+- `preset` — `FrameworkPreset` compiler contributions (from the package index)
 
 ## Links
 

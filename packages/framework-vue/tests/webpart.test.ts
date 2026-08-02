@@ -1,17 +1,15 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { act, createElement, type ReactElement } from 'react';
-import { ReactWebPart } from '../src/webpart.js';
+import { h, type Component } from 'vue';
+import { VueWebPart } from '../src/webpart.js';
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-class TestReactWebPart extends ReactWebPart<{ title: string }> {
-  protected renderComponent(props: { title: string }): ReactElement {
-    return createElement('div', { className: 'title' }, props.title);
+class TestVueWebPart extends VueWebPart<{ title: string }> {
+  protected renderComponent(props: { title: string }): Component {
+    return { render: () => h('div', null, props.title) };
   }
 }
 
-function initialize(webPart: TestReactWebPart, domElement: HTMLElement): void {
+function initialize(webPart: TestVueWebPart, domElement: HTMLElement): void {
   (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({
     domElement,
     manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }
@@ -22,44 +20,35 @@ function initialize(webPart: TestReactWebPart, domElement: HTMLElement): void {
   });
 }
 
-describe('ReactWebPart', () => {
-  it('renders the react component into the web part domElement', () => {
+describe('VueWebPart', () => {
+  it('renders the vue component into the web part domElement', () => {
     const domElement = document.createElement('div');
-    const webPart = new TestReactWebPart();
+    const webPart = new TestVueWebPart();
     initialize(webPart, domElement);
-    act(() => {
-      webPart.render();
-    });
+    webPart.render();
     expect(domElement.textContent).toBe('Hello');
   });
 
   it('re-renders with updated properties', () => {
     const domElement = document.createElement('div');
-    const webPart = new TestReactWebPart();
+    const webPart = new TestVueWebPart();
     initialize(webPart, domElement);
-    act(() => {
-      webPart.render();
-    });
+    webPart.render();
     (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({
       properties: { title: 'Updated' },
       dataVersion: '1.0'
     });
-    act(() => {
-      webPart.render();
-    });
+    webPart.render();
     expect(domElement.textContent).toBe('Updated');
+    expect(domElement.childNodes.length).toBe(1);
   });
 
-  it('unmounts the component tree on dispose', () => {
+  it('unmounts the app on dispose', () => {
     const domElement = document.createElement('div');
-    const webPart = new TestReactWebPart();
+    const webPart = new TestVueWebPart();
     initialize(webPart, domElement);
-    act(() => {
-      webPart.render();
-    });
-    act(() => {
-      (webPart as unknown as { onDispose(): void }).onDispose();
-    });
+    webPart.render();
+    (webPart as unknown as { onDispose(): void }).onDispose();
     expect(domElement.childNodes.length).toBe(0);
   });
 });

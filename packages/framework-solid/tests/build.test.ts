@@ -58,7 +58,7 @@ describe('framework-solid build', () => {
   it('compiles solid JSX via babel-preset-solid', () => {
     const bundle = fs.readFileSync(path.join(FIXTURE, OUT_DIR, 'test.js'), 'utf8');
     expect(bundle).toContain('createSignal');
-    expect(bundle).toContain('solid_js__rspack_import_0');
-    expect(bundle).not.toContain('<div>');
+    expect(bundle).toContain('createComponent');
+    expect(bundle).not.toContain('React.createElement');
   });
 });

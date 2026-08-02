@@ -10,40 +10,64 @@ vi.mock('solid-js/web', async () => {
   return mod;
 });
 
-import { adapter } from '../src/index.js';
+import type { JSX } from 'solid-js';
+import { SolidWebPart } from '../src/webpart.js';
 
-describe('solid framework adapter', () => {
-  it('mounts a solid component into the container', () => {
-    const container = document.createElement('div');
-    const component = () => 'hi';
-    adapter.mount(container, component);
-    expect(container.childNodes.length).toBeGreaterThan(0);
-    expect(container.textContent).toBe('hi');
+class TestSolidWebPart extends SolidWebPart<{ title: string }> {
+  protected renderComponent(props: { title: string }): JSX.Element {
+    return (() => props.title) as unknown as JSX.Element;
+  }
+}
+
+function initialize(webPart: TestSolidWebPart, domElement: HTMLElement): void {
+  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({
+    domElement,
+    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }
+  });
+  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({
+    properties: { title: 'Hello' },
+    dataVersion: '1.0'
+  });
+}
+
+describe('SolidWebPart', () => {
+  it('renders the solid component into the web part domElement', () => {
+    const domElement = document.createElement('div');
+    const webPart = new TestSolidWebPart();
+    initialize(webPart, domElement);
+    webPart.render();
+    expect(domElement.childNodes.length).toBeGreaterThan(0);
+    expect(domElement.textContent).toBe('Hello');
   });
 
-  it('re-mounts on the same container without duplicating', () => {
-    const container = document.createElement('div');
-    const component = () => 'hi';
-    adapter.mount(container, component);
-    adapter.mount(container, component);
-    expect(container.textContent).toBe('hi');
+  it('re-mounts on the same domElement without duplicating', () => {
+    const domElement = document.createElement('div');
+    const webPart = new TestSolidWebPart();
+    initialize(webPart, domElement);
+    webPart.render();
+    webPart.render();
+    expect(domElement.textContent).toBe('Hello');
   });
 
-  it('update does not throw', () => {
-    const container = document.createElement('div');
-    adapter.mount(container, () => 'hi');
-    expect(() => adapter.update(container)).not.toThrow();
-    expect(container.textContent).toBe('hi');
+  it('re-renders with updated properties', () => {
+    const domElement = document.createElement('div');
+    const webPart = new TestSolidWebPart();
+    initialize(webPart, domElement);
+    webPart.render();
+    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({
+      properties: { title: 'Updated' },
+      dataVersion: '1.0'
+    });
+    webPart.render();
+    expect(domElement.textContent).toBe('Updated');
   });
 
-  it('unmount disposes the component and clears the container', () => {
-    const container = document.createElement('div');
-    adapter.mount(container, () => 'hi');
-    adapter.unmount(container);
-    expect(container.childNodes.length).toBe(0);
-  });
-
-  it('does not support fast refresh (solid-refresh not installed)', () => {
-    expect(adapter.supportsFastRefresh()).toBe(false);
+  it('disposes the component and clears the container on dispose', () => {
+    const domElement = document.createElement('div');
+    const webPart = new TestSolidWebPart();
+    initialize(webPart, domElement);
+    webPart.render();
+    (webPart as unknown as { onDispose(): void }).onDispose();
+    expect(domElement.childNodes.length).toBe(0);
   });
 });

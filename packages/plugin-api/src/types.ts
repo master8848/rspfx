@@ -1,7 +1,4 @@
 import type { FrameworkId } from '@mbsks/rspfx-core';
-import type { FrameworkAdapter as FrameworkAdapterType } from '@mbsks/rspfx-core';
-
-export type { FrameworkAdapter } from '@mbsks/rspfx-core';
 
 export interface FrameworkRspackContributions {
   rules?: unknown[];
@@ -14,7 +11,6 @@ export interface FrameworkRspackContributions {
 
 export interface FrameworkPreset {
   name: FrameworkId;
-  adapter(): FrameworkAdapterType;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
 }
 

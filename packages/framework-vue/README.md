@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-vue
 
-Vue framework adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Vue framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
 Provides the `VueWebPart` base class with `vue-loader` SFC compilation.
 
@@ -16,7 +16,7 @@ Requires `vue` `^3.5` as a peer dependency.
 
 ```ts
 import { VueWebPart } from '@mbsks/rspfx-framework-vue/webpart';
-import { adapter, preset } from '@mbsks/rspfx-framework-vue';
+import { preset } from '@mbsks/rspfx-framework-vue';
 
 export default class MyWebPart extends VueWebPart {
   protected async renderComponent(root: HTMLElement): Promise<void> {
@@ -28,7 +28,7 @@ export default class MyWebPart extends VueWebPart {
 ## API
 
 - `VueWebPart` — base web part class (from `@mbsks/rspfx-framework-vue/webpart`)
-- `adapter` / `preset` — `FrameworkAdapter` / `FrameworkPreset` registrations
+- `preset` — `FrameworkPreset` compiler contributions (from the package index)
 
 ## Links
 

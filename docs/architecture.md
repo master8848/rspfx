@@ -43,13 +43,13 @@ no dependency cycles.
 |---|---|---|---|
 | `core` | foundation | — | SPFx interfaces, `BaseWebPart`, `WebPartContextLike`, `Environment`, `Version`, `defineConfig` |
 | `diagnostics` | foundation | core | logger, `RspfxError`, telemetry, benchmarks |
-| `plugin-api` | foundation | core, diagnostics | `FrameworkAdapter`, `FrameworkPreset`, compiler/package hooks, plugin registry |
+| `plugin-api` | foundation | core, diagnostics | `FrameworkPreset`, compiler/package hooks, plugin registry |
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, swc TS/JSX, SCSS/CSS-modules, assets, caching, framework plugin stubs |
 | `manifest-generator` | build | core, diagnostics | component manifests, manifests.js, loaderConfig, sp-* dependency discovery |
 | `sppkg-builder` | build (priority 1) | manifest-generator, core | package-solution.json → AppManifest/features/ZIP `.sppkg` |
 | `manifest-server` | dev | core, diagnostics | dev certificates in `~/.rspfx/certs` only; `:4321` serving is handled by the compiler dev server |
 | `dev-runtime` | dev | core, compiler-rspack, manifest-server, manifest-generator | serve emulation, websocket refresh, fast-refresh runtime, workbench URL |
-| `framework-vanilla\|react\|solid\|preact\|vue\|svelte` | framework | core, plugin-api | DOM adapter + framework-specific refresh runtime |
+| `framework-vanilla\|react\|solid\|preact\|vue\|svelte` | framework | core, plugin-api | self-mounting web part class + compiler preset |
 | `framework-angular` | framework | — | **DEFERRED** (separate AOT compiler track) |
 | `fluent-adapter` | optional | core, framework-react | `FluentWebPart`, theme sync |
 | `sharepoint-runtime` | runtime | core | mock context, playground loader, sp-* bridges |

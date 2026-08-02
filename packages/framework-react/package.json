@@ -41,7 +41,7 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0"
   },
-  "description": "RSPFX React framework adapter",
+  "description": "RSPFX React framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

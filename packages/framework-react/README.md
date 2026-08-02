@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-react
 
-React framework adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+React framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
 Provides the `ReactWebPart` base class with fast refresh support via `@rspack/plugin-react-refresh`.
 
@@ -16,7 +16,7 @@ Requires `react` and `react-dom` `^18` as peer dependencies.
 
 ```ts
 import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart';
-import { adapter, preset } from '@mbsks/rspfx-framework-react';
+import { preset } from '@mbsks/rspfx-framework-react';
 
 export default class MyWebPart extends ReactWebPart {
   protected async renderComponent(root: HTMLElement): Promise<void> {
@@ -28,7 +28,7 @@ export default class MyWebPart extends ReactWebPart {
 ## API
 
 - `ReactWebPart` — base web part class (from `@mbsks/rspfx-framework-react/webpart`)
-- `adapter` / `preset` — `FrameworkAdapter` / `FrameworkPreset` registrations
+- `preset` — `FrameworkPreset` compiler contributions (from the package index)
 
 ## Links
 

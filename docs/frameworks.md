@@ -1,35 +1,46 @@
 # Framework Support
 
-Every framework is a pluggable package behind two contracts: a `FrameworkAdapter`
-(how the web part mounts into the DOM) and a `FrameworkPreset` (how the compiler
-is configured for that framework). The core is framework-agnostic; nothing in
+Every framework is a pluggable package behind one contract split across two
+entry points: a `FrameworkPreset` (how the compiler is configured for that
+framework) and a self-mounting `<Cap>WebPart` class (how the web part mounts into
+the DOM in the browser). The core is framework-agnostic; nothing in
 `@mbsks/rspfx-core`, `compiler-rspack`, or the packaging pipeline knows about any
 particular framework.
 
-## Adapter semantics
+## Mount semantics
 
-A `FrameworkAdapter` (from `@mbsks/rspfx-plugin-api`) is the single surface the web
-part runtime talks to:
+`BaseWebPart<TProps>` (from `@mbsks/rspfx-core/webpart`) declares the mount
+contract as three abstract hooks:
 
-| Method | Purpose |
+| Hook | Purpose |
 |---|---|
-| `mount(root, component)` | Mount the framework root component into the web part's `domElement` |
-| `unmount(root)` | Tear down; dispose effects, remove listeners |
-| `update(root)` | Re-render with new props (called on property changes) |
-| `supportsFastRefresh()` | Whether the framework has a state-preserving refresh runtime |
+| `getComponentProps()` | Derive props from `this.properties` |
+| `renderInto(root)` | Mount the framework root component into `root` (the web part's `domElement`) |
+| `disposeFrom(root)` | Tear down; dispose effects, remove listeners |
 
-`BaseWebPart.render()` mounts via the adapter into `this.domElement`;
-`onDispose()` unmounts. Property-pane changes flow through `update()`.
+The framework package mounts **itself**: each `<Cap>WebPart` implements the hooks
+with its own canonical API (`createRoot().render()`, `render(vnode, root)`,
+`createApp().mount()`, `new Component()`, ...). No `unknown` component crosses a
+generic boundary.
+
+`BaseWebPart.render()` mounts via `renderInto(this.domElement)`; `onDispose()`
+calls `disposeFrom(this.domElement)` first. SPFx calls `render()` again on
+property-pane changes; re-render is handled per framework:
+
+- React / Preact — re-render in place (same root, new props).
+- Solid / Vue / Svelte — dispose-then-recreate (per-root WeakMap bookkeeping).
+- Vanilla — `root.replaceChildren(component)`; the component is
+  `HTMLElement | string`.
 
 ## Package layout
 
 Each `@mbsks/rspfx-framework-<fw>` package is split into two entry points:
 
-- **Index** (`@mbsks/rspfx-framework-<fw>`) — `adapter` + `preset` only. Node-safe
-  (the CLI imports it to collect compiler contributions); never imports
+- **Index** (`@mbsks/rspfx-framework-<fw>`) — `preset` only. Node-safe (the CLI
+  imports it to collect compiler contributions); never imports
   `@mbsks/rspfx-core/webpart`.
 - **`/webpart` subpath** (`@mbsks/rspfx-framework-<fw>/webpart`) — the `<Cap>WebPart`
-  base classes (browser side). Svelte also exports `SvelteWebPartComponent`
+  base class (browser side). Svelte also exports `SvelteWebPartComponent`
   there.
 
 ```ts
@@ -45,7 +56,6 @@ rules, and plugins via `FrameworkPreset.contributions({ fastRefresh })`:
 ```ts
 interface FrameworkPreset {
   name: FrameworkId;
-  adapter(): FrameworkAdapter;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
 }
 ```
@@ -71,25 +81,24 @@ Any failure in a framework runtime falls back to a full page reload automaticall
 
 1. **Create the package** `packages/framework-<name>` (depends on `core` +
    `plugin-api`; framework libs as peers).
-2. **Export the preset** — `FrameworkPreset` with `name`, `adapter()`, and
-   `contributions()` returning the loader rules / swc options / plugins the
-   framework needs (JSX transform, HMR plugin, aliases).
-3. **Export the adapter** — a singleton `FrameworkAdapter` implementing
-   mount/unmount/update, plus `supportsFastRefresh()`.
-4. **Export a web part base class** — `<Cap>WebPart<TProps, TState> extends
-   BaseWebPart<TProps>` wiring `frameworkAdapter` + `createComponent()` +
-   `getComponentProps()`, exported from the `@mbsks/rspfx-framework-<fw>/webpart`
-   subpath (it imports `@mbsks/rspfx-core/webpart`, so it must not live in the
-   Node-safe index).
-5. **Register it** — either import the preset in the CLI's framework registry, or
+2. **Export the preset** — `FrameworkPreset` with `name` and `contributions()`
+   returning the loader rules / swc options / plugins the framework needs (JSX
+   transform, HMR plugin, aliases).
+3. **Export the web part class** — `<Cap>WebPart<TProps, TState> extends
+   BaseWebPart<TProps>` implementing `renderInto()` / `disposeFrom()` /
+   `getComponentProps()` (typically returning `this.properties`) using only the
+   framework's own mount API, plus optional per-root WeakMap bookkeeping.
+   Exported from the `@mbsks/rspfx-framework-<fw>/webpart` subpath (it imports
+   `@mbsks/rspfx-core/webpart`, so it must not live in the Node-safe index).
+4. **Register it** — either import the preset in the CLI's framework registry, or
    ship it as an `RspfxPlugin` (via `definePlugin`/`registerPlugin` from
    `plugin-api`) so projects can opt in without a CLI change.
-6. **Scaffolding** — add a project template to `packages/templates`
+5. **Scaffolding** — add a project template to `packages/templates`
    (`components/<Pascal>.<ext>`, web part class, styles) and a playground page
    variant.
 
-That's the whole contract: compiler contributions + adapter + base class +
-template. Nothing in the build, packaging, or dev pipeline changes.
+That's the whole contract: compiler contributions + web part class + template.
+Nothing in the build, packaging, or dev pipeline changes.
 
 ## Fluent UI adapter
 
