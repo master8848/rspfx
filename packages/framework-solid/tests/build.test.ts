@@ -8,7 +8,7 @@ import { preset } from '../src/index.js';
 const FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'solid-app');
 const OUT_DIR = 'dist';
 
-function makeCtx(): CompileContext {
+function makeCtx(overrides: Partial<CompileContext> = {}): CompileContext {
   return {
     projectRoot: FIXTURE,
     framework: 'solid',
@@ -31,7 +31,10 @@ function makeCtx(): CompileContext {
       releaseDir: 'release'
     },
     serveMode: false,
-    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]
+    swcContributions: [
+      preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>
+    ],
+    ...overrides
   };
 }
 
@@ -60,5 +63,33 @@ describe('framework-solid build', () => {
     expect(bundle).toContain('createSignal');
     expect(bundle).toContain('createComponent');
     expect(bundle).not.toContain('React.createElement');
+    expect(bundle).not.toContain('$$registry');
+  });
+
+  it('wires the solid-refresh babel plugin and dev mode when fastRefresh is on', () => {
+    const contributions = preset.contributions({ fastRefresh: true }) as {
+      rules: Array<{ use: { options: { presets: unknown[]; plugins: unknown[] } } }>;
+    };
+    const options = contributions.rules[0]!.use.options;
+    expect(options.plugins).toEqual([['solid-refresh/babel', { bundler: 'rspack-esm' }]]);
+    expect(options.presets[0]).toEqual([
+      'babel-preset-solid',
+      { generate: 'dom', development: true }
+    ]);
+  });
+
+  it('compiles with fast refresh on and bundles the solid-refresh runtime', async () => {
+    const ctx = makeCtx({ fastRefresh: true });
+    ctx.swcContributions = [
+      preset.contributions({ fastRefresh: true }) as unknown as Record<string, unknown>
+    ];
+    const result = await build(ctx);
+    const stats = result.stats as unknown as StatsLike;
+    const json = stats.toJson({ all: false, errors: true, warnings: true });
+    expect(json.errors ?? []).toHaveLength(0);
+    const bundle = fs.readFileSync(path.join(FIXTURE, OUT_DIR, 'test.js'), 'utf8');
+    expect(bundle).toContain('$$registry');
+    expect(bundle).toContain('solid-refresh');
+    expect(bundle).not.toContain('fast-refresh plugin for solid is not installed');
   });
 });

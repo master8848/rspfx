@@ -128,7 +128,7 @@ function loadSeed(projectRoot: string): Partial<MockStore> | undefined {
 
 export function createMockSharePointApi(opts: MockApiOptions): {
   path: string;
-  handle(req: unknown, res: MockApiResponse): void;
+  handle: (req: unknown, res: unknown) => Promise<void>;
 } {
   const store = createDefaultMockStore();
   const seed = loadSeed(opts.projectRoot);
@@ -402,7 +402,10 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     respondError(res, 400, 'System.NotSupportedException', `The local preview mock does not implement ${method} ${rawPath}. See docs/commands.md (rspfx dev --mode local) for the supported /_api/ endpoints.`);
   };
 
-  return { path: '/_api', handle };
+  return {
+    path: '/_api',
+    handle: (req: unknown, res: unknown) => handle(req, res as MockApiResponse)
+  };
 }
 
 async function readRequestBody(req: unknown): Promise<Record<string, unknown>> {

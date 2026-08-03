@@ -1,0 +1,22 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "0f1a2b3c-4d5e-4f6a-8b7c-9d0e1f2a3b4c",
+  "componentId": "0f1a2b3c-4d5e-4f6a-8b7c-9d0e1f2a3b4c",
+  "alias": "HelloWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "supportedPlatforms": ["Windows", "MacOS", "Linux"],
+  "safeWithCustomScriptDisabled": true,
+  "requiresCustomScript": false,
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": { "default": "Other" },
+      "title": { "default": "Hello" },
+      "description": { "default": "Hello web part" },
+      "officeFabricIconFontName": "Page",
+      "properties": { "description": "Hello" }
+    }
+  ]
+}

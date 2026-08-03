@@ -90,7 +90,7 @@ existing project carries over as-is.
 - **Extensions deferred.** `ApplicationCustomizer` and `ListViewCommandSet`
   (application extensions) are out of scope while the web part path matures; the
   manifest/loaderConfig machinery is designed not to preclude them later.
-- **Angular deferred.** Angular web parts need a separate AOT compiler pipeline
-  and are not yet supported (see roadmap M6).
+- **Angular not supported.** Angular web parts need a separate AOT compiler
+  pipeline; it was removed from the roadmap and is not planned.
 - **React 18/19 dual environment.** Bundle React per web part (official
   behavior); check for React version conflicts on legacy tenant pages.

@@ -11,7 +11,7 @@ right call, or at least the low-risk one.
 |---|---|---|
 | **Application extensions** (`ApplicationCustomizer`) | ❌ Not supported | Only client-side web parts are compiled and packaged. `src/extensions/` is ignored; the feature would package an empty shell. |
 | **List view command sets** (`ListViewCommandSet`) | ❌ Not supported | Same as above. |
-| **Angular web parts** | ❌ Not supported | Angular needs a separate AOT pipeline (`ngc`/`ng-packagr`); roadmap M6, deferred. |
+| **Angular web parts** | ❌ Not supported | Angular needs a separate AOT pipeline (`ngc`/`ng-packagr`); removed from the roadmap, no planned support. The preset layer is self-contained, so it could be added back later without core changes. |
 | **SPFx library components** (`src/libraries/`, component type Library) | ❌ Not supported | No library-component manifest/package path yet. |
 | **SharePoint 2019 / on-premises targets** | ❌ Not supported | RSPFX targets SPFx 1.20–1.23 (SharePoint Online); older sp-* packages are out of the supported matrix. |
 | **Teams tab / personal app manifests** | ⚠️ Not generated | You keep building the `teams/` manifests yourself (RSPFX doesn't emit them). |

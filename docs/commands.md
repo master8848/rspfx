@@ -190,7 +190,7 @@ export default {
 
 `RspfxPlugin` implements the standard webpack plugin interface
 (`apply(compiler)`), so it can also be tested under webpack-compatible bundlers
-(e.g. Turbopack) for the compile-time parts; the full pipeline (manifests, dev
+(e.g. Rspack) for the compile-time parts; the full pipeline (manifests, dev
 server, packaging) runs through the rspfx CLI.
 
 ### Vite — `vite.config.ts`

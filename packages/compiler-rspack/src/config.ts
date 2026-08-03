@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -20,6 +21,25 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-preact-refresh': fileURLToPath(new URL('./stubs/preact-refresh.js', import.meta.url)),
   'vue-loader': fileURLToPath(new URL('./stubs/vue-loader.js', import.meta.url))
 };
+
+const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
+
+function canResolveFromProject(projectRoot: string, specifier: string): boolean {
+  const packageName = specifier.startsWith('@')
+    ? specifier.split('/').slice(0, 2).join('/')
+    : specifier.split('/')[0]!;
+  let dir = projectRoot;
+  for (;;) {
+    if (fs.existsSync(path.join(dir, 'node_modules', packageName))) {
+      return true;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return false;
+    }
+    dir = parent;
+  }
+}
 
 const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss', '.css', '.sass'];
 
@@ -91,6 +111,9 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const rules: RuleSetRule[] = [];
   const plugins: Configuration['plugins'] = [];
   const alias: Record<string, string> = { ...BUILD_TIME_ALIASES, ...(ctx.aliases ?? {}) };
+  if (ctx.framework === 'solid' && ctx.fastRefresh && !canResolveFromProject(ctx.projectRoot, 'solid-refresh')) {
+    alias['solid-refresh'] = SOLID_REFRESH_STUB;
+  }
   const extensions: string[] = [...BASE_EXTENSIONS];
   const frameworkRules: RuleSetRule[] = [];
 

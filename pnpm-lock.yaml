@@ -821,6 +821,9 @@ importers:
       babel-preset-solid:
         specifier: ^1.9.4
         version: 1.9.12(@babel/core@7.29.7)(solid-js@1.9.14)
+      solid-refresh:
+        specifier: ^0.7.8
+        version: 0.7.8(solid-js@1.9.14)
     devDependencies:
       solid-js:
         specifier: ^1.9.4
@@ -5982,6 +5985,11 @@ packages:
 
   solid-js@1.9.14:
     resolution: {integrity: sha512-sAEXC0Kk0S1EDg+8ysEWJDbYhA3RRoEjwuySUGlKIemeo0I5YZfOyumNjNs9Sv3y2nmhD+0rW66ag2HsMuQiGQ==}
+
+  solid-refresh@0.7.8:
+    resolution: {integrity: sha512-iG442T3HXJp5jEebCy8okETrWnmX7CnxNOKrJQVeufh6WXSn+xtLXaptUXXMHTWcRqTJOJwQ8UwzxrRtVFSIzA==}
+    peerDependencies:
+      solid-js: ^1.3
 
   sort-asc@0.2.0:
     resolution: {integrity: sha512-umMGhjPeHAI6YjABoSTrFp2zaBtXBej1a0yKkuMUyjjqu6FJsTF+JYwCswWDg+zJfk/5npWUUbd33HH/WLzpaA==}
@@ -20780,6 +20788,12 @@ snapshots:
       csstype: 3.2.3
       seroval: 1.5.6
       seroval-plugins: 1.5.6(seroval@1.5.6)
+
+  solid-refresh@0.7.8(solid-js@1.9.14):
+    dependencies:
+      '@babel/generator': 7.29.8
+      '@babel/types': 7.29.8
+      solid-js: 1.9.14
 
   sort-asc@0.2.0: {}
 

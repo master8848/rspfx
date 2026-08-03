@@ -7,7 +7,7 @@ keeping the SharePoint workbench as the primary surface:
 
 ```
 save → Rspack incremental rebuild → onEmit → manifest regeneration → websocket refresh event → web part re-render
-  ├─ fast refresh enabled: framework HMR plugin (react/preact/vue/svelte) patches the component tree in place
+  ├─ fast refresh enabled: framework HMR plugin (react/preact/vue/svelte/solid) patches the component tree in place
   └─ otherwise: fallback → full page reload
 ```
 
@@ -35,7 +35,7 @@ save → Rspack incremental rebuild → onEmit → manifest regeneration → web
 | Preact | `@rspack/plugin-preact-refresh` | Same model as React — state-preserving re-render |
 | Vue | `vue-loader` HMR (peer `@vue/compiler-sfc`) | Component tree patched in place; state kept |
 | Svelte | `svelte-loader` `hotReload` (`svelte-hmr`) | Component instance re-created with preserved state |
-| Solid | none in RSPFX (solid-refresh not wired) | Full reload |
+| Solid | `solid-refresh` (babel plugin `solid-refresh/babel` with `bundler: 'rspack-esm'` + the runtime it injects) | Component signals preserved; patched via the module registry (`hot.data`-based patch or decline → reload) |
 | Vanilla | none | Full reload |
 
 Per-framework failure → full reload (automatic). The workbench never sits blank.
@@ -52,10 +52,20 @@ fast refresh is disabled; fallback to full reload. Install
 @rspack/plugin-react-refresh to enable it.
 ```
 
-(same for `@rspack/plugin-preact-refresh` and `vue-loader`). The class shapes
-are byte-identical to the real plugins' usage (`ReactRefreshRspackPlugin`,
+(same for `@rspack/plugin-preact-refresh`, `vue-loader`, and `solid-refresh` —
+see below for how solid differs). The class shapes of the react/preact/vue
+stubs are byte-identical to the real plugins' usage (`ReactRefreshRspackPlugin`,
 `PreactRefreshRspackPlugin`, `VueLoaderPlugin`), so bundle output is unchanged
 when the real package is present — the stub only ever loads when it is not.
+
+Solid differs slightly: the babel plugin is build-time only (a `solid-refresh`
+dependency of the preset package), but the *runtime* it injects (`$$registry`,
+`$$component`, `$$refresh`, …) is imported by the transformed component modules
+in the browser bundle. So for solid the stub is conditional — it is added to
+the resolve aliases only when `solid-refresh` cannot be resolved from the
+project's `node_modules` walk-up (the rspack path), and it exports no-op
+helpers instead of a class, so instrumented modules still evaluate normally.
+Either way the outcome is the same: the warning above, no HMR, full reload.
 
 ### Not implemented (out of scope)
 
@@ -71,7 +81,7 @@ when the real package is present — the stub only ever loads when it is not.
 |---|---|---|
 | Config | `dev.fastRefresh` false (default) | `dev.fastRefresh` true / `--refresh` flag |
 | Save → update | Rebuild → websocket event → reload path | Rebuild → websocket event → state-preserving refresh (framework runtime) |
-| Frameworks affected | all | React/Preact/Vue/Svelte get state preservation; Solid and vanilla reload |
+| Frameworks affected | all | React/Preact/Vue/Svelte/Solid get state preservation; vanilla reloads |
 | RefreshRuntime | not created | tracks the regeneration cycle (preserve/restore/dispose) |
 | Failure mode | full reload | full reload (same) |
 
@@ -81,6 +91,6 @@ predictability (e.g. debugging a property-pane or theme interaction), and
 `--refresh` for component iteration.
 
 Fast refresh is a per-package **compiler contribution** only (the react/preact/
-vue/svelte presets add their HMR plugin when `fastRefresh` is enabled; solid and
-vanilla have none — nothing runtime). It does not mean the plugin package is
+vue/svelte/solid presets add their HMR plugin when `fastRefresh` is enabled;
+vanilla has none — nothing runtime). It does not mean the plugin package is
 installed; the stub warning above is the source of truth for the actual wiring.
