@@ -1,4 +1,5 @@
-import type { FrameworkPreset, FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import vuePlugin from '@vitejs/plugin-vue';
 import { VueLoaderPlugin } from 'vue-loader';
 
 export const preset: FrameworkPreset = {
@@ -9,5 +10,14 @@ export const preset: FrameworkPreset = {
       plugins: [new VueLoaderPlugin()],
       resolve: { extensions: ['.vue'] }
     };
+  },
+  vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    return {
+      plugins: [vuePlugin()],
+      resolveExtensions: ['.vue']
+    };
+  },
+  rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {
+    return this.contributions(opts);
   }
 };

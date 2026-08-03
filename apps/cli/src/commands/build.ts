@@ -1,14 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { build } from '@mbsks/rspfx-compiler-rspack';
-import { generateComponentManifests, findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import type { ComponentManifest } from '@mbsks/rspfx-manifest-generator';
-import { createLogger, formatBytes } from '@mbsks/rspfx-diagnostics';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import {
   readProject,
   loadFrameworkPreset,
   resolveContributionLoaders,
   createCompileContext,
+  assembleRelease,
   type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
 import type { RspfxConfig } from '@mbsks/rspfx-core';
@@ -44,20 +45,15 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
   let stats: unknown;
   let outputFiles: string[];
 
-  if (loaded.bundler === 'vite') {
+  if (loaded.bundler === 'vite' || loaded.bundler === 'rsbuild') {
     const distDir = path.join(cwd, config.build.outDir ?? 'dist');
     fs.rmSync(distDir, { recursive: true, force: true });
     fs.mkdirSync(distDir, { recursive: true });
-    for (const entry of project.webParts.entries) {
-      await runViteBuild(cwd, { entry: entry.name, amdId: `${entry.componentIds[0]}_${entry.version}` });
+    if (loaded.bundler === 'vite') {
+      await runViteBuild(cwd);
+    } else {
+      await runRsbuildBuild(cwd);
     }
-    outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
-    stats = undefined;
-  } else if (loaded.bundler === 'rsbuild') {
-    const distDir = path.join(cwd, config.build.outDir ?? 'dist');
-    fs.rmSync(distDir, { recursive: true, force: true });
-    fs.mkdirSync(distDir, { recursive: true });
-    await runRsbuildBuild(cwd);
     outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
     stats = undefined;
   } else {
@@ -71,7 +67,7 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
       projectRoot: cwd,
       config,
       entries: project.webParts.entries,
-      externals: [...findSpDependencies(cwd).keys(), ...project.externals],
+      externals,
       localizedAliases: project.localizedAliases,
       localizedResources: project.localizedResources,
       fastRefresh: false,
@@ -97,79 +93,35 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
 
     stats = result.stats;
     outputFiles = result.outputFiles;
+
+    await assembleRelease({
+      projectRoot: cwd,
+      config,
+      project,
+      externals,
+      outputFiles,
+      production: true
+    });
   }
 
-  return assembleRelease(cwd, config, project, externals, stats, outputFiles);
-}
-
-function collectExternals(cwd: string, project: ReadProjectResult): string[] {
-  return [...findSpDependencies(cwd).keys(), ...project.externals, ...project.localizedResources.map((r) => r.name)];
-}
-
-async function assembleRelease(
-  cwd: string,
-  config: RspfxConfig,
-  project: ReadProjectResult,
-  externals: string[],
-  stats: unknown,
-  outputFiles: string[]
-): Promise<BuildOutput> {
   const distDir = path.join(cwd, config.build.outDir ?? 'dist');
   const releaseDir = path.join(cwd, config.build.releaseDir ?? 'release');
   const releaseManifestsDir = path.join(releaseDir, 'manifests');
   const releaseAssetsDir = path.join(releaseDir, 'assets');
 
-  const cdnBasePath = readCdnBasePath(cwd);
-  const entryModuleIds: Record<string, string> = {};
-  project.webParts.bundles.forEach((bundle, index) => {
-    entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
-  });
-  const manifests = await generateComponentManifests({
-    projectRoot: cwd,
-    production: true,
-    baseUrls: { debug: '', release: cdnBasePath },
-    packageVersion: project.webParts.packageVersion,
-    bundleFiles: new Map(project.webParts.entries.map((entry) => [entry.name, `${entry.name}.js`])),
-    externals,
-    localizedResources: project.localizedResources.map((resource) => ({
-      name: resource.name,
-      locales: resource.files.map((file) => file.locale)
-    })),
-    webpartsDir: config.paths?.webpartsDir,
-    entryModuleIds
-  });
-
-  fs.mkdirSync(releaseManifestsDir, { recursive: true });
-  fs.mkdirSync(releaseAssetsDir, { recursive: true });
-  for (const manifest of manifests) {
-    const content = JSON.stringify(manifest, null, 2);
-    fs.writeFileSync(path.join(releaseManifestsDir, `${manifest.id}.manifest.json`), content);
-  }
-
-  const packageFiles: { path: string; content: Uint8Array }[] = [];
-  for (const file of fs.readdirSync(distDir)) {
-    if (file.endsWith('.map') || file.endsWith('.manifest.json')) {
-      continue;
-    }
-    const source = path.join(distDir, file);
-    if (!fs.statSync(source).isFile()) {
-      continue;
-    }
-    fs.copyFileSync(source, path.join(releaseAssetsDir, file));
-    packageFiles.push({ path: file, content: fs.readFileSync(source) });
-  }
-
-  for (const file of outputFiles) {
-    const bundlePath = path.join(distDir, file);
-    if (fs.existsSync(bundlePath)) {
-      logger.info(`${file}: ${formatBytes(fs.statSync(bundlePath).size)}`);
+  const manifests: ComponentManifest[] = [];
+  if (fs.existsSync(releaseManifestsDir)) {
+    for (const file of fs.readdirSync(releaseManifestsDir)) {
+      if (!file.endsWith('.manifest.json')) {
+        continue;
+      }
+      manifests.push(
+        JSON.parse(fs.readFileSync(path.join(releaseManifestsDir, file), 'utf8')) as ComponentManifest
+      );
     }
   }
 
-  for (const plugin of getPlugins()) {
-    plugin.packageHooks?.beforePackage?.({ manifests, files: packageFiles });
-  }
-
+  logger.info(`Release output: ${releaseDir}/manifests (${manifests.length} components), ${releaseDir}/assets`);
   return {
     stats,
     outputFiles,
@@ -181,16 +133,6 @@ async function assembleRelease(
   };
 }
 
-function readCdnBasePath(cwd: string): string[] {
-  try {
-    const raw = JSON.parse(
-      fs.readFileSync(path.join(cwd, 'config', 'write-manifests.json'), 'utf8')
-    ) as { cdnBasePath?: unknown };
-    if (typeof raw.cdnBasePath === 'string' && raw.cdnBasePath.trim()) {
-      return [raw.cdnBasePath];
-    }
-  } catch {
-    // No write-manifests.json — fall back to empty release base urls.
-  }
-  return [];
+function collectExternals(cwd: string, project: ReadProjectResult): string[] {
+  return [...findSpDependencies(cwd).keys(), ...project.externals, ...project.localizedResources.map((r) => r.name)];
 }

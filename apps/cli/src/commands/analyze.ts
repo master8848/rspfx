@@ -33,6 +33,10 @@ export async function runAnalyze(cwd: string, opts: AnalyzeOptions = {}): Promis
   }
 
   const moduleCounts = collectModuleCounts(stats);
+  const statsFallback = moduleCounts.size === 0 ? readStatsModuleCounts(cwd) : undefined;
+  for (const [name, count] of statsFallback ?? []) {
+    moduleCounts.set(name, count);
+  }
   const rows: BundleRow[] = [];
   for (const file of fs.readdirSync(distDir)) {
     if (file.endsWith('.map') || file.endsWith('.manifest.json') || !fs.statSync(path.join(distDir, file)).isFile()) {
@@ -86,6 +90,25 @@ function collectModuleCounts(stats: unknown): Map<string, number> {
     counts.set(name, Array.isArray(record.modules) ? record.modules.length : 0);
   }
   return counts;
+}
+
+function readStatsModuleCounts(cwd: string): Map<string, number> | undefined {
+  const statsPath = path.join(cwd, '.rspfx', 'stats.json');
+  if (!fs.existsSync(statsPath)) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(statsPath, 'utf8')) as { moduleCounts?: Record<string, unknown> };
+    const counts = new Map<string, number>();
+    for (const [name, count] of Object.entries(parsed.moduleCounts ?? {})) {
+      if (typeof count === 'number') {
+        counts.set(name, count);
+      }
+    }
+    return counts.size > 0 ? counts : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function renderReport(rows: BundleRow[]): string {

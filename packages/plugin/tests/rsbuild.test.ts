@@ -67,6 +67,7 @@ function captureHooks(plugin: { setup(api: unknown): void | Promise<void> }) {
     onBeforeStartDevServer?: (params: { server: { middlewares: { use(route: string, handler: unknown): void } } }) => void;
     onAfterStartDevServer?: (params: { port: number }) => void;
     onAfterDevCompile?: () => void;
+    onAfterBuild?: () => void;
   } = {};
   const api = {
     logger: { warn: (): void => undefined, error: (): void => undefined, info: (): void => undefined, success: (): void => undefined },
@@ -84,6 +85,9 @@ function captureHooks(plugin: { setup(api: unknown): void | Promise<void> }) {
     },
     onAfterDevCompile: (cb: () => void): void => {
       hooks.onAfterDevCompile = cb;
+    },
+    onAfterBuild: (cb: () => void): void => {
+      hooks.onAfterBuild = cb;
     }
   };
   plugin.setup(api as never);

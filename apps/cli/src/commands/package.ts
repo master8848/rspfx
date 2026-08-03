@@ -31,6 +31,10 @@ export async function runPackage(cwd: string, opts: PackageOptions = {}): Promis
   const size = fs.statSync(result.outputPath).size;
   logger.success(`Package created: ${result.outputPath} (${formatBytes(size)})`);
 
+  for (const plugin of getPlugins()) {
+    plugin.packageHooks?.afterPackage?.({ sppkgPath: result.outputPath });
+  }
+
   const validation = await validateSppkg(result.outputPath);
   if (!validation.ok) {
     for (const error of validation.errors) {

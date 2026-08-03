@@ -1,4 +1,5 @@
-import type { FrameworkPreset, FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import prefresh from '@prefresh/vite';
 import PreactRefreshRspackPlugin from '@rspack/plugin-preact-refresh';
 
 export const preset: FrameworkPreset = {
@@ -17,6 +18,36 @@ export const preset: FrameworkPreset = {
           }
         }
       },
+      plugins: opts.fastRefresh ? [new PreactRefreshRspackPlugin({})] : []
+    };
+  },
+  vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    return {
+      plugins: [prefresh()],
+      esbuild: { jsx: 'automatic', jsxImportSource: 'preact' }
+    };
+  },
+  rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {
+    return {
+      rules: [
+        {
+          test: /\.(t|j)sx?$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                [
+                  '@babel/preset-react',
+                  { runtime: 'automatic', importSource: 'preact', development: opts.fastRefresh }
+                ],
+                '@babel/preset-typescript'
+              ],
+              plugins: opts.fastRefresh ? ['@prefresh/babel-plugin'] : []
+            }
+          }
+        }
+      ],
       plugins: opts.fastRefresh ? [new PreactRefreshRspackPlugin({})] : []
     };
   }

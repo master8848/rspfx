@@ -12,14 +12,14 @@ artifacts are, and how to wire it into CI. For the day-to-day flow see
 | `rspfx build` | `dist/` bundles + `release/manifests/*.manifest.json` + `release/assets/*` | Production compile; `--no-minify`, `--sourcemap` flags |
 | `rspfx package` | `<paths.zippedPackage>` (default `sharepoint/solution/<name>.sppkg`) | Implies `build`; `--no-build` to skip |
 | `rspfx deploy` | Uploads the `.sppkg` to the app catalog | Bearer-token upload (`RSPFX_ACCESS_TOKEN`); prints manual steps without a token |
-| `rspfx analyze` | Bundle size report as console table + `.rspfx/analyze.html` | Implies `build` |
+| `rspfx analyze` | Bundle size report as console table + `.rspfx/analyze.html` | Implies `build`; module counts fall back to `.rspfx/stats.json` on Vite/Rsbuild |
 | `rspfx clean` | Removes `dist/`, `release/`, `temp/`, `.rspfx/`, `node_modules/.cache` | — |
 | `rspfx doctor` | Environment/config checks, exit code 1 on failure | CI-friendly preflight |
 
-All commands load the project's bundler config (`rspack.config.ts` /
-`vite.config.ts`), find the `RspfxPlugin` / `rspfxVite` plugin by its marker
-symbol, and use its options, merging CLI flags over them
-(`build.minify`/`build.sourcemap`, `dev.port`, etc.).
+All commands load the project's bundler config — `rspack.config.ts|js`,
+`vite.config.ts|js`, or `rsbuild.config.ts|js` — find the `RspfxPlugin` /
+`rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options,
+merging CLI flags over them (`build.minify`/`build.sourcemap`, `dev.port`, etc.).
 
 ## Project layout
 

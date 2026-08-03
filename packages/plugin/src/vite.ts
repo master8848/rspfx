@@ -1,4 +1,5 @@
 import os from 'node:os';
+import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -6,17 +7,28 @@ import {
   resolveConfig,
   RSPFX_PLUGIN_MARKER,
   RSPFX_PLUGIN_OPTIONS,
+  type FrameworkId,
   type RspfxBundlerPluginLike
 } from '@mbsks/rspfx-core';
+import {
+  SPFX_PUBLIC_PATH_SENTINEL,
+  scriptUrlCaptureLine,
+  scriptUrlPublicPathExpression
+} from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
+import { getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
   resolveServeSettings,
+  resolveServeMode,
   buildWorkbenchUrl,
   createManifestRegenerator,
+  createRefreshRuntime,
   createReloadController,
+  assembleRelease,
   openBrowser,
+  loadFrameworkPreset,
   type ServeSettings
 } from '@mbsks/rspfx-dev-runtime';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
@@ -31,17 +43,31 @@ const logger = createLogger('rspfx');
  *   Rollup cannot give each entry its own `define('id', …)` in one config).
  * - `RSPFX_VITE_AMD_ID` — explicit AMD library id (`<componentId>_<version>`).
  * - `RSPFX_VITE_MODE` — `'development'` | `'production'`.
+ *
+ * Unset (direct `vite dev` / `vite build`), the mode follows the vite command.
  */
 export const VITE_ENV = {
   entry: 'RSPFX_VITE_ENTRY',
   amdId: 'RSPFX_VITE_AMD_ID',
-  mode: 'RSPFX_VITE_MODE'
+  mode: 'RSPFX_VITE_MODE',
+  fastRefresh: 'RSPFX_FAST_REFRESH'
 } as const;
 
 export interface ViteRspfxPlugin extends RspfxBundlerPluginLike {
   name: 'rspfx';
-  config(): Promise<Record<string, unknown>>;
+  config(
+    config: unknown,
+    env: { command: 'build' | 'serve'; mode: string }
+  ): Promise<Record<string, unknown>>;
+  buildStart(): void;
+  moduleParsed(info: { id?: unknown }): void;
+  buildEnd(): void;
+  generateBundle(
+    options: unknown,
+    bundle: Record<string, { type: string; code?: string; source?: unknown }>
+  ): void | Promise<void>;
   configureServer(server: unknown): void;
+  closeBundle(): Promise<void>;
 }
 
 interface ViteBuildApi {
@@ -62,6 +88,123 @@ interface ConnectResponse {
   statusCode?: number;
 }
 
+interface ViteBuildOverrides {
+  minify?: boolean;
+  sourcemap?: boolean;
+  emptyOutDir?: boolean;
+}
+
+interface ViteStatsJson {
+  moduleCounts?: Record<string, number>;
+}
+
+let presetCache: Promise<FrameworkPreset> | undefined;
+
+function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPreset> {
+  presetCache ??= loadFrameworkPreset(framework, root).then(
+    (mod) => mod.preset as unknown as FrameworkPreset
+  );
+  return presetCache;
+}
+
+function writeStats(root: string, entryName: string, moduleCount: number): void {
+  const file = path.join(root, '.rspfx', 'stats.json');
+  let existing: ViteStatsJson = {};
+  try {
+    existing = JSON.parse(fs.readFileSync(file, 'utf8')) as ViteStatsJson;
+  } catch {
+    // No stats file yet.
+  }
+  const moduleCounts: Record<string, number> = {
+    ...(typeof existing.moduleCounts === 'object' && existing.moduleCounts !== null
+      ? existing.moduleCounts
+      : {}),
+    [entryName]: moduleCount
+  };
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ ...existing, moduleCounts }, null, 2));
+}
+
+function inlineStyleCode(css: string): string {
+  return (
+    `\n(function(){var e=document.createElement("style");e.type="text/css";` +
+    `e.textContent=${JSON.stringify(css)};(document.head||document.documentElement).appendChild(e);})();\n`
+  );
+}
+
+/**
+ * Byte-compat with the Rspack/official-SPFx bundle header: rollup quotes the
+ * AMD id with double quotes (`define("id", …)`) while the official form is
+ * single-quoted — normalize it, then prepend the script-URL capture line.
+ */
+function amdBundleTransform(entryName: string, code: string): string {
+  let out = code;
+  if (out.includes(SPFX_PUBLIC_PATH_SENTINEL)) {
+    out = out.split(SPFX_PUBLIC_PATH_SENTINEL).join(scriptUrlPublicPathExpression(entryName));
+  }
+  out = out.replace(/^define\("([^"]*)",/, "define('$1',");
+  return scriptUrlCaptureLine(entryName) + out;
+}
+
+function transformEntryBundle(
+  entryName: string,
+  bundle: Record<string, { type: string; code?: string; source?: unknown }>
+): void {
+  const chunk = bundle[`${entryName}.js`];
+  if (!chunk || chunk.type !== 'chunk' || typeof chunk.code !== 'string') {
+    return;
+  }
+  chunk.code = amdBundleTransform(entryName, chunk.code);
+  for (const key of Object.keys(bundle)) {
+    const asset = bundle[key];
+    if (!asset || asset.type !== 'asset' || !key.endsWith('.css')) {
+      continue;
+    }
+    const css =
+      typeof asset.source === 'string'
+        ? asset.source
+        : Buffer.from(asset.source as ArrayBuffer).toString('utf8');
+    chunk.code += inlineStyleCode(css);
+    delete bundle[key];
+  }
+}
+
+/**
+ * Closes the remaining byte-compat gaps vs the Rspack path for a single-entry
+ * build: prepend the script-URL capture line (same bytes as
+ * `SpfxPublicPathPlugin`), rewrite the publicPath sentinel, normalize the AMD
+ * id quoting, and inline the emitted CSS asset into the JS bundle (SPFx never
+ * loads separate .css files).
+ */
+function createEntryPlugins(entryName: string, root: string): unknown[] {
+  let moduleCount = 0;
+  return [
+    {
+      name: 'rspfx-public-path',
+      generateBundle(
+        _options: unknown,
+        bundle: Record<string, { type: string; code?: string; source?: unknown }>
+      ) {
+        transformEntryBundle(entryName, bundle);
+      }
+    },
+    {
+      name: 'rspfx-stats',
+      buildStart() {
+        moduleCount = 0;
+      },
+      moduleParsed(info: { id?: unknown }) {
+        if (typeof info?.id === 'string') {
+          moduleCount += 1;
+        }
+      },
+      buildEnd() {
+        writeStats(root, process.env[VITE_ENV.entry] ?? entryName, moduleCount);
+      }
+    }
+  ];
+}
+
 /**
  * The Vite plugin. Use it in `vite.config.ts` with the same options object as
  * `RspfxPlugin`:
@@ -73,73 +216,149 @@ interface ConnectResponse {
  * };
  * ```
  *
- * - `rspfx build`/`rspfx package` spawn one `vite build` per web part bundle
- *   (env `RSPFX_VITE_ENTRY`/`RSPFX_VITE_AMD_ID`), then assemble manifests and
- *   release output as with Rspack.
- * - `rspfx dev` spawns `vite`; the plugin serves `/temp/manifests.js`, watches
- *   sources and rebuilds the AMD bundles to `dist/`, and opens the workbench.
- * - Running `vite build` directly builds the first discovered web part bundle.
+ * - `rspfx build` / direct `vite build` build every web part bundle (one vite
+ *   build per entry, since Rollup cannot give each entry its own
+ *   `define('id', …)` in a single config), then assemble the release output
+ *   (component manifests + `release/` assets) exactly like the Rspack path.
+ * - `rspfx dev` / direct `vite dev` serve `/temp/manifests.js`, watch sources,
+ *   rebuild the AMD bundles to `dist/` and open the workbench.
  */
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
   const { projectRoot, ...rest } = options;
   const root = projectRoot ?? process.cwd();
   const resolved = resolveConfig(rest);
+  let command: 'build' | 'serve' = 'serve';
+
+  const effectiveMode = (): 'development' | 'production' =>
+    (process.env[VITE_ENV.mode] as 'development' | 'production' | undefined) ??
+    (command === 'serve' ? 'development' : 'production');
+
+  const createConfig = async (overrides: ViteBuildOverrides = {}): Promise<Record<string, unknown>> => {
+    const project = readProject(root, resolved.paths, resolved.version);
+    const settings = resolveServeSettings({ config: resolved }, project.serveJson);
+    const mode = effectiveMode();
+    const entry = selectEntry(project.webParts.entries, process.env[VITE_ENV.entry]);
+    const amdId = process.env[VITE_ENV.amdId] ?? `${entry.componentIds[0]}_${entry.version}`;
+    const externals = collectExternals(root, project.externals, project.localizedResources);
+
+    const certs =
+      mode === 'development' && settings.https
+        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'))
+        : undefined;
+
+    const fastRefresh =
+      command === 'serve' &&
+      (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));    const preset = await loadPreset(root, resolved.framework);
+    const viteContribs = preset.vite?.({ fastRefresh });
+    const define = {
+      DEBUG: JSON.stringify(mode === 'development'),
+      DEPRECATED_UNIT_TEST: JSON.stringify(false),
+      'process.env.NODE_ENV': JSON.stringify(mode)
+    };
+    if (viteContribs?.define) {
+      Object.assign(define, viteContribs.define);
+    }
+
+    return {
+      root,
+      base: './',
+      define,
+      esbuild: viteContribs?.esbuild,
+      plugins: [...createEntryPlugins(entry.name, root), ...(viteContribs?.plugins ?? [])],
+      resolve:
+        viteContribs?.resolveExtensions && viteContribs.resolveExtensions.length > 0
+          ? { extensions: viteContribs.resolveExtensions }
+          : undefined,
+      server: {
+        host: settings.hostname,
+        port: settings.port,
+        https: certs ? { key: certs.key, cert: certs.cert } : settings.https ? true : false,
+        open: false
+      },
+      build: {
+        outDir: resolved.build.outDir,
+        emptyOutDir: overrides.emptyOutDir ?? false,
+        cssCodeSplit: false,
+        ...(overrides.minify !== undefined ? { minify: overrides.minify } : {}),
+        ...(overrides.sourcemap !== undefined ? { sourcemap: overrides.sourcemap } : {}),
+        rollupOptions: {
+          input: { [entry.name]: entry.import },
+          external: externals,
+          preserveEntrySignatures: true,
+          output: {
+            format: 'amd',
+            amd: { id: amdId },
+            entryFileNames: '[name].js',
+            chunkFileNames: 'chunk.[name].js',
+            assetFileNames: 'assets/[name][extname]',
+            exports: 'named'
+          }
+        }
+      }
+    };
+  };
+
+  const currentEntryName = (): string => {
+    const project = readProject(root, resolved.paths, resolved.version);
+    return process.env[VITE_ENV.entry] ?? project.webParts.entries[0]!.name;
+  };
+
+  let moduleCount = 0;
 
   return {
     name: 'rspfx',
     [RSPFX_PLUGIN_MARKER]: true,
     [RSPFX_PLUGIN_OPTIONS]: resolved,
 
-    async config() {
-      const project = readProject(root, resolved.paths, resolved.version);
-      const settings = resolveServeSettings({ config: resolved }, project.serveJson);
-      const mode = process.env[VITE_ENV.mode] === 'development' ? 'development' : 'production';
-      const entry = selectEntry(project.webParts.entries, process.env[VITE_ENV.entry]);
-      const amdId = process.env[VITE_ENV.amdId] ?? `${entry.componentIds[0]}_${entry.version}`;
-      const externals = collectExternals(root, project.externals, project.localizedResources);
+    async config(_config, env) {
+      command = env.command === 'build' ? 'build' : 'serve';
+      return createConfig({ emptyOutDir: true });
+    },
 
-      const certs = settings.https
-        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'))
-        : undefined;
+    buildStart() {
+      moduleCount = 0;
+    },
 
-      return {
-        root,
-        base: './',
-        define: {
-          DEBUG: JSON.stringify(mode === 'development'),
-          DEPRECATED_UNIT_TEST: JSON.stringify(false),
-          'process.env.NODE_ENV': JSON.stringify(mode)
-        },
-        server: {
-          host: settings.hostname,
-          port: settings.port,
-          https: certs ? { key: certs.key, cert: certs.cert } : settings.https ? true : false,
-          open: false
-        },
-        build: {
-          outDir: resolved.build.outDir,
-          emptyOutDir: false,
-          rollupOptions: {
-            input: { [entry.name]: entry.import },
-            external: externals,
-            output: {
-              format: 'amd',
-              amd: { id: amdId },
-              entryFileNames: '[name].js',
-              chunkFileNames: 'chunk.[name].js',
-              assetFileNames: 'assets/[name][extname]',
-              exports: 'named'
-            }
-          }
-        }
-      };
+    moduleParsed(info: { id?: unknown }) {
+      if (typeof info?.id === 'string') {
+        moduleCount += 1;
+      }
+    },
+
+    buildEnd() {
+      try {
+        writeStats(root, currentEntryName(), moduleCount);
+      } catch {
+        // No web parts discovered — nothing to record.
+      }
+    },
+
+    generateBundle(
+      _options: unknown,
+      bundle: Record<string, { type: string; code?: string; source?: unknown }>
+    ) {
+      if (command !== 'build') {
+        return;
+      }
+      let entryName: string;
+      try {
+        entryName = currentEntryName();
+      } catch {
+        return;
+      }
+      transformEntryBundle(entryName, bundle);
     },
 
     configureServer(server) {
       const project = readProject(root, resolved.paths, resolved.version);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
+      const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain);
       const reload = createReloadController();
       const originRef: { value: string } = { value: settings.origin };
+      const fastRefresh =
+        command === 'serve' &&
+        (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
+      const refreshRuntime = fastRefresh ? createRefreshRuntime(resolved.framework) : undefined;
       const entryModuleIds: Record<string, string> = {};
       project.webParts.bundles.forEach((bundle, index) => {
         entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
@@ -153,24 +372,26 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         externals: collectExternals(root, project.externals, project.localizedResources),
         localizedResources: project.localizedResources,
         webpartsDir: resolved.paths?.webpartsDir,
-        entryModuleIds
+        entryModuleIds,
+        refreshRuntime,
+        bundleUrlSuffix: () => `?t=${reload.current}`
       });
+
+      for (const plugin of getPlugins()) {
+        plugin.devHooks?.beforeStart?.({ mode, port: settings.port });
+      }
 
       const rebuildAll = async (): Promise<void> => {
         const vite = await importViteFrom(root);
-        for (const entry of project.webParts.entries) {
+        for (const [index, entry] of project.webParts.entries.entries()) {
           await withEnv(entry, async () => {
             await (vite as unknown as ViteBuildApi).build({
-              configFile: false,
-              root,
-              logLevel: 'error',
-              mode: 'development',
-              minify: false,
-              sourcemap: true
+              ...(await createConfig({ minify: false, sourcemap: true, emptyOutDir: index === 0 }))
             });
           });
         }
         await regenerator.regenerate();
+        reload.tick();
       };
 
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -221,7 +442,36 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           logger.info(`Workbench: ${workbenchUrl}`);
         });
       }
+      devServer.httpServer?.once('listening', () => {
+        originRef.value = updateOriginWithActualPort(settings, devServer);
+        for (const plugin of getPlugins()) {
+          plugin.devHooks?.afterStart?.({ url: originRef.value });
+        }
+      });
       logger.success(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+    },
+
+    async closeBundle() {
+      if (command !== 'build') {
+        return;
+      }
+      const project = readProject(root, resolved.paths, resolved.version);
+      const vite = await importViteFrom(root);
+      for (const entry of project.webParts.entries.slice(1)) {
+        await withEnv(entry, async () => {
+          await (vite as unknown as ViteBuildApi).build({
+            ...(await createConfig())
+          });
+        });
+      }
+      await assembleRelease({
+        projectRoot: root,
+        config: resolved,
+        project,
+        externals: collectExternals(root, project.externals, project.localizedResources),
+        outputFiles: project.webParts.entries.map((entry) => `${entry.name}.js`),
+        production: true
+      });
     }
   };
 }
@@ -298,7 +548,24 @@ function importViteFrom(root: string): Promise<unknown> {
   let resolved: string;
   try {
     const requireFromProject = createRequire(pathToFileURL(path.join(root, 'package.json')).href);
-    resolved = requireFromProject.resolve('vite');
+    const packagePath = requireFromProject.resolve('vite/package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8')) as {
+      exports?: { '.': string | { import?: string | { default?: string } } };
+      main?: string;
+    };
+    const exportEntry = packageJson.exports?.['.'];
+    const importEntry =
+      typeof exportEntry === 'string'
+        ? exportEntry
+        : typeof exportEntry?.import === 'string'
+          ? exportEntry.import
+          : exportEntry?.import?.default;
+    const entry = importEntry ?? packageJson.main;
+    if (entry) {
+      resolved = path.resolve(path.dirname(packagePath), entry);
+    } else {
+      resolved = requireFromProject.resolve('vite');
+    }
   } catch (error) {
     throw new RspfxError(
       'VITE_NOT_FOUND',

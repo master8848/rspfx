@@ -138,6 +138,7 @@ function packageJson(vars: TemplateVars): string {
       devDependencies: {
         '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
         '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
+        '@rspack/cli': '^1.2.0',
         typescript: '^5.7.0'
       }
     },
@@ -184,10 +185,11 @@ function rspackConfig(vars: TemplateVars): string {
     `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: '${vars.tenantUrl}'` : ''}`
   ];
   const lines: string[] = [
-    `import { RspfxPlugin } from '@mbsks/rspfx-plugin';`,
+    `import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';`,
     '',
     'export default {',
     "  mode: 'development',",
+    '  resolve: rspfxResolve(),',
     '  plugins: [',
     '    new RspfxPlugin({',
     `      name: '${vars.packageName}',`,

@@ -21,7 +21,7 @@ harvested from official npm packages; provenance is marked per section there.
 
 | Item | Status |
 |---|---|
-| AMD bundle wrapper (`define('<id>_<version>', [...])`) | **Verified** — byte-compatible with the Rspack spike (see FORMATS §2) |
+| AMD bundle wrapper (`define('<id>_<version>', [...])`) | **Verified** — byte-compatible for all three bundlers: the parity suite (`packages/plugin/tests/parity.test.ts`) builds the same fixture through Rspack, Vite, and Rsbuild and asserts the script-URL capture line (`(function(){window["__rspfx_script_url_<name>"]=`) + AMD define header per bundler, byte-equal manifests and release asset name sets, and no separate `.css` files (CSS is inlined into the JS bundle on every bundler). Per-bundler bundle internals still differ (Rollup vs Rspack runtime codegen) while the manifest/release structure matches byte-for-byte (see FORMATS §2) |
 | manifests.js template, component manifest schema, sppkg zip layout, SPCLIENTSIDEASSETLIBRARY rewriting, workbench URL params | **Verified by reference** — captured from `@microsoft/spfx-heft-plugins@1.23.2`, `sp-build-web@1.23.2`, `sp-webpart-base@1.23.2` npm packages (see provenance in FORMATS.md); final acceptance is a real-tenant install (M1 gate) |
 | sp-* component IDs | Stable across versions (FORMATS §6); fallback table in `reference/sp-component-ids.json` |
 

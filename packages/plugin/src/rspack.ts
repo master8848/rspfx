@@ -1,4 +1,4 @@
-import { rspack, type Compiler } from '@rspack/core';
+import type { Compiler, Configuration } from '@rspack/core';
 import {
   resolveConfig,
   RSPFX_PLUGIN_MARKER,
@@ -7,12 +7,18 @@ import {
   type RspfxConfig
 } from '@mbsks/rspfx-core';
 import {
-  SpfxPublicPathPlugin,
-  SpfxLocalizedResourcesPlugin,
-  type BundleEntry,
+  createRspackConfig,
   type LocalizedResource
 } from '@mbsks/rspfx-compiler-rspack';
-import { readProject } from '@mbsks/rspfx-dev-runtime';
+import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import {
+  readProject,
+  loadFrameworkPreset,
+  resolveContributionLoaders,
+  createCompileContext,
+  assembleRelease,
+  type ReadProjectResult
+} from '@mbsks/rspfx-dev-runtime';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
 
@@ -29,19 +35,28 @@ const logger = createLogger('rspfx');
  * };
  * ```
  *
- * `apply(compiler)` injects the SPFx runtime plugins (AMD public-path capture,
- * localized resource emission, DEBUG/NODE_ENV defines) when the compiler runs
- * directly (rspack — the webpack-compatible bundler; Turbopack does not support
- * webpack plugins and cannot run this interface).
+ * Running the compiler directly — `rspack build` / `rspack dev` — is fully
+ * supported: `apply` composes the complete SPFx configuration (entries,
+ * externals, AMD output, framework loader contributions, swc/SCSS rules,
+ * public-path capture and localized-resource emission), and assembles the
+ * release output (component manifests + `release/` assets) after a production
+ * compile, exactly like `rspfx build`.
  *
- * The CLI (`rspfx dev|build|package|…`) instead reads `this.options` from the
- * plugin instance in the user's bundler config and composes the full pipeline
- * (entries discovery, externals, manifests, dev server, sppkg assembly).
+ * Entries/externals are applied synchronously in `apply` (rspack registers
+ * entries from the options at compiler-creation time); the async parts —
+ * framework presets, loader resolution, rules and output — are overlaid on
+ * `compiler.options` at `beforeRun`/`watchRun`, which rspack re-reads when
+ * the compiler instance is created.
+ *
+ * (Turbopack does not support webpack plugins and cannot run this interface.)
  */
 export class RspfxPlugin implements RspfxBundlerPluginLike {
   [key: symbol]: unknown;
   private readonly _options: RspfxConfig;
   private readonly projectRoot: string;
+  private project: ReadProjectResult | undefined;
+  private outputFiles: string[] = [];
+  private configured = false;
   readonly [RSPFX_PLUGIN_MARKER]: true = true;
 
   get [RSPFX_PLUGIN_OPTIONS](): RspfxConfig {
@@ -60,28 +75,119 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   }
 
   apply(compiler: Compiler): void {
-    let entries: BundleEntry[];
-    let localizedResources: LocalizedResource[];
+    let project: ReadProjectResult;
     try {
-      const project = readProject(this.projectRoot, this.options.paths);
-      entries = project.webParts.entries;
-      localizedResources = project.localizedResources;
+      project = readProject(this.projectRoot, this._options.paths);
     } catch (error) {
       logger.warn(
-        'RspfxPlugin: no web part bundles discovered — SPFx runtime plugins skipped. ' +
+        'RspfxPlugin: no web part bundles discovered — SPFx configuration skipped. ' +
           `Run "rspfx build"/"rspfx dev" for the full pipeline (${error instanceof Error ? error.message : String(error)})`
       );
       return;
     }
+    this.project = project;
+    this.outputFiles = project.webParts.entries.map((entry) => `${entry.name}.js`);
 
-    new SpfxPublicPathPlugin({ entries }).apply(compiler);
-    if (localizedResources.length > 0) {
-      new SpfxLocalizedResourcesPlugin(localizedResources).apply(compiler);
+    const options = compiler.options as unknown as Configuration;
+    if (options.externalsType === undefined) {
+      options.externalsType = 'amd';
     }
-    new rspack.DefinePlugin({
-      DEBUG: JSON.stringify(true),
-      DEPRECATED_UNIT_TEST: JSON.stringify(false),
-      'process.env.NODE_ENV': JSON.stringify('development')
-    }).apply(compiler);
+    options.entry = Object.fromEntries(
+      project.webParts.entries.map((entry) => [
+        entry.name,
+        {
+          import: [entry.import],
+          library: { type: 'amd', name: `${entry.componentIds[0]!}_${entry.version}` }
+        }
+      ])
+    );
+    options.externals = this.collectExternals(project);
+
+    compiler.hooks.beforeRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
+    compiler.hooks.watchRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
+    compiler.hooks.done.tapPromise('rspfx-release', async (stats) => {
+      if (!this.configured || !this.project) {
+        return;
+      }
+      if (stats.hasErrors()) {
+        return;
+      }
+      const production = compiler.options.mode === 'production';
+      if (!production) {
+        return;
+      }
+      await assembleRelease({
+        projectRoot: this.projectRoot,
+        config: this._options,
+        project: this.project,
+        externals: this.collectExternals(this.project),
+        outputFiles: this.outputFiles,
+        production
+      });
+    });
+  }
+
+  private async configureCompiler(compiler: Compiler, options: Configuration): Promise<void> {
+    if (this.configured) {
+      return;
+    }
+    this.configured = true;
+    try {
+      const frameworkPreset = await loadFrameworkPreset(this._options.framework, this.projectRoot);
+      const contributions = resolveContributionLoaders(
+        frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<string, unknown>,
+        frameworkPreset.moduleUrl
+      );
+
+      const production = compiler.options.mode === 'production';
+      const ctx = createCompileContext({
+        projectRoot: this.projectRoot,
+        config: this._options,
+        entries: this.project!.webParts.entries,
+        externals: [...findSpDependencies(this.projectRoot).keys(), ...this.project!.externals],
+        localizedAliases: this.project!.localizedAliases,
+        localizedResources: this.project!.localizedResources,
+        fastRefresh: false,
+        production,
+        serveMode: false,
+        build: { ...this._options.build }
+      });
+      ctx.swcContributions = [contributions as Record<string, unknown>];
+
+      const full = (await createRspackConfig(ctx)) as Configuration;
+      const libraryType =
+        full.output?.library && typeof full.output.library === 'object' && 'type' in full.output.library
+          ? String(full.output.library.type)
+          : undefined;
+      options.mode = full.mode;
+      options.output = {
+        ...options.output,
+        ...full.output,
+        ...(libraryType ? { externalsType: libraryType } : {})
+      };
+      options.module = { ...options.module, rules: full.module?.rules };
+      options.optimization = { ...options.optimization, ...full.optimization };
+      options.devtool = full.devtool;
+      for (const plugin of full.plugins ?? []) {
+        const candidate = plugin as { apply?(c: Compiler): void };
+        if (typeof candidate?.apply === 'function') {
+          candidate.apply(compiler);
+        }
+      }
+    } catch (error) {
+      logger.warn(
+        `RspfxPlugin: failed to apply SPFx compiler configuration — continuing with defaults (${error instanceof Error ? error.message : String(error)})`
+      );
+    }
+  }
+
+  private collectExternals(project: ReadProjectResult): string[] {
+    return [
+      ...new Set([
+        ...findSpDependencies(this.projectRoot).keys(),
+        ...project.externals,
+        ...project.localizedResources.map((resource: LocalizedResource) => resource.name)
+      ])
+    ];
   }
 }

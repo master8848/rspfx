@@ -1,7 +1,8 @@
-import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';
 
 export default {
   mode: 'development',
+  resolve: rspfxResolve(),
   plugins: [
     new RspfxPlugin({
       name: '@mbsks/rspfx-example-solid',

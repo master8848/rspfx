@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { rspack } from '@rspack/core';
 import type { RsbuildPluginAPI } from '@rsbuild/core';
 import {
@@ -20,11 +22,17 @@ import {
   createManifestRegenerator,
   createReloadController,
   resolveServeSettings,
+  resolveServeMode,
   buildWorkbenchUrl,
+  assembleRelease,
   openBrowser,
+  loadFrameworkPreset,
+  resolveContributionLoaders,
   type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { getPlugins } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspfx-plugin-api';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
 
@@ -100,6 +108,14 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
       };
 
       api.onBeforeStartDevServer(({ server }) => {
+        const project = read();
+        if (project) {
+          const settingsNow = resolveServeSettings({ config: resolved }, project.serveJson);
+          const mode = resolveServeMode({ mode: undefined, config: resolved }, settingsNow.tenantDomain);
+          for (const plugin of getPlugins()) {
+            plugin.devHooks?.beforeStart?.({ mode, port: settingsNow.port });
+          }
+        }
         server.middlewares.use('/temp/manifests.js', (_req, res, next) => {
           const regen = ensureRegenerator();
           if (!regen) {
@@ -128,7 +144,10 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         });
       });
 
+      let isDevServer = false;
+
       api.onAfterStartDevServer(({ port }) => {
+        isDevServer = true;
         originRef.value = `${settings.scheme}://${settings.hostname}:${port}`;
         void regenerateAndTick().catch((error: unknown) => {
           logger.error(
@@ -141,6 +160,9 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           logger.info(`Workbench: ${workbenchUrl}`);
         }
         logger.success(`Manifest server running at ${originRef.value}/temp/manifests.js`);
+        for (const plugin of getPlugins()) {
+          plugin.devHooks?.afterStart?.({ url: originRef.value });
+        }
       });
 
       api.onAfterDevCompile(() => {
@@ -151,10 +173,71 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         });
       });
 
+      api.onAfterBuild(() => {
+        if (isDevServer) {
+          return;
+        }
+        const project = read();
+        if (!project) {
+          return;
+        }
+        const distDir = path.join(root, resolved.build.outDir ?? 'dist');
+        let outputFiles: string[] = [];
+        if (fs.existsSync(distDir)) {
+          outputFiles = fs
+            .readdirSync(distDir)
+            .filter((file) => file.endsWith('.js') && fs.statSync(path.join(distDir, file)).isFile());
+        }
+        return assembleRelease({
+          projectRoot: root,
+          config: resolved,
+          project,
+          externals: collectExternals(root, project.externals, project.localizedResources),
+          outputFiles,
+          production: true
+        }).catch((error: unknown) => {
+          logger.error(
+            `Failed to assemble release: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }).then(() => undefined);
+      });
+
+      api.onAfterBuild(({ stats }) => {
+        if (!stats) {
+          return;
+        }
+        const moduleCounts: Record<string, number> = {};
+        const statsList = 'stats' in stats ? stats.stats : [stats];
+        for (const s of statsList) {
+          const json = s.toJson({ all: false, chunks: true, chunkModules: true });
+          for (const chunk of json.chunks ?? []) {
+            const rec = chunk as {
+              name?: string;
+              names?: string[];
+              modules?: unknown[];
+              entry?: boolean;
+              initial?: boolean;
+            };
+            if (!rec.entry && !rec.initial) {
+              continue;
+            }
+            const name = rec.name ?? rec.names?.[0];
+            if (!name) {
+              continue;
+            }
+            moduleCounts[name] = Array.isArray(rec.modules) ? rec.modules.length : 0;
+          }
+        }
+        if (Object.keys(moduleCounts).length > 0) {
+          writeStatsJson(root, moduleCounts);
+        }
+      });
+
       api.modifyRsbuildConfig((config) => {
         config.tools = { ...(config.tools ?? {}), htmlPlugin: false };
         config.output = {
           ...(config.output ?? {}),
+          legalComments: 'none',
           distPath: {
             ...(typeof config.output?.distPath === 'object' ? config.output.distPath : {}),
             root: resolved.build.outDir
@@ -175,7 +258,11 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         };
       });
 
-      api.modifyRspackConfig((config, utils) => {
+      let frameworkPresetPromise: ReturnType<typeof loadFrameworkPreset> | undefined;
+      const loadPreset = (): ReturnType<typeof loadFrameworkPreset> =>
+        (frameworkPresetPromise ??= loadFrameworkPreset(resolved.framework, root));
+
+      api.modifyRspackConfig(async (config, utils) => {
         const project = read();
         if (!project) {
           return;
@@ -201,19 +288,54 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           config.resolve.alias = { ...(config.resolve.alias ?? {}), ...localizedAliases };
         }
         const production = utils.isProd;
-        if (!production) {
-          config.optimization = { ...config.optimization, minimize: false };
-        }
+        config.optimization = {
+          ...config.optimization,
+          ...(production ? {} : { minimize: false }),
+          splitChunks: false
+        };
+        const defineOptions: Record<string, string> = {
+          DEBUG: JSON.stringify(!production),
+          DEPRECATED_UNIT_TEST: JSON.stringify(false),
+          'process.env.NODE_ENV': JSON.stringify(production ? 'production' : 'development')
+        };
         config.plugins.push(
-          new rspack.DefinePlugin({
-            DEBUG: JSON.stringify(!production),
-            DEPRECATED_UNIT_TEST: JSON.stringify(false),
-            'process.env.NODE_ENV': JSON.stringify(production ? 'production' : 'development')
-          }),
+          new rspack.DefinePlugin(defineOptions),
           new SpfxPublicPathPlugin({ entries: project.webParts.entries })
         );
         if (project.localizedResources.length > 0) {
           config.plugins.push(new SpfxLocalizedResourcesPlugin(project.localizedResources));
+        }
+        const frameworkModule = await loadPreset();
+        const preset = frameworkModule.preset as unknown as FrameworkPreset;
+        const fastRefresh =
+          !utils.isProd &&
+          (process.env['RSPFX_FAST_REFRESH'] === '1' || (resolved.dev.fastRefresh ?? false));
+        const contribs = resolveContributionLoaders(
+          (preset.rsbuild
+            ? preset.rsbuild({ fastRefresh })
+            : preset.contributions({ fastRefresh })) as unknown as Record<string, unknown>,
+          frameworkModule.moduleUrl
+        ) as unknown as FrameworkRsbuildContributions;
+        if (contribs.rules) {
+          config.module = {
+            ...config.module,
+            rules: [
+              ...(config.module.rules ?? []),
+              ...(contribs.rules as NonNullable<typeof config.module.rules>)
+            ]
+          };
+        }
+        if (contribs.plugins) {
+          config.plugins.push(...(contribs.plugins as typeof config.plugins));
+        }
+        if (contribs.resolve?.extensions) {
+          config.resolve.extensions = [...(config.resolve.extensions ?? []), ...contribs.resolve.extensions];
+        }
+        if (contribs.resolve?.alias) {
+          config.resolve.alias = { ...(config.resolve.alias ?? {}), ...contribs.resolve.alias };
+        }
+        if (contribs.define) {
+          Object.assign(defineOptions, contribs.define);
         }
       });
     }
@@ -222,6 +344,23 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
 
 function amdName(entry: BundleEntry): string {
   return `${entry.componentIds[0]}_${entry.version}`;
+}
+
+function writeStatsJson(root: string, moduleCounts: Record<string, number>): void {
+  const file = path.join(root, '.rspfx', 'stats.json');
+  let existing: Record<string, number> = {};
+  if (fs.existsSync(file)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as {
+        moduleCounts?: Record<string, number>;
+      };
+      existing = parsed.moduleCounts ?? {};
+    } catch {
+      existing = {};
+    }
+  }
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ moduleCounts: { ...existing, ...moduleCounts } }));
 }
 
 function computeUniqueName(entries: BundleEntry[]): string {
