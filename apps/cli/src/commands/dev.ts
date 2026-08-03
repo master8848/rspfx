@@ -3,8 +3,10 @@ import {
   startServe,
   readProject,
   resolveServeSettings,
+  resolveServeMode,
   buildWorkbenchUrl,
-  type DevRuntimeHandle
+  type DevRuntimeHandle,
+  type ServeMode
 } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
 import { spawnViteDev } from '../vite.js';
@@ -20,6 +22,19 @@ export interface DevOptions {
   tenant?: string;
 }
 
+export function localPreviewUnavailableWarning(
+  bundler: 'vite' | 'rsbuild',
+  mode: ServeMode
+): string | undefined {
+  if (mode !== 'local') {
+    return undefined;
+  }
+  return (
+    `Local preview (no SharePoint) is only available on the Rspack bundler path — this project uses ${bundler}. ` +
+    'Pass --tenant <url> to serve the SharePoint workbench instead, or scaffold a project with the default Rspack config (rspack.config.ts).'
+  );
+}
+
 export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRuntimeHandle> {
   const loaded = await loadConfig(cwd);
   const config = loaded.config;
@@ -33,6 +48,12 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
     const child = loaded.bundler === 'vite' ? spawnViteDev(cwd) : spawnRsbuildDev(cwd);
 
     logger.info(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+
+    const serveMode = resolveServeMode({ mode: opts.mode, config }, settings.tenantDomain);
+    const warning = localPreviewUnavailableWarning(loaded.bundler, serveMode);
+    if (warning) {
+      logger.warn(warning);
+    }
 
     const workbenchUrl = buildWorkbenchUrl(settings, config);
     if (workbenchUrl) {

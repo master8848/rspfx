@@ -71,7 +71,7 @@ export function configureProgram(): void {
 
   program
     .command('dev')
-    .description('start the dev server — local preview at / by default, SharePoint workbench with --tenant')
+    .description('start the dev server — local preview at / (Rspack projects) or SharePoint workbench with --tenant')
     .option('--refresh', 'enable fast refresh')
     .option('--browser', 'open the local preview or workbench in a browser')
     .option('--port <n>', 'dev server port')
