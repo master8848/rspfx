@@ -44,14 +44,15 @@ export function runRsbuildBuild(projectRoot: string): void {
   }
 }
 
-export function spawnRsbuildDev(projectRoot: string): ChildProcess {
+export function spawnRsbuildDev(projectRoot: string, opts: { fastRefresh?: boolean } = {}): ChildProcess {
   const bin = resolveRsbuildBin(projectRoot);
   return spawn(process.execPath, [bin, 'dev'], {
     cwd: projectRoot,
     stdio: 'inherit',
     env: {
       ...process.env,
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
+      ...(opts.fastRefresh ? { 'RSPFX_FAST_REFRESH': '1' } : {})
     }
   });
 }

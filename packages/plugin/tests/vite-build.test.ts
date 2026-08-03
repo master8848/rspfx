@@ -60,8 +60,8 @@ beforeAll(() => {
     path.join(FIXTURE, 'config', 'write-manifests.json'),
     JSON.stringify({ cdnBasePath: 'https://cdn.example.com/vite-proj' })
   );
-  writeWebPart('hello', MANIFEST_IDS[0]);
-  writeWebPart('goodbye', MANIFEST_IDS[1]);
+  writeWebPart('hello', MANIFEST_IDS[0]!);
+  writeWebPart('goodbye', MANIFEST_IDS[1]!);
 });
 
 afterAll(() => {

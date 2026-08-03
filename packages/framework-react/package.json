@@ -27,9 +27,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-react": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@rspack/plugin-react-refresh": "^1.0.0"
+    "@rspack/plugin-react-refresh": "^1.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "babel-loader": "^9.2.1",
+    "react-refresh": "^0.16.0"
   },
   "peerDependencies": {
     "react": "^18.0.0",

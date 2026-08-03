@@ -25,6 +25,23 @@ function publicPathExpression(entryName: string): string {
 }
 
 /**
+ * The script-URL capture line prepended to every AMD bundle, before the
+ * `define(...)` call. Bundler-agnostic — reused by the Vite plugin so its
+ * bundles start with the exact same bytes as the Rspack path.
+ */
+export function scriptUrlCaptureLine(entryName: string): string {
+  return captureLine(entryName);
+}
+
+/**
+ * The expression replacing `SPFX_PUBLIC_PATH_SENTINEL`, resolving chunk/asset
+ * URLs against the captured script URL. Bundler-agnostic.
+ */
+export function scriptUrlPublicPathExpression(entryName: string): string {
+  return publicPathExpression(entryName);
+}
+
+/**
  * Mirrors the official SPFx toolchain's publicPath handling: capture
  * `document.currentScript` at bundle top-level (before the AMD `define` call,
  * while the script tag is still executing) and use it to resolve chunk URLs.
@@ -62,6 +79,10 @@ export class SpfxPublicPathPlugin {
             }
             const src = asset.source.source().toString();
             if (!src.includes(SPFX_PUBLIC_PATH_SENTINEL)) {
+              compilation.updateAsset(
+                assetName,
+                new rspack.sources.RawSource(captureLine(entry.name) + src)
+              );
               continue;
             }
             const quote = src.includes(`"${SPFX_PUBLIC_PATH_SENTINEL}"`) ? '"' : "'";

@@ -45,7 +45,8 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
       { port: opts.port, tenantDomain: opts.tenant, config },
       project.serveJson
     );
-    const child = loaded.bundler === 'vite' ? spawnViteDev(cwd) : spawnRsbuildDev(cwd);
+    const fastRefresh = opts.refresh ?? config.dev.fastRefresh ?? false;
+    const child = loaded.bundler === 'vite' ? spawnViteDev(cwd, { fastRefresh }) : spawnRsbuildDev(cwd, { fastRefresh });
 
     logger.info(`Manifest server running at ${settings.origin}/temp/manifests.js`);
 

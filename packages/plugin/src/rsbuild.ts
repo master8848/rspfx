@@ -188,7 +188,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
             .readdirSync(distDir)
             .filter((file) => file.endsWith('.js') && fs.statSync(path.join(distDir, file)).isFile());
         }
-        void assembleRelease({
+        return assembleRelease({
           projectRoot: root,
           config: resolved,
           project,
@@ -199,7 +199,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           logger.error(
             `Failed to assemble release: ${error instanceof Error ? error.message : String(error)}`
           );
-        });
+        }).then(() => undefined);
       });
 
       api.onAfterBuild(({ stats }) => {

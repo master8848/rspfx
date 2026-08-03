@@ -2,6 +2,8 @@ export type {
   CompilerHooks,
   FrameworkPreset,
   FrameworkRspackContributions,
+  FrameworkRsbuildContributions,
+  FrameworkViteContributions,
   PackageHooks,
   RspfxExtension
 } from './types.js';
