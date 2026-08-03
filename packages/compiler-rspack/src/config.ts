@@ -24,6 +24,9 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
+/** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
+export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
+
 function canResolveFromProject(projectRoot: string, specifier: string): boolean {
   const packageName = specifier.startsWith('@')
     ? specifier.split('/').slice(0, 2).join('/')
@@ -42,6 +45,9 @@ function canResolveFromProject(projectRoot: string, specifier: string): boolean 
 }
 
 const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss', '.css', '.sass'];
+
+/** Build-time aliases shared by the compiler config and the native rspack resolve. */
+export { BASE_EXTENSIONS };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

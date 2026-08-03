@@ -84,6 +84,9 @@ function captureHooks(plugin: { setup(api: unknown): void | Promise<void> }) {
     },
     onAfterDevCompile: (cb: () => void): void => {
       hooks.onAfterDevCompile = cb;
+    },
+    onAfterBuild: (cb: () => void): void => {
+      hooks.onAfterBuild = cb;
     }
   };
   plugin.setup(api as never);
