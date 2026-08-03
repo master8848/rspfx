@@ -227,7 +227,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   readonly [RSPFX_PLUGIN_MARKER]: true;
   readonly options: RspfxConfig;
   constructor(options: RspfxPluginOptions);
-  apply(compiler: unknown): void;  // standard webpack plugin interface — webpack-compatible bundlers (e.g. Turbopack) can run the compile-time parts
+  apply(compiler: unknown): void;  // standard webpack plugin interface — webpack-compatible bundlers (Rspack) can run the compile-time parts; Turbopack does not support webpack plugins
 }
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin; // { name: 'rspfx', [RSPFX_PLUGIN_MARKER]: true, options }
 export const VITE_ENV: { mode: string; entry: string; amdId: string };  // env var names for per-bundle vite builds (RSPFX_VITE_*)
@@ -442,7 +442,8 @@ export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> {
   contribution when fastRefresh.
 - Solid: `SolidWebPart.renderInto` uses `render(() => component, root)` from
   solid-js/web, with a disposers WeakMap — dispose-then-recreate on re-render;
-  refresh: babel-loader + babel-preset-solid (no fast-refresh contribution).
+  refresh: babel-loader + babel-preset-solid (dev mode) + `solid-refresh/babel`
+  (bundler `rspack-esm`) when fastRefresh.
 - Preact: `PreactWebPart.renderInto` uses `render(vnode, root)` from preact;
   `disposeFrom` renders `null`; refresh: `@rspack/plugin-preact-refresh`.
 - Vue: `VueWebPart.renderInto` uses `createApp(Component).mount(root)` with an

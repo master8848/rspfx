@@ -1,25 +1,58 @@
 # Roadmap
 
-Milestones from [ARCHITECTURE.md](../../ARCHITECTURE.md). The M1 gate (real-tenant
-install) remains the acceptance test for everything packaging-related.
+Milestones from [ARCHITECTURE.md](../../ARCHITECTURE.md). **Real-tenant validation**
+(install a generated `.sppkg` into a real Microsoft 365 app catalog and render it)
+remains the acceptance test for everything packaging-related — see
+[Real-tenant validation](#real-tenant-validation) below.
 
 | Milestone | Scope | Status |
 |---|---|---|
 | **M0** | Reference capture + AMD spike | ✅ **Done** — fixture ground truth committed: `reference/FORMATS.md` (harvested from `@microsoft/*` 1.23.2 packages), `reference/sp-component-ids.json`; Rspack AMD bundle wrapper confirmed byte-compatible with the official `define('<id>_<version>', [...])` form |
-| **M1** | Foundation + packaging core (vanilla) | ✅ **Done** — `core` (zero deps), `diagnostics`, `plugin-api`, `manifest-generator` (component manifests, manifests.js, sp-* discovery), `sppkg-builder` (AppManifest/features/ClientSideAssets ZIP) implemented; `sharepoint-runtime` stubs added. Plugin hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI build/package flow |
-| **M2** | Compiler + build/package CLI + React/Solid | 🔄 **In progress** — `compiler-rspack` implemented (swc TS/JSX, SCSS/CSS-modules, assets, dev server, watch) and now exposes the `spfx()` rspack plugin surface; user-configurable folder layout via `paths` landed; CLI (`apps/cli`), templates, and framework packages are being built |
-| **M3** | Dev mode | 🔄 **In progress** — `manifest-server` (dev certs in `~/.rspfx/certs` only; serving is handled by the compiler dev server) and `dev-runtime` serve emulation are partially implemented |
-| **M4** | Fast refresh + local preview | 🔄 **In progress** — refresh runtime in `dev-runtime` is now a stateful machine wired into serve (preserve/restore/dispose, epoch counter, gated on `--refresh`); missing HMR plugin packages resolve to loud stubs with an honest fallback to full reload; the dev server serves a local preview page at `/` with a mock SharePoint REST API — no tenant needed; per-framework runtimes to follow |
-| **M5** | Framework breadth + Fluent | ⏳ Planned — Preact/Vue/Svelte web part classes + refresh; `fluent-adapter` (`FluentWebPart`, theme sync) |
-| **M6** | Angular (deferred) | ⏸️ **Deferred** — Angular needs a separate AOT compiler track (`ngc`/`ng-packagr`); explicitly out of scope until M1–M4 are proven. Not a blocker |
-| **M7** | Benchmarks, full test suite, docs | ⏳ Planned — cold start <2s, rebuild <300ms, refresh <150ms, small build <4s, large <15s; unit (vitest) + fixture-driven packaging tests + real-tenant CI on 1.20/1.21/1.22/1.23; examples and migration guide |
+| **M1** | Foundation + packaging core (vanilla) | ✅ **Done** — `core` (zero deps), `diagnostics`, `plugin-api`, `manifest-generator` (component manifests, manifests.js, sp-* discovery), `sppkg-builder` (AppManifest/features/ClientSideAssets ZIP) implemented; `sharepoint-runtime` stubs added. Plugin hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI build/package flow. The install-in-a-real-tenant gate has not been run yet |
+| **M2** | Compiler + build/package CLI | ✅ **Done** — `compiler-rspack` (swc TS/JSX, SCSS/CSS-modules, assets, dev server, watch) + `spfx()` rspack plugin surface; multi-bundler support: `RspfxPlugin` (rspack), `rspfxVite` (vite.config.ts), `rspfxRsbuild` (rsbuild.config.ts); user-configurable folder layout via `paths`; CLI commands `new`/`dev`/`build`/`package`/`deploy`/`doctor`/`analyze`/`clean`; templates + all framework packages shipped; examples for every framework |
+| **M3** | Dev mode | ✅ **Done** — `:4321` HTTPS manifest server (certs from `manifest-server`), debug manifests at `/temp/manifests.js`, workbench URL + auto-open (opt-in), auto-reload; `dev-runtime` serve emulation |
+| **M4** | Fast refresh + local preview | ✅ **Done** — stateful refresh runtime in `dev-runtime` wired into serve (preserve/restore/dispose, epoch counter, gated on `--refresh`); react/preact/vue/svelte HMR wired (missing plugin packages fall back to loud stubs + full reload); `rspfx dev` serves a local preview page at `/` with a mock SharePoint REST API — no tenant needed (the old `rspfx playground` command was removed). Solid + vanilla refresh are M10 |
+| **M5** | Framework breadth + Fluent | ✅ **Done** — vanilla/react/solid/preact/vue/svelte web part classes + presets (`@mbsks/rspfx-framework-*`), `fluent-adapter` (`FluentWebPart`, theme sync) |
+| **M6** | ~~Angular~~ | ❌ **Removed** — not supported; no roadmap slot. The web part classes are a self-contained preset layer, so a future Angular track (separate AOT pipeline) could be layered back on without core changes |
+| **M7** | Benchmarks, full test suite, docs | 🔄 **In progress** — RSPFX-only numbers measured (`bench/bench.mjs` + `docs/performance.md`, 2026-08-01: cold start 633 ms, recompile 68 ms median, full build 315 ms on `examples/shadcn`); official-toolchain comparison harness ships (`bench/compare-official.mjs` — Heft / `gulp bundle` / `gulp serve` / `gulp fast-serve`); docs shipped (migration guide, case study, why/why-not, frameworks, fast refresh, compatibility, internal API). Remaining: validate the official harness on real machines, add the SPFx 1.20–1.22 official matrix, real-tenant validation |
+| **M8** | Bundler parity — **major feature** | ⏳ **Planned** — switching bundlers must be a first-class, tested capability, not a side path. Scope: (a) **Turbopack** — `RspfxPlugin` implements the webpack plugin interface (`apply(compiler)`); verify against a real Turbopack install on `examples/shadcn`, add `turbopack.config.ts` support + CLI wiring + example + tests + docs, then promote to a supported row; (b) **Vite deep parity** — close gaps vs Rspack: fast refresh, `analyze`, per-bundler byte-compat tests (same project → same `.sppkg`); (c) a parity test suite that builds the same fixture through every bundler and asserts identical manifests/bundles/`.sppkg` |
+| **M9** | Fast refresh for **all** frameworks (vanilla excluded — full reload is acceptable there) | ✅ **Done** — Solid wired in the `@mbsks/rspfx-framework-solid` preset: `solid-refresh/babel` with `bundler: 'rspack-esm'` (`import.meta.webpackHot`) + dev-mode `babel-preset-solid`, gated on `--refresh`/`dev.fastRefresh` like the others. Missing-package fallback matches the react/preact pattern but is conditional: the `solid-refresh` runtime is imported by transformed modules in the browser bundle, so the stub alias only applies when the package can't be resolved from the project (no-op helpers, loud warning, full reload). Covered by `framework-solid/tests/build.test.ts` + `compiler-rspack/tests/stubs.test.ts`. Exit criterion met: `rspfx dev --refresh` preserves state for react/preact/vue/svelte/solid; vanilla keeps full reload by design |
 
-## Extensions roadmap
+## Real-tenant validation
 
-`ApplicationCustomizer` and `ListViewCommandSet` (application extensions) are
-**out of scope** for M1–M4. The manifest generator and loaderConfig machinery are
-designed so extensions can be added later without rework (same script-resource
-machinery; component type fields already preserved).
+- **The M1 gate** (from ARCHITECTURE.md): scaffold a project → `rspfx package` →
+  upload the `.sppkg` to a real SharePoint app catalog (a Microsoft 365 developer
+  tenant) → install → the web part renders in the workbench with no console
+  errors. This has **never been run** — the repo has no tenant credentials — so
+  every packaging claim is still unproven against SharePoint itself.
+- **Real-tenant CI**: run the same flow automated across SPFx 1.20/1.21/1.22/1.23
+  (needs tenant credentials in CI secrets; `RSPFX_ACCESS_TOKEN` +
+  `RSPFX_APP_CATALOG_URL` deploy support is already implemented).
+- Until then, packaging correctness rests on byte-level assertions against the
+  captured reference artifacts (`reference/FORMATS.md`, `reference/sp-component-ids.json`).
+
+## Feasibility of the open items
+
+| Item | Verdict | Why |
+|---|---|---|
+| **Turbopack as a bundler** | ❌ **Not possible today** | Vercel's docs state Turbopack **does not support webpack plugins**, and standalone Turbopack outside Next.js is still in development (no public CLI, no plugin API). The `RspfxPlugin` "webpack-compatible interface" is an Rspack-compatible interface; Turbopack will never run it. The claim in `docs/why-rspfx.md` / `skills/rspfx/SKILL.md` is aspirational and being corrected. Track Vercel's standalone-Turbopack releases; revisit only when a plugin API ships |
+| **Vite deep parity** | ✅ Feasible, medium effort | Rollup (Vite's core) supports `output.format: 'amd'` with a custom module id — the SPFx wrapper is reachable. Work: per-web-part builds already exist (`VITE_ENV`); gaps are fast refresh wiring, `analyze`, and byte-compat tests |
+| **Solid fast refresh** | ✅ Feasible, medium effort | `solid-refresh` (babel plugin) + a solid HMR client; pattern mirrors the existing react/preact stub-with-fallback |
+| **Extensions** (`ApplicationCustomizer`, `ListViewCommandSet`) | ✅ Feasible, medium effort | Same loaderConfig machinery; needs manifest templates + `src/extensions/` discovery + package-path wiring. ARCHITECTURE.md already reserved for it |
+| **React 19 validation** | ✅ Feasible, small effort | Bump `examples/react` + templates to React 19, run web part + Fluent tests; risk is Fluent 8 peer ranges, not RSPFX itself |
+| **Official-toolchain benchmarks** (Heft / gulp / gulp fast-serve) | ⚠️ Feasible with caveats | Harness ships as `bench/compare-official.mjs`. Caveats: (1) fast-serve predates Heft — it only runs on the gulp+webpack line, so it benchmarks the SPFx 1.22 skeleton while Heft is measured via `gulp bundle` on the 1.23 skeleton; (2) first run installs the official toolchain (minutes); (3) needs Node in the supported range (SPFx 1.23 wants Node 20.19+/22+; Node 24 may warn) |
+| **Real-tenant validation** | ⚠️ External dependency, not difficulty | Needs a Microsoft 365 developer tenant + app-catalog credentials; nothing in the repo blocks it. See [Real-tenant validation](#real-tenant-validation) |
+
+## Backlog (claimed but not yet real)
+
+- **Extensions** — `ApplicationCustomizer` and `ListViewCommandSet` are **out of
+  scope**. The manifest generator and loaderConfig machinery are designed so
+  extensions can be added later without rework (same script-resource machinery;
+  component type fields already preserved).
+- **React 19 / non-SPFx-pinned React** — examples and templates currently ship
+  React 18 (SPFx 1.22/1.23 line). The claim "any React version" needs validation
+  with React 19 + Fluent before it's promoted from a demo statement to a
+  supported guarantee.
 
 ## Testing
 
@@ -27,17 +60,15 @@ machinery; component type fields already preserved).
 - Integration: fixture `src` → `dist` → `solution.sppkg` → manifest/zip validation
   against captured reference artifacts (`tests/fixtures/`, `tests/stubs/`).
 - Packaging: zip layout diffs against the captured `.sppkg`.
-- Compatibility: real-tenant CI across SPFx 1.20/1.21/1.22/1.23 (needs a dev tenant
-  for the M1 gate).
-- Benchmarks: scripted (`pnpm bench`), results in `.rspfx/benchmarks.jsonl`.
+- Compatibility: real-tenant validation across SPFx 1.20/1.21/1.22/1.23 (needs a
+  dev tenant — still open).
+- Benchmarks: RSPFX harness (`node bench/bench.mjs`), official-toolchain
+  comparison harness (`node bench/compare-official.mjs` — Heft / gulp / gulp
+  fast-serve).
 
 ## Current phase note
 
-M0 and M1 are complete. M2–M4 are in progress (compiler and dev-runtime cores
-landed; plugin-api hooks wired into the CLI; project config now lives in the
-bundler config as the `RspfxPlugin` / `rspfxVite` plugin, replacing
-`rspfx.config.ts`; CLI, templates, framework packages, and refresh runtimes are
-being filled in — the local preview page + mock `/_api` are already served by
-`rspfx dev` in its default local mode). Framework packages
-are currently scaffolded as stubs — treat the web part class / preset API as not
-yet final until M5.
+M0–M5 and M9 are complete. Active work: M7 (official-toolchain benchmark
+validation, real-tenant gate), M8 (Vite deep parity; Turbopack parked until
+Vercel ships a standalone plugin API). The framework web part class /
+preset APIs reached their final shape in M5 — no longer stubs.

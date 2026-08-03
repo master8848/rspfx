@@ -72,7 +72,7 @@ The compiler merges all contributions into the final Rspack config.
 | Preact | ✅ full | `@rspack/plugin-preact-refresh` contribution |
 | Vue | ✅ full | `vue-loader` HMR (peer `@vue/compiler-sfc`) |
 | Svelte | ✅ full | `svelte-loader` `hotReload` (`svelte-hmr`) |
-| Solid | ⚠️ partial | `babel-loader` + `babel-preset-solid`; refresh falls back to full reload |
+| Solid | ✅ full | babel-loader + `babel-preset-solid` (dev mode) + `solid-refresh/babel` (`bundler: 'rspack-esm'`) |
 | Vanilla | n/a | no runtime; full reload only |
 
 Any failure in a framework runtime falls back to a full page reload automatically.

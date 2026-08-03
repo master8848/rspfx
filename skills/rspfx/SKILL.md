@@ -1,6 +1,6 @@
 ---
 name: rspfx
-description: Create and build SharePoint Framework (SPFx) web parts with RSPFX — the community, Rspack-powered toolchain (NOT supported by Microsoft) — plus the official Microsoft Heft toolchain for when official support is required. Use when scaffolding an SPFx project (rspfx new), running the workbench dev server, packaging/deploying .sppkg, choosing between modern (Rspack/Vite/Turbopack, any frontend) and official (Heft + webpack) toolchains, or migrating an existing SPFx project off gulp/Heft.
+description: Create and build SharePoint Framework (SPFx) web parts with RSPFX — the community, Rspack-powered toolchain (NOT supported by Microsoft) — plus the official Microsoft Heft toolchain for when official support is required. Use when scaffolding an SPFx project (rspfx new), running the workbench dev server, packaging/deploying .sppkg, choosing between modern (Rspack/Vite/Rsbuild, any frontend) and official (Heft + webpack) toolchains, or migrating an existing SPFx project off gulp/Heft.
 ---
 
 # RSPFX — SPFx on Rspack/Turbopack/Vite (any frontend)
@@ -8,7 +8,7 @@ description: Create and build SharePoint Framework (SPFx) web parts with RSPFX �
 ## ⚠️ Support status — read first
 
 - **RSPFX is a community toolchain — NOT supported by Microsoft.** Microsoft only supports the official Heft toolchain (last section). No MS docs, MS support tickets, or Stack Overflow for Heft/webpack apply to RSPFX builds.
-- Pick RSPFX for: **speed** (Rust-based Rspack, ~5–10× faster builds than webpack), **any frontend** (React, Vue, Svelte, Solid, Preact, vanilla — official SPFx is React-only), **any bundler** (Rspack default, Vite, Turbopack), one config file instead of gulp + Heft + webpack. Most users choose it for the faster, modern toolchain.
+- Pick RSPFX for: **speed** (Rust-based Rspack, ~5–10× faster builds than webpack), **any frontend** (React, Vue, Svelte, Solid, Preact, vanilla — official SPFx is React-only), **any bundler** (Rspack default, Vite, Rsbuild), one config file instead of gulp + Heft + webpack. Most users choose it for the faster, modern toolchain.
 - Limitations: web parts only (no `ApplicationCustomizer`, `ListViewCommandSet`, library components, Angular), SPFx 1.20–1.23 only, single-locale UI strings.
 
 ## 1. Install

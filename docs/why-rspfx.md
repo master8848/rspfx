@@ -51,7 +51,7 @@ Everything else is auto-discovered: web part bundles from
 | **Rspack** (Rust webpack successor) | `rspack.config.ts` + `RspfxPlugin` | ✅ default, fully supported |
 | **Vite** (Rollup + esbuild) | `vite.config.ts` + `rspfxVite` | ✅ build + dev (workbench) |
 | **Rsbuild** (Rspack-based build tool) | `rsbuild.config.ts` + `rspfxRsbuild` | ✅ build + dev (workbench) |
-| **Turbopack / webpack-compatible** | `RspfxPlugin.apply(compiler)` | 🔬 webpack-standard interface, testable |
+| **Turbopack** | — | ❌ not possible today — Turbopack has no webpack plugin API and no standalone CLI outside Next.js; tracked in `docs/roadmap.md` |
 
 The official toolchain is hardwired to webpack 5. If you want Vite or Rspack,
 you can't have SPFx.
@@ -114,6 +114,6 @@ None of this breaks SharePoint:
 | `.sppkg` packaging | gulp bundle + package-solution | `rspfx package` |
 | App catalog deploy | manual / CI scripts | `rspfx deploy` (token) |
 | Property pane, Teams hosts, full-page | runtime, unaffected | runtime, unaffected |
-| Fast refresh | — | `rspfx dev --refresh` (react/preact/solid/vue/svelte) |
+| Fast refresh | — | `rspfx dev --refresh` (react/preact/vue/svelte/solid; vanilla reloads) |
 | Bundle analysis | webpack-bundle-analyzer setup | `rspfx analyze` |
 | One-command project creation | `yo @microsoft/sharepoint` | `rspfx new` |
