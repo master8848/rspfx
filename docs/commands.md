@@ -33,35 +33,54 @@ rspfx new my-app --framework react --fluent --spfx-version 1.20 --no-install
 
 ## `rspfx dev`
 
-Start the dev environment: Rspack dev server + HTTPS manifest server on `:4321`.
-Dev output is unminified with readable module names and source maps; rebuilds
-auto-reload the workbench page (client embedded in `/temp/manifests.js`).
+Start the dev environment: Rspack dev server + manifest server on `:4321`
+(HTTPS with a self-signed cert in workbench mode; plain HTTP in local preview
+mode). Dev output is unminified with readable module names and source maps;
+rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 
 | Flag | Description |
 |---|---|
 | `--refresh` | Enable fast refresh (state-preserving where supported) |
-| `--browser` | Open the workbench in a browser (off by default) |
+| `--browser` | Open the local preview or workbench in a browser (off by default) |
 | `--port <n>` | Override `dev.port` (default 4321) |
-| `--tenant <url>` | Override the tenant URL (else `dev.tenantUrl` or `SPFX_SERVE_TENANT_DOMAIN`) |
+| `--mode <local\|sharepoint>` | Serve mode — default `local`, or `sharepoint` when a tenant is configured (`--tenant` / `dev.tenantUrl` / `SPFX_SERVE_TENANT_DOMAIN`) |
+| `--tenant <url>` | Tenant URL or domain (else `dev.tenantUrl` or `SPFX_SERVE_TENANT_DOMAIN`) |
+
+### Local preview mode (default)
+
+With no tenant configured, `rspfx dev` serves a **local preview page at `/`** —
+no SharePoint tenant needed:
+
+- The page lists every discovered web part (injected into
+  `window.__RSPFX_COMPONENTS__`) and loads the `/dist/local-runtime.js`
+  bootstrap, which mounts each web part with an emulated SPFx context.
+- File saves trigger a rebuild followed by an automatic `location.reload()`
+  (the reload client polls `/__rspfx_hot.json`).
+- Served over HTTP — no self-signed cert required.
+
+A mock SharePoint REST API is served at `/_api` (OData v4 JSON-light: flat
+objects, collections as `{ value: [...] }`, no `d:` envelopes):
+
+- `GET /_api/web`, `/site`, `/web/currentuser`, `/web/lists`, `/web/siteusers`
+- `GET /_api/web/lists(guid'…')` and `/web/lists/getbytitle('…')`
+- `GET` / `POST` `/_api/web/lists/getbytitle('…')/items` (collection with
+  `$top`/`$orderby`/`$select`, create)
+- `GET` / `MERGE` / `PUT` / `DELETE`
+  `/_api/web/lists/getbytitle('…')/items(<id>)` — mutations via the
+  `X-HTTP-Method` override header
+- `POST /_api/contextinfo` returns
+  `{ GetContextWebInformation: { FormDigestValue } }`
+- Missing lists/items return 404; anything unsupported returns 400 with a clear
+  `{ error: { code, message } }` envelope
+
+Seed the mock data with a `local/data.json` file in the project root
+(`{ lists: [...], currentUser: {...} }` overrides the defaults).
 
 ```sh
 rspfx dev
 rspfx dev --refresh
-rspfx dev --tenant https://contoso.sharepoint.com --browser
-```
-
-## `rspfx playground`
-
-Standalone localhost sandbox — no SharePoint required. Serves the web part on
-`config.playground.port` (default 3000) with a generated playground page.
-
-| Flag | Description |
-|---|---|
-| `--port <n>` | Override `playground.port` |
-
-```sh
-rspfx playground
-rspfx playground --port 4000
+rspfx dev --mode local
+rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 ```
 
 ## `rspfx build`
@@ -186,8 +205,10 @@ export default {
 
 `rspfx build` / `rspfx package` spawn one `vite build` per web part bundle;
 `rspfx dev` spawns `vite` (the plugin serves `/temp/manifests.js`, rebuilds AMD
-bundles into `dist/`, opens the workbench). `rspfx playground` is Rspack-only
-for now — Vite projects get a clear error.
+bundles into `dist/`, opens the workbench when a tenant is configured). The
+local preview page and mock `/_api` API are served by dev-runtime's
+`startServe`, which the CLI runs on the Rspack path — the Vite dev flow is
+workbench-only for now.
 
 ### Rsbuild — `rsbuild.config.ts`
 
@@ -207,8 +228,9 @@ externals + localized resources, the `webpackJsonp_<uniqueName>`
 and the `DEBUG`/`NODE_ENV` defines; HTML output is disabled (SPFx ships raw
 JS bundles). `rspfx build` / `rspfx package` run a single `rsbuild build`
 (one build produces all web part bundles in `dist/`); `rspfx dev` spawns
-`rsbuild dev` and prints the workbench URL. `rspfx playground` is Rspack-only
-for now — Rsbuild projects get a clear error.
+`rsbuild dev` and prints the workbench URL when a tenant is configured. The
+local preview (`--mode local`) is served by dev-runtime's Rspack `startServe`
+path — the Rsbuild dev flow is workbench-only for now.
 
 ### Options
 
@@ -217,6 +239,7 @@ library names and manifests — overrides package.json), `spfxVersion`,
 `framework`, `fluent`, `language`, `dev` (port/https/hostname/
 workbench/fastRefresh/openBrowser/tenantUrl/initialPage), `build`
 (sourcemap/minify/splitChunks/outDir/releaseDir), `paths`
-(srcDir/webpartsDir/configDir), `playground`, `deploy`. Defaults are unchanged
+(srcDir/webpartsDir/configDir), `deploy`. Defaults are unchanged
 (port 4321, https true, hostname localhost, minify true, dist/release,
-src/src/webparts/config).
+src/src/webparts/config). The legacy `playground` option is still accepted for
+compat but is ignored — there is no playground command or runtime anymore.

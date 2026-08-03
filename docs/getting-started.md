@@ -53,7 +53,7 @@ my-app/
 │   ├── serve.json               # dev server: initialPage, https, port, hostname
 │   └── write-manifests.json     # release base URL (cdnBasePath)
 ├── sharepoint/assets/           # optional solution assets
-└── playground/                  # playground host (index.html, main.ts)
+└── local/                       # optional — mock REST seed (local/data.json) for the dev local preview
 ```
 
 Every path above is a default — `paths` in the plugin options (`srcDir`,
@@ -92,9 +92,17 @@ overrides package.json for the AMD library names and manifests.
 rspfx dev
 ```
 
-This starts the dev server on **`https://localhost:4321`** (HTTPS, self-signed
-cert): it serves the compiled bundles under `/dist/*` and the debug manifests at
-`/temp/manifests.js`, then opens the workbench in your browser.
+This starts the dev server on **`http://localhost:4321`** (default `--mode
+local`): it serves a **local preview page at `/`** — no SharePoint tenant
+needed — plus the compiled bundles under `/dist/*` and the debug manifests at
+`/temp/manifests.js`. A mock SharePoint REST API runs at `/_api` (lists, items,
+current user, context digests — see [commands.md](commands.md)); seed it with a
+`local/data.json` file in the project root.
+
+When a tenant is configured (`dev.tenantUrl`, `SPFX_SERVE_TENANT_DOMAIN`, or
+`rspfx dev --tenant …`), or with an explicit `--mode sharepoint`, it instead
+serves over **`https://localhost:4321`** (self-signed cert) and opens the
+workbench in your browser.
 
 ### The workbench URL
 

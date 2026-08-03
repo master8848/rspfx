@@ -94,8 +94,8 @@ Any failure in a framework runtime falls back to a full page reload automaticall
    ship it as an `RspfxExtension` (via `definePlugin`/`registerPlugin` from
    `plugin-api`) so projects can opt in without a CLI change.
 5. **Scaffolding** — add a project template to `packages/templates`
-   (`components/<Pascal>.<ext>`, web part class, styles) and a playground page
-   variant.
+   (`components/<Pascal>.<ext>`, web part class, styles); the web part then
+   appears automatically in the local preview page served by `rspfx dev` at `/`.
 
 That's the whole contract: compiler contributions + web part class + template.
 Nothing in the build, packaging, or dev pipeline changes.

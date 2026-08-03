@@ -39,7 +39,7 @@ export interface BuildConfig {
   outDir?: string;               // default 'dist'
   releaseDir?: string;           // default 'release'
 }
-export interface PlaygroundConfig { port?: number; enabled?: boolean }
+export interface PlaygroundConfig { port?: number; enabled?: boolean }  // LEGACY — type retained for compat; no command or runtime uses it
 export interface DeployConfig {
   tenantUrl?: string; username?: string; password?: string;
   appCatalogSiteUrl?: string;    // e.g. https://contoso.sharepoint.com/sites/appcatalog
@@ -54,7 +54,7 @@ export interface RspfxConfig {
   language: 'typescript' | 'javascript';
   dev: DevConfig;
   build: BuildConfig;
-  playground?: PlaygroundConfig;
+  playground?: PlaygroundConfig;   // LEGACY — accepted for compat, ignored by the CLI
   deploy?: DeployConfig;
 }
 export function defineConfig(config: RspfxConfig): RspfxConfig;
@@ -222,7 +222,7 @@ export interface RspfxPluginOptions extends Partial<Omit<RspfxConfig, 'name'>> {
 // manifests — overrides package.json), spfxVersion, framework, fluent, language,
 // dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
 // build (sourcemap/minify/splitChunks/outDir/releaseDir), paths (srcDir/webpartsDir/configDir),
-// playground, deploy; defaults unchanged
+// deploy; defaults unchanged. The legacy `playground` option is accepted for compat but ignored.
 export class RspfxPlugin implements RspfxBundlerPluginLike {
   readonly [RSPFX_PLUGIN_MARKER]: true;
   readonly options: RspfxConfig;
@@ -246,9 +246,11 @@ The full pipeline (manifests, dev server, packaging) runs through the rspfx CLI;
 for Vite configs `rspfx build`/`rspfx package` spawn one `vite build` per web
 part bundle (selected via `VITE_ENV` env vars), and `rspfx dev` spawns `vite`
 (the plugin serves `/temp/manifests.js`, rebuilds AMD bundles into `dist/`,
-opens the workbench). For Rsbuild configs a single `rsbuild build` produces all
-web part bundles and `rspfx dev` spawns `rsbuild dev`. `rspfx playground` is
-Rspack-only for now.
+opens the workbench when a tenant is configured). For Rsbuild configs a single
+`rsbuild build` produces all web part bundles and `rspfx dev` spawns `rsbuild
+dev`. The local preview page and mock `/_api` API are served by dev-runtime's
+`startServe`, which the CLI runs on the Rspack path — the Vite/Rsbuild dev flows
+are workbench-only for now.
 
 Notes for implementer:
 - Use `builtin:swc-loader` for .ts/.tsx/.jsx/.js (parser jsx, decorators, importMeta); merge framework swc contributions.
@@ -320,20 +322,40 @@ export async function ensureCertificates(certsDir: string): Promise<{ key: strin
 ## @mbsks/rspfx-dev-runtime (depends on core, compiler-rspack, manifest-server, manifest-generator, diagnostics)
 
 ```ts
+export type ServeMode = 'local' | 'sharepoint';
 export interface DevRuntimeOptions {
   projectRoot: string;
   config: RspfxConfig;
-  tenantDomain?: string;            // from env SPFX_SERVE_TENANT_DOMAIN or config.dev.tenantUrl
   fastRefresh?: boolean;            // --refresh flag
-  noBrowser?: boolean;
+  noBrowser?: boolean;              // inverse of --browser / dev.openBrowser
+  port?: number;                    // --port flag
+  tenantDomain?: string;            // --tenant, SPFX_SERVE_TENANT_DOMAIN, or config.dev.tenantUrl (stripped of scheme)
+  mode?: ServeMode;                 // --mode flag; default 'sharepoint' when a tenant domain is configured, else 'local'
 }
-export async function startServe(opts: DevRuntimeOptions): Promise<{ url: string; close(): Promise<void> }>;
+export interface DevRuntimeHandle {
+  url: string;                      // dev server origin; http:// in local mode, https:// otherwise
+  port: number;
+  workbenchUrl: string | undefined; // undefined in local mode — there is no workbench URL
+  close(): Promise<void>;
+}
+export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle>;
 // Flow: load config → find webpart manifests+entries → create rspack config (serveMode) →
 // start dev server (hot:true, CORS, static root) → generate cumulative manifests.js (project + sp-* debug) →
 // open browser → workbench URL: <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<server>/temp/manifests.js
 // On each compiler rebuild: regenerate manifests.js (dist files may change names; official keeps [name].js so stable).
-export async function startPlayground(opts: DevRuntimeOptions): Promise<{ url: string; close(): Promise<void> }>;
-// Standalone: dev server on config.playground.port (default 3000) + generated playground page (see templates)
+// mode 'local': plain HTTP (no certs), sp-* externals emptied (the real @microsoft/sp-* packages
+// are bundled and run in the browser; only the data layer is emulated), an extra `local-runtime`
+// bundle (from @mbsks/rspfx-sharepoint-runtime/local-bootstrap) is compiled, the local preview
+// page is served at / and the mock /_api API is mounted; workbenchUrl is undefined.
+export function resolveServeMode(opts: { mode?: ServeMode; config: RspfxConfig }, tenantDomain: string | undefined): ServeMode;
+// explicit --mode wins; otherwise a configured tenant domain selects 'sharepoint', else 'local'
+export function resolveServeSettings(opts: { port?: number; tenantDomain?: string; config: RspfxConfig }, serveJson: ProjectServeConfigJson | undefined): ServeSettings;
+// port/hostname/https/tenant from CLI overrides → config/serve.json → plugin dev options → defaults (4321, localhost, https, scheme/origin derived)
+export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string | undefined;
+// <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<enc>.../temp/manifests.js
+// undefined when no tenant domain is available; honors config.dev.workbench and initialPage ({tenantdomain} token)
+export function stripScheme(url: string | undefined): string | undefined;  // strips https?:// prefix and trailing slashes
+export interface ServeSettings { port: number; hostname: string; https: boolean; scheme: string; origin: string; tenantDomain: string | undefined; initialPage: string | undefined }
 export function readProject(projectRoot: string, paths?: PathsConfig, versionOverride?: string): ReadProjectResult;
 // reads package.json/config.json/serve.json, discovers web parts; the version override
 // (plugin `version` option) replaces package.json version in AMD library names and manifests
@@ -341,9 +363,6 @@ export function createReloadController(): ReloadController;
 // dev auto-reload: monotonically increasing build counter served at /__rspfx_hot.json
 // (no-store + CORS); tick() after each completed rebuild; clientScript is appended to
 // /temp/manifests.js and polls the endpoint, calling location.reload() when the counter changes
-export function resolveServeSettings(config: { config: RspfxConfig }, serveJson: ProjectServeConfigJson | undefined): ServeSettings;
-export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string;
-// <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<enc>.../temp/manifests.js
 export function createManifestRegenerator(opts: ManifestRegeneratorOptions): ManifestRegenerator;
 // regenerates /temp/manifests.js after each compiler rebuild (project + sp-* debug manifests)
 export interface RefreshRuntime {
@@ -371,6 +390,26 @@ export function resolveContributionLoaders(contributions: Record<string, unknown
 // preset/plugin strings ('babel-preset-solid') in rule `use` entries against the framework
 // package's own node_modules (createRequire from moduleUrl); unchanged when moduleUrl is ''
 ```
+
+Local preview internals (module-level exports in `src/`, used by `startServe`
+in `mode: 'local'`; not re-exported from the package index):
+
+- `src/local-page.ts` — `buildLocalPageHtml(opts: LocalPageOptions): string`:
+  the static HTML served at `/` — injects the discovered web part list into
+  `window.__RSPFX_COMPONENTS__`, loads `/dist/local-runtime.js`, appends the
+  reload client script. `readLocalPageComponents(bundles, packageVersion):
+  LocalPageComponent[]` derives `{ id, alias, bundleName, amdId,
+  preconfiguredEntries }` from the web part manifests.
+- `src/mock-api.ts` — `createMockSharePointApi(opts: { projectRoot: string;
+  origin: () => string })` returns `{ path: '/_api', handle(req, res) }`; the
+  mock SharePoint REST API (OData v4 JSON-light — flat objects, collections as
+  `{ value: [...] }`, no `d:` envelopes): `/web`, `/site`, `/web/currentuser`,
+  `/web/lists`, `/web/siteusers`, `lists(guid'…')` /
+  `getbytitle('…')` metadata + item CRUD (mutations via the `X-HTTP-Method`
+  override header), `POST /contextinfo` digests, 404/400
+  `{ error: { code, message } }` envelopes. The store is seeded from
+  `createDefaultMockStore()` and optionally overridden by `local/data.json`
+  (`{ lists, currentUser }`) in the project root.
 
 ## @mbsks/rspfx-framework-* (depends on core, plugin-api; peer: framework libs)
 
@@ -416,11 +455,45 @@ export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> {
 
 ## @mbsks/rspfx-sharepoint-runtime (depends on core; peer @microsoft/sp-*)
 
+Local preview emulation of the SPFx client — used by the `/dist/local-runtime.js`
+bootstrap (`rspfx dev` local mode) to instantiate web parts without SharePoint:
+
 ```ts
-export function createMockWebPartContext(manifest: unknown, overrides?: Record<string, unknown>): WebPartContextLike;
-export function createPlaygroundLoader(webpartModule: unknown): { mount(root: HTMLElement): void; unmount(): void };
-export const PLAYGROUND_SERVICE_KEY = '__rspfx_playground__';
+export function createLocalWebPartContext(
+  manifest: unknown,
+  overrides?: Record<string, unknown>,
+  options?: CreateLocalContextOptions
+): Promise<WebPartContextLike>;
+// Builds a REAL WebPartContext (`new WebPartContext(parameters)`, mirroring
+// ClientSideWebPartManager._getWebPartContext) over a parent ServiceScope that
+// provides a mock PageContext + a local theme provider under the real service
+// keys (PageContext.serviceKey / ThemeProvider.serviceKey). The REAL
+// SPHttpClient/HttpClient are kept (they work against the dev server); the
+// child-scope MSGraphClientFactory / AadHttpClientFactory / AadTokenProviderFactory
+// registrations are replaced with mocks. Environment.type is Local.
+// options.services can override spHttpClient/msGraphClientFactory/aadHttpClientFactory/
+// pageContext/themeProvider; options.createScope/createContext are test seams.
+export function createMockPageContextData(overrides?: Partial<LocalPageContextData>): LocalPageContextData;
+export const LOCAL_CURRENT_USER: Record<string, unknown>;
+export type { CreateLocalContextOptions, LocalContextServices, LocalPageContextData, ScopeLike };
+export { createMockThemeProvider, LOCAL_THEMES } from './theme';      // Fluent-faithful light/dark themes
+// LocalThemeProvider: tryGetTheme()/getTheme()/themeChangedEvent (add/remove)/setTheme()/dispose()
+export { createMockSPHttpClient, createMockAadHttpClientFactory, createMockMSGraphClientFactory,
+         defaultMockTransport, LOCAL_GRAPH_DATA } from './http';     // mocked graph/AAD data clients
+
+// LEGACY — retained for compat, used nowhere at runtime (docs mark these, do not remove):
+export const PLAYGROUND_SERVICE_KEY = '__rspfx_playground__';   // self-referenced only by its own test
+export function createMockWebPartContext(manifest: unknown, overrides?: Record<string, unknown>): WebPartContextLike;  // pre-emulation flat mock
+export function createPlaygroundLoader(mountComponent: (root: HTMLElement) => void, unmountComponent?: (root: HTMLElement) => void): { mount(root: HTMLElement): void; unmount(): void };
 ```
+
+Subpath `@mbsks/rspfx-sharepoint-runtime/local-bootstrap` — the browser entry
+compiled by the dev server as the `local-runtime` bundle: installs global AMD
+`define`/`require` hooks on `window`, initializes `Environment` type to `Local`,
+reads `window.__RSPFX_COMPONENTS__`, loads each web part bundle by `amdId`, and
+per component: `createLocalWebPartContext` → `_internalInitialize(context,
+false, DisplayMode.Read)` → `_internalDeserialize({ properties, dataVersion })`
+→ await `onInit()` → `render()`.
 
 ## @mbsks/rspfx-fluent-adapter (depends on core, framework-react; peer @fluentui/react)
 
@@ -449,31 +522,29 @@ export interface TemplateVars {
   packageVersion: string;
 }
 export function scaffoldProject(vars: TemplateVars, destDir: string): Promise<string[]>; // returns written file paths
-export function scaffoldPlaygroundPage(projectRoot: string, vars: TemplateVars): Promise<string[]>;
 ```
 
 Generated project layout:
 ```
-package.json  tsconfig.json  rspack.config.ts  .gitignore  README.md
+package.json  tsconfig.json  rspack.config.ts  .gitignore  .npmrc  README.md
 config/package-solution.json  config/serve.json  config/write-manifests.json
 sharepoint/assets/.gitkeep
-src/index.ts
+src/index.ts  src/rspfx-env.d.ts
 src/webparts/<name>/<name>.manifest.json  <name>WebPart.ts  components/<Pascal>.tsx|ts|vue|svelte  styles/<Pascal>.module.scss|css  assets/.gitkeep
-playground/index.html  playground/main.ts
 ```
 (Exact scaffold file contents are the template's design; must match API usage below.)
 
-The scaffolded `<name>WebPart.ts` extends `BaseClientSideWebPart` from
-`@microsoft/sp-webpart-base` directly (no `@mbsks/rspfx-framework-*` web part base),
-and `playground/main.ts` mounts it via a cast:
-`(webPart as unknown as { properties: Record<string, string> }).properties`.
+There is **no `playground/` folder** in the scaffold — the local preview page is
+generated by dev-runtime (`local-page.ts`) and served at `/` by `rspfx dev`
+(`--mode local`, the default). The scaffolded `<name>WebPart.ts` extends
+`BaseClientSideWebPart` from `@microsoft/sp-webpart-base` directly (no
+`@mbsks/rspfx-framework-*` web part base).
 
 ## @mbsks/rspfx-cli (depends on ALL packages)
 
 Bin `rspfx`. Commands (commander):
 - `rspfx new <name>` — interactive prompts (framework, language, fluent, spfx target, pm); flags `--framework <id> --language <ts|js> --fluent --spfx-version <v> --pm <pnpm|npm|yarn> --no-install --yes` for non-interactive. Then scaffold + install deps.
-- `rspfx dev` — startServe; flags `--refresh`, `--browser`, `--port <n>`, `--tenant <url>`
-- `rspfx playground` — startPlayground; `--port <n>`
+- `rspfx dev` — startServe; flags `--refresh`, `--browser`, `--port <n>`, `--mode <local|sharepoint>`, `--tenant <url>`
 - `rspfx build` — production compile to dist + release (manifests/assets); `--no-minify --sourcemap`
 - `rspfx package` — build + package → sppkg; `--no-build`
 - `rspfx deploy` — package + upload to app catalog (REST, bearer token from `RSPFX_ACCESS_TOKEN`; catalog URL from `config.deploy.appCatalogSiteUrl` or `RSPFX_APP_CATALOG_URL`, prompted otherwise; URL validated, 120s upload timeout); prints manual steps without a token
@@ -488,8 +559,10 @@ Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`, or
 Per-command bundler awareness: for Vite configs, `dev`/`build`/`package` spawn
 the project-local `vite`/`vite build` (one build per web part bundle); for
 Rsbuild configs a single `rsbuild build` runs and `dev` spawns `rsbuild dev`;
-for Rspack configs the internal Rspack pipeline runs as before. `rspfx
-playground` is Rspack-only for now. The Rsbuild plugin mirrors the Vite dev
+for Rspack configs the internal Rspack pipeline runs as before. The local
+preview page and mock `/_api` API are served by dev-runtime's `startServe` on
+the Rspack path — the Vite/Rsbuild dev flows are workbench-only for now. The
+Rsbuild plugin mirrors the Vite dev
 features: serves `/temp/manifests.js` + the `/__rspfx_hot.json` reload counter
 via `onBeforeStartDevServer` middlewares, regenerates manifests and ticks the
 counter on `onAfterDevCompile`, keeps dev unminified (`optimization.minimize:
