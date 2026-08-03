@@ -31,7 +31,8 @@ const logger = createLogger('rspfx');
  *
  * `apply(compiler)` injects the SPFx runtime plugins (AMD public-path capture,
  * localized resource emission, DEBUG/NODE_ENV defines) when the compiler runs
- * directly (rspack / webpack-compatible bundlers such as Turbopack).
+ * directly (rspack — the webpack-compatible bundler; Turbopack does not support
+ * webpack plugins and cannot run this interface).
  *
  * The CLI (`rspfx dev|build|package|…`) instead reads `this.options` from the
  * plugin instance in the user's bundler config and composes the full pipeline

@@ -11,8 +11,14 @@ export const preset: FrameworkPreset = {
           use: {
             loader: 'babel-loader',
             options: {
-              presets: [['babel-preset-solid', { generate: 'dom' }], '@babel/preset-typescript'],
-              plugins: []
+              presets: [
+                [
+                  'babel-preset-solid',
+                  { generate: 'dom', ...(opts.fastRefresh ? { development: true } : {}) }
+                ],
+                '@babel/preset-typescript'
+              ],
+              plugins: opts.fastRefresh ? [['solid-refresh/babel', { bundler: 'rspack-esm' }]] : []
             }
           }
         }

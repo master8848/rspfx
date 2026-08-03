@@ -1,6 +1,8 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { createRspackConfig, type CompileContext } from '../src/index.js';
 import type { Configuration } from '@rspack/core';
 
@@ -8,7 +10,31 @@ const FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixture
 const COMPONENT_ID = 'aaaaaaaa-0000-0000-0000-000000000099';
 const VERSION = '1.0.0';
 
-function makeCtx(): CompileContext {
+const tmpDirs: string[] = [];
+
+function makeTempProject(installSolidRefresh: boolean): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rspfx-solid-stub-'));
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'tmp-proj', version: '1.0.0' }));
+  if (installSolidRefresh) {
+    const pkgDir = path.join(dir, 'node_modules', 'solid-refresh');
+    fs.mkdirSync(pkgDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(pkgDir, 'package.json'),
+      JSON.stringify({ name: 'solid-refresh', version: '0.7.8', main: 'index.js' })
+    );
+    fs.writeFileSync(path.join(pkgDir, 'index.js'), 'export {};\n');
+  }
+  tmpDirs.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of tmpDirs) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function makeCtx(overrides: Partial<CompileContext> = {}): CompileContext {
   return {
     projectRoot: FIXTURE,
     framework: 'react',
@@ -29,7 +55,8 @@ function makeCtx(): CompileContext {
       splitChunks: false,
       outDir: 'dist',
       releaseDir: 'release'
-    }
+    },
+    ...overrides
   };
 }
 
@@ -76,5 +103,59 @@ describe('build-time alias stubs', () => {
     }).errors ?? [];
     expect(errors).toHaveLength(0);
     expect(outputFiles).toContain('testwebpart.js');
+  });
+
+  it('aliases solid-refresh to the stub only when it cannot be resolved from the project', async () => {
+    const aliasOf = async (ctx: CompileContext): Promise<Record<string, string> | undefined> => {
+      const config = (await createRspackConfig(ctx)) as Configuration;
+      return config.resolve?.alias as Record<string, string> | undefined;
+    };
+    const missing = makeTempProject(false);
+    const installed = makeTempProject(true);
+
+    const withStub = await aliasOf(makeCtx({ projectRoot: missing, framework: 'solid', fastRefresh: true }));
+    expect(withStub?.['solid-refresh']).toBeDefined();
+    expect(withStub!['solid-refresh']).toContain('stubs');
+    expect(withStub!['solid-refresh']).not.toContain('node_modules');
+
+    const withoutStub = await aliasOf(
+      makeCtx({ projectRoot: installed, framework: 'solid', fastRefresh: true })
+    );
+    expect(withoutStub?.['solid-refresh']).toBeUndefined();
+  });
+
+  it('does not alias solid-refresh outside solid fast refresh', async () => {
+    const aliasOf = async (ctx: CompileContext): Promise<Record<string, string> | undefined> => {
+      const config = (await createRspackConfig(ctx)) as Configuration;
+      return config.resolve?.alias as Record<string, string> | undefined;
+    };
+    const missing = makeTempProject(false);
+    const noRefresh = await aliasOf(makeCtx({ projectRoot: missing, framework: 'solid', fastRefresh: false }));
+    expect(noRefresh?.['solid-refresh']).toBeUndefined();
+    const otherFramework = await aliasOf(makeCtx({ projectRoot: missing, framework: 'react', fastRefresh: true }));
+    expect(otherFramework?.['solid-refresh']).toBeUndefined();
+  });
+
+  it('warns and no-ops the solid-refresh runtime helpers when the stub is loaded', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const mod = (await import('../src/stubs/solid-refresh.js')) as {
+        $$registry(): unknown;
+        $$component(registry: unknown, id: string, component: unknown): unknown;
+        $$context(registry: unknown, id: string, context: unknown): unknown;
+        $$refresh(): void;
+        $$decline(): void;
+      };
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('solid-refresh'));
+      expect(mod.$$registry()).toEqual({});
+      const component = () => undefined;
+      expect(mod.$$component({}, 'App', component)).toBe(component);
+      const context = {};
+      expect(mod.$$context({}, 'Ctx', context)).toBe(context);
+      expect(mod.$$refresh()).toBeUndefined();
+      expect(mod.$$decline()).toBeUndefined();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
