@@ -35,6 +35,11 @@ export interface DeployConfig {
   appCatalogSiteUrl?: string;
 }
 
+export interface PlaygroundConfig {
+  port?: number;
+  enabled?: boolean;
+}
+
 export interface RspfxConfig {
   name: string;
   /** Build-time package version used in AMD library names and manifests; overrides package.json "version". */
@@ -48,6 +53,7 @@ export interface RspfxConfig {
   build: BuildConfig;
   paths?: PathsConfig;
   deploy?: DeployConfig;
+  playground?: PlaygroundConfig;
 }
 
 export function defineConfig(config: RspfxConfig): RspfxConfig {
@@ -114,6 +120,7 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
       releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir
     },
     paths: resolvePathDefaults(config.paths),
-    ...(config.deploy !== undefined ? { deploy: config.deploy } : {})
+    ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
+    ...(config.playground !== undefined ? { playground: config.playground } : {})
   };
 }

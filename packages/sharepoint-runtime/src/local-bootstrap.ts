@@ -19,27 +19,33 @@ interface RspfxLocalComponent {
   alias: string;
   bundleName: string;
   amdId: string;
-  preconfiguredEntries?: { properties?: Record<string, unknown> }[];
+  preconfiguredEntries?: {
+    properties?: Record<string, unknown>;
+    title?: string | { default?: string };
+  }[];
 }
 
 declare global {
   interface Window {
     __RSPFX_COMPONENTS__?: RspfxLocalComponent[];
   }
-  // The web part bundles call define/require in AMD form.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function define(id: string, deps: string[], factory: (...args: any[]) => unknown): void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function require(id: string): any;
 }
 
 interface AmdModule {
   exports: unknown;
 }
 
+// The web part bundles call define/require in AMD form. The global define/require
+// declarations shipped by @types/requirejs describe the full RequireJS API, which
+// this minimal loader does not implement, so install the hooks via a cast.
+const amdWindow = window as unknown as {
+  define(id: string, deps: string[], factory: (...args: unknown[]) => unknown): void;
+  require(id: string): unknown;
+};
+
 const registry = new Map<string, AmdModule>();
 
-window.define = (id, deps, factory) => {
+amdWindow.define = (id, deps, factory) => {
   const mod: AmdModule = { exports: {} };
   const resolved = deps.map((dep) => {
     if (dep === 'require') {
@@ -60,11 +66,15 @@ window.define = (id, deps, factory) => {
   registry.set(id, mod);
 };
 
-window.require = (id) => registry.get(id)?.exports;
+amdWindow.require = (id) => registry.get(id)?.exports;
+
+const EnvironmentInitializer = Environment as unknown as {
+  _initialize(data: { type: EnvironmentType }): void;
+};
 
 function boot(): void {
   try {
-    Environment._initialize({ type: EnvironmentType.Local });
+    EnvironmentInitializer._initialize({ type: EnvironmentType.Local });
   } catch {
     // Environment type is informational; the emulated context is Local anyway.
   }
@@ -89,7 +99,8 @@ function createCard(component: RspfxLocalComponent): HTMLElement {
   const header = document.createElement('header');
   const title = document.createElement('h2');
   const entry = component.preconfiguredEntries?.[0];
-  title.textContent = entry?.title?.default ?? entry?.title ?? component.alias;
+  const entryTitle = entry?.title;
+  title.textContent = (typeof entryTitle === 'string' ? entryTitle : entryTitle?.default) ?? component.alias;
   header.appendChild(title);
 
   const status = document.createElement('span');
@@ -122,7 +133,7 @@ async function mountOne(component: RspfxLocalComponent): Promise<void> {
   }
   status.textContent = 'loading…';
   await loadScript(`/dist/${component.bundleName}.js`);
-  const moduleExports = window.require(component.amdId) as
+  const moduleExports = amdWindow.require(component.amdId) as
     | { default?: new () => { render(): void } }
     | undefined;
   const WebPartClass = (moduleExports?.default ?? moduleExports) as

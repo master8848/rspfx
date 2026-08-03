@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EnvironmentType } from '@mbsks/rspfx-core';
+import { EnvironmentType, type WebPartContextLike } from '@mbsks/rspfx-core';
 import {
   createLocalWebPartContext,
   createMockPageContextData,
@@ -86,7 +86,7 @@ function buildOptions(
       domElement: element,
       properties: {},
       environment: { type: EnvironmentType.Local },
-      pageContext: services.pageContext ?? createMockPageContextData(),
+      pageContext: (services.pageContext ?? createMockPageContextData()) as LocalPageContextData,
       themeProvider: services.themeProvider ?? createMockThemeProvider(),
       spHttpClient: services.spHttpClient,
       msGraphClientFactory: services.msGraphClientFactory,
@@ -95,7 +95,7 @@ function buildOptions(
       serviceScope: scope,
       manifest,
       propertyPane: {}
-    })
+    }) as unknown as WebPartContextLike
   };
 }
 
@@ -113,10 +113,13 @@ describe('createLocalWebPartContext', () => {
     const pageContext = context.pageContext as unknown as LocalPageContextData;
     expect(pageContext.web.title).toBe('Local Workbench');
     expect(pageContext.web.absoluteUrl).toBe('http://localhost:4321');
+    expect(pageContext.web.serverRelativeUrl).toBe('/');
     expect(pageContext.site.absoluteUrl).toBe('http://localhost:4321');
     expect(pageContext.user.displayName).toBe('Dev User');
     expect(pageContext.user).toEqual(LOCAL_CURRENT_USER);
+    expect(pageContext.user.isSiteAdmin).toBe(true);
     expect(pageContext.cultureInfo.currentUICultureName).toBe('en-US');
+    expect(pageContext.cultureInfo.isRightToLeft).toBe(false);
   });
 
   it('exposes the http/graph/theme clients a web part sees', async () => {
@@ -146,6 +149,11 @@ describe('createLocalWebPartContext', () => {
       userPrincipalName: 'dev@contoso.onmicrosoft.com'
     });
     expect(graphClient.lastRequestPath).toBe('/v1.0/me');
+
+    const graphClientDefaultVersion = await (context.msGraphClientFactory as typeof graphClientFactory).getClient();
+    await expect(graphClientDefaultVersion.api('/v1.0/me').get()).resolves.toMatchObject({
+      displayName: 'Dev User'
+    });
 
     const theme = (context.themeProvider as LocalThemeProvider).tryGetTheme();
     expect(theme?.palette.themePrimary).toBe(LOCAL_THEMES.light.palette.themePrimary);

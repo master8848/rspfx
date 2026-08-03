@@ -21,7 +21,7 @@ export interface LocalPageContextData {
   user: Record<string, unknown>;
   list?: Record<string, unknown>;
   listItem?: Record<string, unknown>;
-  cultureInfo: { currentCultureName: string; currentUICultureName: string };
+  cultureInfo: { currentCultureName: string; currentUICultureName: string; isRightToLeft?: boolean };
 }
 
 export const LOCAL_CURRENT_USER = {
@@ -166,6 +166,7 @@ export async function createLocalWebPartContext(
     requestPropertyPaneAction: () => undefined,
     formFactor: real.WebPartFormFactor.Standard,
     sdks: {},
+    microsoftTeams: undefined,
     sdksAsync: Promise.resolve({}),
     widthCacheKey: undefined,
     pageLayoutType: undefined,
@@ -252,19 +253,24 @@ interface RealContextModules {
 }
 
 async function loadRealContextModules(): Promise<RealContextModules> {
-  const [{ ServiceScope, SPEvent }, { WebPartContext, WebPartFormFactor }, spHttp, pageContext, componentBase] =
-    await Promise.all([
-      import('@microsoft/sp-core-library'),
-      import('@microsoft/sp-webpart-base'),
-      import('@microsoft/sp-http'),
-      import('@microsoft/sp-page-context'),
-      import('@microsoft/sp-component-base')
-    ]);
+  const [coreLibrary, webpartBaseModule, spHttp, pageContext, componentBase] = await Promise.all([
+    import('@microsoft/sp-core-library'),
+    import('@microsoft/sp-webpart-base'),
+    import('@microsoft/sp-http'),
+    import('@microsoft/sp-page-context'),
+    import('@microsoft/sp-component-base')
+  ]);
+  // WebPartFormFactor is excluded from the public release typings of
+  // sp-webpart-base@1.23.2 (it exists at runtime), so cast the module.
+  const webpartBase = webpartBaseModule as unknown as {
+    WebPartContext: RealContextModules['WebPartContext'];
+    WebPartFormFactor: RealContextModules['WebPartFormFactor'];
+  };
   return {
-    ServiceScope,
-    WebPartContext: WebPartContext as RealContextModules['WebPartContext'],
-    SPEvent: SPEvent as RealContextModules['SPEvent'],
-    WebPartFormFactor: WebPartFormFactor as RealContextModules['WebPartFormFactor'],
+    ServiceScope: coreLibrary.ServiceScope,
+    WebPartContext: webpartBase.WebPartContext,
+    SPEvent: coreLibrary.SPEvent as RealContextModules['SPEvent'],
+    WebPartFormFactor: webpartBase.WebPartFormFactor,
     SPHttpClient: spHttp.SPHttpClient as RealContextModules['SPHttpClient'],
     MSGraphClientFactory: spHttp.MSGraphClientFactory,
     AadHttpClientFactory: spHttp.AadHttpClientFactory,
