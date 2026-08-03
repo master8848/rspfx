@@ -15,6 +15,8 @@ export type { DependencyScopeWatcher } from './deps-watch.js';
 export { openBrowser } from './browser.js';
 export { createReloadController, createReloadClientScript, RSPFX_HOT_PATH } from './reload.js';
 export type { ReloadController } from './reload.js';
+export { assembleRelease } from './release.js';
+export type { AssembleReleaseOptions, ReleaseOutput } from './release.js';
 export {
   discoverWebParts,
   readProject,
