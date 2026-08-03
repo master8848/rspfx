@@ -28,7 +28,6 @@ export default {
       version: '1.0.0',             // build-time version → AMD names + manifests
       spfxVersion: '1.22',          // which SPFx you target
       framework: 'react',           // vanilla · react · solid · preact · vue · svelte
-      styling: 'scss',
       dev: {                        // which server, which host
         port: 4321,
         https: true,
@@ -51,6 +50,7 @@ Everything else is auto-discovered: web part bundles from
 |---|---|---|
 | **Rspack** (Rust webpack successor) | `rspack.config.ts` + `RspfxPlugin` | ✅ default, fully supported |
 | **Vite** (Rollup + esbuild) | `vite.config.ts` + `rspfxVite` | ✅ build + dev (workbench) |
+| **Rsbuild** (Rspack-based build tool) | `rsbuild.config.ts` + `rspfxRsbuild` | ✅ build + dev (workbench) |
 | **Turbopack / webpack-compatible** | `RspfxPlugin.apply(compiler)` | 🔬 webpack-standard interface, testable |
 
 The official toolchain is hardwired to webpack 5. If you want Vite or Rspack,
@@ -60,7 +60,7 @@ you can't have SPFx.
 
 | Framework | Official SPFx | RSPFX |
 |---|---|---|
-| React | ✅ | ✅ (incl. shadcn/ui + Tailwind 4) |
+| React | ✅ | ✅ |
 | Vanilla TS | ✅ | ✅ |
 | Solid / Preact / Vue / Svelte | ❌ | ✅ |
 
@@ -86,7 +86,7 @@ See [docs/performance.md](performance.md) for benchmark methodology.
 
 - **ESM-only packages** (official SPFx toolchain is CommonJS-era; Heft is
   deprecated by Microsoft itself)
-- **Tailwind CSS v4** + shadcn/ui out of the box (`rspfx new --styling tailwind`)
+- **Bring your own CSS tooling** — Tailwind (v2/v3/v4), UnoCSS, or anything else, configured directly in the bundler config
 - **Node ≥ 20**, no gulpfile, no Heft, no webpack configs anywhere in your
   project
 - `rspfx doctor` validates node/ports/dependencies instead of cryptic

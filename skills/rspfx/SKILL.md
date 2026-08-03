@@ -22,20 +22,19 @@ rspfx --version
 ## 2. Scaffold a project
 
 ```sh
-rspfx new my-app    # interactive: framework, language, styling, Fluent, SPFx version, pm
+rspfx new my-app    # interactive: framework, language, Fluent, SPFx version, pm
 ```
 
 Non-interactive (CI-safe):
 
 ```sh
-rspfx new my-app --framework react --language ts --styling tailwind --fluent --spfx-version 1.22 --pm pnpm --yes
+rspfx new my-app --framework react --language ts --fluent --spfx-version 1.22 --pm pnpm --yes
 ```
 
 | Flag | Values |
 |---|---|
 | `--framework` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` |
 | `--language` | `ts` \| `js` |
-| `--styling` | `css` \| `scss` \| `tailwind` |
 | `--fluent` | Fluent UI adapter (React only) |
 | `--spfx-version` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default 1.23) |
 | `--pm` | `pnpm` \| `npm` \| `yarn` |

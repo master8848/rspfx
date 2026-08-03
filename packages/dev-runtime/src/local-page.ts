@@ -1,0 +1,129 @@
+import fs from 'node:fs';
+
+/**
+ * Local preview page: the Vite-style entry served at `/` by `rspfx dev` in
+ * local mode. Static HTML (no SharePoint) that injects the discovered web
+ * part list into `window.__RSPFX_COMPONENTS__` and loads the local runtime
+ * bootstrap bundle (`/dist/local-runtime.js`), which in turn loads each web
+ * part bundle and mounts it with an emulated SPFx context.
+ */
+
+export interface LocalPageComponent {
+  id: string;
+  alias: string;
+  bundleName: string;
+  amdId: string;
+  preconfiguredEntries?: { properties?: Record<string, unknown> }[];
+}
+
+export interface LocalPageOptions {
+  projectName: string;
+  origin: string;
+  components: LocalPageComponent[];
+  reloadClientScript: string;
+}
+
+export function buildLocalPageHtml(opts: LocalPageOptions): string {
+  const componentsJson = JSON.stringify(opts.components).replace(/</g, '\\u003c');
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${escapeHtml(opts.projectName)} — local preview</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    background: #f3f2f1;
+    color: #323130;
+  }
+  .rspfx-bar {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 10px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #edebe9;
+    font-size: 14px;
+  }
+  .rspfx-bar b { font-size: 15px; }
+  .rspfx-hint { color: #605e5c; font-size: 12px; }
+  #__rspfx_host { max-width: 900px; margin: 24px auto; padding: 0 20px; }
+  .rspfx-wp-card {
+    background: #ffffff;
+    border: 1px solid #edebe9;
+    border-radius: 4px;
+    box-shadow: 0 1.6px 3.6px rgba(0,0,0,0.132), 0 0.3px 0.9px rgba(0,0,0,0.108);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .rspfx-wp-card header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid #edebe9;
+    background: #faf9f8;
+  }
+  .rspfx-wp-card h2 { margin: 0; font-size: 14px; font-weight: 600; color: #323130; }
+  .rspfx-wp-status { font-size: 11px; color: #605e5c; }
+  .rspfx-wp-ready { color: #107c10; }
+  .rspfx-wp-root { min-height: 120px; padding: 16px; }
+  .rspfx-wp-error {
+    margin: 8px 0 0; padding: 10px;
+    background: #fde7e9; color: #a4262c;
+    font-size: 12px; white-space: pre-wrap;
+    border-radius: 2px;
+  }
+  .rspfx-wp-fatal {
+    max-width: 900px; margin: 24px auto; padding: 12px 16px;
+    background: #fde7e9; color: #a4262c;
+    border: 1px solid #f1707b; border-radius: 4px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<header class="rspfx-bar">
+  <b>${escapeHtml(opts.projectName)}</b>
+  <span>local preview</span>
+  <span class="rspfx-hint">no SharePoint required — run <code>rspfx dev --tenant &lt;url&gt;</code> to debug in the real workbench</span>
+</header>
+<div id="__rspfx_host"></div>
+<script>
+  window.__RSPFX_COMPONENTS__ = ${componentsJson};
+</script>
+<script src="${opts.origin}/dist/local-runtime.js"></script>
+<script>${opts.reloadClientScript}</script>
+</body>
+</html>
+`;
+}
+
+export function readLocalPageComponents(
+  bundles: { bundleName: string; manifestPath: string }[],
+  packageVersion: string
+): LocalPageComponent[] {
+  const components: LocalPageComponent[] = [];
+  for (const bundle of bundles) {
+    const manifest = JSON.parse(fs.readFileSync(bundle.manifestPath, 'utf8')) as {
+      id?: string;
+      alias?: string;
+      preconfiguredEntries?: { properties?: Record<string, unknown> }[];
+    };
+    if (!manifest.id) {
+      continue;
+    }
+    components.push({
+      id: manifest.id,
+      alias: manifest.alias ?? manifest.id,
+      bundleName: bundle.bundleName,
+      amdId: `${manifest.id}_${packageVersion}`,
+      preconfiguredEntries: manifest.preconfiguredEntries
+    });
+  }
+  return components;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}

@@ -128,7 +128,7 @@ Rules:
 | `framework-angular` | framework | core, plugin-api | **DEFERRED** — separate compiler track (AOT, ngc/ng-packagr) | preset |
 | `fluent-adapter` | optional | framework-react | Fluent UI web part boilerplate, theme sync | `FluentWebPart` |
 | `sharepoint-runtime` | runtime | core | shims/bridges for sp-* npm packages, framework→SPFx glue | helpers |
-| `templates` | scaffolding | — | project templates (per framework, per language, per styling) | template files |
+| `templates` | scaffolding | — | project templates (per framework, per language) | template files |
 | `cli` | app | everything above | `new/dev/playground/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
 
 Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend on them directly (version pinned to SPFx target); the toolchain externalizes them and emits `"type": "component"` dependency entries into manifests so SharePoint resolves its own built-in copies. `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.

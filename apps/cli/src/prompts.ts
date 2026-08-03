@@ -4,8 +4,6 @@ import { stdin as input, stdout as output } from 'node:process';
 
 export const FRAMEWORK_CHOICES: readonly FrameworkId[] = ['react', 'vanilla', 'solid', 'preact', 'vue', 'svelte'];
 export const DEFAULT_FRAMEWORK: FrameworkId = 'react';
-export const STYLING_CHOICES = ['tailwind', 'css', 'scss'] as const;
-export const DEFAULT_STYLING = 'tailwind';
 
 export async function promptChoice(
   question: string,

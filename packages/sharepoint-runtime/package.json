@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./local-bootstrap": {
+      "types": "./dist/local-bootstrap.d.ts",
+      "import": "./dist/local-bootstrap.js",
+      "default": "./dist/local-bootstrap.js"
     }
   },
   "files": [
@@ -27,11 +32,17 @@
   },
   "peerDependencies": {
     "@microsoft/sp-webpart-base": "*",
-    "@microsoft/sp-core-library": "*"
+    "@microsoft/sp-core-library": "*",
+    "@microsoft/sp-http": "*",
+    "@microsoft/sp-component-base": "*",
+    "@microsoft/sp-page-context": "*"
   },
   "devDependencies": {
     "@microsoft/sp-webpart-base": "1.23.2",
-    "@microsoft/sp-core-library": "1.23.2"
+    "@microsoft/sp-core-library": "1.23.2",
+    "@microsoft/sp-http": "1.23.2",
+    "@microsoft/sp-component-base": "1.23.2",
+    "@microsoft/sp-page-context": "1.23.2"
   },
   "description": "RSPFX shims/bridges for @microsoft/sp-* packages",
   "repository": {

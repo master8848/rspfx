@@ -10,7 +10,7 @@ describe('configDefaults', () => {
         hostname: 'localhost',
         workbench: true,
         fastRefresh: false,
-        openBrowser: true
+        openBrowser: false
       },
       build: {
         sourcemap: false,
@@ -46,14 +46,13 @@ describe('resolveConfig', () => {
       spfxVersion: '1.23',
       fluent: false,
       language: 'typescript',
-      styling: 'scss',
       dev: {
         port: 4321,
         https: true,
         hostname: 'localhost',
         workbench: true,
         fastRefresh: false,
-        openBrowser: true
+        openBrowser: false
       },
       build: {
         sourcemap: false,
@@ -75,7 +74,6 @@ describe('resolveConfig', () => {
       name: 'my-app',
       framework: 'react',
       language: 'javascript',
-      styling: 'tailwind',
       fluent: true,
       spfxVersion: '1.21',
       dev: { port: 9000, https: false, fastRefresh: true },
@@ -84,7 +82,6 @@ describe('resolveConfig', () => {
     expect(config.name).toBe('my-app');
     expect(config.framework).toBe('react');
     expect(config.language).toBe('javascript');
-    expect(config.styling).toBe('tailwind');
     expect(config.fluent).toBe(true);
     expect(config.spfxVersion).toBe('1.21');
     expect(config.dev).toEqual({
@@ -93,7 +90,7 @@ describe('resolveConfig', () => {
       hostname: 'localhost',
       workbench: true,
       fastRefresh: true,
-      openBrowser: true
+      openBrowser: false
     });
     expect(config.build).toEqual({
       sourcemap: true,
@@ -160,7 +157,6 @@ describe('defineConfig', () => {
       spfxVersion: '1.23',
       fluent: false,
       language: 'typescript',
-      styling: 'scss',
       dev: { port: 4321 },
       build: { minify: true }
     } as const;

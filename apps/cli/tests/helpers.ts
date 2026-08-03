@@ -24,7 +24,6 @@ export function baseVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     spfxVersion: '1.23',
     fluent: false,
     language: 'typescript',
-    styling: 'scss',
     componentId: 'aaaaaaaa-0000-0000-0000-000000000001',
     solutionId: 'bbbbbbbb-0000-0000-0000-000000000002',
     featureId: 'cccccccc-0000-0000-0000-000000000003',

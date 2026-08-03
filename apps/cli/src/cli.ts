@@ -7,7 +7,6 @@ import { SPFX_TARGETS } from '@mbsks/rspfx-core';
 import { version } from './version.js';
 import { runNew, type NewOptions } from './commands/new.js';
 import { runDev } from './commands/dev.js';
-import { runPlayground } from './commands/playground.js';
 import { runBuild, type BuildOptions } from './commands/build.js';
 import { runPackage } from './commands/package.js';
 import { runDeploy } from './commands/deploy.js';
@@ -48,7 +47,6 @@ export function configureProgram(): void {
     .argument('<name>', 'project name')
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
-    .option('--styling <css|scss|tailwind>', 'styling')
     .option('--fluent', 'enable Fluent UI')
     .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn>', 'package manager')
@@ -61,7 +59,6 @@ export function configureProgram(): void {
         cwd,
         framework: options.framework as string | undefined,
         language: options.language as string | undefined,
-        styling: options.styling as string | undefined,
         fluent: options.fluent as boolean | undefined,
         spfxVersion: options.spfxVersion as string | undefined,
         pm: options.pm as string | undefined,
@@ -74,10 +71,11 @@ export function configureProgram(): void {
 
   program
     .command('dev')
-    .description('start the dev server and open the SharePoint workbench')
+    .description('start the dev server — local preview at / (Rspack projects) or SharePoint workbench with --tenant')
     .option('--refresh', 'enable fast refresh')
-    .option('--no-browser', 'do not open the workbench in a browser')
+    .option('--browser', 'open the local preview or workbench in a browser')
     .option('--port <n>', 'dev server port')
+    .option('--mode <local|sharepoint>', 'serve mode (default: local, or sharepoint when a tenant is configured)')
     .option('--tenant <url>', 'tenant URL or domain (e.g. https://contoso.sharepoint.com)')
     .action((options: Record<string, unknown>) => {
       return guard(() =>
@@ -85,17 +83,10 @@ export function configureProgram(): void {
           refresh: options.refresh as boolean | undefined,
           browser: options.browser as boolean | undefined,
           port: toPort(options.port),
+          mode: options.mode as 'local' | 'sharepoint' | undefined,
           tenant: options.tenant as string | undefined
         })
       );
-    });
-
-  program
-    .command('playground')
-    .description('start the standalone playground dev server')
-    .option('--port <n>', 'playground server port')
-    .action((options: Record<string, unknown>) => {
-      return guard(() => runPlayground(cwd, { port: toPort(options.port) }));
     });
 
   program

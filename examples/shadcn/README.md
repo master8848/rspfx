@@ -5,7 +5,7 @@ A React 18 web part demonstrating shadcn/ui components with Tailwind CSS v4, bui
 ## What it demonstrates
 
 - `ReactWebPart` from `@mbsks/rspfx-framework-react`
-- Tailwind CSS v4 CSS-first styling (`styling: 'tailwind'` in the `RspfxPlugin` options in `rspack.config.ts` — the compiler wires `@tailwindcss/postcss`)
+- Tailwind CSS v4 CSS-first styling — CSS tooling is user-owned: `tailwindcss` is a direct dependency here and `globals.css` imports it; wire your own PostCSS/Tailwind/UnoCSS pipeline in the bundler config
 - CSS-variable theme tokens (`globals.css`: `:root` variables + `@theme inline` mapping, shadcn convention classes like `bg-background`, `text-muted-foreground`)
 - Hand-written shadcn/ui components (`components/ui/*` + `components/lib/utils.ts` with `cn()`)
 - Interactive component state (`useState`), property pane, standalone playground page

@@ -3,11 +3,14 @@ import {
   startServe,
   readProject,
   resolveServeSettings,
+  resolveServeMode,
   buildWorkbenchUrl,
-  type DevRuntimeHandle
+  type DevRuntimeHandle,
+  type ServeMode
 } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig } from '../config.js';
 import { spawnViteDev } from '../vite.js';
+import { spawnRsbuildDev } from '../rsbuild.js';
 
 const logger = createLogger('rspfx');
 
@@ -15,22 +18,42 @@ export interface DevOptions {
   refresh?: boolean;
   browser?: boolean;
   port?: number;
+  mode?: 'local' | 'sharepoint';
   tenant?: string;
+}
+
+export function localPreviewUnavailableWarning(
+  bundler: 'vite' | 'rsbuild',
+  mode: ServeMode
+): string | undefined {
+  if (mode !== 'local') {
+    return undefined;
+  }
+  return (
+    `Local preview (no SharePoint) is only available on the Rspack bundler path — this project uses ${bundler}. ` +
+    'Pass --tenant <url> to serve the SharePoint workbench instead, or scaffold a project with the default Rspack config (rspack.config.ts).'
+  );
 }
 
 export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRuntimeHandle> {
   const loaded = await loadConfig(cwd);
   const config = loaded.config;
 
-  if (loaded.bundler === 'vite') {
+  if (loaded.bundler === 'vite' || loaded.bundler === 'rsbuild') {
     const project = readProject(cwd, config.paths, config.version);
     const settings = resolveServeSettings(
       { port: opts.port, tenantDomain: opts.tenant, config },
       project.serveJson
     );
-    const child = spawnViteDev(cwd);
+    const child = loaded.bundler === 'vite' ? spawnViteDev(cwd) : spawnRsbuildDev(cwd);
 
     logger.info(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+
+    const serveMode = resolveServeMode({ mode: opts.mode, config }, settings.tenantDomain);
+    const warning = localPreviewUnavailableWarning(loaded.bundler, serveMode);
+    if (warning) {
+      logger.warn(warning);
+    }
 
     const workbenchUrl = buildWorkbenchUrl(settings, config);
     if (workbenchUrl) {
@@ -63,8 +86,9 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
     projectRoot: cwd,
     config,
     fastRefresh: opts.refresh ?? config.dev.fastRefresh,
-    noBrowser: !opts.browser,
+    noBrowser: opts.browser === true ? false : undefined,
     port: opts.port,
+    mode: opts.mode,
     tenantDomain: opts.tenant
   });
 

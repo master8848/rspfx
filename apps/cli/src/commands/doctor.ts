@@ -7,6 +7,7 @@ import { SPFX_DEFAULT_TARGET } from '@mbsks/rspfx-core';
 import { readProject } from '@mbsks/rspfx-dev-runtime';
 import { loadConfig, type LoadedProject } from '../config.js';
 import { resolveViteBin } from '../vite.js';
+import { resolveRsbuildBin } from '../rsbuild.js';
 import { version } from '../version.js';
 
 const logger = createLogger('rspfx');
@@ -36,13 +37,13 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
   try {
     loaded = await loadConfig(cwd);
     checks.push({
-      name: 'project config loads (rspack.config.ts / vite.config.ts)',
+      name: 'project config loads (rspack.config.ts / vite.config.ts / rsbuild.config.ts)',
       ok: true,
       detail: `${loaded.config.framework} / SPFx ${loaded.config.spfxVersion} / ${loaded.bundler}`
     });
   } catch (error) {
     checks.push({
-      name: 'project config loads (rspack.config.ts / vite.config.ts)',
+      name: 'project config loads (rspack.config.ts / vite.config.ts / rsbuild.config.ts)',
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
     });
@@ -57,6 +58,19 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
     } catch (error) {
       checks.push({
         name: 'vite installed',
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  if (loaded?.bundler === 'rsbuild') {
+    try {
+      const bin = resolveRsbuildBin(cwd);
+      checks.push({ name: 'rsbuild installed', ok: true, detail: bin });
+    } catch (error) {
+      checks.push({
+        name: 'rsbuild installed',
         ok: false,
         detail: error instanceof Error ? error.message : String(error)
       });

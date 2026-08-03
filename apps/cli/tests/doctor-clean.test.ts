@@ -23,7 +23,7 @@ describe('doctor', () => {
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'bad', version: '1.0.0' }));
     const result = await runDoctor(dir);
     expect(result.ok).toBe(false);
-    expect(result.checks.some((check) => check.name === 'project config loads (rspack.config.ts / vite.config.ts)' && !check.ok)).toBe(true);
+    expect(result.checks.some((check) => check.name === 'project config loads (rspack.config.ts / vite.config.ts / rsbuild.config.ts)' && !check.ok)).toBe(true);
     expect(result.checks.some((check) => check.name === 'web part bundles discovered' && !check.ok)).toBe(true);
     rmRf(dir);
   });

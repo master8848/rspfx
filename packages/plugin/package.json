@@ -22,18 +22,27 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-dev-runtime": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-manifest-generator": "workspace:*",
     "@mbsks/rspfx-manifest-server": "workspace:*",
     "@rspack/core": "^1.2.0"
   },
   "devDependencies": {
+    "@rsbuild/core": "^2.1.9",
     "typescript": "^5.7.0"
   },
-  "description": "RSPFX bundler plugins: RspfxPlugin (Rspack/Webpack-compatible) and rspfxVite (Vite) carrying the single project config object",
+  "peerDependencies": {
+    "@rsbuild/core": "^2.1.9"
+  },
+  "peerDependenciesMeta": {
+    "@rsbuild/core": {
+      "optional": true
+    }
+  },
+  "description": "RSPFX bundler plugins: RspfxPlugin (Rspack/Webpack-compatible), rspfxVite (Vite) and rspfxRsbuild (Rsbuild) carrying the single project config object",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

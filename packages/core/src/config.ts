@@ -22,11 +22,6 @@ export interface BuildConfig {
   releaseDir?: string;
 }
 
-export interface PlaygroundConfig {
-  port?: number;
-  enabled?: boolean;
-}
-
 export interface PathsConfig {
   srcDir?: string;
   webpartsDir?: string;
@@ -40,20 +35,25 @@ export interface DeployConfig {
   appCatalogSiteUrl?: string;
 }
 
+export interface PlaygroundConfig {
+  port?: number;
+  enabled?: boolean;
+}
+
 export interface RspfxConfig {
   name: string;
   /** Build-time package version used in AMD library names and manifests; overrides package.json "version". */
   version?: string;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
-  fluent: boolean;
+  /** Enable the Fluent UI web part base class; default false. */
+  fluent?: boolean;
   language: 'typescript' | 'javascript';
-  styling: 'css' | 'scss' | 'tailwind';
   dev: DevConfig;
   build: BuildConfig;
   paths?: PathsConfig;
-  playground?: PlaygroundConfig;
   deploy?: DeployConfig;
+  playground?: PlaygroundConfig;
 }
 
 export function defineConfig(config: RspfxConfig): RspfxConfig {
@@ -67,7 +67,7 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
     hostname: 'localhost',
     workbench: true,
     fastRefresh: false,
-    openBrowser: true
+    openBrowser: false
   },
   build: {
     sourcemap: false,
@@ -102,7 +102,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     spfxVersion: config.spfxVersion ?? SPFX_DEFAULT_TARGET,
     fluent: config.fluent ?? false,
     language: config.language ?? 'typescript',
-    styling: config.styling ?? 'scss',
     dev: {
       port: config.dev?.port ?? configDefaults.dev.port,
       https: config.dev?.https ?? configDefaults.dev.https,
@@ -121,7 +120,7 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
       releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir
     },
     paths: resolvePathDefaults(config.paths),
-    ...(config.playground !== undefined ? { playground: config.playground } : {}),
-    ...(config.deploy !== undefined ? { deploy: config.deploy } : {})
+    ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
+    ...(config.playground !== undefined ? { playground: config.playground } : {})
   };
 }

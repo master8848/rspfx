@@ -143,6 +143,13 @@ describe('createRspackConfig', () => {
     expect(config.optimization?.minimize).toBe(false);
   });
 
+  it('uses named module ids in dev and deterministic ids in production', async () => {
+    const dev = await getConfig(makeCtx({ production: false }));
+    expect(dev.optimization?.moduleIds).toBe('named');
+    const prod = await getConfig(makeCtx());
+    expect(prod.optimization?.moduleIds).toBe('deterministic');
+  });
+
   it('enables splitChunks only when build.splitChunks is true', async () => {
     const without = await getConfig(makeCtx());
     expect(without.optimization?.splitChunks).toBeUndefined();
@@ -164,12 +171,12 @@ describe('createRspackConfig', () => {
     expect(notServe.experiments?.cache).toBeUndefined();
   });
 
-  it('adds postcss-loader with tailwind when ctx.tailwind is true', async () => {
-    const config = await getConfig(makeCtx({ tailwind: true }));
+  it('adds plain css/scss rules', async () => {
+    const config = await getConfig(makeCtx());
     const rules = (config.module?.rules ?? []) as { test?: RegExp; use?: unknown[] }[];
     const scssRule = rules.find((rule) => rule.test?.toString().includes('s[ac]ss'));
     const cssRule = rules.find((rule) => rule.test?.toString() === '/\\.css$/' || rule.test?.toString() === '/\\.css/');
-    expect(JSON.stringify(scssRule?.use)).toContain('postcss-loader');
-    expect(JSON.stringify(cssRule?.use)).toContain('postcss-loader');
+    expect(JSON.stringify(scssRule?.use)).not.toContain('postcss-loader');
+    expect(JSON.stringify(cssRule?.use)).not.toContain('postcss-loader');
   });
 });

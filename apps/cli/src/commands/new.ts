@@ -8,9 +8,7 @@ import { SPFX_DEFAULT_TARGET, SPFX_TARGETS, isSpfxTarget } from '@mbsks/rspfx-co
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import {
   DEFAULT_FRAMEWORK,
-  DEFAULT_STYLING,
   FRAMEWORK_CHOICES,
-  STYLING_CHOICES,
   promptChoice,
   promptConfirm
 } from '../prompts.js';
@@ -25,7 +23,6 @@ export interface NewOptions {
   cwd?: string;
   framework?: string;
   language?: string;
-  styling?: string;
   fluent?: boolean;
   spfxVersion?: string;
   pm?: string;
@@ -40,7 +37,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
 
   let framework = (opts.framework as FrameworkId) ?? DEFAULT_FRAMEWORK;
   let language = opts.language ?? 'ts';
-  let styling = (opts.styling as string) ?? DEFAULT_STYLING;
   let fluent = opts.fluent ?? false;
   let spfxVersion = (opts.spfxVersion as SpfxTarget) ?? SPFX_DEFAULT_TARGET;
   let pm = opts.pm ?? 'pnpm';
@@ -51,9 +47,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
     }
     if (opts.language === undefined) {
       language = await promptChoice('Language', LANGUAGES, language);
-    }
-    if (opts.styling === undefined) {
-      styling = await promptChoice('Styling', STYLING_CHOICES, styling);
     }
     if (opts.fluent === undefined) {
       fluent = await promptConfirm('Enable Fluent UI?', false);
@@ -71,9 +64,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
   }
   if (!(LANGUAGES as readonly string[]).includes(language)) {
     throw new RspfxError('INVALID_OPTION', `Unknown language '${language}'. Expected one of: ${LANGUAGES.join(', ')}`);
-  }
-  if (!(STYLING_CHOICES as readonly string[]).includes(styling)) {
-    throw new RspfxError('INVALID_OPTION', `Unknown styling '${styling}'. Expected one of: ${STYLING_CHOICES.join(', ')}`);
   }
   if (!isSpfxTarget(spfxVersion)) {
     throw new RspfxError('INVALID_OPTION', `Unknown spfx version '${spfxVersion}'. Expected one of: ${SPFX_TARGETS.join(', ')}`);
@@ -98,7 +88,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
     spfxVersion: spfxVersion as SpfxTarget,
     fluent,
     language: language === 'js' ? 'javascript' : 'typescript',
-    styling: styling as TemplateVars['styling'],
     ...(opts.tenant !== undefined ? { tenantUrl: opts.tenant } : {}),
     componentId: randomUUID(),
     solutionId: randomUUID(),

@@ -308,8 +308,7 @@ export function createCompileContext(opts: {
     aliases,
     localizedResources,
     build: opts.build,
-    serveMode: opts.serveMode,
-    tailwind: opts.config.styling === 'tailwind'
+    serveMode: opts.serveMode
   };
 }
 

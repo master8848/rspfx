@@ -2,7 +2,7 @@
 
 Project scaffolding templates for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
 
-Programmatic scaffolders used by the `rspfx new` command: SPFx web part projects (vanilla, React, Solid, Preact, Vue, Svelte), Tailwind styling, and playground pages.
+Programmatic scaffolders used by the `rspfx new` command: SPFx web part projects (vanilla, React, Solid, Preact, Vue, Svelte) and playground pages.
 
 ## Install
 
@@ -33,7 +33,7 @@ await scaffoldPlaygroundPage('my-app', vars);
 
 - `scaffoldProject(vars, destDir)` — generate a complete SPFx project
 - `scaffoldPlaygroundPage(projectRoot, vars)` — add a playground sandbox page
-- `TemplateVars` — scaffold options (framework, SPFx version, language, styling)
+- `TemplateVars` — scaffold options (framework, SPFx version, language)
 
 ## Links
 
