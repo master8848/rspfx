@@ -238,7 +238,7 @@ describe('scaffoldProject', () => {
 
 describe('scaffoldProject without playground', () => {
   it('no longer scaffolds the playground folder (local preview is served by the dev server at /)', async () => {
-    const written = await scaffoldProject(vanillaVars, path.join(tmpRoot, 'no-playground'));
+    const written = await scaffoldProject(vanillaVars, path.join(tmpRoot, 'plain'));
     expect(written.some((file) => file.includes('playground'))).toBe(false);
   });
 });

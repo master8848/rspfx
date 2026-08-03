@@ -253,7 +253,7 @@ describe('startServe local mode', () => {
       const res = await fetch(`${handle.url}/dist/local-runtime.js`);
       expect(res.status).toBe(200);
       const body = await res.text();
-      expect(body).toContain('window.define');
+      expect(body).toContain("define('local-runtime_1.0.0', []");
       expect(body).toContain('__RSPFX_COMPONENTS__');
     } finally {
       await handle.close();
@@ -270,25 +270,31 @@ describe('startServe local mode', () => {
 
     try {
       const web = (await (await fetch(`${handle.url}/_api/web`)).json()) as {
-        d: { Title: string; CurrentUser: { LoginName: string } };
+        Title: string;
+        ServerRelativeUrl: string;
       };
-      expect(web.d.Title).toBe('Local Workbench');
-      expect(web.d.CurrentUser.LoginName).toContain('dev@contoso.onmicrosoft.com');
+      expect(web.Title).toBe('Local Workbench');
+      expect(web.ServerRelativeUrl).toBe('/');
+
+      const currentUser = (await (
+        await fetch(`${handle.url}/_api/web/currentuser`)
+      ).json()) as { LoginName: string };
+      expect(currentUser.LoginName).toContain('dev@contoso.onmicrosoft.com');
 
       const lists = (await (await fetch(`${handle.url}/_api/web/lists`)).json()) as {
-        d: { results: { Title: string }[] };
+        value: { Title: string }[];
       };
-      expect(lists.d.results.map((list) => list.Title)).toEqual(['Announcements', 'Documents']);
+      expect(lists.value.map((list) => list.Title)).toEqual(['Announcements', 'Documents']);
 
       const items = (await (
         await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`)
-      ).json()) as { d: { results: { Id: number; Title: string }[] } };
-      expect(items.d.results[0]!.Title).toBe('Welcome to RSPFX');
+      ).json()) as { value: { Id: number; Title: string }[] };
+      expect(items.value[0]!.Title).toBe('Welcome to RSPFX');
 
       const contextinfo = (await (
         await fetch(`${handle.url}/_api/contextinfo`, { method: 'POST' })
-      ).json()) as { d: { GetContextWebInformation: { FormDigestValue: string } } };
-      expect(contextinfo.d.GetContextWebInformation.FormDigestValue).toBe('0xRSPFXLOCALPREVIEW');
+      ).json()) as { GetContextWebInformation: { FormDigestValue: string } };
+      expect(contextinfo.GetContextWebInformation.FormDigestValue).toBe('0xRSPFXLOCALPREVIEW');
 
       const unknown = await fetch(`${handle.url}/_api/web/search`);
       expect(unknown.status).toBe(400);
@@ -315,15 +321,15 @@ describe('startServe local mode', () => {
         body: JSON.stringify({ Title: 'New item from test' })
       });
       expect(createdRes.status).toBe(201);
-      const created = (await createdRes.json()) as { d: { Id: number; Title: string } };
-      expect(created.d.Title).toBe('New item from test');
-      expect(created.d.Id).toBe(3);
+      const created = (await createdRes.json()) as { Id: number; Title: string };
+      expect(created.Title).toBe('New item from test');
+      expect(created.Id).toBe(3);
 
       const items = (await (
         await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`)
-      ).json()) as { d: { results: { Id: number; Title: string }[] } };
-      expect(items.d.results).toHaveLength(3);
-      expect(items.d.results.some((item) => item.Title === 'New item from test')).toBe(true);
+      ).json()) as { value: { Id: number; Title: string }[] };
+      expect(items.value).toHaveLength(3);
+      expect(items.value.some((item) => item.Title === 'New item from test')).toBe(true);
     } finally {
       await handle.close();
     }

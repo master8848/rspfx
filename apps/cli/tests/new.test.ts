@@ -34,9 +34,7 @@ describe('new', () => {
       'src/webparts/my-app/my-app.manifest.json',
       'src/webparts/my-app/my-appWebPart.ts',
       'src/webparts/my-app/components/MyApp.ts',
-      'src/webparts/my-app/styles/MyApp.module.scss',
-      'playground/index.html',
-      'playground/main.ts'
+      'src/webparts/my-app/styles/MyApp.module.scss'
     ]) {
       expect(fs.existsSync(path.join(dest, file)), file).toBe(true);
     }
