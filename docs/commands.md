@@ -40,7 +40,7 @@ rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 
 | Flag | Description |
 |---|---|
-| `--refresh` | Enable fast refresh (state-preserving where supported) |
+| `--refresh` | Enable fast refresh (state-preserving where supported); on Vite/Rsbuild projects the flag (or `dev.fastRefresh`) sets `RSPFX_FAST_REFRESH=1` for the spawned dev process |
 | `--browser` | Open the local preview or workbench in a browser (off by default) |
 | `--port <n>` | Override `dev.port` (default 4321) |
 | `--mode <local\|sharepoint>` | Serve mode — default `local`, or `sharepoint` when a tenant is configured (`--tenant` / `dev.tenantUrl` / `SPFX_SERVE_TENANT_DOMAIN`) |
@@ -135,7 +135,10 @@ RSPFX_ACCESS_TOKEN=<token> RSPFX_APP_CATALOG_URL=https://contoso.sharepoint.com/
 ## `rspfx analyze`
 
 Build + bundle report: sizes and chunk list as a console table plus
-`.rspfx/analyze.html`.
+`.rspfx/analyze.html`. Module counts come from the bundler stats (Rspack) or,
+when the bundler emits no webpack-style stats (Vite/Rsbuild), from the
+`.rspfx/stats.json` the plugins write during the build — the modules column is
+populated for all bundlers.
 
 ```sh
 rspfx analyze
@@ -171,10 +174,11 @@ The project config lives in your bundler config as a plugin instance from
 ### Rspack (default) — `rspack.config.ts`
 
 ```ts
-import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';
 
 export default {
   mode: 'development',
+  resolve: rspfxResolve(),
   plugins: [
     new RspfxPlugin({
       name: 'my-app',
@@ -193,6 +197,31 @@ export default {
 (e.g. Rspack) for the compile-time parts; the full pipeline (manifests, dev
 server, packaging) runs through the rspfx CLI.
 
+### Running the bundler directly (native commands)
+
+The bundler commands work standalone — no rspfx CLI needed:
+
+- `npx vite build` — builds every web part bundle (one vite build per entry,
+  since Rollup cannot give each entry its own `define('id', …)` in a single
+  config) and assembles the release output (`release/manifests` +
+  `release/assets`).
+- `npx rspack build` — the scaffolded `rspack.config.ts` is fully
+  self-sufficient: `rspfxResolve()` provides the standard resolve block
+  (TypeScript/JSX/SCSS extensions, `.js → .ts` extension alias, build-time stub
+  aliases and localized-resource aliases), `RspfxPlugin` composes entries,
+  externals, AMD output, framework loader contributions and swc/SCSS rules at
+  compile time, and assembles the release output after a production compile.
+  Note rspack's resolver factory is built from the config file at
+  compiler-creation time, so plugin-injected resolve options are not picked up —
+  keep the `resolve: rspfxResolve()` line. Use `--mode production` for a
+  production build (`rspfx build` always builds production).
+- `npx rsbuild build` — the rsbuild plugin configures entries/externals/output
+  via `modifyRspackConfig` and assembles the release output after the build.
+
+`rspfx build` / `rspfx package` use the same pipeline through the plugins:
+`rspfx build` spawns the project's bundler once and the plugin assembles the
+release, so native and CLI builds produce identical output.
+
 ### Vite — `vite.config.ts`
 
 ```ts
@@ -203,9 +232,17 @@ export default {
 };
 ```
 
-`rspfx build` / `rspfx package` spawn one `vite build` per web part bundle;
-`rspfx dev` spawns `vite` (the plugin serves `/temp/manifests.js`, rebuilds AMD
-bundles into `dist/`, opens the workbench when a tenant is configured). The
+`rspfx build` / `rspfx package` spawn one `vite build`; the plugin builds
+every web part bundle (one vite build per entry via `closeBundle`) and
+assembles the release output. `rspfx dev` spawns `vite` (the plugin serves
+`/temp/manifests.js`, rebuilds AMD bundles into `dist/`, opens the workbench
+when a tenant is configured). The plugin loads the framework preset's `vite()`
+contributions, prepends the same script-URL capture line as the Rspack path,
+inlines CSS into the JS bundle (no `.css` files in `dist/`), ticks the reload
+controller after rebuilds (`?t=`
+cache-busting), and writes `.rspfx/stats.json` module counts for
+`rspfx analyze`. Fast refresh is enabled with `rspfx dev --refresh` or
+`dev.fastRefresh` (passed to the dev process as `RSPFX_FAST_REFRESH=1`). The
 local preview page and mock `/_api` API are served by dev-runtime's
 `startServe`, which the CLI runs on the Rspack path — the Vite dev flow is
 workbench-only for now.
@@ -226,8 +263,14 @@ web part entries (AMD library names `<componentId>_<version>`), sp-*
 externals + localized resources, the `webpackJsonp_<uniqueName>`
 `chunkLoadingGlobal`, the public-path capture and localized-resource plugins,
 and the `DEBUG`/`NODE_ENV` defines; HTML output is disabled (SPFx ships raw
-JS bundles). `rspfx build` / `rspfx package` run a single `rsbuild build`
-(one build produces all web part bundles in `dist/`); `rspfx dev` spawns
+JS bundles). The framework preset is merged in `modifyRspackConfig`
+(`rsbuild()` contributions — babel-based react/preact refresh,
+vue/svelte/solid reuse the rspack loader rules; no swc — Rsbuild owns SWC),
+with fast refresh gated on dev + `RSPFX_FAST_REFRESH`/`dev.fastRefresh`, and
+`.rspfx/stats.json` module counts are written via `onAfterBuild` for
+`rspfx analyze`. `rspfx build` / `rspfx package` run a single `rsbuild build`
+(one build produces all web part bundles in `dist/`, and the plugin assembles
+the release output via `onAfterBuild`); `rspfx dev` spawns
 `rsbuild dev` and prints the workbench URL when a tenant is configured. The
 local preview (`--mode local`) is served by dev-runtime's Rspack `startServe`
 path — the Rsbuild dev flow is workbench-only for now.

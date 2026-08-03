@@ -124,7 +124,8 @@ describe('scaffoldProject', () => {
     expect(entry).toContain("import HelloWorld from './components/HelloWorld'");
 
     const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
-    expect(config).toContain("import { RspfxPlugin } from '@mbsks/rspfx-plugin';");
+    expect(config).toContain("import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';");
+    expect(config).toContain('resolve: rspfxResolve(),');
     expect(config).toContain("name: '@contoso/hello'");
     expect(config).toContain("version: '0.0.1'");
     expect(config).toContain("framework: 'react'");

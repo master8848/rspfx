@@ -125,21 +125,46 @@ export interface FrameworkRspackContributions {   // structural; typed loosely t
   define?: Record<string, string>;
   moduleTest?: { test?: RegExp; type?: string };  // e.g. { type: 'asset' } for css
 }
+export interface FrameworkViteContributions {    // vite-shaped; merged into the vite config by rspfxVite
+  plugins?: unknown[];        // vite plugin instances (@vitejs/plugin-react, @vitejs/plugin-vue, @prefresh/vite, @sveltejs/vite-plugin-svelte, vite-plugin-solid)
+  esbuild?: Record<string, unknown>;             // esbuild transform options, e.g. { jsx: 'automatic' }
+  resolveExtensions?: string[];
+  define?: Record<string, string>;
+}
+export interface FrameworkRsbuildContributions {  // webpack/rspack-shaped, minus the swc block (Rsbuild owns SWC)
+  rules?: unknown[];        // loader strings rewritten to absolute paths via resolveContributionLoaders
+  plugins?: unknown[];      // rspack plugin instances
+  resolve?: { alias?: Record<string, string>; extensions?: string[] };
+  define?: Record<string, string>;
+}
 export interface FrameworkPreset {
   name: import('@mbsks/rspfx-core').FrameworkId;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
+  vite?(opts: { fastRefresh: boolean }): FrameworkViteContributions;       // optional — absent = no Vite support; rspfxVite warns loudly
+  rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions; // optional — rspfxRsbuild falls back to contributions() when absent
 }
 export interface CompilerHooks {
   beforeCompile?(config: unknown): unknown;       // invoked with the resolved CompileContext; mutate it in place
   afterStats?(stats: unknown): void;
 }
+export interface ReleaseHooks {
+  beforeGenerate?(ctx: { production: boolean; webParts: unknown }): void;
+  afterGenerate?(ctx: { manifests: unknown[]; releaseDir: string }): void;
+}
+export interface DevHooks {
+  beforeStart?(ctx: { mode: 'local' | 'sharepoint'; port?: number }): void;
+  afterStart?(ctx: { url: string }): void;
+}
 export interface PackageHooks {
   beforePackage?(ctx: { manifests: unknown[]; files: { path: string; content: Uint8Array }[] }): void;
+  afterPackage?(ctx: { sppkgPath: string }): void;
 }
 export interface RspfxExtension {
   name: string;
   frameworkPreset?: FrameworkPreset;
   compilerHooks?: CompilerHooks;
+  releaseHooks?: ReleaseHooks;
+  devHooks?: DevHooks;
   packageHooks?: PackageHooks;
 }
 export function definePlugin(plugin: RspfxExtension): RspfxExtension;
@@ -147,18 +172,35 @@ export function registerPlugin(plugin: RspfxExtension): void;      // global reg
 export function getPlugins(): RspfxExtension[];
 ```
 
-The CLI wires these hooks at fixed points (`apps/cli/src/commands/build.ts`,
-`apps/cli/src/commands/package.ts`); with no registered plugins the loops are empty
-no-ops and behavior is unchanged:
+The hooks are wired at fixed points in the shared pipeline; with no registered
+plugins the loops are empty no-ops and behavior is unchanged:
 
+- `vite()` / `rsbuild()` are the M8 bundler-parity surface. `rspfxVite` calls
+  `preset.vite({ fastRefresh })` and merges plugins/esbuild/resolveExtensions/define
+  into the vite config (loud warning when the method is absent — no Vite support
+  for that framework). `rspfxRsbuild` calls `preset.rsbuild({ fastRefresh })` in
+  `modifyRspackConfig` and merges rules/plugins/resolve/define (loader strings
+  rewritten against the framework package's own `node_modules` by
+  `resolveContributionLoaders`); when `rsbuild()` is absent it falls back to
+  `contributions()` minus the swc block. React/preact rsbuild refresh is
+  babel-based (`react-refresh/babel`, `@prefresh/babel-plugin`); vue/svelte/solid
+  rsbuild reuse their rspack loader rules.
 - `compilerHooks.beforeCompile` — invoked with the resolved `CompileContext` before
   `build()` runs; plugins mutate it in place (e.g. push into `additionalPlugins` or
-  `swcContributions`). The return value is ignored.
+  `swcContributions`). The return value is ignored. (CLI rspack path only.)
 - `compilerHooks.afterStats` — invoked with the rspack stats once `build()` resolves.
-- `packageHooks.beforePackage` — invoked with `{ manifests, files }` before the release
-  layout is finalized (`runBuild`) and again before the `.sppkg` is assembled
-  (`runPackage`); `manifests` are the release component manifests, `files` are the
-  release assets as `{ path, content }` so plugins can add or transform package files.
+- `releaseHooks.beforeGenerate` / `releaseHooks.afterGenerate` — fired by
+  `assembleRelease` (`packages/dev-runtime/src/release.ts`) around component-manifest
+  generation, so they run identically for every entry point: `rspfx build` (CLI) and
+  the native bundler commands (`vite build`, `rspack build`, `rsbuild build`).
+- `devHooks.beforeStart` / `devHooks.afterStart` — fired around dev-server startup by
+  `rspfx dev` (rspack path) and by the vite/rsbuild plugins (`configureServer`,
+  `onBeforeStartDevServer`/`onAfterStartDevServer`).
+- `packageHooks.beforePackage` — invoked with `{ manifests, files }` before the
+  `.sppkg` is assembled (`rspfx package`); `manifests` are the release component
+  manifests, `files` are the release assets as `{ path, content }` so plugins can
+  add or transform package files.
+- `packageHooks.afterPackage` — invoked with `{ sppkgPath }` once the `.sppkg` is written.
 
 ## @mbsks/rspfx-diagnostics (depends on core only)
 
@@ -230,7 +272,10 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   apply(compiler: unknown): void;  // standard webpack plugin interface — webpack-compatible bundlers (Rspack) can run the compile-time parts; Turbopack does not support webpack plugins
 }
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin; // { name: 'rspfx', [RSPFX_PLUGIN_MARKER]: true, options }
-export const VITE_ENV: { mode: string; entry: string; amdId: string };  // env var names for per-bundle vite builds (RSPFX_VITE_*)
+export const VITE_ENV: { mode: string; entry: string; amdId: string; fastRefresh: string };
+// env var names for per-bundle vite builds: RSPFX_VITE_MODE / RSPFX_VITE_ENTRY /
+// RSPFX_VITE_AMD_ID, plus RSPFX_FAST_REFRESH ('1' gates fast refresh in dev;
+// also enabled by dev.fastRefresh)
 export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin;
 // { name: 'rspfx-rsbuild', [RSPFX_PLUGIN_MARKER]: true, options, setup(api) } — RsbuildPlugin-compatible
 // setup: modifyRsbuildConfig (html: false, distPath.root = build.outDir, source.entry) +
@@ -251,6 +296,26 @@ opens the workbench when a tenant is configured). For Rsbuild configs a single
 dev`. The local preview page and mock `/_api` API are served by dev-runtime's
 `startServe`, which the CLI runs on the Rspack path — the Vite/Rsbuild dev flows
 are workbench-only for now.
+
+M8 parity surface (shared with the Rspack path):
+
+- `rspfxVite` loads the framework preset and merges its `vite()` contributions
+  (loud warning when the framework has none). Each bundle is closed to Rspack
+  byte-compat output: the `scriptUrlCaptureLine` is prepended (same bytes as the
+  Rspack `SpfxPublicPathPlugin`), the `SPFX_PUBLIC_PATH_SENTINEL` is rewritten to
+  the script-URL public-path expression, and emitted `.css` assets are inlined
+  into the JS bundle (`cssCodeSplit: false`; no `.css` files in `dist/`).
+- Both plugins write `.rspfx/stats.json` as `{ "moduleCounts": { "<bundle>": n } }`
+  (per entry for vite; per entry chunk for rsbuild via `onAfterBuild`) — the
+  `rspfx analyze` module counts for bundlers that emit no webpack-style stats.
+- Fast refresh is gated on dev mode + (`RSPFX_FAST_REFRESH=1` or
+  `dev.fastRefresh`): vite merges the preset's refresh plugins
+  (`@vitejs/plugin-react`, `@prefresh/vite`, …); rsbuild merges the preset's
+  `rsbuild()` rules/plugins in `modifyRspackConfig` (no swc block — Rsbuild owns
+  SWC; loader strings rewritten via `resolveContributionLoaders`).
+- Dev auto-reload: after each rebuild the reload controller is ticked and bundle
+  URLs in `/temp/manifests.js` get a `?t=<epoch>` cache-busting suffix (both
+  vite and rsbuild paths).
 
 Notes for implementer:
 - Use `builtin:swc-loader` for .ts/.tsx/.jsx/.js (parser jsx, decorators, importMeta); merge framework swc contributions.
@@ -339,6 +404,28 @@ export interface DevRuntimeHandle {
   close(): Promise<void>;
 }
 export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle>;
+export interface AssembleReleaseOptions {
+  projectRoot: string;
+  config: RspfxConfig;
+  project: ReadProjectResult;
+  externals: string[];
+  outputFiles: string[];
+  production: boolean;
+}
+export interface ReleaseOutput {
+  manifests: ComponentManifest[];
+  distDir: string;
+  releaseDir: string;
+  releaseManifestsDir: string;
+  releaseAssetsDir: string;
+  outputFiles: string[];
+}
+export async function assembleRelease(opts: AssembleReleaseOptions): Promise<ReleaseOutput>;
+// Generates the production component manifests (config/write-manifests.json cdnBasePath as the
+// release base url) and assembles release/manifests/*.manifest.json + release/assets/* from dist/.
+// Shared by every entry point — `rspfx build` (CLI) and the native bundler commands
+// (`vite build` / `rspack build` / `rsbuild build` via the plugins) — so all paths produce
+// identical release output and fire the same `releaseHooks.beforeGenerate` / `.afterGenerate`.
 // Flow: load config → find webpart manifests+entries → create rspack config (serveMode) →
 // start dev server (hot:true, CORS, static root) → generate cumulative manifests.js (project + sp-* debug) →
 // open browser → workbench URL: <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<server>/temp/manifests.js
@@ -439,20 +526,25 @@ export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> {
 - React: react ^18, react-dom ^18 (peers); `ReactWebPart.renderInto` mounts via
   `createRoot(root).render(...)` (root cached in a WeakMap); re-render re-renders
   in place with new props; fast refresh: `@rspack/plugin-react-refresh`
-  contribution when fastRefresh.
+  contribution when fastRefresh; vite: `@vitejs/plugin-react` (esbuild
+  `jsx: 'automatic'`); rsbuild: babel-loader + `react-refresh/babel`.
 - Solid: `SolidWebPart.renderInto` uses `render(() => component, root)` from
   solid-js/web, with a disposers WeakMap — dispose-then-recreate on re-render;
   refresh: babel-loader + babel-preset-solid (dev mode) + `solid-refresh/babel`
-  (bundler `rspack-esm`) when fastRefresh.
+  (bundler `rspack-esm`) when fastRefresh; vite: `vite-plugin-solid`; rsbuild:
+  the solid babel rules.
 - Preact: `PreactWebPart.renderInto` uses `render(vnode, root)` from preact;
-  `disposeFrom` renders `null`; refresh: `@rspack/plugin-preact-refresh`.
+  `disposeFrom` renders `null`; refresh: `@rspack/plugin-preact-refresh`;
+  vite: `@prefresh/vite`; rsbuild: babel-loader + `@prefresh/babel-plugin`.
 - Vue: `VueWebPart.renderInto` uses `createApp(Component).mount(root)` with an
   apps WeakMap — unmount-then-create on re-render; refresh: vue-loader HMR (peer
-  @vue/compiler-sfc; contribution: vue-loader rule).
+  @vue/compiler-sfc; contribution: vue-loader rule); vite: `@vitejs/plugin-vue`;
+  rsbuild: the vue-loader rule (same as rspack).
 - Svelte: `SvelteWebPart.renderInto` does `new Component({ target: root, props })`
   with an instances WeakMap — `$destroy()` then recreate on re-render; refresh:
-  svelte-loader `hotReload` (svelte-hmr).
-- Each preset's `contributions` must return compiler rules/plugins/swc for JSX/refresh — compilers merge them.
+  svelte-loader `hotReload` (svelte-hmr); vite: `@sveltejs/vite-plugin-svelte`;
+  rsbuild: the svelte-loader rule.
+- Each preset's `contributions` must return compiler rules/plugins/swc for JSX/refresh — compilers merge them; the optional `vite()`/`rsbuild()` methods return the bundler-shaped equivalents (see plugin-api above).
 
 ## @mbsks/rspfx-sharepoint-runtime (depends on core; peer @microsoft/sp-*)
 
@@ -549,7 +641,7 @@ Bin `rspfx`. Commands (commander):
 - `rspfx build` — production compile to dist + release (manifests/assets); `--no-minify --sourcemap`
 - `rspfx package` — build + package → sppkg; `--no-build`
 - `rspfx deploy` — package + upload to app catalog (REST, bearer token from `RSPFX_ACCESS_TOKEN`; catalog URL from `config.deploy.appCatalogSiteUrl` or `RSPFX_APP_CATALOG_URL`, prompted otherwise; URL validated, 120s upload timeout); prints manual steps without a token
-- `rspfx analyze` — build + bundle report (sizes, chunk list) to `.rspfx/analyze.html` + console table
+- `rspfx analyze` — build + bundle report (sizes, chunk list) to `.rspfx/analyze.html` + console table; module counts from bundler stats (Rspack) or the `.rspfx/stats.json` fallback (Vite/Rsbuild)
 - `rspfx doctor` — env/config/ports/deps checks, exit code 1 on failures
 - `rspfx clean` — rm dist release temp .rspfx node_modules/.cache
 - `rspfx --version`, `rspfx --help`
@@ -560,7 +652,9 @@ Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`, or
 Per-command bundler awareness: for Vite configs, `dev`/`build`/`package` spawn
 the project-local `vite`/`vite build` (one build per web part bundle); for
 Rsbuild configs a single `rsbuild build` runs and `dev` spawns `rsbuild dev`;
-for Rspack configs the internal Rspack pipeline runs as before. The local
+for Rspack configs the internal Rspack pipeline runs as before. On Vite/Rsbuild
+projects `dev --refresh` (or `dev.fastRefresh`) sets `RSPFX_FAST_REFRESH=1` on
+the spawned process. The local
 preview page and mock `/_api` API are served by dev-runtime's `startServe` on
 the Rspack path — the Vite/Rsbuild dev flows are workbench-only for now. The
 Rsbuild plugin mirrors the Vite dev
