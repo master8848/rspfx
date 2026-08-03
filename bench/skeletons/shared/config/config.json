@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "entry": "./lib/webparts/hello/HelloWebPart.js",
+      "manifest": "./src/webparts/hello/HelloWebPart.manifest.json",
+      "outputPath": "./dist/hello-web-part.js"
+    }
+  ]
+}
