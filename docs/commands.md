@@ -13,22 +13,29 @@ guidance.
 
 ## `rspfx new <name>`
 
-Scaffold a new SPFx project and install dependencies.
+Scaffold a new SPFx project (web part or extension) and install dependencies.
 
 | Flag | Description |
 |---|---|
-| `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` |
-| `--language <lang>` | `ts` (typescript) \| `js` (javascript) |
+| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` (default `webpart`). Extensions scaffold as vanilla TypeScript only — `--framework` / `--language` / `--fluent` are rejected for them |
+| `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` (web parts only) |
+| `--language <lang>` | `ts` (typescript) \| `js` (javascript) (web parts only) |
 | `--fluent` | Enable the Fluent UI adapter (React only) |
 | `--spfx-version <v>` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default `1.23`) |
 | `--pm <pm>` | `pnpm` \| `npm` \| `yarn` (dependency install) |
 | `--no-install` | Skip dependency installation |
 | `--yes` | Accept all defaults; non-interactive |
 
+Web part scaffolds also generate a `config/config.json` with localized resources
+(`en-us`/`fr-fr` locale modules under `src/webparts/<name>/loc/`) and a `teams/`
+folder with the Teams app manifest plus the 192x192/32x32 PNG icons.
+
 ```sh
 rspfx new my-app
 rspfx new my-app --framework vue --yes
 rspfx new my-app --framework react --fluent --spfx-version 1.20 --no-install
+rspfx new my-extension --component applicationcustomizer --yes
+rspfx new my-commands --component listviewcommandset --no-install
 ```
 
 ## `rspfx dev`
@@ -51,9 +58,17 @@ rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 With no tenant configured, `rspfx dev` serves a **local preview page at `/`** —
 no SharePoint tenant needed:
 
-- The page lists every discovered web part (injected into
+- The page lists every discovered web part **and extension** (injected into
   `window.__RSPFX_COMPONENTS__`) and loads the `/dist/local-runtime.js`
-  bootstrap, which mounts each web part with an emulated SPFx context.
+  bootstrap, which mounts each component with an emulated SPFx context.
+  Extensions mount with their real contexts: ApplicationCustomizers get a
+  working placeholder provider (Top/Bottom), FieldCustomizers render a sample
+  3-row list through `onRenderCell`, and ListViewCommandSets get a command
+  toolbar wired to `onListViewUpdated`/`onExecute`.
+- **Multi-locale**: append `?locale=fr-fr` (alias `?market=`) to the preview
+  URL to switch the emulated CultureInfo (LCID, RTL flag, language name) and
+  load the matching `dist/<name>_<locale>.js` string modules, falling back to
+  `en-us` when the exact locale file is missing.
 - File saves trigger a rebuild followed by an automatic `location.reload()`
   (the reload client polls `/__rspfx_hot.json`).
 - Served over HTTP — no self-signed cert required.
@@ -117,6 +132,16 @@ Build + assemble the solution package to `sharepoint/solution/<name>.sppkg`
 rspfx package
 rspfx package --no-build
 ```
+
+The command auto-detects optional inputs when present:
+
+- **`teams/`** (Teams app `manifest.json` + icons) — included under
+  `ClientSideAssets/` in the package.
+- **`sharepoint/Resources*.resx`** — embedded at the package root and used to
+  resolve `"$Resources:KeyName"` values in
+  `metadata.shortDescription`/`longDescription` of `package-solution.json`
+  into localized `<LocalizedString>` entries (default resx → LCID 1033, each
+  `<lang>.resx` → its language's LCID).
 
 ## `rspfx deploy`
 
