@@ -22,6 +22,7 @@ describe('configDefaults', () => {
       paths: {
         srcDir: 'src',
         webpartsDir: 'src/webparts',
+        extensionsDir: 'src/extensions',
         configDir: 'config'
       }
     });
@@ -64,6 +65,7 @@ describe('resolveConfig', () => {
       paths: {
         srcDir: 'src',
         webpartsDir: 'src/webparts',
+        extensionsDir: 'src/extensions',
         configDir: 'config'
       }
     });
@@ -109,11 +111,13 @@ describe('resolveConfig', () => {
     expect(config.paths).toEqual({
       srcDir: 'components',
       webpartsDir: 'components/widgets',
+      extensionsDir: 'src/extensions',
       configDir: 'config'
     });
     expect(resolvePathDefaults()).toEqual({
       srcDir: 'src',
       webpartsDir: 'src/webparts',
+      extensionsDir: 'src/extensions',
       configDir: 'config'
     });
   });

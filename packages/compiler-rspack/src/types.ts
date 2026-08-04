@@ -19,13 +19,21 @@ export interface LocalizedResource {
   files: LocalizedResourceFile[];
 }
 
+/**
+ * A function external (webpack-compatible): receives the resolve data and
+ * returns the AMD module name to externalize, or `undefined` to keep bundling.
+ */
+export interface ExternalMatcher {
+  (data: { request?: string }): string | undefined;
+}
+
 export interface CompileContext {
   projectRoot: string;
   framework: FrameworkIdType;
   fastRefresh: boolean;
   production: boolean;
   entries: BundleEntry[];
-  externals: string[];
+  externals: (string | ExternalMatcher)[];
   aliases?: Record<string, string>;
   localizedResources?: LocalizedResource[];
   build: BuildConfigType;

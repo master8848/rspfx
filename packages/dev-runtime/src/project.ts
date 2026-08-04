@@ -10,7 +10,12 @@ import {
   type PathsConfig,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
-import type { BundleEntry, CompileContext, LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
+import type {
+  BundleEntry,
+  CompileContext,
+  ExternalMatcher,
+  LocalizedResource
+} from '@mbsks/rspfx-compiler-rspack';
 
 export interface WebPartBundle {
   bundleName: string;
@@ -311,7 +316,7 @@ export function createCompileContext(opts: {
   projectRoot: string;
   config: RspfxConfig;
   entries: BundleEntry[];
-  externals: string[];
+  externals: (string | ExternalMatcher)[];
   localizedAliases?: Record<string, string>;
   localizedResources?: LocalizedResource[];
   fastRefresh: boolean;

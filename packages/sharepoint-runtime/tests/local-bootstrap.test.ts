@@ -221,6 +221,52 @@ describe('local-bootstrap anonymous define + locale resources', () => {
     expect(status.textContent).toBe('ready');
   });
 
+  it('provides a no-op stand-in for @msinternal/* deps (bundled sp-* telemetry imports)', async () => {
+    const captured: unknown[] = [];
+    installScriptLoader({
+      '/dist/testwp.js': () => {
+        (window as unknown as { define(id: string | undefined, deps: string[], factory: unknown): void }).define(
+          'wp-id_1.0.0',
+          ['@msinternal/sp-telemetry'],
+          (telemetry: unknown) => ({
+            default: class FakeWebPart {
+              public constructor() {
+                captured.push(telemetry);
+              }
+              public _internalInitialize(): void {}
+              public _internalDeserialize(): void {}
+              public render(): void {}
+            }
+          })
+        );
+      }
+    });
+
+    const { status } = mountCard('wp-id');
+    const { mountOne } = await import('../src/local-bootstrap.js');
+    await mountOne(
+      {
+        id: 'wp-id',
+        alias: 'FakeWebPart',
+        bundleName: 'testwp',
+        amdId: 'wp-id_1.0.0',
+        preconfiguredEntries: [{ properties: {} }]
+      },
+      resolveLocale('en-us'),
+      { createWebPartContext: fakeWebPartContext }
+    );
+
+    expect(captured).toHaveLength(1);
+    const telemetry = captured[0];
+    expect(typeof telemetry).toBe('function');
+    // The stand-in survives new/call/property chains without throwing.
+    const monitor = new (telemetry as new (name: string) => { writeSuccess(): unknown })('qos');
+    expect(typeof (monitor as unknown as { writeSuccess: unknown }).writeSuccess).toBe('function');
+    expect(typeof (telemetry as unknown as { SafeHtml: unknown }).SafeHtml).toBe('function');
+    expect(status.textContent).toBe('ready');
+    expect(status.classList.contains('rspfx-wp-ready')).toBe(true);
+  });
+
   it('reads the locale from the ?locale= query param', async () => {
     const seen: { locale?: string }[] = [];
     window.history.pushState({}, '', '?locale=de-de');

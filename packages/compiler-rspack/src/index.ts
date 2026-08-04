@@ -3,6 +3,7 @@ export type {
   BundleEntry,
   CompileContext,
   DevServerOptions,
+  ExternalMatcher,
   LocalizedResource,
   LocalizedResourceFile,
   StartDevServerResult,

@@ -281,7 +281,8 @@ describe('startServe local mode', () => {
       const res = await fetch(`${handle.url}/dist/local-runtime.js`);
       expect(res.status).toBe(200);
       const body = await res.text();
-      expect(body).toContain("define('local-runtime_1.0.0', []");
+      expect(body).toContain("define('local-runtime_1.0.0',");
+      expect(body).toContain('@msinternal/sp-telemetry');
       expect(body).toContain('__RSPFX_COMPONENTS__');
     } finally {
       await handle.close();

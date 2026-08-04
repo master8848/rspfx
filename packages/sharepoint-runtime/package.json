@@ -15,6 +15,11 @@
       "types": "./dist/local-bootstrap.d.ts",
       "import": "./dist/local-bootstrap.js",
       "default": "./dist/local-bootstrap.js"
+    },
+    "./platform-modules": {
+      "types": "./dist/platform-modules.d.ts",
+      "import": "./dist/platform-modules.js",
+      "default": "./dist/platform-modules.js"
     }
   },
   "files": [

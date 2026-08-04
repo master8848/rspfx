@@ -25,6 +25,7 @@ import type { WebPartContextLike } from '@mbsks/rspfx-core';
 import { createLocalWebPartContext } from './context.js';
 import { createLocalExtensionContext } from './extension-contexts.js';
 import { DEFAULT_LOCALE, resolveLocale, type ResolvedLocale } from './locales.js';
+import { isPlatformOnlyModule } from './platform-modules.js';
 
 interface RspfxLocalComponent {
   id: string;
@@ -67,6 +68,33 @@ const amdWindow = window as unknown as {
 
 const registry = new Map<string, AmdModule>();
 
+/**
+ * No-op stand-in for the internal `@msinternal/*` modules the bundled sp-*
+ * packages import (telemetry, feature flags, safe-html). They are never
+ * published to npm; sp-loader provides them on real tenants, so in the local
+ * preview any property access, call or `new` on them yields another no-op.
+ * Self-referential so `new X().method().prop` chains keep working.
+ */
+export const MSINTERNAL_PROXY: unknown = new Proxy(function () {}, {
+  get(_target, prop) {
+    if (prop === '__esModule' || prop === Symbol.toStringTag) {
+      return undefined;
+    }
+    return MSINTERNAL_PROXY;
+  },
+  set() {
+    return true;
+  },
+  apply() {
+    return MSINTERNAL_PROXY;
+  },
+  construct() {
+    return MSINTERNAL_PROXY as object;
+  }
+});
+
+const MSINTERNAL_PREFIX = '@msinternal';
+
 // Locale files are ANONYMOUS defines (`define([], () => ({...}))`); the module
 // is stashed here until loadScript() claims it under the resource name.
 let pendingDefine: AmdModule | undefined;
@@ -82,20 +110,26 @@ interface DeferredDefine {
 const deferredDefines: DeferredDefine[] = [];
 const SPECIAL_DEP_NAMES = new Set(['require', 'exports', 'module']);
 
+function isMissingDep(dep: string): boolean {
+  return !SPECIAL_DEP_NAMES.has(dep) && !registry.has(dep) && !isPlatformOnlyModule(dep);
+}
+
+function resolveDep(dep: string, mod: AmdModule): unknown {
+  if (dep === 'require') {
+    return (requestedId: string): unknown => registry.get(requestedId)?.exports;
+  }
+  if (dep === 'exports') {
+    return mod.exports;
+  }
+  if (dep === 'module') {
+    return mod;
+  }
+  return registry.get(dep)?.exports ?? (isPlatformOnlyModule(dep) ? MSINTERNAL_PROXY : undefined);
+}
+
 function registerDefine(id: string | undefined, deps: string[], factory: (...args: unknown[]) => unknown): void {
   const mod: AmdModule = { exports: {} };
-  const resolved = deps.map((dep) => {
-    if (dep === 'require') {
-      return (requestedId: string): unknown => registry.get(requestedId)?.exports;
-    }
-    if (dep === 'exports') {
-      return mod.exports;
-    }
-    if (dep === 'module') {
-      return mod;
-    }
-    return registry.get(dep)?.exports;
-  });
+  const resolved = deps.map((dep) => resolveDep(dep, mod));
   const result = factory(...resolved);
   if (result !== undefined) {
     mod.exports = result;
@@ -108,7 +142,7 @@ function registerDefine(id: string | undefined, deps: string[], factory: (...arg
 }
 
 amdWindow.define = (id, deps, factory) => {
-  const missing = deps.filter((dep) => !SPECIAL_DEP_NAMES.has(dep) && !registry.has(dep));
+  const missing = deps.filter(isMissingDep);
   if (missing.length > 0) {
     // In local mode the only AMD externals are localized-resource names, so a
     // missing dep is a resource module we still have to load.
@@ -541,7 +575,7 @@ async function loadComponentBundle(component: RspfxLocalComponent, locale: strin
   while (deferredDefines.length > 0) {
     const batch = deferredDefines.splice(0);
     for (const pending of batch) {
-      const missing = pending.deps.filter((dep) => !SPECIAL_DEP_NAMES.has(dep) && !registry.has(dep));
+      const missing = pending.deps.filter(isMissingDep);
       for (const name of missing) {
         await loadLocaleResource(name, locale);
       }
