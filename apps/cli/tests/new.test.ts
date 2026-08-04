@@ -10,6 +10,7 @@ describe('new', () => {
     const dest = await runNew({
       name: 'my-app',
       cwd: tmp,
+      component: 'webpart',
       framework: 'vanilla',
       language: 'ts',
       fluent: false,
@@ -88,6 +89,87 @@ describe('new', () => {
     };
     expect(packageJson.dependencies?.['@microsoft/sp-webpart-base']).toBeDefined();
     expect(packageJson.dependencies?.['tailwindcss']).toBeUndefined();
+    rmRf(tmp);
+  });
+
+  it('scaffolds an application customizer extension', async () => {
+    const tmp = makeTmpDir('new-ext');
+    const dest = await runNew({
+      name: 'my-ext',
+      cwd: tmp,
+      component: 'applicationcustomizer',
+      spfxVersion: '1.23',
+      pm: 'pnpm',
+      install: false,
+      yes: true
+    });
+
+    expect(fs.existsSync(path.join(dest, 'src/extensions/my-ext/my-ext.manifest.json'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'src/extensions/my-ext/MyExtApplicationCustomizer.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'src/webparts'))).toBe(false);
+    expect(fs.existsSync(path.join(dest, 'teams'))).toBe(false);
+    expect(fs.existsSync(path.join(dest, 'config/config.json'))).toBe(false);
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(dest, 'src/extensions/my-ext/my-ext.manifest.json'), 'utf8')
+    ) as { componentType: string; extensionType: string };
+    expect(manifest.componentType).toBe('Extension');
+    expect(manifest.extensionType).toBe('ApplicationCustomizer');
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(dest, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>;
+    };
+    expect(packageJson.dependencies?.['@microsoft/sp-application-base']).toBe('1.23.0');
+    expect(packageJson.dependencies?.['@microsoft/decorators']).toBe('1.23.0');
+    expect(packageJson.dependencies?.['@microsoft/sp-webpart-base']).toBeUndefined();
+
+    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
+    expect(config).toContain("framework: 'vanilla'");
+    expect(config).toContain("language: 'typescript'");
+    rmRf(tmp);
+  });
+
+  it('scaffolds a list view command set extension with command items', async () => {
+    const tmp = makeTmpDir('new-lvcs');
+    const dest = await runNew({
+      name: 'cmds',
+      cwd: tmp,
+      component: 'listviewcommandset',
+      spfxVersion: '1.23',
+      pm: 'pnpm',
+      install: false,
+      yes: true
+    });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(dest, 'src/extensions/cmds/cmds.manifest.json'), 'utf8')
+    ) as { extensionType: string; items: Record<string, { title: { default: string } }> };
+    expect(manifest.extensionType).toBe('ListViewCommandSet');
+    expect(manifest.items['CMDS_1']?.title.default).toBe('Command One');
+    expect(manifest.items['CMDS_2']?.title.default).toBe('Command Two');
+    expect(fs.existsSync(path.join(dest, 'src/extensions/cmds/CmdsCommandSet.ts'))).toBe(true);
+    rmRf(tmp);
+  });
+
+  it('rejects unknown component values', async () => {
+    const tmp = makeTmpDir('new-bad-component');
+    await expect(
+      runNew({ name: 'bad', cwd: tmp, component: 'library', install: false, yes: true })
+    ).rejects.toThrow(/Unknown component/);
+    rmRf(tmp);
+  });
+
+  it('rejects framework/language/fluent flags for extensions', async () => {
+    const tmp = makeTmpDir('new-ext-flags');
+    await expect(
+      runNew({ name: 'bad', cwd: tmp, component: 'fieldcustomizer', framework: 'react', install: false, yes: true })
+    ).rejects.toThrow(/--framework is not supported/);
+    await expect(
+      runNew({ name: 'bad2', cwd: tmp, component: 'applicationcustomizer', language: 'js', install: false, yes: true })
+    ).rejects.toThrow(/--language is not supported/);
+    await expect(
+      runNew({ name: 'bad3', cwd: tmp, component: 'applicationcustomizer', fluent: true, install: false, yes: true })
+    ).rejects.toThrow(/--fluent is not supported/);
     rmRf(tmp);
   });
 });

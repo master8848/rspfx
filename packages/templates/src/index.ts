@@ -2,11 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { configDefaults, spfxNpmVersion } from '@mbsks/rspfx-core';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
+import { solidPng } from './png.js';
+
+export const EXTENSION_TYPES = ['applicationcustomizer', 'fieldcustomizer', 'listviewcommandset'] as const;
+export type ExtensionType = (typeof EXTENSION_TYPES)[number];
+export type ComponentType = 'webpart' | ExtensionType;
 
 export interface TemplateVars {
   name: string;
   namePascal: string;
   nameCamel: string;
+  componentType: ComponentType;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
   fluent: boolean;
@@ -33,7 +39,7 @@ export async function scaffoldProject(vars: TemplateVars, destDir: string): Prom
 
 interface TemplateFile {
   path: string;
-  content: string;
+  content: string | Buffer;
 }
 
 const FRAMEWORK_VARIANTS = ['vue', 'svelte', 'solid', 'preact'] as const;
@@ -69,6 +75,10 @@ function frameworkDeps(vars: TemplateVars): Record<string, string> {
   return { [`@mbsks/rspfx-framework-${vars.framework}`]: `^${TOOLCHAIN_VERSION}`, ...runtime };
 }
 
+function isExtension(vars: TemplateVars): boolean {
+  return vars.componentType !== 'webpart';
+}
+
 function buildFiles(vars: TemplateVars): TemplateFile[] {
   const files: TemplateFile[] = [
     { path: 'package.json', content: packageJson(vars) },
@@ -82,12 +92,27 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: 'config/write-manifests.json', content: writeManifestsJson() },
     { path: 'sharepoint/assets/.gitkeep', content: '' },
     { path: 'src/index.ts', content: 'export {};\n' },
+    { path: 'src/rspfx-env.d.ts', content: declarations(vars) }
+  ];
+  if (isExtension(vars)) {
+    files.push(
+      { path: `src/extensions/${vars.name}/${vars.name}.manifest.json`, content: extensionManifest(vars) },
+      { path: `src/extensions/${vars.name}/${vars.namePascal}${extensionSuffix(vars)}.ts`, content: extensionEntry(vars) }
+    );
+    return files;
+  }
+  files.push(
+    { path: 'config/config.json', content: configJson(vars) },
     { path: `src/webparts/${vars.name}/${vars.name}.manifest.json`, content: webpartManifest(vars) },
     { path: `src/webparts/${vars.name}/${vars.name}WebPart.${vars.language === 'javascript' ? 'js' : 'ts'}`, content: webpartEntry(vars) },
     { path: `src/webparts/${vars.name}/components/${vars.namePascal}${componentExtension(vars)}`, content: component(vars) },
     { path: `src/webparts/${vars.name}/assets/.gitkeep`, content: '' },
-    { path: 'src/rspfx-env.d.ts', content: declarations(vars) }
-  ];
+    { path: `src/webparts/${vars.name}/loc/en-us.ts`, content: localeStrings(vars, 'en-us', 'Description') },
+    { path: `src/webparts/${vars.name}/loc/fr-fr.ts`, content: localeStrings(vars, 'fr-fr', 'La description') },
+    { path: `teams/${vars.componentId}_color.png`, content: solidPng(192, 192, [0, 120, 212]) },
+    { path: `teams/${vars.componentId}_outline.png`, content: solidPng(32, 32, [50, 49, 48]) },
+    { path: 'teams/manifest.json', content: teamsManifest(vars) }
+  );
   files.push({
     path: `src/webparts/${vars.name}/styles/${vars.namePascal}.module.scss`,
     content: stylesheet(vars)
@@ -114,6 +139,11 @@ function componentExtension(vars: TemplateVars): string {
 function packageJson(vars: TemplateVars): string {
   const spVersion = spfxNpmVersion(vars.spfxVersion);
   const framework = frameworkDeps(vars);
+  const spDeps = isExtension(vars) ? extensionSpDeps(vars) : {
+    '@microsoft/sp-core-library': spVersion,
+    '@microsoft/sp-webpart-base': spVersion,
+    '@microsoft/sp-property-pane': spVersion
+  };
   return JSON.stringify(
     {
       name: vars.packageName,
@@ -130,9 +160,7 @@ function packageJson(vars: TemplateVars): string {
         clean: 'rspfx clean'
       },
       dependencies: {
-        '@microsoft/sp-core-library': spVersion,
-        '@microsoft/sp-webpart-base': spVersion,
-        '@microsoft/sp-property-pane': spVersion,
+        ...spDeps,
         ...framework
       },
       devDependencies: {
@@ -145,6 +173,32 @@ function packageJson(vars: TemplateVars): string {
     null,
     2
   );
+}
+
+function extensionSpDeps(vars: TemplateVars): Record<string, string> {
+  const spVersion = spfxNpmVersion(vars.spfxVersion);
+  switch (vars.componentType) {
+    case 'applicationcustomizer':
+      return {
+        '@microsoft/sp-core-library': spVersion,
+        '@microsoft/sp-application-base': spVersion,
+        '@microsoft/decorators': spVersion
+      };
+    case 'fieldcustomizer':
+      return {
+        '@microsoft/sp-core-library': spVersion,
+        '@microsoft/sp-field-customizer-base': spVersion,
+        '@microsoft/decorators': spVersion
+      };
+    case 'listviewcommandset':
+      return {
+        '@microsoft/sp-core-library': spVersion,
+        '@microsoft/sp-listview-extensibility': spVersion,
+        '@microsoft/decorators': spVersion
+      };
+    default:
+      throw new Error(`Unexpected extension type: ${vars.componentType}`);
+  }
 }
 
 function tsconfigJson(vars: TemplateVars): string {
@@ -167,6 +221,7 @@ function tsconfigJson(vars: TemplateVars): string {
         skipLibCheck: true,
         esModuleInterop: true,
         resolveJsonModule: true,
+        ...(isExtension(vars) ? { experimentalDecorators: true } : {}),
         ...jsx
       },
       include: ['src']
@@ -238,11 +293,27 @@ function npmrc(): string {
   return 'legacy-peer-deps=true\n';
 }
 
+function componentLabel(vars: TemplateVars): string {
+  switch (vars.componentType) {
+    case 'applicationcustomizer':
+      return 'application customizer';
+    case 'fieldcustomizer':
+      return 'field customizer';
+    case 'listviewcommandset':
+      return 'list view command set';
+    default:
+      return 'web part';
+  }
+}
+
 function readme(vars: TemplateVars): string {
+  const build = isExtension(vars)
+    ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (vanilla, TypeScript).`
+    : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (${vars.framework}, ${vars.language}).`;
   return [
     `# ${vars.namePascal}`,
     '',
-    `An SPFx ${vars.spfxVersion} web part scaffolded with rspfx (${vars.framework}, ${vars.language}).`,
+    build,
     '',
     '## Commands',
     '',
@@ -284,7 +355,9 @@ function packageSolution(vars: TemplateVars): string {
         features: [
           {
             title: `${vars.namePascal} Feature`,
-            description: `A feature which activates the Client-Side WebPart named '${vars.namePascal}'`,
+            description: isExtension(vars)
+              ? `A feature which activates the Client-Side Extension named '${vars.namePascal}'`
+              : `A feature which activates the Client-Side WebPart named '${vars.namePascal}'`,
             id: vars.featureId,
             version: '1.0.0.0',
             assets: { elementManifests: [], elementFiles: [] }
@@ -323,6 +396,97 @@ function writeManifestsJson(): string {
   );
 }
 
+function configJson(vars: TemplateVars): string {
+  return JSON.stringify(
+    {
+      $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json',
+      localizedResources: {
+        [`${vars.namePascal}WebPartStrings`]: `src/webparts/${vars.name}/loc/{locale}.js`
+      }
+    },
+    null,
+    2
+  );
+}
+
+function localeStrings(vars: TemplateVars, locale: string, description: string): string {
+  return [
+    'define([], () => {',
+    '  return {',
+    `    "Description": "${description}"`,
+    '  };',
+    '});',
+    ''
+  ].join('\n');
+}
+
+function teamsManifest(vars: TemplateVars): string {
+  const componentId = vars.componentId;
+  const tabUrl = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=${componentId}%26forceLocale={locale}`;
+  return JSON.stringify(
+    {
+      $schema: 'https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json',
+      manifestVersion: '1.13',
+      version: '1.0.0',
+      id: componentId,
+      packageName: `com.contoso.${vars.name}`,
+      developer: {
+        name: 'SPFx + Teams Dev',
+        websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
+        privacyUrl: 'https://privacy.microsoft.com/en-us/privacystatement',
+        termsOfUseUrl: 'https://www.microsoft.com/en-us/servicesagreement'
+      },
+      name: {
+        short: vars.name,
+        full: vars.name
+      },
+      description: {
+        short: `${vars.name} description`,
+        full: `${vars.name} description`
+      },
+      icons: {
+        outline: `${componentId}_outline.png`,
+        color: `${componentId}_color.png`
+      },
+      accentColor: '#FFFFFF',
+      staticTabs: [
+        {
+          entityId: componentId,
+          name: vars.name,
+          contentUrl: tabUrl,
+          websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
+          scopes: ['personal']
+        }
+      ],
+      configurableTabs: [
+        {
+          configurationUrl: tabUrl,
+          canUpdateConfiguration: true,
+          scopes: ['team']
+        }
+      ],
+      validDomains: [
+        '*.login.microsoftonline.com',
+        '*.sharepoint.com',
+        '*.sharepoint-df.com',
+        'spoppe-a.akamaihd.net',
+        'spoprod-a.akamaihd.net',
+        '*.microsoftonline.com',
+        '*.microsoftonline-p.com',
+        '*.msauth.net',
+        '*.msauthimages.net',
+        '*.msftauth.net',
+        '*.msftauthimages.net',
+        '*.office.com',
+        '*.officeapps.live.com',
+        '*.secure.aadcdn.microsoftonline-p.com'
+      ]
+    },
+    null,
+    2
+  );
+}
+
 function webpartManifest(vars: TemplateVars): string {
   return JSON.stringify(
     {
@@ -350,6 +514,168 @@ function webpartManifest(vars: TemplateVars): string {
   );
 }
 
+function extensionSuffix(vars: TemplateVars): string {
+  switch (vars.componentType) {
+    case 'applicationcustomizer':
+      return 'ApplicationCustomizer';
+    case 'fieldcustomizer':
+      return 'FieldCustomizer';
+    case 'listviewcommandset':
+      return 'CommandSet';
+    default:
+      throw new Error(`Unexpected component type: ${vars.componentType}`);
+  }
+}
+
+function extensionType(vars: TemplateVars): string {
+  switch (vars.componentType) {
+    case 'applicationcustomizer':
+      return 'ApplicationCustomizer';
+    case 'fieldcustomizer':
+      return 'FieldCustomizer';
+    case 'listviewcommandset':
+      return 'ListViewCommandSet';
+    default:
+      throw new Error(`Unexpected component type: ${vars.componentType}`);
+  }
+}
+
+function extensionManifest(vars: TemplateVars): string {
+  const manifest = {
+    $schema: 'https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json',
+    id: vars.componentId,
+    alias: `${vars.namePascal}${extensionSuffix(vars)}`,
+    componentType: 'Extension',
+    extensionType: extensionType(vars),
+    version: '*',
+    manifestVersion: 2,
+    requiresCustomScript: false
+  };
+  if (vars.componentType === 'listviewcommandset') {
+    return JSON.stringify(
+      {
+        ...manifest,
+        items: {
+          [`${vars.namePascal.toUpperCase()}_1`]: {
+            title: { default: 'Command One' },
+            type: 'command'
+          },
+          [`${vars.namePascal.toUpperCase()}_2`]: {
+            title: { default: 'Command Two' },
+            type: 'command'
+          }
+        }
+      },
+      null,
+      2
+    );
+  }
+  return JSON.stringify(manifest, null, 2);
+}
+
+function extensionEntry(vars: TemplateVars): string {
+  switch (vars.componentType) {
+    case 'applicationcustomizer':
+      return applicationCustomizerEntry(vars);
+    case 'fieldcustomizer':
+      return fieldCustomizerEntry(vars);
+    case 'listviewcommandset':
+      return listViewCommandSetEntry(vars);
+    default:
+      throw new Error(`Unexpected component type: ${vars.componentType}`);
+  }
+}
+
+function applicationCustomizerEntry(vars: TemplateVars): string {
+  const logSource = `${vars.namePascal}ApplicationCustomizer`;
+  return [
+    `import { Log } from '@microsoft/sp-core-library';`,
+    `import { override } from '@microsoft/decorators';`,
+    `import { BaseApplicationCustomizer } from '@microsoft/sp-application-base';`,
+    ``,
+    `const LOG_SOURCE: string = '${logSource}';`,
+    ``,
+    `export default class ${logSource} extends BaseApplicationCustomizer {`,
+    `  @override`,
+    `  public onInit(): Promise<void> {`,
+    `    Log.info(LOG_SOURCE, 'Initialized ${vars.name}');`,
+    `    return super.onInit();`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public onRender(): void {`,
+    `    const placeholder = this.context.placeholderProvider.tryCreateContent('PageHeader');`,
+    `    if (placeholder) {`,
+    `      placeholder.domElement.innerHTML = \`<div>Hello from \${LOG_SOURCE}</div>\`;`,
+    `    }`,
+    `  }`,
+    `}`,
+    ``
+  ].join('\n');
+}
+
+function fieldCustomizerEntry(vars: TemplateVars): string {
+  const logSource = `${vars.namePascal}FieldCustomizer`;
+  return [
+    `import { Log } from '@microsoft/sp-core-library';`,
+    `import { override } from '@microsoft/decorators';`,
+    `import {`,
+    `  BaseFieldCustomizer,`,
+    `  type IFieldCustomizerCellEventParameters`,
+    `} from '@microsoft/sp-listview-extensibility';`,
+    ``,
+    `const LOG_SOURCE: string = '${logSource}';`,
+    ``,
+    `export default class ${logSource} extends BaseFieldCustomizer<{}> {`,
+    `  @override`,
+    `  public onInit(): Promise<void> {`,
+    `    Log.info(LOG_SOURCE, 'Initialized ${vars.name}');`,
+    `    return super.onInit();`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public onRenderCell(event: IFieldCustomizerCellEventParameters): void {`,
+    `    event.domElement.innerHTML = \`\${event.fieldValue}\`;`,
+    `  }`,
+    `}`,
+    ``
+  ].join('\n');
+}
+
+function listViewCommandSetEntry(vars: TemplateVars): string {
+  const logSource = `${vars.namePascal}CommandSet`;
+  return [
+    `import { Log } from '@microsoft/sp-core-library';`,
+    `import { override } from '@microsoft/decorators';`,
+    `import {`,
+    `  BaseListViewCommandSet,`,
+    `  type IListViewCommandSetExecuteEventParameters,`,
+    `  type IListViewCommandSetListViewUpdatedEventParameters`,
+    `} from '@microsoft/sp-listview-extensibility';`,
+    ``,
+    `const LOG_SOURCE: string = '${logSource}';`,
+    ``,
+    `export default class ${logSource} extends BaseListViewCommandSet<{}> {`,
+    `  @override`,
+    `  public onInit(): Promise<void> {`,
+    `    Log.info(LOG_SOURCE, 'Initialized ${vars.name}');`,
+    `    return Promise.resolve();`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public onListViewUpdated(event: IListViewCommandSetListViewUpdatedEventParameters): void {`,
+    `    Log.info(LOG_SOURCE, 'List view updated');`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public onExecute(event: IListViewCommandSetExecuteEventParameters): void {`,
+    `    Log.info(LOG_SOURCE, \`Command \${event.itemId} clicked\`);`,
+    `  }`,
+    `}`,
+    ``
+  ].join('\n');
+}
+
 function webpartEntry(vars: TemplateVars): string {
   if (isFrameworkVariant(vars)) {
     return frameworkWebpartEntry(vars);
@@ -366,13 +692,14 @@ function webpartEntry(vars: TemplateVars): string {
     ? `  public render(): void {\n    this.domElement.innerHTML = \`<section class="\${styles.${vars.namePascal}}">\${${vars.namePascal}({ description: this.properties.description })}</section>\`;\n  }`
     : `  public render() {\n    this.domElement.innerHTML = \`<section class="\${styles.${vars.namePascal}}">\${${vars.namePascal}({ description: this.properties.description })}</section>\`;\n  }`;
   const propertyPane = ts
-    ? `  protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: 'Description'\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`
-    : `  protected getPropertyPaneConfiguration() {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: 'Description'\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`;
+    ? `  protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: strings.Description\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`
+    : `  protected getPropertyPaneConfiguration() {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: strings.Description\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`;
   return [
     `import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';`,
     `import { PropertyPaneTextField${ts ? ', type IPropertyPaneConfiguration' : ''} } from '@microsoft/sp-property-pane';`,
     `import ${vars.namePascal} from './components/${vars.namePascal}';`,
     `import styles from './styles/${vars.namePascal}.module.scss';`,
+    `import strings from '${vars.namePascal}WebPartStrings';`,
     propsInterface,
     classDecl,
     `  public get dataVersion(): string {\n    return '1.0';\n  }`,
@@ -389,9 +716,10 @@ function frameworkWebpartEntry(vars: TemplateVars): string {
     ? `export type I${vars.namePascal}WebPartProps = {\n  description: string;\n};\n`
     : '';
   const propertyPane = ts
-    ? `  protected override getPropertyPaneConfiguration(): IPropertyPaneConfiguration {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: 'Description'\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`
-    : `  getPropertyPaneConfiguration() {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: 'Description'\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`;
+    ? `  protected override getPropertyPaneConfiguration(): IPropertyPaneConfiguration {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: strings.Description\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`
+    : `  getPropertyPaneConfiguration() {\n    return {\n      pages: [\n        {\n          header: { description: '${vars.name}' },\n          groups: [\n            {\n              groupName: 'Settings',\n              groupFields: [\n                PropertyPaneTextField('description', {\n                  label: strings.Description\n                })\n              ]\n            }\n          ]\n        }\n      ]\n    };\n  }`;
   const styleImport = `import styles from './styles/${vars.namePascal}.module.scss';`;
+  const stringsImport = `import strings from '${vars.namePascal}WebPartStrings';`;
 
   switch (vars.framework) {
     case 'vue':
@@ -401,6 +729,7 @@ function frameworkWebpartEntry(vars: TemplateVars): string {
         `import { VueWebPart } from '@mbsks/rspfx-framework-vue/webpart';`,
         `import ${vars.namePascal} from './components/${vars.namePascal}.vue';`,
         styleImport,
+        stringsImport,
         propsInterface,
         ts
           ? `export default class ${vars.namePascal}WebPart extends VueWebPart<I${vars.namePascal}WebPartProps, unknown> {\n  protected renderComponent(props: I${vars.namePascal}WebPartProps): Component {\n    return ${vars.namePascal};\n  }`
@@ -414,6 +743,7 @@ function frameworkWebpartEntry(vars: TemplateVars): string {
         `import { SvelteWebPart${ts ? ', type SvelteWebPartComponent' : ''} } from '@mbsks/rspfx-framework-svelte/webpart';`,
         `import ${vars.namePascal} from './components/${vars.namePascal}.svelte';`,
         styleImport,
+        stringsImport,
         propsInterface,
         ts
           ? `export default class ${vars.namePascal}WebPart extends SvelteWebPart<I${vars.namePascal}WebPartProps, unknown> {\n  protected renderComponent(props: I${vars.namePascal}WebPartProps): SvelteWebPartComponent<I${vars.namePascal}WebPartProps> {\n    return { component: ${vars.namePascal}, props };\n  }`
@@ -428,6 +758,7 @@ function frameworkWebpartEntry(vars: TemplateVars): string {
         `import { SolidWebPart } from '@mbsks/rspfx-framework-solid/webpart';`,
         `import ${vars.namePascal} from './components/${vars.namePascal}';`,
         styleImport,
+        stringsImport,
         propsInterface,
         ts
           ? `export default class ${vars.namePascal}WebPart extends SolidWebPart<I${vars.namePascal}WebPartProps, unknown> {\n  protected renderComponent(props: I${vars.namePascal}WebPartProps): JSX.Element {\n    return createComponent(${vars.namePascal}, props);\n  }`
@@ -442,6 +773,7 @@ function frameworkWebpartEntry(vars: TemplateVars): string {
         `import { PreactWebPart } from '@mbsks/rspfx-framework-preact/webpart';`,
         `import ${vars.namePascal} from './components/${vars.namePascal}';`,
         styleImport,
+        stringsImport,
         propsInterface,
         ts
           ? `export default class ${vars.namePascal}WebPart extends PreactWebPart<I${vars.namePascal}WebPartProps, unknown> {\n  protected renderComponent(props: I${vars.namePascal}WebPartProps): ComponentChild {\n    return h(${vars.namePascal}, props);\n  }`

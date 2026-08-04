@@ -43,8 +43,9 @@ export function configureProgram(): void {
 
   program
     .command('new')
-    .description('scaffold a new SPFx web part project')
+    .description('scaffold a new SPFx project (web part or extension)')
     .argument('<name>', 'project name')
+    .option('--component <webpart|applicationcustomizer|fieldcustomizer|listviewcommandset>', 'component type (default: webpart); extensions scaffold as vanilla TypeScript and reject --framework/--language/--fluent')
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
     .option('--fluent', 'enable Fluent UI')
@@ -57,6 +58,7 @@ export function configureProgram(): void {
       const opts: NewOptions = {
         name,
         cwd,
+        component: options.component as string | undefined,
         framework: options.framework as string | undefined,
         language: options.language as string | undefined,
         fluent: options.fluent as boolean | undefined,

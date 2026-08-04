@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { scaffoldProject, type TemplateVars } from '@mbsks/rspfx-templates';
+import { scaffoldProject, type ComponentType, type TemplateVars } from '@mbsks/rspfx-templates';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 import { SPFX_DEFAULT_TARGET, SPFX_TARGETS, isSpfxTarget } from '@mbsks/rspfx-core';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import {
+  COMPONENT_CHOICES,
+  DEFAULT_COMPONENT,
   DEFAULT_FRAMEWORK,
   FRAMEWORK_CHOICES,
   promptChoice,
@@ -21,6 +23,7 @@ const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn'] as const;
 export interface NewOptions {
   name: string;
   cwd?: string;
+  component?: string;
   framework?: string;
   language?: string;
   fluent?: boolean;
@@ -35,6 +38,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
   const cwd = opts.cwd ?? process.cwd();
   const skipPrompts = opts.yes === true;
 
+  let component = (opts.component as ComponentType) ?? DEFAULT_COMPONENT;
   let framework = (opts.framework as FrameworkId) ?? DEFAULT_FRAMEWORK;
   let language = opts.language ?? 'ts';
   let fluent = opts.fluent ?? false;
@@ -42,14 +46,20 @@ export async function runNew(opts: NewOptions): Promise<string> {
   let pm = opts.pm ?? 'pnpm';
 
   if (!skipPrompts) {
-    if (opts.framework === undefined) {
-      framework = (await promptChoice('Framework', FRAMEWORK_CHOICES, framework)) as FrameworkId;
+    if (opts.component === undefined) {
+      component = (await promptChoice('Component type', COMPONENT_CHOICES, component)) as ComponentType;
     }
-    if (opts.language === undefined) {
-      language = await promptChoice('Language', LANGUAGES, language);
-    }
-    if (opts.fluent === undefined) {
-      fluent = await promptConfirm('Enable Fluent UI?', false);
+    const isExtension = component !== 'webpart';
+    if (!isExtension) {
+      if (opts.framework === undefined) {
+        framework = (await promptChoice('Framework', FRAMEWORK_CHOICES, framework)) as FrameworkId;
+      }
+      if (opts.language === undefined) {
+        language = await promptChoice('Language', LANGUAGES, language);
+      }
+      if (opts.fluent === undefined) {
+        fluent = await promptConfirm('Enable Fluent UI?', false);
+      }
     }
     if (opts.spfxVersion === undefined) {
       spfxVersion = (await promptChoice('SPFx version', SPFX_TARGETS, spfxVersion)) as SpfxTarget;
@@ -59,6 +69,23 @@ export async function runNew(opts: NewOptions): Promise<string> {
     }
   }
 
+  if (!(COMPONENT_CHOICES as readonly string[]).includes(component)) {
+    throw new RspfxError('INVALID_OPTION', `Unknown component '${component}'. Expected one of: ${COMPONENT_CHOICES.join(', ')}`);
+  }
+  if (component !== 'webpart') {
+    if (opts.framework !== undefined) {
+      throw new RspfxError('INVALID_OPTION', `--framework is not supported for ${component} components; extensions scaffold as vanilla`);
+    }
+    if (opts.language !== undefined) {
+      throw new RspfxError('INVALID_OPTION', `--language is not supported for ${component} components; extensions scaffold as TypeScript`);
+    }
+    if (opts.fluent !== undefined) {
+      throw new RspfxError('INVALID_OPTION', `--fluent is not supported for ${component} components; extensions are vanilla only`);
+    }
+    framework = 'vanilla';
+    language = 'ts';
+    fluent = false;
+  }
   if (!FRAMEWORK_CHOICES.includes(framework as FrameworkId)) {
     throw new RspfxError('INVALID_OPTION', `Unknown framework '${framework}'. Expected one of: ${FRAMEWORK_CHOICES.join(', ')}`);
   }
@@ -84,6 +111,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
     name: opts.name,
     namePascal,
     nameCamel: toCamelCase(namePascal),
+    componentType: component,
     framework: framework as FrameworkId,
     spfxVersion: spfxVersion as SpfxTarget,
     fluent,
