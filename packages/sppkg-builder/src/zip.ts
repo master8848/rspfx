@@ -49,8 +49,14 @@ export async function validateSppkg(zipPath: string): Promise<SppkgValidationRes
   if (![...names].some((name) => /^feature_[0-9a-fA-F-]+\.xml$/.test(name))) {
     errors.push('Missing required feature manifest entry (feature_<id>.xml)');
   }
-  if (![...names].some((name) => /(?:^|\/)WebPart_[0-9a-fA-F-]+\.xml$/.test(name))) {
-    errors.push('Missing required web part element manifest entry (<featureId>/WebPart_<componentId>.xml)');
+  if (
+    ![...names].some((name) =>
+      /(?:^|\/)(?:WebPart|Extension|AdaptiveCardExtension)_[0-9a-fA-F-]+\.xml$/.test(name)
+    )
+  ) {
+    errors.push(
+      'Missing required component element manifest entry (<featureId>/<ComponentType>_<componentId>.xml)'
+    );
   }
   return { ok: errors.length === 0, errors };
 }

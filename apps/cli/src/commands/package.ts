@@ -19,13 +19,20 @@ export async function runPackage(cwd: string, opts: PackageOptions = {}): Promis
   const { config } = await loadConfig(cwd);
   const releaseDir = config.build.releaseDir ?? 'release';
   invokeBeforePackage(cwd, releaseDir);
+  const teamsDir = path.join(cwd, 'teams');
+  const sharepointDir = path.join(cwd, 'sharepoint');
   const result = await buildPackage({
     projectRoot: cwd,
     solutionConfigPath: 'config/package-solution.json',
     manifestsDir: path.join(releaseDir, 'manifests'),
     assetsDir: path.join(releaseDir, 'assets'),
     outDir: undefined,
-    production: true
+    production: true,
+    teamsDir: fs.existsSync(teamsDir) ? 'teams' : undefined,
+    resxDir:
+      fs.existsSync(sharepointDir) && fs.readdirSync(sharepointDir).some((file) => /^Resources.*\.resx$/.test(file))
+        ? 'sharepoint'
+        : undefined
   });
 
   const size = fs.statSync(result.outputPath).size;

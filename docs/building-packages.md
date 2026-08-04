@@ -98,9 +98,10 @@ AppManifest.xml            solution metadata, WebApiPermissionRequests, version
 AppManifest.xml.rels
 feature_<id>.xml           one feature per package-solution.json feature
 feature_<id>.xml.config.xml
-<featureId>/WebPart_<componentId>.xml   component manifest (JSON) per web part
+<featureId>/<ComponentType>_<componentId>.xml   component manifest (JSON) per component
+Resources.resx             present when sharepoint/Resources*.resx exists
 ClientSideAssets.xml       present when includeClientSideAssets = true
-ClientSideAssets/          bundles, chunks, and rewritten manifests
+ClientSideAssets/          bundles, chunks, teams/ folder (if any), rewritten manifests
 ```
 
 Key semantics, all read from `config/package-solution.json`:
@@ -118,6 +119,26 @@ Key semantics, all read from `config/package-solution.json`:
   `AppManifest.xml` (the admin consent dialog shows them after install)
 - `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata` — passed
   through to `AppManifest.xml`
+- Components with `componentType: "Extension"` (application customizers, field
+  customizers, list view command sets) produce
+  `<featureId>/Extension_<componentId>.xml` elements with
+  `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`,
+  `ClientSideComponentProperties="null"` and a per-build
+  `ClientSideComponentInstance` — no `<Module>` child.
+
+`rspfx package` auto-detects two optional folders and wires them through:
+
+- **`teams/`** — when a `teams/` folder exists (Teams app `manifest.json` +
+  icons), its files are included under `ClientSideAssets/` so the Teams app
+  ships inside the `.sppkg`.
+- **`sharepoint/Resources*.resx`** — `Resources.resx` (default, LCID 1033) plus
+  any `Resources.<lang>.resx` land at the package root with
+  `content-defaultresource` / `content-resource` relationships. They also power
+  localized solution metadata: a `metadata.shortDescription` /
+  `metadata.longDescription` value of `"$Resources:KeyName"` is resolved against
+  the resx files into one `<LocalizedString LCID="..." Value="..."/>` per
+  available locale (default resx → 1033, `Resources.fr-fr.resx` → 1036, …);
+  unresolvable keys fall back to the literal `$Resources:` string.
 
 `rspfx package` runs the same zip validation the tests use (`validateSppkg`) and
 reports entry count on success.
