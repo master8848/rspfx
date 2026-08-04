@@ -1,0 +1,10 @@
+{
+  "id": "bbbbbbbb-2222-4333-8444-555555555555",
+  "alias": "MyExtCommandSet",
+  "componentType": "Extension",
+  "extensionType": "ListViewCommandSet",
+  "version": "*",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+  "items": {}
+}

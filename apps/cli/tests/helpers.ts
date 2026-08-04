@@ -20,6 +20,7 @@ export function baseVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     name: 'hello',
     namePascal: 'Hello',
     nameCamel: 'hello',
+    componentType: 'webpart',
     framework: 'vanilla',
     spfxVersion: '1.23',
     fluent: false,

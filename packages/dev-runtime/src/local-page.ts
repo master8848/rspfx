@@ -13,6 +13,10 @@ export interface LocalPageComponent {
   alias: string;
   bundleName: string;
   amdId: string;
+  componentType?: 'WebPart' | 'Extension';
+  extensionType?: string;
+  localizedResources?: string[];
+  items?: Record<string, { title?: { default?: string }; type?: string }>;
   preconfiguredEntries?: { properties?: Record<string, unknown> }[];
 }
 
@@ -66,8 +70,31 @@ export function buildLocalPageHtml(opts: LocalPageOptions): string {
   }
   .rspfx-wp-card h2 { margin: 0; font-size: 14px; font-weight: 600; color: #323130; }
   .rspfx-wp-status { font-size: 11px; color: #605e5c; }
+  .rspfx-wp-type {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 2px 8px; border-radius: 10px;
+    background: #e5f1fb; color: #004578;
+  }
   .rspfx-wp-ready { color: #107c10; }
   .rspfx-wp-root { min-height: 120px; padding: 16px; }
+  .rspfx-ac-placeholder { min-height: 8px; border-radius: 2px; }
+  .rspfx-ac-placeholder:empty { display: none; }
+  .rspfx-fc-table, .rspfx-lvcs-toolbar { margin-bottom: 12px; }
+  .rspfx-fc-table {
+    border-collapse: collapse; width: 100%; font-size: 13px;
+  }
+  .rspfx-fc-table th, .rspfx-fc-table td {
+    border: 1px solid #edebe9; padding: 6px 10px; text-align: left;
+  }
+  .rspfx-fc-table th { background: #faf9f8; font-weight: 600; }
+  .rspfx-fc-cell { min-height: 20px; }
+  .rspfx-lvcs-toolbar { display: flex; gap: 8px; }
+  .rspfx-lvcs-button {
+    font: inherit; font-size: 13px; padding: 5px 12px;
+    border: 1px solid #8a8886; border-radius: 2px; background: #ffffff; cursor: pointer;
+  }
+  .rspfx-lvcs-button:hover { background: #f3f2f1; }
+  .rspfx-lvcs-button:disabled { opacity: 0.5; cursor: default; }
   .rspfx-wp-error {
     margin: 8px 0 0; padding: 10px;
     background: #fde7e9; color: #a4262c;
@@ -86,7 +113,7 @@ export function buildLocalPageHtml(opts: LocalPageOptions): string {
 <header class="rspfx-bar">
   <b>${escapeHtml(opts.projectName)}</b>
   <span>local preview</span>
-  <span class="rspfx-hint">no SharePoint required — run <code>rspfx dev --tenant &lt;url&gt;</code> to debug in the real workbench</span>
+  <span class="rspfx-hint">no SharePoint required — run <code>rspfx dev --tenant &lt;url&gt;</code> to debug in the real workbench, or add <code>?locale=fr-fr</code> to preview another language</span>
 </header>
 <div id="__rspfx_host"></div>
 <script>
@@ -108,16 +135,29 @@ export function readLocalPageComponents(
     const manifest = JSON.parse(fs.readFileSync(bundle.manifestPath, 'utf8')) as {
       id?: string;
       alias?: string;
+      componentType?: 'WebPart' | 'Extension';
+      extensionType?: string;
+      items?: Record<string, { title?: { default?: string }; type?: string }>;
       preconfiguredEntries?: { properties?: Record<string, unknown> }[];
+      loaderConfig?: {
+        scriptResources?: Record<string, { type?: string }>;
+      };
     };
     if (!manifest.id) {
       continue;
     }
+    const scriptResources = manifest.loaderConfig?.scriptResources ?? {};
     components.push({
       id: manifest.id,
       alias: manifest.alias ?? manifest.id,
       bundleName: bundle.bundleName,
       amdId: `${manifest.id}_${packageVersion}`,
+      componentType: manifest.componentType,
+      extensionType: manifest.extensionType,
+      items: manifest.items,
+      localizedResources: Object.entries(scriptResources)
+        .filter(([, resource]) => resource?.type === 'localizedPath')
+        .map(([name]) => name),
       preconfiguredEntries: manifest.preconfiguredEntries
     });
   }

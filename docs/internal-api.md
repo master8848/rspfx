@@ -362,13 +362,19 @@ export interface BuildPackageOptions {
   outDir: string;                  // default projectRoot/sharepoint/solution (zippedPackage resolved against projectRoot)
   production: boolean;
   prettyXml?: boolean;
-  teamsDir?: string;               // optional teams icons folder
+  teamsDir?: string;               // optional teams icons folder; files land under ClientSideAssets/ (flat)
+  resxDir?: string;                // optional folder with Resources.resx + Resources.<lang>.resx (see below)
 }
 export async function buildPackage(opts: BuildPackageOptions): Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>;
 // Zip via yazl or jszip (DEFLATE level 9). Full layout: reference/FORMATS.md §4. Must include:
 // [Content_Types].xml, _rels/.rels, AppManifest.xml (+.rels), feature_<id>.xml (+.config.xml, +.rels),
 // <featureId>/<ComponentType>_<componentId>.xml, ClientSideAssets feature + files (when includeClientSideAssets && production),
 // rewrite manifest base urls to ['HTTPS://SPCLIENTSIDEASSETLIBRARY/'] when includeClientSideAssets.
+// Extension components (componentType 'Extension'): elements XML uses Type="Extension", Location="ClientSideExtension.<extensionType>",
+// ClientSideComponentProperties="null", and a ClientSideComponentInstance child (fresh random UUID per build); no <Module>.
+// resxDir: Resources.resx (default → LCID 1033) + Resources.<lang>.resx parsed by src/resx.ts (regex, no deps; LCID table in
+// src/lcid.ts) and embedded at the zip root with content-defaultresource/content-resource rels; AppManifest metadata values
+// "$Resources:Key" resolve into <LocalizedString> entries per locale (missing keys fall back to the literal string).
 export function validateSppkg(zipPath: string): Promise<{ ok: boolean; errors: string[] }>; // unzip + schema checks
 ```
 
@@ -444,8 +450,12 @@ export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig):
 export function stripScheme(url: string | undefined): string | undefined;  // strips https?:// prefix and trailing slashes
 export interface ServeSettings { port: number; hostname: string; https: boolean; scheme: string; origin: string; tenantDomain: string | undefined; initialPage: string | undefined }
 export function readProject(projectRoot: string, paths?: PathsConfig, versionOverride?: string): ReadProjectResult;
-// reads package.json/config.json/serve.json, discovers web parts; the version override
+// reads package.json/config.json/serve.json, discovers web parts and extensions; the version override
 // (plugin `version` option) replaces package.json version in AMD library names and manifests
+// discovery: explicit config.json bundles win; otherwise scans src/webparts/* and src/extensions/*
+// (each folder needs one *.manifest.json + a pickable entrypoint: index, <name>WebPart,
+// <name>ApplicationCustomizer/<name>FieldCustomizer/<name>CommandSet/<name>Extension, or a lone .ts/.tsx)
+export function discoverWebParts(projectRoot: string, configJson?: ProjectConfigJson, webpartsDir?: string, packageJson?: { version?: string }, extensionsDir?: string): DiscoveredWebParts; // same scan, exported for tooling; discoverComponents is an alias
 export function createReloadController(): ReloadController;
 // dev auto-reload: monotonically increasing build counter served at /__rspfx_hot.json
 // (no-store + CORS); tick() after each completed rebuild; clientScript is appended to

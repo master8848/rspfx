@@ -1,6 +1,7 @@
 import type { WebPartContextLike } from '@mbsks/rspfx-core';
 import { createMockThemeProvider, type LocalThemeProvider } from './theme.js';
 import { createMockMSGraphClientFactory, createMockAadHttpClientFactory } from './http.js';
+import { resolveLocale, type ResolvedLocale } from './locales.js';
 
 /**
  * Local preview context: a real `WebPartContext` (constructed with
@@ -24,6 +25,9 @@ export interface LocalPageContextData {
   cultureInfo: { currentCultureName: string; currentUICultureName: string; isRightToLeft?: boolean };
 }
 
+/** `createMockPageContextData` input: page context overrides plus an optional locale tag (`fr-fr`, `ar-sa`, …). */
+export type LocalPageContextInput = Partial<LocalPageContextData> & { locale?: string };
+
 export const LOCAL_CURRENT_USER = {
   id: 1,
   loginName: 'i:0#.f|membership|dev@contoso.onmicrosoft.com',
@@ -37,7 +41,10 @@ export const LOCAL_CURRENT_USER = {
   preferUserTimeZone: false
 };
 
-export function createMockPageContextData(overrides: Partial<LocalPageContextData> = {}): LocalPageContextData {
+export function createMockPageContextData(
+  overrides: LocalPageContextInput = {}
+): LocalPageContextData {
+  const resolved: ResolvedLocale = resolveLocale(overrides.locale);
   return {
     web: {
       id: '3d81f5a1-0000-0000-0000-000000000001',
@@ -46,8 +53,8 @@ export function createMockPageContextData(overrides: Partial<LocalPageContextDat
       absoluteUrl: 'http://localhost:4321',
       serverRelativeUrl: '/',
       isAppWeb: false,
-      language: 1033,
-      languageName: 'English (United States)',
+      language: resolved.language,
+      languageName: resolved.languageName,
       logoUrl: null,
       permissions: { viewListItems: true },
       templateName: 'Team site',
@@ -79,7 +86,11 @@ export function createMockPageContextData(overrides: Partial<LocalPageContextDat
       permissions: { viewListItems: true }
     },
     listItem: { id: 1, uniqueId: '3d81f5a1-0000-0000-0000-000000000011' },
-    cultureInfo: { currentCultureName: 'en-US', currentUICultureName: 'en-US', isRightToLeft: false },
+    cultureInfo: {
+      currentCultureName: resolved.cultureInfo.currentCultureName,
+      currentUICultureName: resolved.cultureInfo.currentUICultureName,
+      isRightToLeft: resolved.cultureInfo.isRightToLeft
+    },
     ...overrides
   };
 }
@@ -115,7 +126,7 @@ export interface CreateLocalContextOptions {
   /** DOM element hosting the web part (default: a fresh `document.createElement('div')`). */
   domElement?: HTMLElement;
   /** Page context data (defaults to `createMockPageContextData()`). */
-  pageContextData?: Partial<LocalPageContextData>;
+  pageContextData?: LocalPageContextInput;
 }
 
 export async function createLocalWebPartContext(

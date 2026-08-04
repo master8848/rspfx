@@ -39,6 +39,8 @@ RSPFX: an SPFx-compatible build toolchain powered by Rspack (replaces Heft + web
 ## Structure gotchas
 
 - `examples/*` are git-tracked source (only their build outputs are gitignored) and are CLI-driven smoke apps with `@microsoft/sp-*` @ 1.22, while package dev/peer deps are @ 1.23.2 — version drift is intentional.
+- Component types: web parts (`src/webparts/`) and extensions (`src/extensions/`, `rspfx new --component`) are discovered and packaged identically; `sp-field-customizer-base` does NOT exist on npm — `BaseFieldCustomizer`/`FieldCustomizerContext` live in `@microsoft/sp-listview-extensibility` (1.23 layout).
+- Local dev preview bundles real `@microsoft/sp-*` (no externals). Their internal `@msinternal/*` and `@azure/msal-browser-1p` imports are never on npm — local mode externalizes them (AMD) and the bootstrap resolves them to a no-op proxy (`PLATFORM_ONLY_PREFIXES` in `sharepoint-runtime/src/platform-modules.ts`); keep that list in sync when bumping sp-*.
 - SPFx version matrix lives in ONE place: `packages/core/src/versions.ts` (`SPFX_VERSIONS`, `SPFX_DEFAULT_TARGET` = 1.23, `spfxNpmVersion`). Never scatter version literals; add a new SPFx target per `docs/supporting-a-new-spfx-version.md`.
 - `apps/cli` is the composition root (commander; commands in `apps/cli/src/commands/`); `packages/templates` scaffolds projects via inline string builders in `src/index.ts` (not template files on disk).
 - Framework packages: per docs/roadmap.md the web part class / preset APIs aren't final until M5 — don't treat them as stable.

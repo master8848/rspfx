@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { localeToLcid } from './lcid.js';
+
 export interface XmlAttributes {
   [name: string]: string;
 }
@@ -136,20 +139,35 @@ export function buildAppPartConfigXml(featureId: string, pretty: boolean): strin
 
 export function buildElementsXml(
   name: string,
-  manifest: { id: string; componentType?: string },
+  manifest: { id: string; componentType?: string; extensionType?: string },
   pretty: boolean
 ): string {
   const componentType = manifest.componentType ?? 'WebPart';
+  const attrs: XmlAttributes = {
+    Name: name,
+    Id: manifest.id,
+    ComponentManifest: JSON.stringify(manifest),
+    Type: componentType
+  };
+  const componentChildren: XmlNode[] = [];
+  if (componentType === 'Extension') {
+    const extensionType = manifest.extensionType;
+    if (!extensionType) {
+      throw new Error(`Extension manifest '${manifest.id}' is missing an 'extensionType'`);
+    }
+    attrs.ClientSideComponentProperties = 'null';
+    attrs.Location = `ClientSideExtension.${extensionType}`;
+    componentChildren.push({
+      name: 'ClientSideComponentInstance',
+      attrs: { Id: randomUUID(), Title: name, Description: name }
+    });
+  }
   const children: XmlNode[] = [
     {
       name: 'ClientSideComponent',
       singleQuotedAttrs: ['ComponentManifest'],
-      attrs: {
-        Name: name,
-        Id: manifest.id,
-        ComponentManifest: JSON.stringify(manifest),
-        Type: componentType
-      }
+      attrs,
+      ...(componentChildren.length > 0 ? { children: componentChildren } : {})
     }
   ];
   if (componentType === 'WebPart' || componentType === 'AdaptiveCardExtension') {
@@ -171,6 +189,7 @@ export interface AppManifestOptions {
   isDomainIsolated: boolean;
   developer?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  localizedStrings?: { locale: string; values: Record<string, string> }[];
   webApiPermissionRequests?: { resource: string; scope: string }[];
   pretty: boolean;
 }
@@ -210,13 +229,13 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
   }
 
   if (options.metadata) {
-    const shortDescription = options.metadata.shortDescription;
-    const longDescription = options.metadata.longDescription;
-    if (typeof shortDescription === 'object' && shortDescription !== null) {
-      properties.push(localizedElement('ShortDescription', shortDescription as Record<string, unknown>));
+    const shortDescription = resolveMetadataValue('ShortDescription', options.metadata.shortDescription, options.localizedStrings);
+    const longDescription = resolveMetadataValue('LongDescription', options.metadata.longDescription, options.localizedStrings);
+    if (shortDescription) {
+      properties.push(shortDescription);
     }
-    if (typeof longDescription === 'object' && longDescription !== null) {
-      properties.push(localizedElement('LongDescription', longDescription as Record<string, unknown>));
+    if (longDescription) {
+      properties.push(longDescription);
     }
     if (Array.isArray(options.metadata.categories)) {
       for (const category of options.metadata.categories) {
@@ -256,4 +275,31 @@ function localizedElement(name: string, locales: Record<string, unknown>): XmlNo
     });
   }
   return { name, children };
+}
+
+function resolveMetadataValue(
+  name: string,
+  value: unknown,
+  localizedStrings?: { locale: string; values: Record<string, string> }[]
+): XmlNode | undefined {
+  if (typeof value === 'object' && value !== null) {
+    return localizedElement(name, value as Record<string, unknown>);
+  }
+  if (typeof value !== 'string' || !value.startsWith('$Resources:')) {
+    return undefined;
+  }
+  const key = value.slice('$Resources:'.length);
+  const entries = (localizedStrings ?? [])
+    .map(({ locale, values }) => ({ lcid: localeToLcid(locale), text: values[key] }))
+    .filter((entry): entry is { lcid: number; text: string } => entry.text !== undefined);
+  if (entries.length === 0) {
+    return { name, children: [value] };
+  }
+  return {
+    name,
+    children: entries.map((entry) => ({
+      name: 'LocalizedString',
+      attrs: { LCID: String(entry.lcid), Value: entry.text }
+    }))
+  };
 }

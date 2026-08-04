@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { globFiles } from './glob.js';
+import { parseResx } from './resx.js';
 import {
   buildAppManifestXml,
   buildAppPartConfigXml,
@@ -74,6 +75,13 @@ interface NormalizedFeature {
   components: ComponentManifest[];
   explicitComponentIds: boolean;
   assets: { elementManifests: string[]; elementFiles: string[] };
+}
+
+interface ResxFile {
+  name: string;
+  buffer: Buffer;
+  locale: string;
+  values: Record<string, string>;
 }
 
 const logger = createLogger('sppkg-builder');
@@ -210,6 +218,8 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
     isDomainIsolated: solution.isDomainIsolated === true,
     developer: isRecord(solution.developer) ? solution.developer : undefined,
     metadata: isRecord(solution.metadata) ? solution.metadata : undefined,
+    localizedStrings:
+      resxFiles.length > 0 ? resxFiles.map((resx) => ({ locale: resx.locale, values: resx.values })) : undefined,
     webApiPermissionRequests: isWebApiPermissionRequests(solution.webApiPermissionRequests),
     pretty
   });
@@ -339,10 +349,11 @@ function normalizeFeatures(solution: Record<string, unknown>, manifests: Compone
       throw new RspfxError('NoManifestsFound', 'Cannot create a feature without any component manifests');
     }
     const name = typeof first.alias === 'string' && first.alias ? first.alias : first.id;
+    const componentKind = (first.componentType ?? 'WebPart') === 'Extension' ? 'Extension' : 'WebPart';
     return [
       {
         title: `${name} Feature`,
-        description: `A feature which activates the Client-Side WebPart named '${name}'`,
+        description: `A feature which activates the Client-Side ${componentKind} named '${name}'`,
         id: randomUUID(),
         version: '1.0.0.0',
         components: [...manifests],
@@ -438,11 +449,25 @@ async function collectClientSideAssets(assetsDir: string, teamsDir?: string): Pr
   return assets;
 }
 
-async function collectResx(resxDir: string): Promise<{ name: string; buffer: Buffer }[]> {
-  const resxFiles: { name: string; buffer: Buffer }[] = [];
+async function collectResx(resxDir: string): Promise<ResxFile[]> {
+  const resxFiles: ResxFile[] = [];
   for (const relativePath of await globFiles(resxDir, ['Resources.resx', 'Resources.??-??.resx'])) {
-    resxFiles.push({ name: relativePath, buffer: await readFile(path.join(resxDir, relativePath)) });
+    const content = await readFile(path.join(resxDir, relativePath));
+    const locale =
+      relativePath === 'Resources.resx'
+        ? 'en-us'
+        : relativePath.slice('Resources.'.length, -'.resx'.length).toLowerCase();
+    resxFiles.push({ name: relativePath, buffer: content, locale, values: parseResx(content.toString('utf8')) });
   }
+  resxFiles.sort((a, b) => {
+    if (a.name === 'Resources.resx') {
+      return -1;
+    }
+    if (b.name === 'Resources.resx') {
+      return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
   return resxFiles;
 }
 

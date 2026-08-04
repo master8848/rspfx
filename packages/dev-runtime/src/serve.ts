@@ -15,6 +15,7 @@ import { openBrowser } from './browser.js';
 import { createReloadController } from './reload.js';
 import { createMockSharePointApi } from './mock-api.js';
 import { buildLocalPageHtml, readLocalPageComponents } from './local-page.js';
+import { isPlatformOnlyModule } from '@mbsks/rspfx-sharepoint-runtime/platform-modules';
 
 const require = createRequire(import.meta.url);
 
@@ -157,9 +158,11 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       projectRoot: opts.projectRoot,
       config,
       entries,
-      externals: local ? [] : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
+      externals: local
+        ? [platformOnlyExternal]
+        : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
       localizedAliases: currentProject.localizedAliases,
-      localizedResources: local ? [] : currentProject.localizedResources,
+      localizedResources: currentProject.localizedResources,
       fastRefresh,
       production: false,
       serveMode: true,
@@ -177,7 +180,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       origin: () => origin,
       packageVersion: currentProject.webParts.packageVersion,
       entries: currentProject.webParts.entries,
-      externals: ctx.externals,
+      externals: ctx.externals.filter((external): external is string => typeof external === 'string'),
       localizedResources: currentProject.localizedResources,
       webpartsDir: config.paths?.webpartsDir,
       entryModuleIds,
@@ -351,6 +354,20 @@ function localRuntimeEntry(packageVersion: string): {
     componentIds: ['local-runtime'],
     version: packageVersion
   };
+}
+
+/**
+ * The bundled `@microsoft/sp-*` packages reference internal modules that are
+ * never published to npm — `@msinternal/*` (telemetry, feature flags,
+ * safe-html) and the first-party MSAL builds used by sp-http-base's token
+ * provider. sp-loader provides them on real tenants; the local preview
+ * externalizes them as AMD dependencies that the preview bootstrap satisfies
+ * with a no-op stand-in (see `PLATFORM_ONLY_PREFIXES` in sharepoint-runtime).
+ */
+function platformOnlyExternal(data: { request?: string }): string | undefined {
+  return typeof data.request === 'string' && isPlatformOnlyModule(data.request)
+    ? `amd ${data.request}`
+    : undefined;
 }
 
 export function stripScheme(url: string | undefined): string | undefined {

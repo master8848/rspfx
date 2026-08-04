@@ -10,7 +10,12 @@ import {
   type PathsConfig,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
-import type { BundleEntry, CompileContext, LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
+import type {
+  BundleEntry,
+  CompileContext,
+  ExternalMatcher,
+  LocalizedResource
+} from '@mbsks/rspfx-compiler-rspack';
 
 export interface WebPartBundle {
   bundleName: string;
@@ -72,9 +77,13 @@ export function readProject(
     serveJson = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
   }
 
-  const webParts = discoverWebParts(projectRoot, configJson, resolvedPaths.webpartsDir, {
-    version: versionOverride ?? packageJson.version
-  });
+  const webParts = discoverWebParts(
+    projectRoot,
+    configJson,
+    resolvedPaths.webpartsDir,
+    { version: versionOverride ?? packageJson.version },
+    resolvedPaths.extensionsDir
+  );
   return {
     webParts,
     configJson,
@@ -184,7 +193,8 @@ export function discoverWebParts(
   projectRoot: string,
   configJson: ProjectConfigJson | undefined,
   webpartsDir = 'src/webparts',
-  packageJson?: { version?: string }
+  packageJson?: { version?: string },
+  extensionsDir = 'src/extensions'
 ): DiscoveredWebParts {
   const bundleMap: WebPartBundle[] = [];
   if (configJson?.bundles) {
@@ -202,34 +212,14 @@ export function discoverWebParts(
       }
     }
   } else {
-    const resolvedWebpartsDir = path.join(projectRoot, webpartsDir);
-    if (fs.existsSync(resolvedWebpartsDir)) {
-      for (const dir of fs.readdirSync(resolvedWebpartsDir, { withFileTypes: true })) {
-        if (!dir.isDirectory() || dir.name.startsWith('.')) {
-          continue;
-        }
-        const dirPath = path.join(resolvedWebpartsDir, dir.name);
-        const manifests = fs
-          .readdirSync(dirPath)
-          .filter((file) => file.endsWith('.manifest.json') && !file.startsWith('.'));
-        if (manifests.length === 0) {
-          continue;
-        }
-        const entrypoint = pickEntrypoint(dirPath, dir.name);
-        if (!entrypoint) {
-          continue;
-        }
-        bundleMap.push({
-          bundleName: dir.name,
-          entrypoint,
-          manifestPath: path.join(dirPath, manifests[0]!)
-        });
-      }
-    }
+    scanComponentDir(projectRoot, webpartsDir, bundleMap);
+    scanComponentDir(projectRoot, extensionsDir, bundleMap);
   }
 
   if (bundleMap.length === 0) {
-    throw new Error('No web part bundles found. Expected src/webparts/<name>/<name>WebPart.ts + <name>.manifest.json');
+    throw new Error(
+      'No web part or extension bundles found. Expected src/webparts/<name>/<name>WebPart.ts + <name>.manifest.json or src/extensions/<name>/<Name>Extension.ts + <name>.manifest.json'
+    );
   }
 
   if (packageJson === undefined) {
@@ -262,12 +252,53 @@ export function discoverWebParts(
   return { entries, bundles: bundleMap, manifestIds, packageVersion };
 }
 
+function scanComponentDir(projectRoot: string, componentsDir: string, bundleMap: WebPartBundle[]): void {
+  const resolvedDir = path.join(projectRoot, componentsDir);
+  if (!fs.existsSync(resolvedDir)) {
+    return;
+  }
+  for (const dir of fs.readdirSync(resolvedDir, { withFileTypes: true })) {
+    if (!dir.isDirectory() || dir.name.startsWith('.')) {
+      continue;
+    }
+    const dirPath = path.join(resolvedDir, dir.name);
+    const manifests = fs
+      .readdirSync(dirPath)
+      .filter((file) => file.endsWith('.manifest.json') && !file.startsWith('.'));
+    if (manifests.length === 0) {
+      continue;
+    }
+    const entrypoint = pickEntrypoint(dirPath, dir.name);
+    if (!entrypoint) {
+      continue;
+    }
+    bundleMap.push({
+      bundleName: dir.name,
+      entrypoint,
+      manifestPath: path.join(dirPath, manifests[0]!)
+    });
+  }
+}
+
+/**
+ * Alias for `discoverWebParts` — discovers web part and extension bundles alike.
+ */
+export const discoverComponents = discoverWebParts;
+
 function pickEntrypoint(dirPath: string, dirName: string): string | undefined {
   const candidates = [
     path.join(dirPath, 'index.ts'),
     path.join(dirPath, 'index.tsx'),
     path.join(dirPath, `${dirName}WebPart.ts`),
-    path.join(dirPath, `${dirName}WebPart.tsx`)
+    path.join(dirPath, `${dirName}WebPart.tsx`),
+    path.join(dirPath, `${dirName}ApplicationCustomizer.ts`),
+    path.join(dirPath, `${dirName}ApplicationCustomizer.tsx`),
+    path.join(dirPath, `${dirName}FieldCustomizer.ts`),
+    path.join(dirPath, `${dirName}FieldCustomizer.tsx`),
+    path.join(dirPath, `${dirName}CommandSet.ts`),
+    path.join(dirPath, `${dirName}CommandSet.tsx`),
+    path.join(dirPath, `${dirName}Extension.ts`),
+    path.join(dirPath, `${dirName}Extension.tsx`)
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
@@ -285,7 +316,7 @@ export function createCompileContext(opts: {
   projectRoot: string;
   config: RspfxConfig;
   entries: BundleEntry[];
-  externals: string[];
+  externals: (string | ExternalMatcher)[];
   localizedAliases?: Record<string, string>;
   localizedResources?: LocalizedResource[];
   fastRefresh: boolean;

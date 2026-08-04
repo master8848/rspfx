@@ -66,6 +66,7 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
       locales: resource.files.map((file) => file.locale)
     })),
     webpartsDir: config.paths?.webpartsDir,
+    extensionsDir: config.paths?.extensionsDir,
     entryModuleIds
   });
 

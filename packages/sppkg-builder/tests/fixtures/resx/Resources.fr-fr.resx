@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="SolutionTitle">
+    <value>Solution de test RSPFX</value>
+  </data>
+  <data name="SolutionDescription">
+    <value>Une solution de test</value>
+  </data>
+  <data name="FrenchOnly">
+    <value>Pr&eacute;sent uniquement dans le fichier fran&ccedil;ais</value>
+  </data>
+</root>

@@ -38,17 +38,21 @@ remains the acceptance test for everything packaging-related — see
 | **Turbopack as a bundler** | ❌ **Not possible today** | Vercel's docs state Turbopack **does not support webpack plugins**, and standalone Turbopack outside Next.js is still in development (no public CLI, no plugin API). The `RspfxPlugin` "webpack-compatible interface" is an Rspack-compatible interface; Turbopack will never run it. The claim in `docs/why-rspfx.md` / `skills/rspfx/SKILL.md` is aspirational and being corrected. Track Vercel's standalone-Turbopack releases; revisit only when a plugin API ships |
 | **Vite deep parity** | ✅ **Done** | Shipped in M8: preset `vite()`/`rsbuild()` contributions, `RSPFX_FAST_REFRESH` gating, byte-compat capture line + AMD header verified by the parity suite (`packages/plugin/tests/parity.test.ts`), CSS inlined, `.rspfx/stats.json` module counts for `rspfx analyze`, auto-reload after rebuilds. Rsbuild received the same treatment (framework presets, fast refresh, analyze stats) |
 | **Solid fast refresh** | ✅ Feasible, medium effort | `solid-refresh` (babel plugin) + a solid HMR client; pattern mirrors the existing react/preact stub-with-fallback |
-| **Extensions** (`ApplicationCustomizer`, `ListViewCommandSet`) | ✅ Feasible, medium effort | Same loaderConfig machinery; needs manifest templates + `src/extensions/` discovery + package-path wiring. ARCHITECTURE.md already reserved for it |
+| **Extensions** (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`) | ✅ Runtime + dev preview | `rspfx new --component applicationcustomizer|fieldcustomizer|listviewcommandset` ships manifest templates (`client-side-extension-manifest.schema.json`, `requiresCustomScript: false`) + `src/extensions/` TypeScript entries + per-type sp-* deps. This wave adds compile/discovery of extension bundles and the **local dev preview runtime**: real `ApplicationCustomizerContext` (with a working placeholder provider), `FieldCustomizerContext` (sample rows via `onRenderCell`), `ListViewCommandSetContext` (command toolbar wired to `onListViewUpdated`/`onExecute`), all driven by the sp-loader lifecycle (`_init` → `onInit` → render). Multi-locale ships with dev-preview `?locale=`/`?market=` switching. Package path lands in the same wave |
 | **React 19 validation** | ✅ Feasible, small effort | Bump `examples/react` + templates to React 19, run web part + Fluent tests; risk is Fluent 8 peer ranges, not RSPFX itself |
 | **Official-toolchain benchmarks** (Heft / gulp / gulp fast-serve) | ⚠️ Feasible with caveats | Harness ships as `bench/compare-official.mjs`. Caveats: (1) fast-serve predates Heft — it only runs on the gulp+webpack line, so it benchmarks the SPFx 1.22 skeleton while Heft is measured via `gulp bundle` on the 1.23 skeleton; (2) first run installs the official toolchain (minutes); (3) needs Node in the supported range (SPFx 1.23 wants Node 20.19+/22+; Node 24 may warn) |
 | **Real-tenant validation** | ⚠️ External dependency, not difficulty | Needs a Microsoft 365 developer tenant + app-catalog credentials; nothing in the repo blocks it. See [Real-tenant validation](#real-tenant-validation) |
 
 ## Backlog (claimed but not yet real)
 
-- **Extensions** — `ApplicationCustomizer` and `ListViewCommandSet` are **out of
-  scope**. The manifest generator and loaderConfig machinery are designed so
-  extensions can be added later without rework (same script-resource machinery;
-  component type fields already preserved).
+- **Extensions** — scaffolding shipped earlier; this wave lands compile/
+  discovery of `src/extensions/` plus the local dev-preview runtime
+  (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet mount with real
+  contexts, and `?locale=` multi-locale switching). The remaining claim is the
+  extension package path (`.sppkg` wiring), landing in the same wave. The
+  manifest generator and loaderConfig machinery are designed so extensions
+  could be added without rework (same script-resource machinery; component
+  type fields already preserved).
 - **React 19 / non-SPFx-pinned React** — examples and templates currently ship
   React 18 (SPFx 1.22/1.23 line). The claim "any React version" needs validation
   with React 19 + Fluent before it's promoted from a demo statement to a
@@ -73,6 +77,7 @@ remains the acceptance test for everything packaging-related — see
 
 M0–M5, M8 and M9 are complete. Active work: the real-tenant validation gate
 (M7/M1 — official-toolchain benchmark validation and the install-in-a-real-tenant
-run) plus the backlog (extensions, React 19); M8 bundler parity shipped, and
+run) plus the backlog (extensions — dev-preview runtime landed, package path
+landing; React 19); M8 bundler parity shipped, and
 Turbopack stays parked until Vercel ships a standalone plugin API. The framework
 web part class / preset APIs reached their final shape in M5 — no longer stubs.

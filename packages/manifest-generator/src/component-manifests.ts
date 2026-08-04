@@ -41,20 +41,31 @@ function findNonSpExternalManifest(
 }
 
 export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
-  const webpartsDir = path.join(ctx.projectRoot, ctx.webpartsDir ?? 'src/webparts');
-  let webpartDirs: fs.Dirent[];
-  try {
-    webpartDirs = fs.readdirSync(webpartsDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
   const spDependencies = findSpDependencies(ctx.projectRoot);
   const manifests: ComponentManifest[] = [];
-  for (const dirEntry of webpartDirs) {
+  scanComponentsDir(ctx, manifests, spDependencies, ctx.webpartsDir ?? 'src/webparts');
+  scanComponentsDir(ctx, manifests, spDependencies, ctx.extensionsDir ?? 'src/extensions');
+  return manifests;
+}
+
+function scanComponentsDir(
+  ctx: ManifestContext,
+  manifests: ComponentManifest[],
+  spDependencies: Map<string, { id: string; version: string; manifestPath: string }>,
+  componentsDir: string
+): void {
+  const resolvedDir = path.join(ctx.projectRoot, componentsDir);
+  let componentDirs: fs.Dirent[];
+  try {
+    componentDirs = fs.readdirSync(resolvedDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const dirEntry of componentDirs) {
     if (!dirEntry.isDirectory() || dirEntry.name.startsWith('.')) {
       continue;
     }
-    const dirPath = path.join(webpartsDir, dirEntry.name);
+    const dirPath = path.join(resolvedDir, dirEntry.name);
     const manifestFiles = fs
       .readdirSync(dirPath)
       .filter((file) => file.endsWith('.manifest.json') && !file.startsWith('.'));
@@ -64,7 +75,7 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
     if (manifestFiles.length > 1) {
       throw new RspfxError(
         'MULTIPLE_MANIFESTS',
-        `Expected exactly one manifest per web part folder but found ${manifestFiles.length} in ${dirPath}: ${manifestFiles.join(', ')}`
+        `Expected exactly one manifest per web part/extension folder but found ${manifestFiles.length} in ${dirPath}: ${manifestFiles.join(', ')}`
       );
     }
     const source = JSON.parse(
@@ -137,5 +148,4 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
     };
     manifests.push(source as ComponentManifest);
   }
-  return manifests;
 }

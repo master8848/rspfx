@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="SolutionTitle" xml:space="preserve">
+    <value>RSPFX test solution</value>
+  </data>
+  <data name="SolutionDescription">
+    <value>A test solution with &amp; entities &lt;like&gt; 'these' &quot;quotes&quot;</value>
+  </data>
+  <data name="DefaultOnly">
+    <value>Only present in the default resx</value>
+  </data>
+</root>

@@ -47,7 +47,17 @@ describe('build', () => {
     expect(manifest.id).toBe(COMPONENT_ID);
     expect(manifest.loaderConfig.entryModuleId).toBe('hello');
     expect(manifest.loaderConfig.internalModuleBaseUrls).toEqual([]);
-    expect(manifest.loaderConfig.scriptResources).toEqual({ hello: { type: 'path', path: 'hello.js' } });
+    expect(manifest.loaderConfig.scriptResources).toEqual({
+      hello: { type: 'path', path: 'hello.js' },
+      HelloWebPartStrings: {
+        type: 'localizedPath',
+        paths: {
+          default: { path: 'HelloWebPartStrings_en-us.js', integrity: '' },
+          'en-us': { path: 'HelloWebPartStrings_en-us.js', integrity: '' },
+          'fr-fr': { path: 'HelloWebPartStrings_fr-fr.js', integrity: '' }
+        }
+      }
+    });
 
     expect(fs.existsSync(path.join(dir, 'dist', `${COMPONENT_ID}.manifest.json`))).toBe(false);
     expect(fs.existsSync(path.join(dir, 'release', 'assets', 'hello.js'))).toBe(true);
@@ -137,6 +147,26 @@ describe('package', () => {
     expect(result.zipEntries).toContain('AppManifest.xml');
     expect(result.zipEntries.some((entry) => /^feature_[0-9a-f-]+\.xml$/.test(entry))).toBe(true);
     expect(result.zipEntries).toContain('ClientSideAssets/hello.js');
+
+    const validation = await validateSppkg(result.outputPath);
+    expect(validation.errors).toEqual([]);
+    expect(validation.ok).toBe(true);
+    rmRf(dir);
+  });
+
+  it('auto-detects teams/ and sharepoint/Resources*.resx', async () => {
+    const dir = await makeFixture();
+    await runBuild(dir, {});
+    fs.mkdirSync(path.join(dir, 'teams'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'teams', 'manifest.json'), '{}');
+    fs.writeFileSync(path.join(dir, 'teams', 'color.png'), 'fake-png');
+    fs.writeFileSync(path.join(dir, 'sharepoint', 'Resources.resx'), '<root/>');
+
+    const result = await runPackage(dir, { build: false });
+
+    expect(result.zipEntries).toContain('Resources.resx');
+    expect(result.zipEntries).toContain('ClientSideAssets/manifest.json');
+    expect(result.zipEntries).toContain('ClientSideAssets/color.png');
 
     const validation = await validateSppkg(result.outputPath);
     expect(validation.errors).toEqual([]);

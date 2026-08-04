@@ -19,6 +19,7 @@ export { assembleRelease } from './release.js';
 export type { AssembleReleaseOptions, ReleaseOutput } from './release.js';
 export {
   discoverWebParts,
+  discoverComponents,
   readProject,
   loadFrameworkPreset,
   resolveContributionLoaders,
