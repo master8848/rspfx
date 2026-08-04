@@ -12,6 +12,9 @@ export const SP_COMPONENT_IDS: Record<string, ComponentIdEntry> = {
     version: '1.23.2',
     preloadComponents: ['f9e737b7-f0df-4597-ba8c-3060f82380db']
   },
+  '@microsoft/sp-application-base': { id: '4df9bb86-ab0a-4aab-ab5f-48bf167048fb', version: '1.23.2' },
+  '@microsoft/sp-extension-base': { id: '0773bd53-a69e-4293-87e6-ba80ea4d614b', version: '1.23.2' },
+  '@microsoft/sp-listview-extensibility': { id: 'd37b65ee-c7d8-4570-bc74-2b294ff3b380', version: '1.23.2' },
   '@microsoft/sp-component-base': { id: '467dc675-7cc5-4709-8aac-78e3b71bd2f6', version: '1.23.2' },
   '@microsoft/sp-property-pane': { id: 'f9e737b7-f0df-4597-ba8c-3060f82380db', version: '1.23.2' },
   '@microsoft/sp-page-context': { id: '1c4541f7-5c31-41aa-9fa8-fbc9dc14c0a8', version: '1.23.2' },

@@ -34,6 +34,7 @@ function rmRetry(target: string): void {
 beforeAll(() => {
   rmRetry(FIXTURE);
   fs.mkdirSync(path.join(FIXTURE, 'src', 'webparts', 'hello'), { recursive: true });
+  fs.mkdirSync(path.join(FIXTURE, 'src', 'extensions', 'announcements'), { recursive: true });
   fs.mkdirSync(path.join(FIXTURE, 'dist'), { recursive: true });
   fs.mkdirSync(path.join(FIXTURE, 'config'), { recursive: true });
   fs.writeFileSync(
@@ -58,6 +59,24 @@ beforeAll(() => {
   );
   fs.writeFileSync(path.join(FIXTURE, 'dist', 'hello.js'), 'define([], () => {});\n');
   fs.writeFileSync(path.join(FIXTURE, 'dist', 'hello.js.map'), '{}');
+  fs.writeFileSync(
+    path.join(FIXTURE, 'src', 'extensions', 'announcements', 'announcements.manifest.json'),
+    JSON.stringify({
+      id: 'dddddddd-4444-4555-8666-777777777777',
+      alias: 'AnnouncementsCommandSet',
+      componentType: 'Extension',
+      extensionType: 'ListViewCommandSet',
+      version: '1.0.0',
+      manifestVersion: 2,
+      requiresCustomScript: false,
+      items: {}
+    })
+  );
+  fs.writeFileSync(
+    path.join(FIXTURE, 'src', 'extensions', 'announcements', 'announcementsCommandSet.ts'),
+    'export default class AnnouncementsCommandSet {}\n'
+  );
+  fs.writeFileSync(path.join(FIXTURE, 'dist', 'announcements.js'), 'define([], () => {});\n');
   fs.writeFileSync(
     path.join(FIXTURE, 'config', 'write-manifests.json'),
     JSON.stringify({ cdnBasePath: 'https://cdn.example.com/hello-proj' })
@@ -118,6 +137,32 @@ describe('assembleRelease', () => {
     };
     expect(manifest.loaderConfig.internalModuleBaseUrls[0]).toBe(
       'https://cdn.example.com/hello-proj'
+    );
+  });
+
+  it('emits extension manifests into release/manifests', async () => {
+    const config = makeConfig();
+    const project = readProject(FIXTURE, config.paths, config.version);
+    const output = await assembleRelease({
+      projectRoot: FIXTURE,
+      config,
+      project,
+      externals: [],
+      outputFiles: ['hello.js', 'announcements.js'],
+      production: true
+    });
+
+    const manifestPath = path.join(
+      output.releaseManifestsDir,
+      'dddddddd-4444-4555-8666-777777777777.manifest.json'
+    );
+    expect(fs.existsSync(manifestPath)).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+    expect(manifest.componentType).toBe('Extension');
+    expect(manifest.extensionType).toBe('ListViewCommandSet');
+    expect(manifest.loaderConfig).toMatchObject({ entryModuleId: 'announcements' });
+    expect(fs.readFileSync(path.join(output.releaseAssetsDir, 'announcements.js'), 'utf8')).toContain(
+      'define([], () => {});'
     );
   });
 });

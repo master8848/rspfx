@@ -27,5 +27,6 @@ export interface ManifestContext {
   externals: string[];
   localizedResources?: LocalizedResourceEntry[];
   webpartsDir?: string;
+  extensionsDir?: string;
   entryModuleIds?: Record<string, string>;
 }

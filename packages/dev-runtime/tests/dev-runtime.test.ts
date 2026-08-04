@@ -34,6 +34,7 @@ function rmRetry(target: string): void {
 beforeAll(() => {
   rmRetry(FIXTURE);
   const webpartsDir = path.join(FIXTURE, 'src', 'webparts', 'hello');
+  const extensionsDir = path.join(FIXTURE, 'src', 'extensions', 'header');
   fs.mkdirSync(path.join(FIXTURE, 'node_modules', '@microsoft', 'sp-core-library', 'dist'), {
     recursive: true
   });
@@ -41,6 +42,7 @@ beforeAll(() => {
     recursive: true
   });
   fs.mkdirSync(webpartsDir, { recursive: true });
+  fs.mkdirSync(extensionsDir, { recursive: true });
   fs.writeFileSync(
     path.join(FIXTURE, 'package.json'),
     JSON.stringify({ name: 'test-proj', version: '1.0.0' }, null, 2)
@@ -118,6 +120,32 @@ beforeAll(() => {
     if (this._message) {
       document.title = this._message;
     }
+  }
+}
+`
+  );
+  fs.writeFileSync(
+    path.join(extensionsDir, 'header.manifest.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json',
+        id: 'dddddddd-4444-4555-8666-777777777777',
+        alias: 'HeaderAppCustomizer',
+        componentType: 'Extension',
+        extensionType: 'ApplicationCustomizer',
+        version: '*',
+        manifestVersion: 2,
+        requiresCustomScript: false
+      },
+      null,
+      2
+    )
+  );
+  fs.writeFileSync(
+    path.join(extensionsDir, 'headerApplicationCustomizer.ts'),
+    `export default class HeaderAppCustomizerApplicationCustomizer {
+  public onInit(): Promise<void> {
+    return Promise.resolve();
   }
 }
 `
@@ -463,6 +491,58 @@ describe('readProject', () => {
     } finally {
       fs.rmSync(customConfigDir, { recursive: true, force: true });
       fs.rmSync(path.join(FIXTURE, 'components'), { recursive: true, force: true });
+    }
+  });
+
+  it('discovers extension bundles alongside web parts', async () => {
+    const { readProject } = await import('../src/project.js');
+    const result = readProject(FIXTURE);
+    expect(result.webParts.bundles).toHaveLength(2);
+    expect(result.webParts.bundles.map((bundle) => bundle.bundleName)).toEqual([
+      'hello',
+      'header'
+    ]);
+    expect(result.webParts.entries.map((entry) => entry.name)).toEqual(['hello', 'header']);
+    expect(result.webParts.manifestIds).toEqual([
+      'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      'dddddddd-4444-4555-8666-777777777777'
+    ]);
+    expect(result.webParts.packageVersion).toBe('1.0.0');
+  });
+
+  it('picks the <Name>ApplicationCustomizer.ts entrypoint for extensions', async () => {
+    const { discoverWebParts } = await import('../src/project.js');
+    const result = discoverWebParts(FIXTURE, undefined, 'src/webparts', undefined, 'src/extensions');
+    const header = result.bundles.find((bundle) => bundle.bundleName === 'header')!;
+    expect(header.entrypoint.endsWith('headerApplicationCustomizer.ts')).toBe(true);
+    expect(header.manifestPath.endsWith('header.manifest.json')).toBe(true);
+  });
+
+  it('keeps explicit config.json bundles authoritative over directory discovery', async () => {
+    const configDir = path.join(FIXTURE, 'config');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'config.json'),
+      JSON.stringify({
+        bundles: {
+          'explicit-bundle': {
+            components: [
+              {
+                entrypoint: './src/webparts/hello/helloWebPart.ts',
+                manifest: './src/webparts/hello/hello.manifest.json'
+              }
+            ]
+          }
+        }
+      }, null, 2)
+    );
+    try {
+      const { readProject } = await import('../src/project.js');
+      const result = readProject(FIXTURE);
+      expect(result.webParts.bundles).toHaveLength(1);
+      expect(result.webParts.bundles[0]!.bundleName).toBe('explicit-bundle');
+    } finally {
+      fs.rmSync(configDir, { recursive: true, force: true });
     }
   });
 });

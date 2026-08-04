@@ -25,6 +25,7 @@ export interface BuildConfig {
 export interface PathsConfig {
   srcDir?: string;
   webpartsDir?: string;
+  extensionsDir?: string;
   configDir?: string;
 }
 
@@ -79,6 +80,7 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
   paths: {
     srcDir: 'src',
     webpartsDir: 'src/webparts',
+    extensionsDir: 'src/extensions',
     configDir: 'config'
   }
 };
@@ -87,6 +89,7 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
   return {
     srcDir: paths?.srcDir ?? configDefaults.paths.srcDir,
     webpartsDir: paths?.webpartsDir ?? configDefaults.paths.webpartsDir,
+    extensionsDir: paths?.extensionsDir ?? configDefaults.paths.extensionsDir,
     configDir: paths?.configDir ?? configDefaults.paths.configDir
   };
 }

@@ -4,6 +4,7 @@ import { generateComponentManifests, RspfxError } from '../src/index.js';
 import type { ManifestContext } from '../src/index.js';
 
 const fixtureRoot = fileURLToPath(new URL('./fixtures/proj', import.meta.url));
+const extRoot = fileURLToPath(new URL('./fixtures/ext-proj', import.meta.url));
 const multiRoot = fileURLToPath(new URL('./fixtures/multi', import.meta.url));
 const customRoot = fileURLToPath(new URL('./fixtures/custom', import.meta.url));
 
@@ -184,5 +185,50 @@ describe('generateComponentManifests', () => {
     const missingRoot = fileURLToPath(new URL('./fixtures/nonexistent', import.meta.url));
     const manifests = await generateComponentManifests(ctx({ projectRoot: missingRoot }));
     expect(manifests).toEqual([]);
+  });
+
+  it('passes extension manifests through with componentType/extensionType intact', async () => {
+    const manifests = await generateComponentManifests(
+      ctx({
+        projectRoot: extRoot,
+        externals: ['@microsoft/sp-core-library', '@microsoft/sp-application-base', '@microsoft/sp-extension-base']
+      })
+    );
+    expect(manifests).toHaveLength(1);
+    const manifest = manifests[0]!;
+    expect(manifest.componentType).toBe('Extension');
+    expect(manifest.extensionType).toBe('ApplicationCustomizer');
+    expect(manifest.alias).toBe('HelloAppCustomizer');
+    expect(manifest.manifestVersion).toBe(2);
+    expect(manifest.version).toBe('1.2.3');
+    expect(manifest.requiresCustomScript).toBe(false);
+    expect(manifest.$schema).toBeUndefined();
+    expect(manifest.loaderConfig.entryModuleId).toBe('helloAppCustomizer');
+    expect(manifest.loaderConfig.scriptResources['helloAppCustomizer']).toEqual({
+      type: 'path',
+      path: 'helloAppCustomizer.js'
+    });
+    expect(manifest.loaderConfig.scriptResources['@microsoft/sp-application-base']).toEqual({
+      type: 'component',
+      id: '4df9bb86-ab0a-4aab-ab5f-48bf167048fb',
+      version: '1.23.2'
+    });
+    expect(manifest.loaderConfig.scriptResources['@microsoft/sp-extension-base']).toEqual({
+      type: 'component',
+      id: '0773bd53-a69e-4293-87e6-ba80ea4d614b',
+      version: '1.23.2'
+    });
+  });
+
+  it('scans both webparts and extensions dirs and honors extensionsDir overrides', async () => {
+    const mixedRoot = fileURLToPath(new URL('./fixtures/mixed', import.meta.url));
+    const manifests = await generateComponentManifests(
+      ctx({ projectRoot: mixedRoot, externals: [] })
+    );
+    expect(manifests).toHaveLength(2);
+    const byType = Object.fromEntries(manifests.map((m) => [m.componentType, m]));
+    expect(byType['WebPart']!.loaderConfig.entryModuleId).toBe('hello');
+    expect(byType['Extension']!.loaderConfig.entryModuleId).toBe('myExt');
+    expect(byType['Extension']!.extensionType).toBe('ListViewCommandSet');
   });
 });

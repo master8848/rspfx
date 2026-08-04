@@ -1,0 +1,10 @@
+{
+  "id": "aaaaaaaa-1111-4222-8333-444444444444",
+  "alias": "HelloWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "safeWithCustomScriptDisabled": true,
+  "supportedHosts": ["SharePointWebPart"],
+  "preconfiguredEntries": []
+}
