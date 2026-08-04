@@ -31,18 +31,21 @@
     "@mbsks/rspfx-diagnostics": "workspace:*"
   },
   "peerDependencies": {
-    "@microsoft/sp-webpart-base": "*",
+    "@microsoft/sp-component-base": "*",
     "@microsoft/sp-core-library": "*",
     "@microsoft/sp-http": "*",
-    "@microsoft/sp-component-base": "*",
-    "@microsoft/sp-page-context": "*"
+    "@microsoft/sp-page-context": "*",
+    "@microsoft/sp-webpart-base": "*"
   },
   "devDependencies": {
-    "@microsoft/sp-webpart-base": "1.23.2",
-    "@microsoft/sp-core-library": "1.23.2",
-    "@microsoft/sp-http": "1.23.2",
+    "@microsoft/sp-application-base": "1.23.2",
     "@microsoft/sp-component-base": "1.23.2",
-    "@microsoft/sp-page-context": "1.23.2"
+    "@microsoft/sp-core-library": "1.23.2",
+    "@microsoft/sp-extension-base": "1.23.2",
+    "@microsoft/sp-http": "1.23.2",
+    "@microsoft/sp-listview-extensibility": "1.23.2",
+    "@microsoft/sp-page-context": "1.23.2",
+    "@microsoft/sp-webpart-base": "1.23.2"
   },
   "description": "RSPFX shims/bridges for @microsoft/sp-* packages",
   "repository": {

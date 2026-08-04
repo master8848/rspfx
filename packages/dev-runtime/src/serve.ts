@@ -159,7 +159,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       entries,
       externals: local ? [] : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
       localizedAliases: currentProject.localizedAliases,
-      localizedResources: local ? [] : currentProject.localizedResources,
+      localizedResources: currentProject.localizedResources,
       fastRefresh,
       production: false,
       serveMode: true,
