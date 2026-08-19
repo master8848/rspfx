@@ -1,11 +1,8 @@
 # Why RSPFX — how it beats the official SPFx toolchain
 
-The official SharePoint Framework toolchain is a chain of four disconnected
-generations of tooling bolted together: **gulp** (task runner) orchestrating
-**Heft** (build system) driving **webpack** (bundler) through a config overlay
-(`sp-build-core-webpack`, `rush-stack-compiler-…`) — plus a maze of JSON
-config files. RSPFX replaces all of it with **one modern bundler and one
-plugin**.
+The official SharePoint Framework toolchain is a chain of four disconnected generations of tooling bolted together: gulp (task runner) orchestrating Heft (build system) driving webpack (bundler) through a config overlay (`sp-build-core-webpack`, `rush-stack-compiler-…`) — plus a maze of JSON config files.
+
+RSPFX replaces all of it with one modern bundler and one plugin.
 
 ## One file instead of five
 
@@ -14,7 +11,7 @@ extends), `config/config.json`, `config/serve.json`,
 `config/write-manifests.json`, `config/package-solution.json` and a
 `.yo-rc.json` — and the build behavior is spread across all of them.
 
-RSPFX: **one plugin in your bundler config**:
+RSPFX: one plugin in your bundler config:
 
 ```ts
 // rspack.config.ts  (or vite.config.ts with rspfxVite)

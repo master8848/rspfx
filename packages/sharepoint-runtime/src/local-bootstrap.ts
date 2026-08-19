@@ -70,10 +70,16 @@ const registry = new Map<string, AmdModule>();
 
 /**
  * No-op stand-in for the internal `@msinternal/*` modules the bundled sp-*
- * packages import (telemetry, feature flags, safe-html). They are never
- * published to npm; sp-loader provides them on real tenants, so in the local
- * preview any property access, call or `new` on them yields another no-op.
+ * packages import (telemetry, feature flags). They are never published to
+ * npm; sp-loader provides them on real tenants, so in the local preview any
+ * property access, call or `new` on them yields another no-op.
  * Self-referential so `new X().method().prop` chains keep working.
+ *
+ * SECURITY: This proxy intentionally does NOT cover `@msinternal/safe-html`.
+ * Sanitizers must never be stubbed to a no-op that returns a proxy — that
+ * would bypass sanitization and mask XSS. `@msinternal/safe-html` is handled
+ * by `SAFE_HTML_PROXY` (identity-or-throw) via `getPlatformModuleProxy`.
+ * Only telemetry/feature-flag style modules should use MSINTERNAL_PROXY.
  */
 export const MSINTERNAL_PROXY: unknown = new Proxy(function () {}, {
   get(_target, prop) {
@@ -92,6 +98,63 @@ export const MSINTERNAL_PROXY: unknown = new Proxy(function () {}, {
     return MSINTERNAL_PROXY as object;
   }
 });
+
+const SAFE_HTML_ERROR =
+  '@msinternal/safe-html not available in local preview — use DOMPurify or textContent';
+
+/**
+ * Stand-in for `@msinternal/safe-html` (and sub-paths). Unlike the telemetry
+ * proxy, this must NOT silently return another proxy — that would bypass
+ * sanitization. We return an identity function for single-string calls (so
+ * `escapeHtml(str)` etc. degrade to `return str` visibly) and throw for
+ * any other shape, making the missing sanitizer obvious during local dev.
+ * Consumers should replace with DOMPurify or `textContent` assignment.
+ */
+function createSafeHtmlProxy(): unknown {
+  const handler: ProxyHandler<any> = {
+    get(_target, prop) {
+      if (prop === '__esModule' || prop === Symbol.toStringTag) {
+        return undefined;
+      }
+      // Any named export (e.g. HtmlSanitizer, SafeHtml) returns a function
+      // that acts as identity for one-string calls, otherwise throws.
+      return (...args: unknown[]) => {
+        if (args.length === 1 && typeof args[0] === 'string') {
+          return args[0];
+        }
+        throw new Error(SAFE_HTML_ERROR);
+      };
+    },
+    set() {
+      return true;
+    },
+    apply(_target, _thisArg, args) {
+      if (args.length === 1 && typeof args[0] === 'string') {
+        return args[0];
+      }
+      throw new Error(SAFE_HTML_ERROR);
+    },
+    construct() {
+      throw new Error(SAFE_HTML_ERROR);
+    }
+  };
+  return new Proxy(function () {}, handler);
+}
+
+export const SAFE_HTML_PROXY: unknown = createSafeHtmlProxy();
+
+/**
+ * Returns the appropriate stand-in for a platform-only module request.
+ * `@msinternal/safe-html` (exact or sub-path) gets the sanitizer-aware
+ * identity-or-throw proxy; everything else under `PLATFORM_ONLY_PREFIXES`
+ * gets the generic telemetry/feature-flag no-op.
+ */
+export function getPlatformModuleProxy(request: string): unknown {
+  if (request === '@msinternal/safe-html' || request.startsWith('@msinternal/safe-html/')) {
+    return SAFE_HTML_PROXY;
+  }
+  return MSINTERNAL_PROXY;
+}
 
 const MSINTERNAL_PREFIX = '@msinternal';
 
@@ -124,7 +187,7 @@ function resolveDep(dep: string, mod: AmdModule): unknown {
   if (dep === 'module') {
     return mod;
   }
-  return registry.get(dep)?.exports ?? (isPlatformOnlyModule(dep) ? MSINTERNAL_PROXY : undefined);
+  return registry.get(dep)?.exports ?? (isPlatformOnlyModule(dep) ? getPlatformModuleProxy(dep) : undefined);
 }
 
 function registerDefine(id: string | undefined, deps: string[], factory: (...args: unknown[]) => unknown): void {

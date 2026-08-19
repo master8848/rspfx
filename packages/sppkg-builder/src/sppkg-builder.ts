@@ -451,18 +451,41 @@ async function collectClientSideAssets(assetsDir: string, teamsDir?: string): Pr
 
 async function collectResx(resxDir: string): Promise<ResxFile[]> {
   const resxFiles: ResxFile[] = [];
+  // resxDir is expected to be an absolute directory under the project root.
+  // We keep a best-effort traversal guard even though globFiles already
+  // constrains results to within resxDir.
+  const projectRootForGuard = path.resolve(resxDir, '..');
   for (const relativePath of await globFiles(resxDir, ['Resources.resx', 'Resources.*.resx'])) {
     if (relativePath === 'Resources.resx') {
       // ok
     } else if (!/^Resources\.[a-z0-9_-]+\.resx$/i.test(relativePath)) {
       continue;
     }
-    const content = await readFile(path.join(resxDir, relativePath));
+    const absolute = path.resolve(resxDir, relativePath);
+    const rel = path.relative(resxDir, absolute);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new RspfxError(
+        'SPPKG_TRAVERSAL',
+        `Refusing to embed resx '${relativePath}' — path escapes resx dir '${resxDir}'`
+      );
+    }
+    // Also guard against the absolute escaping a presumed project root parent.
+    const rel2 = path.relative(projectRootForGuard, absolute);
+    if (rel2.startsWith('..') || path.isAbsolute(rel2)) {
+      // This is a soft guard; the primary guard is against resxDir.
+      // We still throw if the file is outside the project hierarchy.
+      throw new RspfxError('SPPKG_TRAVERSAL', `Refusing to embed resx outside project: '${relativePath}'`);
+    }
+    const zipName = toZipPath(relativePath);
+    if (zipName !== relativePath.replace(/\\/g, '/')) {
+      throw new RspfxError('SPPKG_TRAVERSAL', `Refusing to embed resx with traversal-normalized name: '${relativePath}'`);
+    }
+    const content = await readFile(absolute);
     const locale =
       relativePath === 'Resources.resx'
         ? 'en-us'
         : relativePath.slice('Resources.'.length, -'.resx'.length).toLowerCase();
-    resxFiles.push({ name: relativePath, buffer: content, locale, values: parseResx(content.toString('utf8')) });
+    resxFiles.push({ name: zipName, buffer: content, locale, values: parseResx(content.toString('utf8')) });
   }
   resxFiles.sort((a, b) => {
     if (a.name === 'Resources.resx') {
@@ -478,6 +501,13 @@ async function collectResx(resxDir: string): Promise<ResxFile[]> {
 
 async function readProjectFile(projectRoot: string, relativePath: string, kind: string): Promise<Buffer> {
   const absolutePath = path.resolve(projectRoot, relativePath);
+  const rel = path.relative(projectRoot, absolutePath);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new RspfxError(
+      'SPPKG_TRAVERSAL',
+      `Refusing to embed ${kind} '${relativePath}' — path escapes project root '${projectRoot}'`
+    );
+  }
   try {
     return await readFile(absolutePath);
   } catch (error) {
@@ -514,5 +544,18 @@ function isWebApiPermissionRequests(value: unknown): { resource: string; scope: 
 }
 
 function toZipPath(value: string): string {
-  return value.replace(/\\/g, '/');
+  // Normalize to posix, strip leading slashes and any leading ".." segments to
+  // prevent directory traversal inside the zip. Callers also enforce the
+  // projectRoot-relative guard before embedding.
+  const posix = value.replace(/\\/g, '/');
+  const normalized = path.posix.normalize(posix);
+  // Remove leading "/" and any number of leading "../" segments after normalize.
+  const stripped = normalized.replace(/^\/+/, '').replace(/^(\.\.\/)+/, '');
+  // After stripping, any remaining ".." segments would have been collapsed by
+  // normalize unless they were in the middle (e.g. "a/../b" -> "b"). For extra
+  // safety, reject any path that still contains ".." as a segment.
+  if (stripped.split('/').includes('..')) {
+    throw new RspfxError('SPPKG_TRAVERSAL', `Refusing to embed path with traversal segments: '${value}'`);
+  }
+  return stripped;
 }

@@ -76,6 +76,40 @@ const DEFAULT_CURRENT_USER = {
   }
 };
 
+const ALLOWED_CURRENT_USER_KEYS = new Set([
+  'Id',
+  'LoginName',
+  'Title',
+  'Email',
+  'UserPrincipalName',
+  'IsSiteAdmin',
+  'IsHiddenInUI',
+  'UserId'
+]);
+
+function sanitizeString(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  // Strip angle brackets/quotes to prevent XSS, limit length.
+  return value.replace(/[<>"']/g, '').slice(0, 256);
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    const h = hostname.toLowerCase();
+    return (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '::1' ||
+      h.endsWith('.sharepoint.com') ||
+      h.endsWith('.sharepoint-df.com') ||
+      h.endsWith('.sharepoint.cn')
+    );
+  } catch {
+    return false;
+  }
+}
+
 function iso(offsetDays = 0): string {
   const date = new Date(Date.now() + offsetDays * 86_400_000);
   return date.toISOString();
@@ -134,10 +168,46 @@ export function createMockSharePointApi(opts: MockApiOptions): {
   const seed = loadSeed(opts.projectRoot);
   if (seed) {
     if (Array.isArray(seed.lists)) {
-      store.lists = seed.lists as MockList[];
+      // Schema validation: only allow lists with Title string sanitized.
+      const sanitizedLists: MockList[] = [];
+      for (const raw of seed.lists as unknown[]) {
+        if (!raw || typeof (raw as Record<string, unknown>).Title !== 'string') continue;
+        const rawObj = raw as Record<string, unknown>;
+        const title = sanitizeString(rawObj.Title);
+        if (!title) continue;
+        const itemsRaw = Array.isArray(rawObj.items) ? rawObj.items as unknown[] : [];
+        const items: MockListItem[] = [];
+        for (const it of itemsRaw) {
+          if (!it || typeof (it as Record<string, unknown>).Title !== 'string') continue;
+          const itemObj = it as Record<string, unknown>;
+          items.push({ ...(itemObj as MockListItem), Title: sanitizeString(itemObj.Title) } as MockListItem);
+        }
+        sanitizedLists.push({
+          Id: typeof rawObj.Id === 'string' ? rawObj.Id : randomUUID(),
+          Title: title,
+          BaseTemplate: typeof rawObj.BaseTemplate === 'number' ? rawObj.BaseTemplate : 100,
+          ServerRelativeUrl: typeof rawObj.ServerRelativeUrl === 'string' ? sanitizeString(rawObj.ServerRelativeUrl) : `/${title}`,
+          Created: typeof rawObj.Created === 'string' ? rawObj.Created : iso(-30),
+          LastItemModifiedDate: typeof rawObj.LastItemModifiedDate === 'string' ? rawObj.LastItemModifiedDate : iso(-1),
+          ItemCount: items.length,
+          items
+        });
+      }
+      if (sanitizedLists.length) {
+        store.lists = sanitizedLists;
+      }
     }
-    if (seed.currentUser) {
-      store.currentUser = { ...store.currentUser, ...seed.currentUser };
+    if (seed.currentUser && typeof seed.currentUser === 'object' && !Array.isArray(seed.currentUser)) {
+      // Allowlist keys for currentUser to prevent injection of arbitrary fields.
+      const filtered: Record<string, unknown> = {};
+      for (const key of Object.keys(seed.currentUser as Record<string, unknown>)) {
+        if (ALLOWED_CURRENT_USER_KEYS.has(key)) {
+          const value = (seed.currentUser as Record<string, unknown>)[key];
+          // Sanitize string values
+          filtered[key] = typeof value === 'string' ? sanitizeString(value) : value;
+        }
+      }
+      store.currentUser = { ...store.currentUser, ...filtered };
     }
   }
   const origin = opts.origin;
@@ -166,28 +236,43 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     }
   }
 
-  const respond = (res: MockApiResponse, status: number, body: unknown): void => {
+  const respond = (res: MockApiResponse, status: number, body: unknown, originHeader?: string | string[] | undefined): void => {
     res.statusCode = status;
     res.setHeader('Content-Type', 'application/json;odata.metadata=minimal;charset=utf-8');
     res.setHeader('SPRequestGuid', randomUUID());
     res.setHeader('SPClientServiceRequestDuration', String(Math.floor(Math.random() * 100) + 1));
+    // Validation branch: X-RequestDigest is set as response header; incoming digest is validated below for state-changing methods.
     res.setHeader('X-RequestDigest', DIGEST);
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Vary', 'Origin');
+    if (originHeader) {
+      const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+      if (originValue && isAllowedOrigin(originValue)) {
+        res.setHeader('Access-Control-Allow-Origin', originValue);
+      }
+      // Fallback to no header when not allowlisted, not '*', for security.
+    }
     res.end(JSON.stringify(body));
   };
 
-  const respondError = (res: MockApiResponse, status: number, code: string, message: string): void => {
+  const respondError = (res: MockApiResponse, status: number, code: string, message: string, originHeader?: string | string[] | undefined): void => {
     respond(res, status, {
       error: {
         code: `-1, ${code}`,
         message: { lang: 'en-US', value: message }
       }
-    });
+    }, originHeader);
   };
 
-  const listByTitle = (title: string): MockList | undefined =>
-    store.lists.find((list) => list.Title.toLowerCase() === decodeURIComponent(title).toLowerCase());
+  const listByTitle = (title: string): MockList | undefined => {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(title);
+    } catch {
+      return undefined;
+    }
+    return store.lists.find((list) => list.Title.toLowerCase() === decoded.toLowerCase());
+  };
 
   const publicList = (list: MockList): Record<string, unknown> => {
     const entityTypeName = list.Title.replace(/\s+/g, '');
@@ -244,8 +329,28 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     const rawPath = queryIndex === -1 ? url : url.slice(0, queryIndex);
     const rawQuery = queryIndex === -1 ? '' : url.slice(queryIndex + 1);
     const headers = request.headers ?? {};
+    // Extract Origin for CORS allowlist (no wildcard fallback)
+    const originHeaderEntry = Object.entries(headers).find(([name]) => name.toLowerCase() === 'origin')?.[1];
+    const originHeader = originHeaderEntry as string | string[] | undefined;
+    // X-RequestDigest validation for state-changing overrides
+    const requestDigestEntry = Object.entries(headers).find(([name]) => name.toLowerCase() === 'x-requestdigest')?.[1];
+    const requestDigest = Array.isArray(requestDigestEntry) ? requestDigestEntry[0] : requestDigestEntry;
     const httpMethodHeader = Object.entries(headers).find(([name]) => name.toLowerCase() === 'x-http-method')?.[1];
-    const override = Array.isArray(httpMethodHeader) ? httpMethodHeader[0] : httpMethodHeader;
+    const rawOverride = Array.isArray(httpMethodHeader) ? httpMethodHeader[0] : httpMethodHeader;
+    let override: string | undefined;
+    if (rawOverride) {
+      const upper = rawOverride.toUpperCase();
+      if (['MERGE', 'PATCH', 'PUT', 'DELETE'].includes(upper)) {
+        // Require valid X-RequestDigest before honoring verb tunneling
+        if (requestDigest !== DIGEST) {
+          respondError(res, 403, 'System.UnauthorizedAccessException', 'X-RequestDigest validation failed.', originHeader);
+          return;
+        }
+        override = rawOverride;
+      } else {
+        override = rawOverride;
+      }
+    }
     const method = (override ?? request.method ?? 'GET').toUpperCase();
     const path = rawPath.replace(/^\/_api/, '').replace(/\/+$/, '') || '/';
     const query = new URLSearchParams(rawQuery);
@@ -260,27 +365,27 @@ export function createMockSharePointApi(opts: MockApiOptions): {
           WebFullUrl: origin(),
           SupportedSchemaVersions: ['14.0.0.0', '15.0.0.0']
         }
-      });
+      }, originHeader);
       return;
     }
     if (method === 'GET' && path === '/web') {
-      respond(res, 200, store.web);
+      respond(res, 200, store.web, originHeader);
       return;
     }
     if (method === 'GET' && path === '/site') {
-      respond(res, 200, store.site);
+      respond(res, 200, store.site, originHeader);
       return;
     }
     if (method === 'GET' && path === '/web/currentuser') {
-      respond(res, 200, store.currentUser);
+      respond(res, 200, store.currentUser, originHeader);
       return;
     }
     if (method === 'GET' && path === '/web/lists') {
-      respond(res, 200, { value: store.lists.map(publicList) });
+      respond(res, 200, { value: store.lists.map(publicList) }, originHeader);
       return;
     }
     if (method === 'GET' && path === '/web/siteusers') {
-      respond(res, 200, { value: [store.currentUser] });
+      respond(res, 200, { value: [store.currentUser] }, originHeader);
       return;
     }
 
@@ -288,10 +393,10 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     if (listGuidMatch && method === 'GET') {
       const list = store.lists.find((entry) => entry.Id.toLowerCase() === listGuidMatch[1]!.toLowerCase());
       if (!list) {
-        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${listGuidMatch[1]}' does not exist at site with URL '${origin()}'`);
+        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${listGuidMatch[1]}' does not exist at site with URL '${origin()}'`, originHeader);
         return;
       }
-      respond(res, 200, publicList(list));
+      respond(res, 200, publicList(list), originHeader);
       return;
     }
 
@@ -299,22 +404,22 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     if (itemMatch) {
       const list = listByTitle(itemMatch[1]!);
       if (!list) {
-        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${itemMatch[1]}' does not exist at site with URL '${origin()}'`);
+        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${itemMatch[1]}' does not exist at site with URL '${origin()}'`, originHeader);
         return;
       }
       const id = Number(itemMatch[2]);
       const index = list.items.findIndex((item) => item.Id === id);
       if (method === 'GET') {
         if (index === -1) {
-          respondError(res, 404, 'System.IO.FileNotFoundException', `Item with id ${id} was not found.`);
+          respondError(res, 404, 'System.IO.FileNotFoundException', `Item with id ${id} was not found.`, originHeader);
           return;
         }
-        respond(res, 200, publicItem(list.items[index]!));
+        respond(res, 200, publicItem(list.items[index]!), originHeader);
         return;
       }
       if (method === 'MERGE' || method === 'PATCH' || method === 'PUT') {
         if (index === -1) {
-          respondError(res, 404, 'System.IO.FileNotFoundException', `Item with id ${id} was not found.`);
+          respondError(res, 404, 'System.IO.FileNotFoundException', `Item with id ${id} was not found.`, originHeader);
           return;
         }
         const existing = list.items[index]!;
@@ -325,6 +430,13 @@ export function createMockSharePointApi(opts: MockApiOptions): {
           list.items[index] = { ...existing, ...body } as MockListItem;
         }
         res.statusCode = 204;
+        res.setHeader('Vary', 'Origin');
+        if (originHeader) {
+          const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+          if (originValue && isAllowedOrigin(originValue)) {
+            res.setHeader('Access-Control-Allow-Origin', originValue);
+          }
+        }
         res.end();
         return;
       }
@@ -334,10 +446,17 @@ export function createMockSharePointApi(opts: MockApiOptions): {
           list.ItemCount = list.items.length;
         }
         res.statusCode = 204;
+        res.setHeader('Vary', 'Origin');
+        if (originHeader) {
+          const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+          if (originValue && isAllowedOrigin(originValue)) {
+            res.setHeader('Access-Control-Allow-Origin', originValue);
+          }
+        }
         res.end();
         return;
       }
-      respondError(res, 400, 'System.NotSupportedException', `Method ${method} is not supported by the local preview mock.`);
+      respondError(res, 400, 'System.NotSupportedException', `Method ${method} is not supported by the local preview mock.`, originHeader);
       return;
     }
 
@@ -345,7 +464,7 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     if (collectionMatch) {
       const list = listByTitle(collectionMatch[1]!);
       if (!list) {
-        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${collectionMatch[1]}' does not exist at site with URL '${origin()}'`);
+        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${collectionMatch[1]}' does not exist at site with URL '${origin()}'`, originHeader);
         return;
       }
       if (method === 'GET') {
@@ -361,7 +480,7 @@ export function createMockSharePointApi(opts: MockApiOptions): {
           items = items.slice(0, top);
         }
         const select = query.get('$select');
-        respond(res, 200, { value: selectFields(items, select ?? undefined) });
+        respond(res, 200, { value: selectFields(items, select ?? undefined) }, originHeader);
         return;
       }
       if (method === 'POST') {
@@ -381,10 +500,10 @@ export function createMockSharePointApi(opts: MockApiOptions): {
         };
         list.items.push(item);
         list.ItemCount = list.items.length;
-        respond(res, 201, publicItem(item));
+        respond(res, 201, publicItem(item), originHeader);
         return;
       }
-      respondError(res, 400, 'System.NotSupportedException', `Method ${method} is not supported by the local preview mock.`);
+      respondError(res, 400, 'System.NotSupportedException', `Method ${method} is not supported by the local preview mock.`, originHeader);
       return;
     }
 
@@ -392,14 +511,14 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     if (listMatch && method === 'GET') {
       const list = listByTitle(listMatch[1]!);
       if (!list) {
-        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${listMatch[1]}' does not exist at site with URL '${origin()}'`);
+        respondError(res, 404, 'System.IO.FileNotFoundException', `List '${listMatch[1]}' does not exist at site with URL '${origin()}'`, originHeader);
         return;
       }
-      respond(res, 200, publicList(list));
+      respond(res, 200, publicList(list), originHeader);
       return;
     }
 
-    respondError(res, 400, 'System.NotSupportedException', `The local preview mock does not implement ${method} ${rawPath}. See docs/commands.md (rspfx dev --mode local) for the supported /_api/ endpoints.`);
+    respondError(res, 400, 'System.NotSupportedException', `The local preview mock does not implement ${method} ${rawPath}. See docs/commands.md (rspfx dev --mode local) for the supported /_api/ endpoints.`, originHeader);
   };
 
   return {

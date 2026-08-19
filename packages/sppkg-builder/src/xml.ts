@@ -268,10 +268,20 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
 
 function localizedElement(name: string, locales: Record<string, unknown>): XmlNode {
   const children: XmlNode[] = [];
-  for (const [lcid, value] of Object.entries(locales)) {
+  for (const [rawLcid, value] of Object.entries(locales)) {
+    let lcidStr: string;
+    if (rawLcid === 'default') {
+      lcidStr = '1033';
+    } else if (/^[0-9]+$/.test(rawLcid)) {
+      lcidStr = rawLcid;
+    } else {
+      // May be a locale tag like "en-us" or "en_us" — normalize via localeToLcid for numeric-only guarantee.
+      lcidStr = String(localeToLcid(rawLcid));
+    }
     children.push({
       name: 'LocalizedString',
-      attrs: { LCID: lcid === 'default' ? '1033' : lcid, Value: String(value) }
+      // LCID is numeric-only (validated above); Value is escaped via escapeXmlAttribute in serializeXml.
+      attrs: { LCID: lcidStr, Value: String(value) }
     });
   }
   return { name, children };

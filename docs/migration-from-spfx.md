@@ -31,9 +31,7 @@ existing project carries over as-is.
   present.
 - **`config/deploy-azure-storage.json`** (CDN deploy) — replaced by
   `config/write-manifests.json` `cdnBasePath` for release base URLs.
-- **`rspfx.config.ts`** — the legacy project config file is removed; no legacy
-  support. `config/config.json` keeps its official role (bundles/externals are
-  still read from there).
+- `rspfx.config.ts` does not exist; `config/config.json` keeps its official role (bundles/externals are still read from there).
 
 ## Steps
 

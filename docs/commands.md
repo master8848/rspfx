@@ -1,15 +1,12 @@
 # Command Reference
 
-Global: `rspfx --version`, `rspfx --help`. All commands load the project's
-bundler config (`rspack.config.ts` via jiti, `vite.config.ts` for Vite projects,
-or `rsbuild.config.ts` for Rsbuild projects), find the `RspfxPlugin` /
-`rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options,
-merging CLI flags over them. The optional `paths` section
-of the plugin options customizes the project folder layout: `paths.srcDir`
-(default `src`), `paths.webpartsDir` (default `src/webparts`), `paths.configDir`
-(default `config`) — see [building-packages.md](building-packages.md) for what
-each one controls. If no config or no plugin is found the CLI errors with
-guidance.
+Global: `rspfx --version`, `rspfx --help`.
+
+All commands load the project's bundler config (`rspack.config.ts` via jiti, `vite.config.ts` for Vite projects, or `rsbuild.config.ts` for Rsbuild projects), find the `RspfxPlugin` / `rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options, merging CLI flags over them.
+
+The optional `paths` section of the plugin options customizes the project folder layout: `paths.srcDir` (default `src`), `paths.webpartsDir` (default `src/webparts`), `paths.configDir` (default `config`) — see [building-packages.md](building-packages.md) for what each one controls.
+
+If no config or no plugin is found the CLI errors with guidance.
 
 ## `rspfx new <name>`
 
@@ -21,7 +18,7 @@ Scaffold a new SPFx project (web part or extension) and install dependencies.
 | `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` (web parts only) |
 | `--language <lang>` | `ts` (typescript) \| `js` (javascript) (web parts only) |
 | `--fluent` | Enable the Fluent UI adapter (React only) |
-| `--spfx-version <v>` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default `1.23`) |
+| `--spfx-version <v>` | see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13` |
 | `--pm <pm>` | `pnpm` \| `npm` \| `yarn` (dependency install) |
 | `--no-install` | Skip dependency installation |
 | `--yes` | Accept all defaults; non-interactive |
@@ -40,10 +37,9 @@ rspfx new my-commands --component listviewcommandset --no-install
 
 ## `rspfx dev`
 
-Start the dev environment: Rspack dev server + manifest server on `:4321`
-(HTTPS with a self-signed cert in workbench mode; plain HTTP in local preview
-mode). Dev output is unminified with readable module names and source maps;
-rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
+Start the dev environment: Rspack dev server + manifest server on `:4321` (HTTPS with a self-signed cert in workbench mode; plain HTTP in local preview mode).
+
+Dev output is unminified with readable module names and source maps; rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 
 | Flag | Description |
 |---|---|
@@ -58,13 +54,10 @@ rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 With no tenant configured, `rspfx dev` serves a **local preview page at `/`** —
 no SharePoint tenant needed:
 
-- The page lists every discovered web part **and extension** (injected into
-  `window.__RSPFX_COMPONENTS__`) and loads the `/dist/local-runtime.js`
-  bootstrap, which mounts each component with an emulated SPFx context.
-  Extensions mount with their real contexts: ApplicationCustomizers get a
-  working placeholder provider (Top/Bottom), FieldCustomizers render a sample
-  3-row list through `onRenderCell`, and ListViewCommandSets get a command
-  toolbar wired to `onListViewUpdated`/`onExecute`.
+- The page lists every discovered web part and extension (injected into `window.__RSPFX_COMPONENTS__`) and loads the `/dist/local-runtime.js` bootstrap, which mounts each component with an emulated SPFx context.
+  - ApplicationCustomizer: working placeholder provider (Top/Bottom).
+  - FieldCustomizer: sample 3-row list via `onRenderCell`.
+  - ListViewCommandSet: command toolbar via `onListViewUpdated`/`onExecute`.
 - **Multi-locale**: append `?locale=fr-fr` (alias `?market=`) to the preview
   URL to switch the emulated CultureInfo (LCID, RTL flag, language name) and
   load the matching `dist/<name>_<locale>.js` string modules, falling back to
@@ -80,11 +73,8 @@ objects, collections as `{ value: [...] }`, no `d:` envelopes):
 - `GET /_api/web/lists(guid'…')` and `/web/lists/getbytitle('…')`
 - `GET` / `POST` `/_api/web/lists/getbytitle('…')/items` (collection with
   `$top`/`$orderby`/`$select`, create)
-- `GET` / `MERGE` / `PUT` / `DELETE`
-  `/_api/web/lists/getbytitle('…')/items(<id>)` — mutations via the
-  `X-HTTP-Method` override header
-- `POST /_api/contextinfo` returns
-  `{ GetContextWebInformation: { FormDigestValue } }`
+- `GET` / `MERGE` / `PUT` / `DELETE` `/_api/web/lists/getbytitle('…')/items(<id>)` — mutations via the `X-HTTP-Method` override header.
+- `POST /_api/contextinfo` returns `{ GetContextWebInformation: { FormDigestValue } }`.
 - Missing lists/items return 404; anything unsupported returns 400 with a clear
   `{ error: { code, message } }` envelope
 

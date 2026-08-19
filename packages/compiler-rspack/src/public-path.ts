@@ -7,11 +7,30 @@ interface SpfxPublicPathOptions {
   entries: BundleEntry[];
 }
 
+/**
+ * SECURITY: `window.__rspfx_script_url_*` and `window.__RSPFX_COMPONENTS__`
+ * (see `dev-runtime/src/local-page.ts`) are XSS-sensitive — an injected script
+ * that overwrites the chunk base URL (`publicPath`) or component list before
+ * the bundle factory runs can redirect chunk loads to an attacker host or inject
+ * components. In production the bundles are hosted on CDNs with CSP, but in
+ * local preview the page is dev-only and we mitigate by capturing
+ * `document.currentScript.src` synchronously at bundle top-level (while the
+ * script tag is still executing) and attempting to freeze the global with
+ * `Object.defineProperty(..., { writable:false, configurable:false })`.
+ * Overwrite is still possible if an attacker runs *before* the capture line,
+ * so dependencies should be vetted and CSP applied where possible.
+ */
 function captureLine(entryName: string): string {
   const globalKey = scriptUrlGlobalKey(entryName);
+  // First statement captures the script URL; second attempts to freeze the
+  // global so later scripts cannot silently overwrite the chunk base. The
+  // try/catch keeps the bundle loadable if freezing is denied (e.g. already
+  // defined). Header prefix is intentionally stable — tests assert
+  // `startsWith('(function(){window["__rspfx_script_url_<name>"]=')`.
   return (
     `(function(){window[${JSON.stringify(globalKey)}]=` +
-    `typeof document!=="undefined"&&document.currentScript?document.currentScript.src:"";})();\n`
+    `typeof document!=="undefined"&&document.currentScript?document.currentScript.src:"";` +
+    `try{Object.defineProperty(window,${JSON.stringify(globalKey)},{value:window[${JSON.stringify(globalKey)}],writable:false,configurable:false});}catch{}})();\n`
   );
 }
 

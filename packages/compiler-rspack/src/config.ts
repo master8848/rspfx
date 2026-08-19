@@ -24,6 +24,14 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
+/**
+ * DRIFT RISK: Keep in sync with `packages/sharepoint-runtime/src/platform-modules.ts`.
+ * Only the `-1p`/`-legacy-1p` first-party MSAL builds are platform-only;
+ * the public `@azure/msal-browser` must NOT be externalized. The exact-prefix
+ * check `request === prefix || request.startsWith(prefix + '/')` prevents
+ * over-matching. See platform-modules.ts for full rationale and
+ * completeness note vs `reference/sp-component-ids.json`.
+ */
 const PLATFORM_ONLY_PREFIXES: readonly string[] = [
   '@msinternal',
   '@azure/msal-browser-1p',
@@ -137,13 +145,25 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const extensions: string[] = [...BASE_EXTENSIONS];
   const frameworkRules: RuleSetRule[] = [];
 
+  // Only allow the minimal safe define keys; block RSPFX_* leakage.
+  const ALLOWED_DEFINE_KEYS = new Set(['DEBUG', 'DEPRECATED_UNIT_TEST', 'process.env.NODE_ENV']);
   for (const contribution of ctx.swcContributions ?? []) {
     const contrib = contribution as FrameworkRspackContributions;
     if (contrib.swc?.jsc) {
       deepMerge(swcJsc, contrib.swc.jsc);
     }
     if (contrib.define) {
-      Object.assign(define, contrib.define);
+      for (const [k, v] of Object.entries(contrib.define)) {
+        if (k.startsWith('RSPFX_') || k.includes('RSPFX')) {
+          // Silently drop RSPFX leakage; framework contributions must not define RSPFX env.
+          continue;
+        }
+        if (!ALLOWED_DEFINE_KEYS.has(k)) {
+          // Drop unknown keys — only the allowlist is forwarded to DefinePlugin.
+          continue;
+        }
+        define[k] = v;
+      }
     }
     if (contrib.rules) {
       rules.push(...(contrib.rules as RuleSetRule[]));

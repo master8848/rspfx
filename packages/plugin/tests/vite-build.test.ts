@@ -113,7 +113,7 @@ describe('rspfxVite native build', () => {
       ) as { componentType: string; loaderConfig: { internalModuleBaseUrls: string[] } };
       expect(manifest.componentType).toBe('WebPart');
       expect(manifest.loaderConfig.internalModuleBaseUrls[0]).toBe(
-        'https://cdn.example.com/vite-proj'
+        'https://cdn.example.com/vite-proj/'
       );
     }
 

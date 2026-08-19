@@ -13,12 +13,35 @@ export interface ReloadController {
   handle(req: unknown, res: HotJsonResponse): void;
 }
 
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    const h = hostname.toLowerCase();
+    return (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '::1' ||
+      h.endsWith('.sharepoint.com') ||
+      h.endsWith('.sharepoint-df.com') ||
+      h.endsWith('.sharepoint.cn')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function createReloadController(): ReloadController {
   let current = 0;
-  const handle = (_req: unknown, res: HotJsonResponse): void => {
+  const handle = (req: unknown, res: HotJsonResponse): void => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Vary', 'Origin');
+    const origin = (req as { headers?: Record<string, string | string[] | undefined> })?.headers?.origin;
+    const originValue = Array.isArray(origin) ? origin[0] : origin;
+    if (originValue && isAllowedOrigin(originValue)) {
+      res.setHeader('Access-Control-Allow-Origin', originValue);
+    }
+    // Fallback to no ACAO header when origin not allowlisted (not '*') for security.
     res.end(JSON.stringify({ build: current }));
   };
   return {

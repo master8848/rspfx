@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
-import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
+import { ensureCertificates, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { createRefreshRuntime } from './refresh.js';
@@ -132,6 +132,13 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const https = local ? false : settings.https;
   const scheme = https ? 'https' : 'http';
   const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+  if (https && settings.hostname) {
+    // Validate custom hostname before it reaches cert generation / SAN allowlist.
+    // validateCustomHostname is the same allowlist used inside manifest-server
+    // (localhost/127.0.0.1/::1 + single DNS/IP validated via ^[a-z0-9.-]+$,
+    // rejects .. ; & " ' space : and .sharepoint suffix).
+    validateCustomHostname(settings.hostname);
+  }
   const certs = https ? await ensureCertificates(certsDir, settings.hostname) : undefined;
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;

@@ -15,10 +15,7 @@ rspfx --version
 rspfx new my-app
 ```
 
-Runs interactively: prompts for framework (vanilla / react / solid / preact / vue /
-svelte), language (typescript / javascript), styling (css / scss),
-Fluent UI (y/n), SPFx target (1.20 / 1.21 / 1.22 / 1.23), and package manager. Then it
-scaffolds the project and installs dependencies.
+Runs interactively: prompts for framework (vanilla / react / solid / preact / vue / svelte), language (typescript / javascript), styling (css / scss), Fluent UI (y/n), SPFx target (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`), and package manager. Then it scaffolds the project and installs dependencies.
 
 Non-interactive (useful for CI):
 
@@ -56,9 +53,7 @@ my-app/
 └── local/                       # optional — mock REST seed (local/data.json) for the dev local preview
 ```
 
-Every path above is a default — `paths` in the plugin options (`srcDir`,
-`webpartsDir`, `configDir`) relocates the source, web parts, and config folders;
-see [building-packages.md](building-packages.md).
+Every path above is a default — `paths` in the plugin options (`srcDir`, `webpartsDir`, `configDir`) relocates the source, web parts, and config folders; see [building-packages.md](building-packages.md).
 
 The project config lives in your bundler config as a plugin instance — the
 `RspfxPlugin` from `@mbsks/rspfx-plugin` in `rspack.config.ts` (the default;
@@ -80,11 +75,11 @@ export default {
 };
 ```
 
-The CLI loads the bundler config via jiti, finds the plugin by its marker
-symbol, and uses its options. Key defaults: `dev.port` **4321**, `dev.https`
-true, `dev.fastRefresh` false, `dev.openBrowser` false, `dev.workbench` true,
-`build.outDir` **dist**, `build.releaseDir` **release**. The `version` option
-overrides package.json for the AMD library names and manifests.
+The CLI loads the bundler config via jiti, finds the plugin by its marker symbol, and uses its options.
+
+Key defaults: `dev.port` 4321, `dev.https` true, `dev.fastRefresh` false, `dev.openBrowser` false, `dev.workbench` true, `build.outDir` dist, `build.releaseDir` release.
+
+The `version` option overrides package.json for the AMD library names and manifests.
 
 ## 3. Development workflow
 
@@ -92,17 +87,13 @@ overrides package.json for the AMD library names and manifests.
 rspfx dev
 ```
 
-This starts the dev server on **`http://localhost:4321`** (default `--mode
-local`): it serves a **local preview page at `/`** — no SharePoint tenant
-needed — plus the compiled bundles under `/dist/*` and the debug manifests at
-`/temp/manifests.js`. A mock SharePoint REST API runs at `/_api` (lists, items,
-current user, context digests — see [commands.md](commands.md)); seed it with a
-`local/data.json` file in the project root.
+This starts the dev server on `http://localhost:4321` (default `--mode local`): it serves a local preview page at `/` — no SharePoint tenant needed — plus the compiled bundles under `/dist/*` and the debug manifests at `/temp/manifests.js`.
 
-When a tenant is configured (`dev.tenantUrl`, `SPFX_SERVE_TENANT_DOMAIN`, or
-`rspfx dev --tenant …`), or with an explicit `--mode sharepoint`, it instead
-serves over **`https://localhost:4321`** (self-signed cert) and opens the
-workbench in your browser.
+A mock SharePoint REST API runs at `/_api` (lists, items, current user, context digests — see [commands.md](commands.md)); seed it with a `local/data.json` file in the project root.
+
+For takeover blockers and the real-tenant gate see [roadblocks.md](roadblocks.md) and [real-tenant-validation.md](real-tenant-validation.md).
+
+When a tenant is configured (`dev.tenantUrl`, env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47), or `rspfx dev --tenant …`), or with an explicit `--mode sharepoint`, it instead serves over `https://localhost:4321` (self-signed cert) and opens the workbench in your browser.
 
 ### The workbench URL
 
@@ -122,13 +113,12 @@ The browser opens:
 The workbench page is on your SharePoint tenant, so rspfx needs to know it:
 
 - Set `dev.tenantUrl` in the plugin options in `rspack.config.ts`, or
-- Set the `SPFX_SERVE_TENANT_DOMAIN` env var (replaces the `{tenantdomain}` token
-  in `config/serve.json`'s `initialPage`), or
+- Set the env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47) (replaces the `{tenantdomain}` token in `config/serve.json`'s `initialPage`), or
 - Override per-run: `rspfx dev --tenant https://contoso.sharepoint.com`.
 
 ### HTTPS certificate trust (SharePoint mode only)
 
-The `:4321` server in **SharePoint mode** (tenant configured via `dev.tenantUrl`, `SPFX_SERVE_TENANT_DOMAIN`, or `--tenant`) uses a **self-signed certificate** generated and cached in **`~/.rspfx/certs`** (825-day, 2048-bit, created on first run; trust instructions are printed once). Local mode (`rspfx dev --mode local`, the default when no tenant is configured) is plain HTTP on `http://localhost:4321` and needs no certificate.
+The `:4321` server in SharePoint mode (tenant configured via `dev.tenantUrl`, env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47), or `--tenant`) uses a self-signed certificate generated and cached in `~/.rspfx/certs` (825-day, 2048-bit, created on first run; trust instructions are printed once). Local mode (`rspfx dev --mode local`, the default when no tenant is configured) is plain HTTP on `http://localhost:4321` and needs no certificate.
 
 > **Warning: dev-only, machine-wide trust.** Importing trusts the cert for all browsers/users on the machine. Use only on a development machine. To remove: macOS `sudo security remove-trusted-cert ~/.rspfx/certs/cert.pem` or Keychain Access → System → delete; Windows `certutil -delstore Root <thumbprint>` or `certlm.msc` → Trusted Root → remove. See `~/.rspfx/certs/cert.pem.trust.txt` for the exact filename printed by the CLI.
 
@@ -141,12 +131,11 @@ Trust it so the SharePoint workbench can fetch `https://localhost:4321` without 
 
 ### Editing
 
-Save a source file → incremental rebuild → the reload client embedded in
-`/temp/manifests.js` detects the new build and reloads the workbench page
-automatically, so you never have to press F5. The dev build is **unminified**
-with readable module names and full source maps; only `rspfx build` optimizes
-and minifies. `rspfx dev --refresh` upgrades to state-preserving fast refresh
-where the framework supports it (see [fast-refresh.md](fast-refresh.md)).
+Save a source file → incremental rebuild → the reload client embedded in `/temp/manifests.js` detects the new build and reloads the workbench page automatically, so you never have to press F5.
+
+The dev build is unminified with readable module names and full source maps; only `rspfx build` optimizes and minifies.
+
+`rspfx dev --refresh` upgrades to state-preserving fast refresh where the framework supports it (see [fast-refresh.md](fast-refresh.md)).
 
 To stop: `Ctrl+C`. The browser is never auto-opened unless you pass `rspfx dev --browser` or set `dev.openBrowser: true` in the config.
 
@@ -157,11 +146,7 @@ rspfx build      # production compile: dist/ bundles + release/ manifests & asse
 rspfx package    # assemble sharepoint/solution/<name>.sppkg (implies build)
 ```
 
-The `.sppkg` is a DEFLATE zip containing `AppManifest.xml`, feature XML,
-component-manifest-bearing elements files, and — when `includeClientSideAssets` is
-true in `config/package-solution.json` — your bundles under `ClientSideAssets/`,
-with manifest base URLs rewritten to the `HTTPS://SPCLIENTSIDEASSETLIBRARY/`
-pseudo-URL that SharePoint resolves at install time.
+The `.sppkg` is a DEFLATE zip containing `AppManifest.xml`, feature XML, component-manifest-bearing elements files, and — when `includeClientSideAssets` is true in `config/package-solution.json` — your bundles under `ClientSideAssets/`, with manifest base URLs rewritten to the `HTTPS://SPCLIENTSIDEASSETLIBRARY/` pseudo-URL that SharePoint resolves at install time.
 
 Install it:
 
@@ -171,10 +156,7 @@ Install it:
    package-solution.json to auto-deploy).
 3. On any site: *Add an app* → your solution → *Add to page*.
 
-`rspfx deploy` automates the upload: it packages and uploads to the app catalog
-via REST using `config.deploy.appCatalogSiteUrl` (or the `RSPFX_APP_CATALOG_URL`
-env var) with a bearer access token from `RSPFX_ACCESS_TOKEN`. Without a token
-it prints the manual upload steps instead.
+`rspfx deploy` automates the upload: it packages and uploads to the app catalog via REST using `config.deploy.appCatalogSiteUrl` or env var (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47). Without a token it prints the manual upload steps instead.
 
 ## 5. Doctor
 

@@ -28,7 +28,17 @@ const SKIP_CHECKS = args.includes('--skip-checks');
 const NO_COMMIT = args.includes('--no-commit');
 const versionFlag = flagValue('--version');
 const bumpKind = args.includes('--major') ? 'major' : args.includes('--minor') ? 'minor' : 'patch';
-const otp = flagValue('--otp');
+// OTP: prefer env var to avoid leaking via `ps` (argv is visible). `--otp` is
+// still accepted for backwards compat but users should set RSPFX_NPM_OTP.
+// We also check npm_config_otp / NPM_OTP for interop.
+const otp = flagValue('--otp') ?? process.env.RSPFX_NPM_OTP ?? process.env.npm_config_otp ?? process.env.NPM_OTP;
+if (flagValue('--otp')) {
+  console.warn('Warning: --otp exposes the token in `ps` output; prefer RSPFX_NPM_OTP env var.');
+}
+// Guard --skip-checks in CI: it must not bypass gates in automation.
+if (SKIP_CHECKS && process.env.CI) {
+  fatal('--skip-checks is not allowed when CI is set (process.env.CI). Remove the flag or unset CI.');
+}
 
 function flagValue(flag) {
   const eq = args.find((a) => a.startsWith(flag + '='));
@@ -46,7 +56,9 @@ function fatal(message) {
 function run(cmd, argsList, opts = {}) {
   const result = spawnSync(cmd, argsList, { stdio: 'inherit', ...opts });
   if (result.status !== 0) {
-    fatal(`command failed: ${cmd} ${argsList.join(' ')} (exit ${result.status ?? 'signal'})`);
+    // Redact OTP if present in args to avoid leaking via logs / CI output.
+    const redacted = argsList.map((a, i) => (argsList[i - 1] === '--otp' ? '***' : a)).join(' ');
+    fatal(`command failed: ${cmd} ${redacted} (exit ${result.status ?? 'signal'})`);
   }
 }
 
@@ -229,11 +241,19 @@ for (const name of order) {
   }
   console.log(`  → ${name}@${targetVersion}`);
   const publishArgs = ['publish', '--no-git-checks', '--access', 'public'];
-  if (otp) publishArgs.push('--otp', otp);
+  // OTP via env (npm_config_otp) to avoid `ps` argv visibility and log leakage.
+  // We intentionally do NOT add --otp to publishArgs; pnpm/npm reads npm_config_otp.
+  const publishEnv = otp
+    ? { ...process.env, npm_config_otp: otp, NPM_OTP: otp, RSPFX_NPM_OTP: otp }
+    : process.env;
   // Pipe stdin so pnpm never shows interactive prompts (branch check, OTP) —
   // a missing OTP surfaces as a hard error instead of a hung prompt.
   const publishOnce = () =>
-    spawnSync('pnpm', publishArgs, { cwd: pkg.dir, stdio: ['pipe', 'inherit', 'inherit'] }).status ?? 1;
+    spawnSync('pnpm', publishArgs, {
+      cwd: pkg.dir,
+      stdio: ['pipe', 'inherit', 'inherit'],
+      env: publishEnv
+    }).status ?? 1;
   let status = publishOnce();
   for (let attempt = 1; status !== 0 && attempt < 4; attempt++) {
     // npm registry races (E409 packument) are transient — back off and retry.

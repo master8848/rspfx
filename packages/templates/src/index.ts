@@ -635,7 +635,8 @@ function fieldCustomizerEntry(vars: TemplateVars): string {
     ``,
     `  @override`,
     `  public onRenderCell(event: IFieldCustomizerCellEventParameters): void {`,
-    `    event.domElement.innerHTML = \`\${event.fieldValue}\`;`,
+    `    // escaped: fieldValue is user-controlled — use textContent, not innerHTML`,
+    `    event.domElement.textContent = event.fieldValue != null ? String(event.fieldValue) : '';`,
     `  }`,
     `}`,
     ``
@@ -791,9 +792,9 @@ function component(vars: TemplateVars): string {
     return frameworkComponent(vars);
   }
   if (vars.language === 'typescript') {
-    return `export interface I${vars.namePascal}Props {\n  description: string;\n}\n\nexport default function ${vars.namePascal}(props: I${vars.namePascal}Props): string {\n  return \`<div class="${vars.name}">\${props.description}</div>\`;\n}\n`;
+    return `export interface I${vars.namePascal}Props {\n  description: string;\n}\n\nfunction escapeHtml(str: string): string {\n  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');\n}\n\nexport default function ${vars.namePascal}(props: I${vars.namePascal}Props): string {\n  return \`<div class="${vars.name}">\${escapeHtml(props.description)}</div>\`;\n}\n`;
   }
-  return `export default function ${vars.namePascal}(props) {\n  return \`<div class="${vars.name}">\${props.description}</div>\`;\n}\n`;
+  return `function escapeHtml(str: string): string {\n  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');\n}\n\nexport default function ${vars.namePascal}(props) {\n  return \`<div class="${vars.name}">\${escapeHtml(props.description)}</div>\`;\n}\n`;
 }
 
 function frameworkComponent(vars: TemplateVars): string {

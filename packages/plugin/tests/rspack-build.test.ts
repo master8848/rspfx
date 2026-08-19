@@ -99,7 +99,7 @@ describe('RspfxPlugin native rspack build', () => {
       ) as { componentType: string; loaderConfig: { internalModuleBaseUrls: string[] } };
       expect(manifest.componentType).toBe('WebPart');
       expect(manifest.loaderConfig.internalModuleBaseUrls[0]).toBe(
-        'https://cdn.example.com/rspack-proj'
+        'https://cdn.example.com/rspack-proj/'
       );
       expect(fs.existsSync(path.join(FIXTURE, 'release', 'assets', 'hello.js'))).toBe(true);
     } finally {

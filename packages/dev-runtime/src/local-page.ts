@@ -6,6 +6,17 @@ import fs from 'node:fs';
  * part list into `window.__RSPFX_COMPONENTS__` and loads the local runtime
  * bootstrap bundle (`/dist/local-runtime.js`), which in turn loads each web
  * part bundle and mounts it with an emulated SPFx context.
+ *
+ * SECURITY: `window.__RSPFX_COMPONENTS__` and the per-bundle
+ * `window.__rspfx_script_url_*` globals (see `compiler-rspack/src/public-path.ts`)
+ * are XSS-sensitive — any script that can overwrite them can redirect chunk
+ * loads or inject components. The page is dev-only (never shipped), but editor
+ * XSS in a dependency could still overwrite the chunk base (publicPath) or
+ * component list. We freeze `__RSPFX_COMPONENTS__` with
+ * `Object.defineProperty(..., { writable:false, configurable:false })` after
+ * assignment so later scripts cannot silently replace it. The chunk URL globals
+ * are captured at bundle top-level via `document.currentScript` before user code
+ * runs, but remain overwritable if an attacker runs before the bundle — documented.
  */
 
 export interface LocalPageComponent {
@@ -29,6 +40,8 @@ export interface LocalPageOptions {
 
 export function buildLocalPageHtml(opts: LocalPageOptions): string {
   const componentsJson = JSON.stringify(opts.components).replace(/</g, '\\u003c');
+  // Escape origin for safe interpolation into <script src="...">; hostname is validated via URL parsing.
+  const safeOrigin = escapeHtml(opts.origin);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -118,8 +131,9 @@ export function buildLocalPageHtml(opts: LocalPageOptions): string {
 <div id="__rspfx_host"></div>
 <script>
   window.__RSPFX_COMPONENTS__ = ${componentsJson};
+  try { Object.defineProperty(window, '__RSPFX_COMPONENTS__', { value: window.__RSPFX_COMPONENTS__, writable: false, configurable: false }); } catch {}
 </script>
-<script src="${opts.origin}/dist/local-runtime.js"></script>
+<script src="${safeOrigin}/dist/local-runtime.js"></script>
 <script>${opts.reloadClientScript}</script>
 </body>
 </html>

@@ -9,9 +9,21 @@
  *
  * The local dev preview bundles `@microsoft/sp-*` directly (no externals), so
  * any module under these prefixes is externalized as an AMD dependency that
- * the preview bootstrap satisfies with a no-op stand-in (`MSINTERNAL_PROXY`).
+ * the preview bootstrap satisfies with a no-op stand-in (`MSINTERNAL_PROXY`;
+ * `@msinternal/safe-html` uses the sanitizer-aware `SAFE_HTML_PROXY`).
  * Production and workbench builds externalize the whole sp-* layer, so these
  * prefixes never reach resolution there.
+ *
+ * DRIFT RISK: This list MUST stay in sync with the duplicate copy in
+ * `packages/compiler-rspack/src/config.ts:27` (same `PLATFORM_ONLY_PREFIXES`
+ * and `isPlatformOnlyModule` exact-prefix check). If they drift, a module
+ * externalized at build time will have no bootstrap stub at runtime (or vice
+ * versa). The check is intentionally `request === prefix || request.startsWith(prefix + '/')`
+ * to avoid over-matching `@msinternalfoo` or `@azure/msal-browser` (the
+ * public `msal-browser` package is on npm and must NOT be externalized —
+ * only the `-1p`/`-legacy-1p` first-party builds are platform-only).
+ * `reference/sp-component-ids.json` does not list these prefixes — completeness
+ * is verified against the compiler's copy, not that table.
  */
 export const PLATFORM_ONLY_PREFIXES: readonly string[] = [
   '@msinternal',

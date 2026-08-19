@@ -1,9 +1,6 @@
 # Building, packaging & deploying
 
-This is the build pipeline reference: what each command produces, what the
-artifacts are, and how to wire it into CI. For the day-to-day flow see
-[getting-started.md](getting-started.md); for moving an existing project see
-[migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
+This is the build pipeline reference: what each command produces, what the artifacts are, and how to wire it into CI. For the day-to-day flow see [getting-started.md](getting-started.md); for moving an existing project see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
 
 ## Command overview
 
@@ -11,15 +8,12 @@ artifacts are, and how to wire it into CI. For the day-to-day flow see
 |---|---|---|
 | `rspfx build` | `dist/` bundles + `release/manifests/*.manifest.json` + `release/assets/*` | Production compile; `--no-minify`, `--sourcemap` flags |
 | `rspfx package` | `<paths.zippedPackage>` (default `sharepoint/solution/<name>.sppkg`) | Implies `build`; `--no-build` to skip |
-| `rspfx deploy` | Uploads the `.sppkg` to the app catalog | Bearer-token upload (`RSPFX_ACCESS_TOKEN`); prints manual steps without a token |
+| `rspfx deploy` | Uploads the `.sppkg` to the app catalog | see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47 |
 | `rspfx analyze` | Bundle size report as console table + `.rspfx/analyze.html` | Implies `build`; module counts fall back to `.rspfx/stats.json` on Vite/Rsbuild |
 | `rspfx clean` | Removes `dist/`, `release/`, `temp/`, `.rspfx/`, `node_modules/.cache` | — |
 | `rspfx doctor` | Environment/config checks, exit code 1 on failure | CI-friendly preflight |
 
-All commands load the project's bundler config — `rspack.config.ts|js`,
-`vite.config.ts|js`, or `rsbuild.config.ts|js` — find the `RspfxPlugin` /
-`rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options,
-merging CLI flags over them (`build.minify`/`build.sourcemap`, `dev.port`, etc.).
+All commands load the project's bundler config (`rspack.config.ts|js`, `vite.config.ts|js`, or `rsbuild.config.ts|js`), find the `RspfxPlugin` / `rspfxVite` / `rspfxRsbuild` plugin by its marker symbol, and use its options, merging CLI flags over them (`build.minify`/`build.sourcemap`, `dev.port`, etc.).
 
 ## Project layout
 
@@ -50,37 +44,14 @@ export default {
 };
 ```
 
-With the default layout, a web part folder `src/webparts/hello/` maps to a
-bundle named `hello`. With `config.json` bundles (or a custom `paths.webpartsDir`),
-the **bundle name** is authoritative: `loaderConfig.entryModuleId` is derived
-from the bundle entry name rather than the folder name.
+With the default layout, a web part folder `src/webparts/hello/` maps to a bundle named `hello`. With `config.json` bundles (or a custom `paths.webpartsDir`), the bundle name is authoritative: `loaderConfig.entryModuleId` is derived from the bundle entry name.
 
 ## What `rspfx build` does
 
-1. **Reads the project** (`<paths.configDir>/config.json`): bundle entrypoints,
-   externals, `localizedResources`. Entrypoints in the official Heft convention
-   (`./lib/...WebPart.js`) are migrated to source (`./src/...WebPart.ts`) by
-   `scripts/migrate-to-rspfx.mjs`; without `config.json` bundles, web parts are
-   auto-discovered from `<paths.webpartsDir>/*` (default `src/webparts/*`).
-2. **Loads the framework preset** (`@mbsks/rspfx-framework-<id>`): swc JSX/TS
-   transform, define flags, resolve contributions — the same compiler config
-   dev mode uses.
-3. **Compiles with Rspack**: one AMD bundle per web part
-   (`define('<componentId>_<version>', ["@microsoft/sp-core-library", ...], ...)`),
-   lazy `import()` → `chunk.<name>.js`, SCSS/CSS modules, HTML imports
-   (`asset/source`), assets. sp-* packages are **never bundled** — every
-   `@microsoft/sp-*` package found in `node_modules` plus every `externals` key
-   in `config.json` is externalized and referenced from the manifest.
-4. **Generates component manifests** into `release/manifests/`:
-   - `version: "*"` in the source manifest → package.json version
-   - `loaderConfig.entryModuleId` = the bundle entry name (the web part folder
-     name in the default layout; the `config.json` bundle name otherwise)
-   - `scriptResources`: the bundle (`"type": "path"`) + one
-     `"type": "component"` entry per external (sp-* IDs/versions harvested from
-     `node_modules` manifests, with `reference/sp-component-ids.json` as
-     fallback)
-   - `localizedResources` string modules resolve to the default locale
-     (`en-us`) at compile time and are bundled
+1. **Reads the project** (`<paths.configDir>/config.json`): bundle entrypoints, externals, `localizedResources`. Entrypoints `./lib/...WebPart.js` are migrated to `./src/...WebPart.ts` by `scripts/migrate-to-rspfx.mjs`; without `config.json` bundles, web parts are auto-discovered from `<paths.webpartsDir>/*` (default `src/webparts/*`).
+2. **Loads the framework preset** (`@mbsks/rspfx-framework-<id>`): swc JSX/TS transform, define flags, resolve contributions.
+3. **Compiles with Rspack**: one AMD bundle per web part (`define('<componentId>_<version>', ["@microsoft/sp-core-library", ...], ...)`), lazy `import()` → `chunk.<name>.js`, SCSS/CSS modules, HTML imports (`asset/source`), assets. sp-* packages are never bundled — every `@microsoft/sp-*` in `node_modules` plus every `externals` key in `config.json` is externalized.
+4. **Generates component manifests** into `release/manifests/`: `version: "*"` → package.json version; `loaderConfig.entryModuleId` = bundle entry name; `scriptResources` = bundle (`"type": "path"`) + one `"type": "component"` per external (sp-* IDs/versions from `node_modules` manifests, fallback `reference/sp-component-ids.json`); `localizedResources` resolve to default locale (`en-us`) at compile time.
 5. **Copies assets** to `release/assets/` for packaging.
 
 `rspfx build` alone does **not** produce an installable package — it produces
@@ -88,8 +59,7 @@ the pieces (`dist` + `release`) that `rspfx package` assembles.
 
 ## What `rspfx package` produces
 
-The `.sppkg` is a DEFLATE zip with the official layout
-(see [reference/FORMATS.md](../reference/FORMATS.md)):
+The `.sppkg` is a DEFLATE zip with the official layout (see [reference/FORMATS.md](../reference/FORMATS.md)):
 
 ```
 [Content_Types].xml
@@ -106,39 +76,17 @@ ClientSideAssets/          bundles, chunks, teams/ folder (if any), rewritten ma
 
 Key semantics, all read from `config/package-solution.json`:
 
-- `paths.zippedPackage` — output path (default convention
-  `sharepoint/solution/<name>.sppkg`)
-- `includeClientSideAssets: true` — bundles land in the package and every
-  manifest's `internalModuleBaseUrls` is rewritten to the
-  `HTTPS://SPCLIENTSIDEASSETLIBRARY/` pseudo-URL that SharePoint resolves at
-  install time
-- `includeClientSideAssets: false` (or a `cdnBasePath` in
-  `config/write-manifests.json`) — manifests keep the CDN base URL and only
-  metadata ships in the package; upload the `release/assets/*` files to your CDN
-- `webApiPermissionRequests` — emitted as `RequestedWebApiPermission` entries in
-  `AppManifest.xml` (the admin consent dialog shows them after install)
-- `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata` — passed
-  through to `AppManifest.xml`
-- Components with `componentType: "Extension"` (application customizers, field
-  customizers, list view command sets) produce
-  `<featureId>/Extension_<componentId>.xml` elements with
-  `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`,
-  `ClientSideComponentProperties="null"` and a per-build
-  `ClientSideComponentInstance` — no `<Module>` child.
+- `paths.zippedPackage` — output path (default `sharepoint/solution/<name>.sppkg`).
+- `includeClientSideAssets: true` — bundles in package; manifests `internalModuleBaseUrls` rewritten to `HTTPS://SPCLIENTSIDEASSETLIBRARY/`.
+- `includeClientSideAssets: false` (or `cdnBasePath` in `config/write-manifests.json`) — manifests keep CDN base URL; only metadata ships; upload `release/assets/*` to CDN.
+- `webApiPermissionRequests` — emitted as `RequestedWebApiPermission` entries in `AppManifest.xml`.
+- `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata` — passed through to `AppManifest.xml`.
+- `componentType: "Extension"` — produces `<featureId>/Extension_<componentId>.xml` with `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`, `ClientSideComponentProperties="null"`, per-build `ClientSideComponentInstance`; no `<Module>`.
 
-`rspfx package` auto-detects two optional folders and wires them through:
+`rspfx package` auto-detects two optional folders:
 
-- **`teams/`** — when a `teams/` folder exists (Teams app `manifest.json` +
-  icons), its files are included under `ClientSideAssets/` so the Teams app
-  ships inside the `.sppkg`.
-- **`sharepoint/Resources*.resx`** — `Resources.resx` (default, LCID 1033) plus
-  any `Resources.<lang>.resx` land at the package root with
-  `content-defaultresource` / `content-resource` relationships. They also power
-  localized solution metadata: a `metadata.shortDescription` /
-  `metadata.longDescription` value of `"$Resources:KeyName"` is resolved against
-  the resx files into one `<LocalizedString LCID="..." Value="..."/>` per
-  available locale (default resx → 1033, `Resources.fr-fr.resx` → 1036, …);
-  unresolvable keys fall back to the literal `$Resources:` string.
+- `teams/` — when present (`manifest.json` + icons), files are included under `ClientSideAssets/`.
+- `sharepoint/Resources*.resx` — `Resources.resx` (LCID 1033) plus `Resources.<lang>.resx` land at zip root; also powers localized `metadata.shortDescription` / `longDescription` (`"$Resources:KeyName"` → `<LocalizedString>` per locale).
 
 `rspfx package` runs the same zip validation the tests use (`validateSppkg`) and
 reports entry count on success.
@@ -153,18 +101,13 @@ reports entry count on success.
 
 ## Deploying from CLI
 
-`rspfx deploy` automates the upload with a bearer access token:
+`rspfx deploy` automates the upload with a bearer access token (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47 for env vars and catalog URL).
 
-```sh
-RSPFX_ACCESS_TOKEN=<token> \
-RSPFX_APP_CATALOG_URL=https://contoso.sharepoint.com/sites/appcatalog \
-rspfx deploy
-```
+Without a token `rspfx deploy` prints the manual upload steps instead.
 
-or `config.deploy.appCatalogSiteUrl` for the catalog URL (prompted otherwise).
-**Without a token `rspfx deploy` prints the manual upload steps instead** — it
-never fails the pipeline on missing secrets. The catalog URL is validated before
-upload, and the upload fails fast after a 120s timeout.
+The catalog URL is validated before upload.
+
+The upload fails fast after a 120s timeout.
 
 ## CI usage
 
@@ -180,19 +123,15 @@ steps:
 
 Tips:
 
-- Use `rspfx build --no-minify --sourcemap` to keep debuggable bundles in a
-  staging build; ship minified.
-- `RSPFX_LOG_LEVEL=debug` (or `silent`) tunes CLI output.
-- Cache `node_modules` and `.rspack-cache` (dev-mode persistent cache) between
-  runs; production builds run without the persistent cache by design.
+- Use `rspfx build --no-minify --sourcemap` to keep debuggable bundles in a staging build; ship minified.
+- Log level via env var (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47).
+- Cache `node_modules` and `.rspack-cache` (dev-mode persistent cache) between runs; production builds run without the persistent cache by design.
 
 ## Sizing & performance
 
-Build-time knobs: `build.minify` (default true), `build.splitChunks` (default
-false), `build.sourcemap` (default false). For reference, the full
-[PnP Modern Search](../examples/modern-search) solution — 4 web parts, ~178
-source files, Fluent UI 8, MGT, Handlebars, Adaptive Cards — builds in **~2s**
-on a laptop (`rspfx build`), including manifest generation.
+Build-time knobs: `build.minify` (default true), `build.splitChunks` (default false), `build.sourcemap` (default false).
+
+For reference, [PnP Modern Search](../examples/modern-search) (4 web parts, ~178 source files, Fluent UI 8, MGT, Handlebars, Adaptive Cards) builds in ~2s on a laptop (`rspfx build`).
 
 ## Troubleshooting
 

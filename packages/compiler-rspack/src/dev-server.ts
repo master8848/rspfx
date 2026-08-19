@@ -49,19 +49,35 @@ function corsMiddleware(req: unknown, res: any, next: (err?: unknown) => void): 
     if (isAllowedOrigin(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
+    } else {
+      // Origin present but not allowlisted — do not set ACAO (fallback to no header, not *).
+      res.setHeader('Vary', 'Origin');
     }
   } else {
+    // No Origin header (non-browser clients like curl/Node fetch) — keep wildcard for tooling.
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   res.setHeader('Access-Control-Allow-Methods', 'HEAD, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-RequestDigest, X-HTTP-Method');
   if ((req as { method?: string }).method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
     return;
   }
   next();
+}
+
+function safeDecodeURIComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function hasDotSegment(value: string): boolean {
+  return value.split('/').some((segment) => segment.startsWith('.') || segment.includes('\0'));
 }
 
 function createStaticMiddleware(
@@ -75,12 +91,35 @@ function createStaticMiddleware(
       next();
       return;
     }
-    const relative = decodeURIComponent(url.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '');
-    if (relative.split('/').some((segment) => segment.startsWith('.'))) {
+    const rawRelative = url.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '';
+    // Iteratively decode to catch double (and triple) encoding:
+    // %252e -> %2e -> "." . First decode handles normal %2e, second and
+    // subsequent decodes handle %252e, %25252e, etc. Check dot segments
+    // after each decode and before path.resolve.
+    let effectiveRelative: string | null = safeDecodeURIComponent(rawRelative);
+    if (effectiveRelative === null) {
       next();
       return;
     }
-    const file = path.resolve(root, relative);
+    if (hasDotSegment(effectiveRelative)) {
+      next();
+      return;
+    }
+    // Second (and deeper) decode pass — loop until stable or decode fails.
+    let current = effectiveRelative;
+    for (let i = 0; i < 4; i++) {
+      const nextDecoded = safeDecodeURIComponent(current);
+      if (nextDecoded === null || nextDecoded === current) {
+        break;
+      }
+      if (hasDotSegment(nextDecoded)) {
+        next();
+        return;
+      }
+      current = nextDecoded;
+      effectiveRelative = current;
+    }
+    const file = path.resolve(root, effectiveRelative);
     if (file !== root && !file.startsWith(root + path.sep)) {
       next();
       return;

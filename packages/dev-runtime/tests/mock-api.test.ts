@@ -147,7 +147,7 @@ describe('createMockSharePointApi', () => {
       makeReq({
         url: "/_api/web/lists/getbytitle('Announcements')/items(1)",
         method: 'POST',
-        headers: { 'X-HTTP-Method': 'MERGE' },
+        headers: { 'X-HTTP-Method': 'MERGE', 'X-RequestDigest': '0xRSPFXLOCALPREVIEW' },
         body: JSON.stringify({ Title: 'Renamed' })
       })
     );
@@ -163,7 +163,7 @@ describe('createMockSharePointApi', () => {
       makeReq({
         url: "/_api/web/lists/getbytitle('Announcements')/items(1)",
         method: 'POST',
-        headers: { 'X-HTTP-Method': 'PUT' },
+        headers: { 'X-HTTP-Method': 'PUT', 'X-RequestDigest': '0xRSPFXLOCALPREVIEW' },
         body: JSON.stringify({ Title: 'Replaced' })
       })
     );
@@ -175,13 +175,54 @@ describe('createMockSharePointApi', () => {
       makeReq({
         url: "/_api/web/lists/getbytitle('Announcements')/items(1)",
         method: 'POST',
-        headers: { 'X-HTTP-Method': 'DELETE' }
+        headers: { 'X-HTTP-Method': 'DELETE', 'X-RequestDigest': '0xRSPFXLOCALPREVIEW' }
       })
     );
     expect(deleted.statusCode).toBe(204);
 
     const missing = await call(api, makeReq({ url: "/_api/web/lists/getbytitle('Announcements')/items(1)" }));
     expect(missing.statusCode).toBe(404);
+  });
+
+  it('rejects X-HTTP-Method tunneling without valid X-RequestDigest', async () => {
+    const noDigest = await call(
+      api,
+      makeReq({
+        url: "/_api/web/lists/getbytitle('Announcements')/items(1)",
+        method: 'POST',
+        headers: { 'X-HTTP-Method': 'MERGE' },
+        body: JSON.stringify({ Title: 'Hacked' })
+      })
+    );
+    expect(noDigest.statusCode).toBe(403);
+
+    const badDigest = await call(
+      api,
+      makeReq({
+        url: "/_api/web/lists/getbytitle('Announcements')/items(1)",
+        method: 'POST',
+        headers: { 'X-HTTP-Method': 'DELETE', 'X-RequestDigest': '0xBAD' },
+        body: JSON.stringify({})
+      })
+    );
+    expect(badDigest.statusCode).toBe(403);
+  });
+
+  it('enforces CORS allowlist and Vary header', async () => {
+    const allowed = await call(api, makeReq({ url: '/_api/web', headers: { origin: 'http://localhost:4321' } }));
+    expect(allowed.headers['Access-Control-Allow-Origin']).toBe('http://localhost:4321');
+    expect(allowed.headers['Vary']).toBe('Origin');
+
+    const sharepoint = await call(api, makeReq({ url: '/_api/web', headers: { origin: 'https://contoso.sharepoint.com' } }));
+    expect(sharepoint.headers['Access-Control-Allow-Origin']).toBe('https://contoso.sharepoint.com');
+
+    const blocked = await call(api, makeReq({ url: '/_api/web', headers: { origin: 'https://evil.com' } }));
+    expect(blocked.headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(blocked.headers['Vary']).toBe('Origin');
+
+    const noOrigin = await call(api, makeReq({ url: '/_api/web' }));
+    expect(noOrigin.headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(noOrigin.headers['Vary']).toBe('Origin');
   });
 
   it('serves contextinfo with SupportedSchemaVersions and no d envelope', async () => {

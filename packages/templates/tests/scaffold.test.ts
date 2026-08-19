@@ -346,7 +346,8 @@ describe('scaffoldProject extensions', () => {
     expect(entry).toContain("} from '@microsoft/sp-listview-extensibility';");
     expect(entry).toContain('export default class HelloWorldFieldCustomizer extends BaseFieldCustomizer<{}> {');
     expect(entry).toContain('public onRenderCell(event: IFieldCustomizerCellEventParameters): void {');
-    expect(entry).toContain('event.domElement.innerHTML = `${event.fieldValue}`;');
+    expect(entry).toContain("event.domElement.textContent = event.fieldValue != null ? String(event.fieldValue) : '';");
+    expect(entry).toContain('escaped: fieldValue is user-controlled');
     expect(entry).not.toContain('PropertyPane');
   });
 

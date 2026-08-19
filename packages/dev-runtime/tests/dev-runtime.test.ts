@@ -199,10 +199,20 @@ describe('startServe', () => {
       const res = await fetch(`${handle.url}/__rspfx_hot.json`);
       expect(res.status).toBe(200);
       expect(res.headers.get('cache-control')).toBe('no-store');
+      // No Origin header → dev-server keeps wildcard for non-browser clients (documented fallback); Vary from reload handler.
       expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      expect(res.headers.get('vary')).toContain('Origin');
       const data = (await res.json()) as { build: number };
       expect(typeof data.build).toBe('number');
       expect(data.build).toBeGreaterThanOrEqual(1);
+
+      // Allowlisted origin should be echoed.
+      const allowed = await fetch(`${handle.url}/__rspfx_hot.json`, { headers: { Origin: 'http://localhost:4321' } });
+      expect(allowed.headers.get('access-control-allow-origin')).toBe('http://localhost:4321');
+
+      // Non-allowlisted origin → no ACAO (Vary remains)
+      const blocked = await fetch(`${handle.url}/__rspfx_hot.json`, { headers: { Origin: 'https://evil.com' } });
+      expect(blocked.headers.get('access-control-allow-origin')).toBeNull();
     } finally {
       await handle.close();
     }

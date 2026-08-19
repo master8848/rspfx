@@ -49,7 +49,7 @@ SPFx 1.24 is in public preview (beta.1, July 2026; GA expected September 2026)
 and is **not** yet a supported target. The matrix above is defined in
 `packages/core/src/versions.ts` (single source of truth, `SPFX_VERSIONS`); see
 [docs/supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for
-the process of adding a new target.
+the process of adding a new target, [roadblocks.md](roadblocks.md) for takeover blockers, and [real-tenant-validation.md](real-tenant-validation.md) for the tenant gate validation steps.
 
 SPFx 1.23 deprecated the hosted workbench (`workbench.aspx`); it retires
 December 1, 2026, replaced by the SPFx Debug Toolbar. RSPFX dev-serve output is

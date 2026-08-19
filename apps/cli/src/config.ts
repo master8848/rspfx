@@ -59,7 +59,13 @@ export async function loadConfig(projectRoot: string): Promise<LoadedProject> {
       `No rspack.config.ts / vite.config.ts / rsbuild.config.ts found in ${projectRoot}. Run "rspfx new" to scaffold a project.`
     );
   }
-  const jiti = createJiti(import.meta.url, { interopDefault: true });
+  // SECURITY: jiti executes the project's config file as JavaScript (rspack.config.ts /
+  // vite.config.ts / rsbuild.config.ts). This is intentional and analogous to Vite/Rspack
+  // loading user config — the file is user-owned code. We do not sandbox it, but we
+  // document the risk: only run `rspfx` in trusted checkouts, review config changes,
+  // and prefer `--frozen` / locked installs in CI. `fsCache: false` avoids stale
+  // transpiled artifacts on disk.
+  const jiti = createJiti(import.meta.url, { interopDefault: true, fsCache: false });
   const mod = await jiti.import(path.resolve(projectRoot, found.file));
   const rawDefault = (mod as { default?: unknown }).default ?? mod;
   const bundlerConfig = typeof rawDefault === 'function' ? rawDefault({}) : rawDefault;

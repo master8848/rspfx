@@ -1,7 +1,6 @@
 # Architecture
 
-Condensed from [ARCHITECTURE.md](../ARCHITECTURE.md). The full document is the
-authoritative plan; this page is the quick orientation.
+See [ARCHITECTURE.md](../ARCHITECTURE.md) for the full plan; this page is the quick orientation.
 
 ## Overview
 

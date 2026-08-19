@@ -59,5 +59,8 @@ const LOCALE_TO_LCID: Record<string, number> = {
 
 export function localeToLcid(locale: string): number {
   const normalized = locale.toLowerCase();
-  return LOCALE_TO_LCID[normalized] ?? LOCALE_TO_LCID[normalized.replace('_', '-')] ?? 1033;
+  // Normalize underscores to hyphens (all occurrences) before lookup. Fallback to 1033 (en-us) on unknown.
+  const hyphenated = normalized.replace(/_/g, '-');
+  const lcid = LOCALE_TO_LCID[normalized] ?? LOCALE_TO_LCID[hyphenated];
+  return typeof lcid === 'number' && Number.isFinite(lcid) ? lcid : 1033;
 }

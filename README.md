@@ -58,39 +58,14 @@ rspfx package     # production build → .sppkg
 ## Supported targets
 
 - **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte (Angular deferred)
-- **SPFx targets:** 1.20, 1.21, 1.22, 1.23 (default)
+- **SPFx targets:** see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
 - **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
 
 ## Project structure
 
-```
-apps/cli                  the rspfx binary (composition root)
-apps/playground           standalone playground host
-packages/core             SPFx types, base web part, config — zero dependencies
-packages/plugin           the RspfxPlugin / rspfxVite bundler plugins carrying the project config
-packages/plugin-api       FrameworkPreset / extension hooks
-packages/diagnostics      logger, errors, telemetry, benchmarks
-packages/compiler-rspack  Rspack config factory, TS via swc, SCSS, assets
-packages/manifest-generator  component manifests, manifests.js, sp-* deps
-packages/sppkg-builder    .sppkg ZIP assembly (AppManifest, features, assets)
-packages/manifest-server  dev certificates in ~/.rspfx/certs (serving is handled by the compiler dev server)
-packages/dev-runtime      serve emulation, websocket refresh, fast-refresh runtime
-packages/framework-*      per-framework presets + web part classes (vanilla, react, solid, preact, vue, svelte)
-packages/fluent-adapter   optional Fluent UI web part base (React-only)
-packages/sharepoint-runtime  shims/bridges for sp-* packages
-packages/templates        project scaffolding templates
-examples/                 smoke apps (react, solid, vue, svelte, preact, shadcn, vanilla, modern-search)
-reference/                captured SPFx format ground truth (FORMATS.md, component IDs)
-docs/                     user + architecture documentation
-```
+See [docs/architecture.md#package-map](docs/architecture.md#package-map) for the full package map.
 
-- **Custom folder layouts** — `paths` in the bundler config plugin options
-  (`srcDir`, `webpartsDir`, `configDir`) relocates the default `src/` +
-  `src/webparts/` + `config/` layout.
-- **Project config is a bundler plugin** — the `RspfxPlugin` in
-  `rspack.config.ts` (or `rspfxVite` in `vite.config.ts`) from
-  `@mbsks/rspfx-plugin` carries the project config (name, framework, dev,
-  build, …); the CLI finds it by its marker symbol and uses its options.
+Full plan lives in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 `examples/modern-search` is a real production solution — PnP Modern Search
 (4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft +

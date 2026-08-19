@@ -1,12 +1,8 @@
 # Supporting a new SPFx version
 
-RSPFX's output formats were reverse-engineered from Microsoft's official npm
-packages — `@microsoft/spfx-heft-plugins`, `@microsoft/sp-build-web`,
-`@microsoft/sp-webpart-base` and the sp-* runtime packages — captured as ground
-truth, then rewritten from scratch (Rspack compiler instead of webpack, own
-manifest generator, own sppkg builder, own dev server). The rule that follows
-from that history is: **never assume a format, never trust memory or a docs
-page — harvest it from the official artifacts and verify byte-level.**
+RSPFX's output formats were reverse-engineered from Microsoft's official npm packages — `@microsoft/spfx-heft-plugins`, `@microsoft/sp-build-web`, `@microsoft/sp-webpart-base` and the sp-* runtime packages — captured as ground truth, then rewritten from scratch (Rspack compiler instead of webpack, own manifest generator, own sppkg builder, own dev server).
+
+The rule is: never assume a format, never trust memory or a docs page — harvest it from the official artifacts and verify byte-level.
 
 This page is the complete, repeatable process for adding a new SPFx target.
 It is written for two audiences: RSPFX maintainers (who follow sections 1–12
@@ -26,15 +22,13 @@ toolchain: 'gulp'|'heft', status: 'ga'|'preview', notes? }` — plus
 - `rspfx doctor` dependency-check prefix
 - template sp-* dependency pins at scaffold time
 
-**Adding a target is a one-entry change.** There are no scattered literals to
-miss, which is exactly why this centralization keeps quality high: a forgotten
-`"1.20" | "1.21" | "1.22"` union somewhere would silently accept the new
-version without testing it, and tests pin the default so a wrong default can't
-slip in.
+Adding a target is a one-entry change in `packages/core/src/versions.ts:13`.
 
-Current matrix: targets **1.20–1.23**, default **1.23** (patch 1.23.2). SPFx
-1.24 is in public preview (beta.1, July 8 2026) with GA expected September
-2026 — it is the next candidate target.
+There are no scattered literals to miss; a forgotten target union would silently accept the new version without testing it, and tests pin the default so a wrong default can't slip in.
+
+Current matrix: see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13` (default `1.23`, patch 1.23.2).
+
+SPFx 1.24 is in public preview (beta.1, July 8 2026) with GA expected September 2026 — it is the next candidate target.
 
 ## 2. Detect a new release
 

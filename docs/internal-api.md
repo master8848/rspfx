@@ -380,9 +380,7 @@ export function validateSppkg(zipPath: string): Promise<{ ok: boolean; errors: s
 
 ## @mbsks/rspfx-manifest-server (depends on core, diagnostics)
 
-Certs-only package: the historical `:4321` HTTP server was removed; the
-compiler dev server (`compiler-rspack` `startDevServer`) owns `:4321` serving
-(bundles, `/temp/manifests.js`, `node_modules` static proxy).
+`manifest-server` provides certs only; `:4321` serving is handled by the compiler dev server (`compiler-rspack` `startDevServer`) (bundles, `/temp/manifests.js`, `node_modules` static proxy).
 
 ```ts
 export async function ensureCertificates(certsDir: string): Promise<{ key: string; cert: string }>;
@@ -400,7 +398,7 @@ export interface DevRuntimeOptions {
   fastRefresh?: boolean;            // --refresh flag
   noBrowser?: boolean;              // inverse of --browser / dev.openBrowser
   port?: number;                    // --port flag
-  tenantDomain?: string;            // --tenant, SPFX_SERVE_TENANT_DOMAIN, or config.dev.tenantUrl (stripped of scheme)
+  tenantDomain?: string;            // --tenant, config.dev.tenantUrl, or env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47)
   mode?: ServeMode;                 // --mode flag; default 'sharepoint' when a tenant domain is configured, else 'local'
 }
 export interface DevRuntimeHandle {
@@ -427,19 +425,9 @@ export interface ReleaseOutput {
   outputFiles: string[];
 }
 export async function assembleRelease(opts: AssembleReleaseOptions): Promise<ReleaseOutput>;
-// Generates the production component manifests (config/write-manifests.json cdnBasePath as the
-// release base url) and assembles release/manifests/*.manifest.json + release/assets/* from dist/.
-// Shared by every entry point — `rspfx build` (CLI) and the native bundler commands
-// (`vite build` / `rspack build` / `rsbuild build` via the plugins) — so all paths produce
-// identical release output and fire the same `releaseHooks.beforeGenerate` / `.afterGenerate`.
-// Flow: load config → find webpart manifests+entries → create rspack config (serveMode) →
-// start dev server (hot:true, CORS, static root) → generate cumulative manifests.js (project + sp-* debug) →
-// open browser → workbench URL: <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<server>/temp/manifests.js
-// On each compiler rebuild: regenerate manifests.js (dist files may change names; official keeps [name].js so stable).
-// mode 'local': plain HTTP (no certs), sp-* externals emptied (the real @microsoft/sp-* packages
-// are bundled and run in the browser; only the data layer is emulated), an extra `local-runtime`
-// bundle (from @mbsks/rspfx-sharepoint-runtime/local-bootstrap) is compiled, the local preview
-// page is served at / and the mock /_api API is mounted; workbenchUrl is undefined.
+// Generates production component manifests (cdnBasePath from `config/write-manifests.json`) and assembles `release/manifests/*.manifest.json` + `release/assets/*` from `dist/`.
+// Shared by `rspfx build` and native bundler commands (`vite build`, `rspack build`, `rsbuild build`); fires `releaseHooks.beforeGenerate` / `afterGenerate` identically.
+// `mode 'local'` details: plain HTTP, sp-* externals emptied and bundled, extra `local-runtime` bundle compiled, local preview at `/` and mock `/_api` mounted.
 export function resolveServeMode(opts: { mode?: ServeMode; config: RspfxConfig }, tenantDomain: string | undefined): ServeMode;
 // explicit --mode wins; otherwise a configured tenant domain selects 'sharepoint', else 'local'
 export function resolveServeSettings(opts: { port?: number; tenantDomain?: string; config: RspfxConfig }, serveJson: ProjectServeConfigJson | undefined): ServeSettings;
@@ -491,22 +479,8 @@ export function resolveContributionLoaders(contributions: Record<string, unknown
 Local preview internals (module-level exports in `src/`, used by `startServe`
 in `mode: 'local'`; not re-exported from the package index):
 
-- `src/local-page.ts` — `buildLocalPageHtml(opts: LocalPageOptions): string`:
-  the static HTML served at `/` — injects the discovered web part list into
-  `window.__RSPFX_COMPONENTS__`, loads `/dist/local-runtime.js`, appends the
-  reload client script. `readLocalPageComponents(bundles, packageVersion):
-  LocalPageComponent[]` derives `{ id, alias, bundleName, amdId,
-  preconfiguredEntries }` from the web part manifests.
-- `src/mock-api.ts` — `createMockSharePointApi(opts: { projectRoot: string;
-  origin: () => string })` returns `{ path: '/_api', handle(req, res) }`; the
-  mock SharePoint REST API (OData v4 JSON-light — flat objects, collections as
-  `{ value: [...] }`, no `d:` envelopes): `/web`, `/site`, `/web/currentuser`,
-  `/web/lists`, `/web/siteusers`, `lists(guid'…')` /
-  `getbytitle('…')` metadata + item CRUD (mutations via the `X-HTTP-Method`
-  override header), `POST /contextinfo` digests, 404/400
-  `{ error: { code, message } }` envelopes. The store is seeded from
-  `createDefaultMockStore()` and optionally overridden by `local/data.json`
-  (`{ lists, currentUser }`) in the project root.
+- `src/local-page.ts` — `buildLocalPageHtml(opts: LocalPageOptions): string`: static HTML served at `/` — injects discovered web part list into `window.__RSPFX_COMPONENTS__`, loads `/dist/local-runtime.js`, appends reload client script. `readLocalPageComponents(bundles, packageVersion): LocalPageComponent[]` derives `{ id, alias, bundleName, amdId, preconfiguredEntries }` from manifests.
+- `src/mock-api.ts` — `createMockSharePointApi(opts: { projectRoot: string; origin: () => string })` returns `{ path: '/_api', handle(req, res) }`: mock SharePoint REST API (OData v4 JSON-light, `/_api/web`, `/site`, `/lists`, item CRUD via `X-HTTP-Method`, `POST /contextinfo`, 404/400 envelopes). Store seeded from `createDefaultMockStore()` and optionally overridden by `local/data.json`.
 
 ## @mbsks/rspfx-framework-* (depends on core, plugin-api; peer: framework libs)
 
@@ -650,7 +624,7 @@ Bin `rspfx`. Commands (commander):
 - `rspfx dev` — startServe; flags `--refresh`, `--browser`, `--port <n>`, `--mode <local|sharepoint>`, `--tenant <url>`
 - `rspfx build` — production compile to dist + release (manifests/assets); `--no-minify --sourcemap`
 - `rspfx package` — build + package → sppkg; `--no-build`
-- `rspfx deploy` — package + upload to app catalog (REST, bearer token from `RSPFX_ACCESS_TOKEN`; catalog URL from `config.deploy.appCatalogSiteUrl` or `RSPFX_APP_CATALOG_URL`, prompted otherwise; URL validated, 120s upload timeout); prints manual steps without a token
+- `rspfx deploy` — package + upload to app catalog (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47 for env vars; URL validated, 120s upload timeout); prints manual steps without a token
 - `rspfx analyze` — build + bundle report (sizes, chunk list) to `.rspfx/analyze.html` + console table; module counts from bundler stats (Rspack) or the `.rspfx/stats.json` fallback (Vite/Rsbuild)
 - `rspfx doctor` — env/config/ports/deps checks, exit code 1 on failures
 - `rspfx clean` — rm dist release temp .rspfx node_modules/.cache

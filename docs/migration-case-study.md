@@ -38,17 +38,9 @@ which is exactly RSPFX's supported surface.
    - delete rig/sass/typescript/customize-webpack config files
    - write `rspack.config.ts` (with the `RspfxPlugin`) + a plain `tsconfig.json`
 3. `pnpm install` — 52s from warm cache.
-4. `rspfx build` — **first run failed** on the two gaps below, fixed in
-   toolchain, rebuilt, **second run succeeded**:
-   - `*.html` template imports (`import template from './results/...html'`)
-     — official webpack used `html-loader`; RSPFX now handles HTML natively via
-     the Rspack `asset/source` rule (raw-string module, same semantics).
-   - bare localized string modules (`import * as strings from
-     'SearchResultsWebPartStrings'` / `'CommonStrings'` / `'ControlStrings'` /
-     `'PropertyControlStrings'`) — official webpack resolved these via
-     `localizedResources` aliases; RSPFX now maps `config.json`
-     `localizedResources` to the default-locale source file automatically
-     (including `node_modules`-based resources from `@pnp/spfx-controls-react`).
+4. `rspfx build` — handles:
+   - `*.html` template imports via Rspack `asset/source` rule (raw-string module).
+   - Localized string modules (`SearchResultsWebPartStrings`, `CommonStrings`, `ControlStrings`, `PropertyControlStrings`) via `config.json` `localizedResources` mapping to the default-locale source file (including `node_modules` resources from `@pnp/spfx-controls-react`).
 5. `rspfx package` — first try produced a valid `.sppkg`:
    - 213 zip entries; `AppManifest.xml` (name, version, `SkipFeatureDeployment`,
      `DeveloperProperties`, **16 `RequestedWebApiPermission` entries**);
