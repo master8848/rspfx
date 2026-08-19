@@ -89,7 +89,7 @@ the pieces (`dist` + `release`) that `rspfx package` assembles.
 ## What `rspfx package` produces
 
 The `.sppkg` is a DEFLATE zip with the official layout
-(see [reference/FORMATS.md](../../reference/FORMATS.md)):
+(see [reference/FORMATS.md](../reference/FORMATS.md)):
 
 ```
 [Content_Types].xml

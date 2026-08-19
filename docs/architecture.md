@@ -1,6 +1,6 @@
 # Architecture
 
-Condensed from [ARCHITECTURE.md](../../ARCHITECTURE.md). The full document is the
+Condensed from [ARCHITECTURE.md](../ARCHITECTURE.md). The full document is the
 authoritative plan; this page is the quick orientation.
 
 ## Overview

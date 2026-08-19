@@ -126,20 +126,18 @@ The workbench page is on your SharePoint tenant, so rspfx needs to know it:
   in `config/serve.json`'s `initialPage`), or
 - Override per-run: `rspfx dev --tenant https://contoso.sharepoint.com`.
 
-### HTTPS certificate trust
+### HTTPS certificate trust (SharePoint mode only)
 
-The `:4321` server uses a **self-signed certificate** generated and cached in
-**`~/.rspfx/certs`** (created on first run; trust instructions are printed once).
-Trust it so the workbench can fetch `https://localhost:4321` without errors:
+The `:4321` server in **SharePoint mode** (tenant configured via `dev.tenantUrl`, `SPFX_SERVE_TENANT_DOMAIN`, or `--tenant`) uses a **self-signed certificate** generated and cached in **`~/.rspfx/certs`** (825-day, 2048-bit, created on first run; trust instructions are printed once). Local mode (`rspfx dev --mode local`, the default when no tenant is configured) is plain HTTP on `http://localhost:4321` and needs no certificate.
 
-- **macOS:** open Keychain Access → *System* → import the cert from
-  `~/.rspfx/certs` → set to *Always Trust*, or:
-  `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.rspfx/certs/<cert>` (the exact filename is printed by the CLI).
-- **Windows:** `certutil -addstore Root <cert>` (or via `certlm.msc` → Trusted
-  Root Certification Authorities → Import).
+> **Warning: dev-only, machine-wide trust.** Importing trusts the cert for all browsers/users on the machine. Use only on a development machine. To remove: macOS `sudo security remove-trusted-cert ~/.rspfx/certs/cert.pem` or Keychain Access → System → delete; Windows `certutil -delstore Root <thumbprint>` or `certlm.msc` → Trusted Root → remove. See `~/.rspfx/certs/cert.pem.trust.txt` for the exact filename printed by the CLI.
 
-`rspfx doctor` verifies the rest of the dev environment (config, port,
-dependencies) — cert trust itself is the browser's job.
+Trust it so the SharePoint workbench can fetch `https://localhost:4321` without errors:
+
+- **macOS:** open Keychain Access → *System* → import the cert from `~/.rspfx/certs` → set to *Always Trust*, or: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.rspfx/certs/<cert>` (the exact filename is printed by the CLI).
+- **Windows:** `certutil -addstore Root <cert>` (or via `certlm.msc` → Trusted Root Certification Authorities → Import).
+
+`rspfx doctor` verifies the rest of the dev environment (config, port, dependencies) — cert trust itself is the browser's job.
 
 ### Editing
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-Milestones from [ARCHITECTURE.md](../../ARCHITECTURE.md). **Real-tenant validation**
+Milestones from [ARCHITECTURE.md](../ARCHITECTURE.md). **Real-tenant validation**
 (install a generated `.sppkg` into a real Microsoft 365 app catalog and render it)
 remains the acceptance test for everything packaging-related — see
 [Real-tenant validation](#real-tenant-validation) below.

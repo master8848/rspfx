@@ -2,7 +2,7 @@
 
 RSPFX produces artifacts that official SPFx tooling produces — same formats, same
 semantics — so existing tenants, workbenches, and app catalogs accept them without
-changes. Format ground truth lives in [reference/FORMATS.md](../../reference/FORMATS.md),
+changes. Format ground truth lives in [reference/FORMATS.md](../reference/FORMATS.md),
 harvested from official npm packages; provenance is marked per section there.
 
 ## Guaranteed
