@@ -91,6 +91,7 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: 'config/serve.json', content: serveJson(vars) },
     { path: 'config/write-manifests.json', content: writeManifestsJson() },
     { path: 'sharepoint/assets/.gitkeep', content: '' },
+    { path: 'assets/favicon.svg', content: faviconSvg() },
     { path: 'src/index.ts', content: 'export {};\n' },
     { path: 'src/rspfx-env.d.ts', content: declarations(vars) }
   ];
@@ -868,6 +869,10 @@ function preactComponent(vars: TemplateVars, js: boolean): string {
     ''
   );
   return lines.join('\n');
+}
+
+function faviconSvg(): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">\n  <rect width="32" height="32" rx="7" fill="#111827"/>\n  <!-- Rspack cube -->\n  <path d="M16 5 L22 8.5 L22 13 L16 16.5 L10 13 L10 8.5 Z" fill="#ff3b30" opacity="0.95"/>\n  <path d="M10 13 L16 16.5 L22 13 L16 9.5 Z" fill="#ff6b4a"/>\n  <!-- Vite lightning -->\n  <path d="M17.5 9 L14 16 L16.5 16 L15 23 L20 15 L17 15 Z" fill="#facc15" stroke="#a78bfa" stroke-width="0.4"/>\n  <!-- SPFx -->\n  <circle cx="16" cy="24" r="5.5" fill="#0078d4"/>\n  <text x="16" y="27.2" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="7" fill="#fff">S</text>\n</svg>\n`;
 }
 
 function stylesheet(vars: TemplateVars): string {

@@ -260,7 +260,8 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
         staticFolders: [
           { path: path.join(opts.projectRoot, 'dist'), urlPrefix: '/dist' },
           { path: path.join(opts.projectRoot, 'temp'), urlPrefix: '/temp' },
-          { path: path.join(opts.projectRoot, 'node_modules/@microsoft'), urlPrefix: '/node_modules/@microsoft' }
+          { path: path.join(opts.projectRoot, 'node_modules/@microsoft'), urlPrefix: '/node_modules/@microsoft' },
+          { path: path.join(opts.projectRoot, 'assets'), urlPrefix: '/assets' }
         ]
       }
     );

@@ -70,6 +70,7 @@ describe('scaffoldProject', () => {
       'config/write-manifests.json',
       'config/config.json',
       'sharepoint/assets/.gitkeep',
+      'assets/favicon.svg',
       'src/index.ts',
       'src/webparts/hello-world/hello-world.manifest.json',
       'src/webparts/hello-world/hello-worldWebPart.ts',
