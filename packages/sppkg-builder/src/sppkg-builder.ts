@@ -451,7 +451,12 @@ async function collectClientSideAssets(assetsDir: string, teamsDir?: string): Pr
 
 async function collectResx(resxDir: string): Promise<ResxFile[]> {
   const resxFiles: ResxFile[] = [];
-  for (const relativePath of await globFiles(resxDir, ['Resources.resx', 'Resources.??-??.resx'])) {
+  for (const relativePath of await globFiles(resxDir, ['Resources.resx', 'Resources.*.resx'])) {
+    if (relativePath === 'Resources.resx') {
+      // ok
+    } else if (!/^Resources\.[a-z0-9_-]+\.resx$/i.test(relativePath)) {
+      continue;
+    }
     const content = await readFile(path.join(resxDir, relativePath));
     const locale =
       relativePath === 'Resources.resx'

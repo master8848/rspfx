@@ -1,6 +1,8 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { isIP } from 'node:net';
+import { X509Certificate } from 'node:crypto';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 
 const TRUST_NOTES = [
@@ -52,16 +54,54 @@ const selfsigned = require('selfsigned') as {
 
 const logger = createLogger('rspfx');
 
-export async function ensureCertificates(certsDir: string): Promise<{ key: string; cert: string }> {
+export async function ensureCertificates(certsDir: string, hostname?: string): Promise<{ key: string; cert: string }> {
   const keyPath = path.join(certsDir, 'key.pem');
   const certPath = path.join(certsDir, 'cert.pem');
   try {
     const [key, cert] = await Promise.all([readFile(keyPath, 'utf8'), readFile(certPath, 'utf8')]);
-    return { key, cert };
+    let shouldRegenerate = false;
+    try {
+      const x509 = new X509Certificate(cert);
+      const expiry = Date.parse(x509.validTo);
+      if (Number.isNaN(expiry) || expiry - Date.now() < 7 * 24 * 60 * 60 * 1000) {
+        shouldRegenerate = true;
+      } else if (hostname) {
+        const alt = x509.subjectAltName ?? '';
+        const needsHost =
+          hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1' && !alt.includes(hostname);
+        const needsIpv6 = !alt.includes('::1') && !alt.includes('0:0:0:0:0:0:0:1');
+        if (needsHost || needsIpv6) {
+          shouldRegenerate = true;
+        }
+      } else {
+        const alt = x509.subjectAltName ?? '';
+        if (!alt.includes('::1') && !alt.includes('0:0:0:0:0:0:0:1')) {
+          shouldRegenerate = true;
+        }
+      }
+    } catch {
+      shouldRegenerate = true;
+    }
+    if (!shouldRegenerate) {
+      return { key, cert };
+    }
   } catch {
     // fall through to generation
   }
   await mkdir(certsDir, { recursive: true });
+  const altNames: SelfsignedAltName[] = [
+    { type: 2, value: 'localhost' },
+    { type: 7, ip: '127.0.0.1' },
+    { type: 7, ip: '::1' }
+  ];
+  if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1') {
+    const ipVersion = isIP(hostname);
+    if (ipVersion === 4 || ipVersion === 6) {
+      altNames.push({ type: 7, ip: hostname });
+    } else {
+      altNames.push({ type: 2, value: hostname });
+    }
+  }
   const pems = selfsigned.generate(
     [{ name: 'commonName', value: 'localhost' }],
     {
@@ -72,10 +112,7 @@ export async function ensureCertificates(certsDir: string): Promise<{ key: strin
         { name: 'extKeyUsage', serverAuth: true },
         {
           name: 'subjectAltName',
-          altNames: [
-            { type: 2, value: 'localhost' },
-            { type: 7, ip: '127.0.0.1' }
-          ]
+          altNames
         }
       ]
     }

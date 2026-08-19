@@ -103,10 +103,14 @@ describe('createRspackConfig', () => {
     const config = await getConfig(
       makeCtx({ externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'] })
     );
-    expect(config.externals).toEqual([
+    expect((config.externals as unknown as string[])?.slice(0, 2)).toEqual([
       '@microsoft/sp-core-library',
       '@microsoft/sp-webpart-base'
     ]);
+    const platformExternal = (config.externals as unknown[])[2] as (data: { request?: string }) => string | undefined;
+    expect(typeof platformExternal).toBe('function');
+    expect(platformExternal({ request: '@msinternal/sp-telemetry' })).toBe('amd @msinternal/sp-telemetry');
+    expect(platformExternal({ request: '@microsoft/sp-core-library' })).toBeUndefined();
   });
 
   it('includes DefinePlugin with DEBUG, DEPRECATED_UNIT_TEST and process.env.NODE_ENV', async () => {

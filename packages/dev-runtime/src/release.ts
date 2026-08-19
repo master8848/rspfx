@@ -115,7 +115,9 @@ function readCdnBasePath(cwd: string): string[] {
       fs.readFileSync(path.join(cwd, 'config', 'write-manifests.json'), 'utf8')
     ) as { cdnBasePath?: unknown };
     if (typeof raw.cdnBasePath === 'string' && raw.cdnBasePath.trim()) {
-      return [raw.cdnBasePath];
+      let base = raw.cdnBasePath.trim();
+      if (!base.endsWith('/')) base += '/';
+      return [base];
     }
   } catch {
     // No write-manifests.json — fall back to empty release base urls.

@@ -31,8 +31,11 @@ const bumpKind = args.includes('--major') ? 'major' : args.includes('--minor') ?
 const otp = flagValue('--otp');
 
 function flagValue(flag) {
+  const eq = args.find((a) => a.startsWith(flag + '='));
+  if (eq) return eq.slice(flag.length + 1);
   const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : undefined;
+  if (i >= 0 && i + 1 < args.length && !args[i + 1].startsWith('--')) return args[i + 1];
+  return undefined;
 }
 
 function fatal(message) {
@@ -104,10 +107,14 @@ function dependencyOrder(set) {
   };
   const order = [];
   const visited = new Set();
+  const visiting = new Set();
   const visit = (name) => {
     if (visited.has(name)) return;
-    visited.add(name);
+    if (visiting.has(name)) fatal(`Circular dependency detected involving ${name}`);
+    visiting.add(name);
     for (const dep of depsOf(name)) visit(dep);
+    visiting.delete(name);
+    visited.add(name);
     order.push(name);
   };
   for (const name of names) visit(name);
@@ -115,7 +122,8 @@ function dependencyOrder(set) {
 }
 
 function bumpVersion(current, kind) {
-  const [major, minor, patch] = current.split('.').map(Number);
+  const base = current.split('-')[0].split('+')[0];
+  const [major, minor, patch] = base.split('.').map(Number);
   if (kind === 'major') return `${major + 1}.0.0`;
   if (kind === 'minor') return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
@@ -125,9 +133,15 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function sleepSync(ms) {
+  const sab = new SharedArrayBuffer(4);
+  const view = new Int32Array(sab);
+  Atomics.wait(view, 0, 0, ms);
+}
+
 function isPublished(name, version) {
   try {
-    const out = execSync(`npm view ${name}@${version} version`, {
+    const out = execSync(`npm view ${JSON.stringify(name + '@' + version)} version`, {
       stdio: ['ignore', 'pipe', 'ignore']
     }).toString().trim();
     return out === version;
@@ -139,7 +153,7 @@ function isPublished(name, version) {
 function verifyPublished(name, version) {
   for (let attempt = 0; attempt < 15; attempt++) {
     if (isPublished(name, version)) return true;
-    execSync('sleep 2');
+    sleepSync(2000);
   }
   return false;
 }
@@ -224,7 +238,7 @@ for (const name of order) {
   for (let attempt = 1; status !== 0 && attempt < 4; attempt++) {
     // npm registry races (E409 packument) are transient — back off and retry.
     console.log(`    (attempt ${attempt + 1}/4 after exit ${status})`);
-    execSync('sleep 4');
+    sleepSync(4000);
     status = publishOnce();
   }
   if (status !== 0) {

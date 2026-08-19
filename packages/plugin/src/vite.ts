@@ -140,7 +140,7 @@ function inlineStyleCode(css: string): string {
 function amdBundleTransform(entryName: string, code: string): string {
   let out = code;
   if (out.includes(SPFX_PUBLIC_PATH_SENTINEL)) {
-    out = out.split(SPFX_PUBLIC_PATH_SENTINEL).join(scriptUrlPublicPathExpression(entryName));
+    out = out.split('"' + SPFX_PUBLIC_PATH_SENTINEL + '"').join(scriptUrlPublicPathExpression(entryName));
   }
   out = out.replace(/^define\("([^"]*)",/, "define('$1',");
   return scriptUrlCaptureLine(entryName) + out;
@@ -243,7 +243,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
 
     const certs =
       mode === 'development' && settings.https
-        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'))
+        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname)
         : undefined;
 
     const fastRefresh =

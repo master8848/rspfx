@@ -136,7 +136,7 @@ describe('assembleRelease', () => {
       loaderConfig: { internalModuleBaseUrls: string[] };
     };
     expect(manifest.loaderConfig.internalModuleBaseUrls[0]).toBe(
-      'https://cdn.example.com/hello-proj'
+      'https://cdn.example.com/hello-proj/'
     );
   });
 

@@ -23,7 +23,7 @@ export const preset: FrameworkPreset = {
   },
   vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
     return {
-      plugins: [prefresh()],
+      plugins: opts.fastRefresh ? [prefresh()] : [],
       esbuild: { jsx: 'automatic', jsxImportSource: 'preact' }
     };
   },

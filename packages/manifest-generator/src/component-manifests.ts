@@ -132,12 +132,14 @@ function scanComponentsDir(
     }
     for (const resource of ctx.localizedResources ?? []) {
       const paths: Record<string, { path: string; integrity: string }> = {};
-      const defaultLocale = resource.locales.find((locale) => locale === 'en-us');
+      const defaultLocale =
+        resource.locales.find((locale) => locale.toLowerCase() === 'en-us') ?? resource.locales[0];
       if (defaultLocale !== undefined) {
-        paths['default'] = { path: `${resource.name}_${defaultLocale}.js`, integrity: '' };
+        paths['default'] = { path: `${resource.name}_${defaultLocale.toLowerCase()}.js`, integrity: '' };
       }
       for (const locale of resource.locales) {
-        paths[locale] = { path: `${resource.name}_${locale}.js`, integrity: '' };
+        const normalized = locale.toLowerCase();
+        paths[normalized] = { path: `${resource.name}_${normalized}.js`, integrity: '' };
       }
       scriptResources[resource.name] = { type: 'localizedPath', paths };
     }

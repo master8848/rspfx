@@ -20,5 +20,5 @@ export const PLATFORM_ONLY_PREFIXES: readonly string[] = [
 ];
 
 export function isPlatformOnlyModule(request: string): boolean {
-  return PLATFORM_ONLY_PREFIXES.some((prefix) => request.startsWith(prefix));
+  return PLATFORM_ONLY_PREFIXES.some((prefix) => request === prefix || request.startsWith(prefix + '/'));
 }

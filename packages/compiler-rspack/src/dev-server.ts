@@ -26,10 +26,36 @@ function contentTypeFor(filePath: string): string {
   return CONTENT_TYPES[ext] ?? 'application/octet-stream';
 }
 
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    const h = hostname.toLowerCase();
+    return (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '::1' ||
+      h.endsWith('.sharepoint.com') ||
+      h.endsWith('.sharepoint-df.com') ||
+      h.endsWith('.sharepoint.cn')
+    );
+  } catch {
+    return false;
+  }
+}
+
 function corsMiddleware(req: unknown, res: any, next: (err?: unknown) => void): void {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = (req as { headers?: Record<string, string> }).headers?.origin;
+  if (origin) {
+    if (isAllowedOrigin(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'HEAD, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if ((req as { method?: string }).method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
@@ -49,7 +75,11 @@ function createStaticMiddleware(
       next();
       return;
     }
-    const relative = url.slice(urlPrefix.length).replace(/^\/+/, '');
+    const relative = decodeURIComponent(url.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '');
+    if (relative.split('/').some((segment) => segment.startsWith('.'))) {
+      next();
+      return;
+    }
     const file = path.resolve(root, relative);
     if (file !== root && !file.startsWith(root + path.sep)) {
       next();
@@ -97,7 +127,7 @@ export async function startDevServer(
     port,
     host: hostname,
     hot: devServerOptions.hot ?? true,
-    allowedHosts: devServerOptions.allowedHosts ?? 'all',
+    allowedHosts: devServerOptions.allowedHosts ?? ['.sharepoint.com', '.sharepoint-df.com', 'localhost', '127.0.0.1', '::1'],
     static: false,
     devMiddleware: {
       publicPath: '/dist',

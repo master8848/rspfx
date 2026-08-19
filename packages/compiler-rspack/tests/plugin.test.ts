@@ -64,10 +64,13 @@ describe('spfx', () => {
       ...DEFAULT_OPTIONS,
       externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base']
     })) as Configuration;
-    expect(config.externals).toEqual([
+    expect((config.externals as unknown[])?.slice(0, 2)).toEqual([
       '@microsoft/sp-core-library',
       '@microsoft/sp-webpart-base'
     ]);
+    const platformExternal = (config.externals as unknown[])[2] as (data: { request?: string }) => string | undefined;
+    expect(typeof platformExternal).toBe('function');
+    expect(platformExternal({ request: '@msinternal/sp-telemetry' })).toBe('amd @msinternal/sp-telemetry');
   });
 
   it('honours production, serveMode and build overrides', async () => {

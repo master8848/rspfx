@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { rspack } from '@rspack/core';
 import type { RsbuildPluginAPI } from '@rsbuild/core';
 import {
@@ -37,6 +38,18 @@ import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
 
 const logger = createLogger('rspfx');
+
+const require = createRequire(import.meta.url);
+let styleLoaderPath: string | undefined;
+let cssLoaderPath: string | undefined;
+let sassLoaderPath: string | undefined;
+try {
+  styleLoaderPath = require.resolve('style-loader');
+  cssLoaderPath = require.resolve('css-loader');
+  sassLoaderPath = require.resolve('sass-loader');
+} catch {
+  // Collocated with compiler-rspack; loaders may be hoisted.
+}
 
 export interface RsbuildRspfxPlugin extends RspfxBundlerPluginLike {
   name: string;
@@ -286,6 +299,25 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         const localizedAliases = project.localizedAliases;
         if (Object.keys(localizedAliases).length > 0) {
           config.resolve.alias = { ...(config.resolve.alias ?? {}), ...localizedAliases };
+        }
+        if (styleLoaderPath && cssLoaderPath && sassLoaderPath) {
+          config.module = config.module ?? {};
+          config.module.rules = [
+            ...(config.module.rules ?? []),
+            {
+              test: /\.css$/,
+              use: [styleLoaderPath, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
+            },
+            {
+              test: /\.s[ac]ss$/i,
+              use: [
+                styleLoaderPath,
+                { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
+                { loader: sassLoaderPath }
+              ]
+            },
+            { test: /\.html$/, type: 'asset/source' }
+          ];
         }
         const production = utils.isProd;
         config.optimization = {

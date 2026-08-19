@@ -132,7 +132,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const https = local ? false : settings.https;
   const scheme = https ? 'https' : 'http';
   const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
-  const certs = https ? await ensureCertificates(certsDir) : undefined;
+  const certs = https ? await ensureCertificates(certsDir, settings.hostname) : undefined;
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
   const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
@@ -160,7 +160,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       entries,
       externals: local
         ? [platformOnlyExternal]
-        : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals],
+        : [...findSpDependencies(opts.projectRoot).keys(), ...currentProject.externals, platformOnlyExternal],
       localizedAliases: currentProject.localizedAliases,
       localizedResources: currentProject.localizedResources,
       fastRefresh,
@@ -242,9 +242,19 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
         https,
         certs,
         hot: true,
-        allowedHosts: 'all',
+        allowedHosts: Array.from(
+          new Set(
+            ['.sharepoint.com', '.sharepoint-df.com', 'localhost', '127.0.0.1', '::1', settings.hostname].filter(
+              Boolean
+            ) as string[]
+          )
+        ),
         routes,
-        staticFolders: [{ path: opts.projectRoot, urlPrefix: '/' }]
+        staticFolders: [
+          { path: path.join(opts.projectRoot, 'dist'), urlPrefix: '/dist' },
+          { path: path.join(opts.projectRoot, 'temp'), urlPrefix: '/temp' },
+          { path: path.join(opts.projectRoot, 'node_modules/@microsoft'), urlPrefix: '/node_modules/@microsoft' }
+        ]
       }
     );
     origin = `${scheme}://${settings.hostname}:${nextServer.port}`;

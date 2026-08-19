@@ -20,9 +20,9 @@ export const preset: FrameworkPreset = {
       plugins: opts.fastRefresh ? [new ReactRefreshRspackPlugin()] : []
     };
   },
-  vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
+  vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
     return {
-      plugins: [reactPlugin({ jsxRuntime: 'automatic' })],
+      plugins: opts.fastRefresh ? [reactPlugin({ jsxRuntime: 'automatic' })] : [],
       esbuild: { jsx: 'automatic' }
     };
   },

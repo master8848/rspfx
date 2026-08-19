@@ -26,7 +26,7 @@ export const preset: FrameworkPreset = {
       ]
     };
   },
-  vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
+  vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
     return {
       plugins: [solidPlugin()],
       resolveExtensions: ['.tsx', '.jsx']

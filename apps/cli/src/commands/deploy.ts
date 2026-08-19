@@ -13,7 +13,8 @@ export interface DeployOptions {
 
 export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<void> {
   const result = await runPackage(cwd, { build: opts.build });
-  const token = process.env.RSPFX_ACCESS_TOKEN;
+  const rawToken = process.env.RSPFX_ACCESS_TOKEN?.trim();
+  const token = rawToken ? rawToken : undefined;
   if (!token) {
     printManualInstructions(result.outputPath);
     return;
@@ -29,6 +30,7 @@ export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<
     printManualInstructions(result.outputPath);
     return;
   }
+  tenant = tenant.trim();
 
   const fileName = path.basename(result.outputPath);
   let tenantUrl: URL;
@@ -37,13 +39,20 @@ export async function runDeploy(cwd: string, opts: DeployOptions = {}): Promise<
   } catch {
     throw new RspfxError('DEPLOY_INVALID_URL', `Invalid app catalog URL: ${tenant}`);
   }
+  if (tenantUrl.protocol !== 'https:') {
+    throw new RspfxError('DEPLOY_INVALID_URL', `Invalid app catalog URL: expected https:// URL, got ${tenant}`);
+  }
+  if (!tenantUrl.hostname.toLowerCase().includes('sharepoint')) {
+    throw new RspfxError('DEPLOY_INVALID_URL', `Invalid app catalog URL: expected a SharePoint host, got ${tenant}`);
+  }
   const basePath = tenantUrl.pathname.replace(/\/+$/, '');
-  const uploadUrl = `${tenantUrl.origin}${basePath}/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='${fileName}',overwrite=true)`;
+  const encodedFileName = fileName.replace(/'/g, "''");
+  const uploadUrl = `${tenantUrl.origin}${basePath}/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='${encodedFileName}',overwrite=true)`;
   const body = fs.readFileSync(result.outputPath);
 
   logger.info(`Uploading ${fileName} to ${uploadUrl}...`);
   const response = await fetch(uploadUrl, {
-    method: 'PUT',
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/octet-stream'

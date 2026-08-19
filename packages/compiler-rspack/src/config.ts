@@ -24,6 +24,20 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
+const PLATFORM_ONLY_PREFIXES: readonly string[] = [
+  '@msinternal',
+  '@azure/msal-browser-1p',
+  '@azure/msal-browser-legacy-1p'
+];
+
+function isPlatformOnlyModule(request: string): boolean {
+  return PLATFORM_ONLY_PREFIXES.some((prefix) => request === prefix || request.startsWith(prefix + '/'));
+}
+
+function platformOnlyExternal(data: { request?: string }): string | undefined {
+  return typeof data.request === 'string' && isPlatformOnlyModule(data.request) ? `amd ${data.request}` : undefined;
+}
+
 /** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
 export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
 
@@ -211,7 +225,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
       publicPath: SPFX_PUBLIC_PATH_SENTINEL,
       devtoolModuleFilenameTemplate: 'webpack:///../[resource-path]'
     },
-    externals: [...ctx.externals, ...(ctx.localizedResources ?? []).map((resource) => resource.name)],
+    externals: [...ctx.externals, platformOnlyExternal, ...(ctx.localizedResources ?? []).map((resource) => resource.name)],
     resolve: {
       extensions,
       modules: ['node_modules'],
