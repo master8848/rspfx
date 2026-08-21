@@ -23,7 +23,10 @@ export {
   readProject,
   loadFrameworkPreset,
   resolveContributionLoaders,
-  createCompileContext
+  createCompileContext,
+  ensureProjectConfigs,
+  expandEnvVars,
+  expandObject
 } from './project.js';
 export type {
   DiscoveredWebParts,

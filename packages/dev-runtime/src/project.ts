@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import { deflateSync } from 'node:zlib';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import {
   resolvePathDefaults,
@@ -53,28 +55,510 @@ export interface ReadProjectResult {
   localizedResources: LocalizedResource[];
 }
 
+export function expandEnvVars(input: string): string {
+  if (typeof input !== 'string') {
+    return input;
+  }
+  let result = input;
+  result = result.replace(
+    /\$\{([A-Za-z_][A-Za-z0-9_]*)(?:\:(-)?([^\}]*))?\}/g,
+    (_match: string, varName: string, dash: string | undefined, defaultValue: string | undefined) => {
+      const envVal = process.env[varName];
+      if (envVal !== undefined && envVal !== '') {
+        return envVal;
+      }
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      return '';
+    }
+  );
+  result = result.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_match: string, varName: string) => {
+    const envVal = process.env[varName];
+    if (envVal !== undefined) {
+      return envVal;
+    }
+    return '';
+  });
+  return result;
+}
+
+export function expandObject<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (typeof obj === 'string') {
+    return expandEnvVars(obj) as unknown as T;
+  }
+  if (Array.isArray(obj)) {
+    return (obj as unknown[]).map((item) => expandObject(item as unknown)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      out[key] = expandObject(value as unknown);
+    }
+    return out as T;
+  }
+  return obj;
+}
+
+function loadDotEnv(projectRoot: string): void {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+  try {
+    const content = fs.readFileSync(envPath, 'utf8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) {
+        continue;
+      }
+      const key = trimmed.slice(0, eqIndex).trim();
+      let value = trimmed.slice(eqIndex + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // ignore .env parse errors
+  }
+}
+
+function toPascal(name: string): string {
+  return name
+    .split(/[-_]/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+function crc32(buf: Buffer): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf.readUInt8(i);
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type: string, data: Buffer): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const typeBuf = Buffer.from(type, 'ascii');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])));
+  return Buffer.concat([length, typeBuf, data, crc]);
+}
+
+function solidPngBuffer(
+  width: number,
+  height: number,
+  rgb: [number, number, number]
+): Buffer {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+  const row = Buffer.alloc(1 + width * 3);
+  for (let x = 0; x < width; x++) {
+    row[1 + x * 3] = rgb[0];
+    row[2 + x * 3] = rgb[1];
+    row[3 + x * 3] = rgb[2];
+  }
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    signature,
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0))
+  ]);
+}
+
+function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>): string | undefined {
+  const dirs = [paths.webpartsDir, paths.extensionsDir];
+  for (const dir of dirs) {
+    const full = path.join(projectRoot, dir);
+    if (!fs.existsSync(full)) {
+      continue;
+    }
+    try {
+      for (const entry of fs.readdirSync(full, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+          continue;
+        }
+        const sub = path.join(full, entry.name);
+        let files: string[] = [];
+        try {
+          files = fs.readdirSync(sub);
+        } catch {
+          continue;
+        }
+        for (const file of files.filter((f) => f.endsWith('.manifest.json'))) {
+          try {
+            const content = JSON.parse(fs.readFileSync(path.join(sub, file), 'utf8')) as { id?: string };
+            if (content.id) {
+              return content.id;
+            }
+          } catch {
+            // ignore broken manifest
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return undefined;
+}
+
+export function ensureProjectConfigs(
+  projectRoot: string,
+  paths?: PathsConfig
+): void {
+  const resolvedPaths = resolvePathDefaults(paths);
+  const logger = createLogger('rspfx');
+  const configDir = path.join(projectRoot, resolvedPaths.configDir);
+
+  // config/serve.json
+  const servePath = path.join(configDir, 'serve.json');
+  if (!fs.existsSync(servePath)) {
+    fs.mkdirSync(path.dirname(servePath), { recursive: true });
+    const content = JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json',
+        initialPage: 'https://{tenantdomain}/_layouts/15/workbench.aspx',
+        https: true,
+        port: 4321,
+        hostname: 'localhost'
+      },
+      null,
+      2
+    );
+    fs.writeFileSync(servePath, content);
+    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, servePath)}`);
+  } else {
+    try {
+      JSON.parse(fs.readFileSync(servePath, 'utf8'));
+    } catch (error) {
+      logger.warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, servePath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  // config/write-manifests.json
+  const writeManifestsPath = path.join(configDir, 'write-manifests.json');
+  if (!fs.existsSync(writeManifestsPath)) {
+    fs.mkdirSync(path.dirname(writeManifestsPath), { recursive: true });
+    const content = JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json',
+        cdnBasePath: ''
+      },
+      null,
+      2
+    );
+    fs.writeFileSync(writeManifestsPath, content);
+    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, writeManifestsPath)}`);
+  } else {
+    try {
+      JSON.parse(fs.readFileSync(writeManifestsPath, 'utf8'));
+    } catch (error) {
+      logger.warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, writeManifestsPath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  // config/package-solution.json
+  const packageSolutionPath = path.join(configDir, 'package-solution.json');
+  if (!fs.existsSync(packageSolutionPath)) {
+    fs.mkdirSync(path.dirname(packageSolutionPath), { recursive: true });
+    let packageName = 'my-solution';
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
+      if (pkg.name) {
+        packageName = pkg.name;
+      }
+    } catch {
+      // ignore
+    }
+    const shortName = packageName.replace(/^@[^/]+\//, '');
+    const solutionId = randomUUID();
+    const featureId = randomUUID();
+    const pascal = toPascal(shortName);
+    const content = JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json',
+        solution: {
+          name: `${shortName}-client-side-solution`,
+          id: solutionId,
+          version: '1.0.0.0',
+          includeClientSideAssets: true,
+          isDomainIsolated: false,
+          skipFeatureDeployment: true,
+          developer: {
+            name: '',
+            websiteUrl: '',
+            privacyUrl: '',
+            termsOfUseUrl: '',
+            mpnId: 'Undefined-0000'
+          },
+          metadata: {
+            shortDescription: { default: `${shortName} description` },
+            longDescription: { default: `${shortName} description` },
+            categories: [],
+            screenshotPaths: []
+          },
+          features: [
+            {
+              title: `${pascal} Feature`,
+              description: `A feature which activates the Client-Side WebPart named '${pascal}'`,
+              id: featureId,
+              version: '1.0.0.0',
+              assets: { elementManifests: [], elementFiles: [] }
+            }
+          ]
+        },
+        paths: { zippedPackage: `sharepoint/solution/${shortName}.sppkg` }
+      },
+      null,
+      2
+    );
+    fs.writeFileSync(packageSolutionPath, content);
+    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, packageSolutionPath)}`);
+  } else {
+    try {
+      JSON.parse(fs.readFileSync(packageSolutionPath, 'utf8'));
+    } catch (error) {
+      logger.warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, packageSolutionPath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  // config/config.json
+  const configJsonPathEns = path.join(configDir, 'config.json');
+  if (!fs.existsSync(configJsonPathEns)) {
+    fs.mkdirSync(path.dirname(configJsonPathEns), { recursive: true });
+    const webpartsDir = path.join(projectRoot, resolvedPaths.webpartsDir);
+    let localizedResources: Record<string, string> = {};
+    try {
+      const dirs = fs
+        .readdirSync(webpartsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && !d.name.startsWith('.'));
+      for (const dir of dirs) {
+        const pascal = toPascal(dir.name);
+        localizedResources[`${pascal}WebPartStrings`] = `src/webparts/${dir.name}/loc/{locale}.js`;
+      }
+    } catch {
+      // ignore
+    }
+    const content = JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json',
+        ...(Object.keys(localizedResources).length > 0 ? { localizedResources } : { localizedResources: {} })
+      },
+      null,
+      2
+    );
+    fs.writeFileSync(configJsonPathEns, content);
+    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, configJsonPathEns)}`);
+  } else {
+    try {
+      JSON.parse(fs.readFileSync(configJsonPathEns, 'utf8'));
+    } catch (error) {
+      logger.warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, configJsonPathEns)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  // teams/manifest.json and icons
+  const teamsDir = path.join(projectRoot, 'teams');
+  const teamsManifestPath = path.join(teamsDir, 'manifest.json');
+  let teamsComponentId: string | undefined;
+  if (fs.existsSync(teamsManifestPath)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(teamsManifestPath, 'utf8')) as { id?: string };
+      if (typeof manifest.id === 'string' && manifest.id) {
+        teamsComponentId = manifest.id;
+      }
+    } catch (error) {
+      logger.warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, teamsManifestPath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+      teamsComponentId = discoverComponentId(projectRoot, resolvedPaths) ?? randomUUID();
+      if (!discoverComponentId(projectRoot, resolvedPaths)) {
+        logger.warn(`No web part manifest found to infer componentId for teams icons, generated id: ${teamsComponentId}`);
+      }
+    }
+  } else {
+    teamsComponentId = discoverComponentId(projectRoot, resolvedPaths);
+    if (!teamsComponentId) {
+      teamsComponentId = randomUUID();
+      logger.warn(`No web part manifest found to infer componentId for teams manifest, generated new id: ${teamsComponentId}`);
+    }
+    fs.mkdirSync(teamsDir, { recursive: true });
+    let packageName = 'my-solution';
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
+      if (pkg.name) {
+        packageName = pkg.name;
+      }
+    } catch {
+      // ignore
+    }
+    const shortName = packageName.replace(/^@[^/]+\//, '');
+    const tabUrl = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=${teamsComponentId}%26forceLocale={locale}`;
+    const content = JSON.stringify(
+      {
+        $schema: 'https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json',
+        manifestVersion: '1.13',
+        version: '1.0.0',
+        id: teamsComponentId,
+        packageName: `com.contoso.${shortName}`,
+        developer: {
+          name: 'SPFx + Teams Dev',
+          websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
+          privacyUrl: 'https://privacy.microsoft.com/en-us/privacystatement',
+          termsOfUseUrl: 'https://www.microsoft.com/en-us/servicesagreement'
+        },
+        name: { short: shortName, full: shortName },
+        description: { short: `${shortName} description`, full: `${shortName} description` },
+        icons: {
+          outline: `${teamsComponentId}_outline.png`,
+          color: `${teamsComponentId}_color.png`
+        },
+        accentColor: '#FFFFFF',
+        staticTabs: [
+          {
+            entityId: teamsComponentId,
+            name: shortName,
+            contentUrl: tabUrl,
+            websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
+            scopes: ['personal']
+          }
+        ],
+        configurableTabs: [
+          {
+            configurationUrl: tabUrl,
+            canUpdateConfiguration: true,
+            scopes: ['team']
+          }
+        ],
+        validDomains: [
+          '*.login.microsoftonline.com',
+          '*.sharepoint.com',
+          '*.sharepoint-df.com',
+          'spoppe-a.akamaihd.net',
+          'spoprod-a.akamaihd.net',
+          '*.microsoftonline.com',
+          '*.microsoftonline-p.com',
+          '*.msauth.net',
+          '*.msauthimages.net',
+          '*.msftauth.net',
+          '*.msftauthimages.net',
+          '*.office.com',
+          '*.officeapps.live.com',
+          '*.secure.aadcdn.microsoftonline-p.com'
+        ]
+      },
+      null,
+      2
+    );
+    fs.writeFileSync(teamsManifestPath, content);
+    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, teamsManifestPath)}`);
+  }
+
+  if (teamsComponentId) {
+    for (const suffix of ['_color.png', '_outline.png'] as const) {
+      const iconPath = path.join(teamsDir, `${teamsComponentId}${suffix}`);
+      if (!fs.existsSync(iconPath)) {
+        fs.mkdirSync(path.dirname(iconPath), { recursive: true });
+        const isColor = suffix === '_color.png';
+        const width = isColor ? 192 : 32;
+        const height = isColor ? 192 : 32;
+        const rgb: [number, number, number] = isColor ? [0, 120, 212] : [50, 49, 48];
+        const buffer = solidPngBuffer(width, height, rgb);
+        fs.writeFileSync(iconPath, buffer);
+        logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, iconPath)}`);
+      }
+    }
+  }
+}
+
 export function readProject(
   projectRoot: string,
   paths?: PathsConfig,
   versionOverride?: string
 ): ReadProjectResult {
   const resolvedPaths = resolvePathDefaults(paths);
+  loadDotEnv(projectRoot);
+  ensureProjectConfigs(projectRoot, resolvedPaths);
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
   if (fs.existsSync(packageJsonPath)) {
-    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    try {
+      packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    } catch (error) {
+      createLogger('rspfx').warn(
+        `Config broken, not overwriting: package.json - ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   const configJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'config.json');
   let configJson: ProjectConfigJson | undefined;
   if (fs.existsSync(configJsonPath)) {
-    configJson = JSON.parse(fs.readFileSync(configJsonPath, 'utf8'));
+    try {
+      configJson = JSON.parse(fs.readFileSync(configJsonPath, 'utf8'));
+    } catch (error) {
+      createLogger('rspfx').warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, configJsonPath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+      configJson = undefined;
+    }
   }
 
   const serveJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'serve.json');
   let serveJson: ProjectServeConfigJson | undefined;
   if (fs.existsSync(serveJsonPath)) {
-    serveJson = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
+    try {
+      const raw = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
+      const expanded = expandObject(raw) as ProjectServeConfigJson;
+      serveJson = expanded;
+      if (serveJson && typeof (serveJson as unknown as Record<string, unknown>).port === 'string') {
+        const portStr = (serveJson as unknown as Record<string, unknown>).port as string;
+        const portNum = Number(portStr);
+        if (!Number.isNaN(portNum) && portStr.trim() !== '') {
+          serveJson.port = portNum;
+        }
+      }
+    } catch (error) {
+      createLogger('rspfx').warn(
+        `Config broken, not overwriting: ${path.relative(projectRoot, serveJsonPath)} - ${error instanceof Error ? error.message : String(error)}`
+      );
+      serveJson = undefined;
+    }
   }
 
   const webParts = discoverWebParts(
