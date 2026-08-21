@@ -53,7 +53,7 @@ my-app/
 └── local/                       # optional — mock REST seed (local/data.json) for the dev local preview
 ```
 
-Every path above is a default — `paths` in the plugin options (`srcDir`, `webpartsDir`, `configDir`) relocates the source, web parts, and config folders; see [building-packages.md](building-packages.md).
+Every path above is a default — `paths` in the plugin options (`srcDir`, `webpartsDir`, `configDir`) relocates the source, web parts, and config folders; see [building-packages.md](building-packages.md), and the exhaustive map with naming rules in [project-structure.md](project-structure.md).
 
 The project config lives in your bundler config as a plugin instance — the
 `RspfxPlugin` from `@mbsks/rspfx-plugin` in `rspack.config.ts` (the default;
@@ -156,7 +156,7 @@ Install it:
    package-solution.json to auto-deploy).
 3. On any site: *Add an app* → your solution → *Add to page*.
 
-`rspfx deploy` automates the upload: it packages and uploads to the app catalog via REST using `config.deploy.appCatalogSiteUrl` or env var (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47). Without a token it prints the manual upload steps instead.
+`rspfx deploy` automates the upload: it packages and uploads to the app catalog via REST using `config.deploy.appCatalogSiteUrl` or env var (see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47). Without a token it prints the manual upload steps instead. Full deployment guide with tenant/site catalog, CDN, API permissions, and Teams sync: [deployment.md](deployment.md).
 
 ## 5. Doctor
 

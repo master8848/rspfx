@@ -1,6 +1,6 @@
 # Building, packaging & deploying
 
-This is the build pipeline reference: what each command produces, what the artifacts are, and how to wire it into CI. For the day-to-day flow see [getting-started.md](getting-started.md); for moving an existing project see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
+This is the build pipeline reference: what each command produces, what the artifacts are, and how to wire it into CI. For the day-to-day flow see [getting-started.md](getting-started.md); for moving an existing project see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md). For exhaustive file paths and manifest naming see [project-structure.md](project-structure.md); for end-to-end catalog/Teams/CDN steps see [deployment.md](deployment.md).
 
 ## Command overview
 
@@ -98,6 +98,8 @@ reports entry count on success.
    Catalog → Apps for SharePoint*).
 3. Click *Deploy* (or set `skipFeatureDeployment: true` to auto-deploy).
 4. On any site: *Add an app* → your solution → *Add*.
+
+Full step-by-step with catalog URLs, CDN, API permissions, Teams sync, and env-var interpolation: [deployment.md](deployment.md).
 
 ## Deploying from CLI
 

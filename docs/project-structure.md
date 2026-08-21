@@ -1,0 +1,228 @@
+# Project structure & file paths
+
+Exhaustive map of every path the CLI reads or writes. For day-to-day commands see [getting-started.md](getting-started.md) and [commands.md](commands.md); for what `build`/`package` assemble see [building-packages.md](building-packages.md). This page is the file-path reference — one home per path.
+
+## Tree
+
+```
+my-app/
+├── rspack.config.ts              # Rspack + RspfxPlugin (default)
+├── vite.config.ts                # alternative — rspfxVite()
+├── rsbuild.config.ts             # alternative — rspfxRsbuild()
+├── package.json                  # name, version (AMD library version source)
+├── tsconfig.json                 # strict, bundler, jsx per framework
+├── .env                          # optional — loaded by readProject() before config reads
+├── .gitignore                    # scaffolded — ignores dist/release/temp/.rspfx/sharepoint/solution
+├── .npmrc                        # legacy-peer-deps=true
+├── assets/
+│   └── favicon.svg               # dev-only favicon served at /assets/favicon.svg
+├── config/
+│   ├── package-solution.json     # solution id, version, features, paths.zippedPackage
+│   ├── serve.json                # dev server: initialPage, port, https, hostname (+ env interpolation)
+│   ├── write-manifests.json      # release cdnBasePath
+│   └── config.json               # bundles, externals, localizedResources
+├── src/
+│   ├── index.ts                  # re-export barrel (empty by default)
+│   ├── rspfx-env.d.ts            # ambient *.module.scss / *.vue / *.svelte
+│   ├── webparts/<name>/          # one folder per web part — folder name = bundleName
+│   │   ├── <name>.manifest.json  # SHOULD match folder name; first *.manifest.json wins
+│   │   ├── <name>WebPart.ts      # or index.ts — see pickEntrypoint() precedence
+│   │   ├── components/<Pascal>.tsx|vue|svelte|ts
+│   │   ├── styles/<Pascal>.module.scss
+│   │   ├── loc/en-us.ts          # locale modules — pattern src/webparts/<name>/loc/{locale}.js
+│   │   └── assets/.gitkeep
+│   └── extensions/<name>/        # extensions — same scan, extension entrypoint suffix
+│       ├── <name>.manifest.json
+│       └── <Pascal><Suffix>.ts   # <Suffix> = ApplicationCustomizer | FieldCustomizer | CommandSet | Extension
+├── teams/
+│   ├── manifest.json             # Teams app manifest v1.13 — only when teams.enabled=true
+│   ├── <id>_color.png            # 192×192
+│   └── <id>_outline.png          # 32×32
+├── sharepoint/
+│   ├── assets/.gitkeep           # optional solution assets
+│   └── Resources.resx            # optional — LCID 1033 default; Resources.<lang>.resx per locale
+├── local/
+│   └── data.json                 # optional — mock REST seed for local preview (/_api)
+├── dist/                         # build.outDir — AMD bundles (<name>.js), chunks, locale modules, maps
+├── release/
+│   ├── manifests/<id>.manifest.json  # production manifests — version "*" → package.json version
+│   └── assets/*                  # copy of dist/ (maps/manifests excluded) for sppkg embedding
+├── temp/
+│   └── manifests.js              # dev debug manifests (cumulative debugManifests, served at /temp/manifests.js)
+├── sharepoint/solution/
+│   ├── <name>.sppkg              # DEFLATE zip — from package-solution.json paths.zippedPackage
+│   └── debug/<name>/             # debug dump of zip entries (same names as inside .sppkg)
+├── .rspfx/
+│   ├── analyze.html              # rspfx analyze report
+│   ├── stats.json                # moduleCounts fallback for Vite/Rsbuild
+│   └── benchmarks.jsonl
+├── .rspack-cache/                # persistent Rspack filesystem cache (watch mode only)
+├── node_modules/.cache
+└── ~/.rspfx/certs/               # dev HTTPS self-signed certs (825-day, 2048-bit; machine-wide if trusted)
+```
+
+Defaults for relocatable roots live in `packages/core/src/config.ts:70` `configDefaults.paths` (`src`, `src/webparts`, `src/extensions`, `config`). Override via `paths` in the plugin options; the CLI resolves them with `resolvePathDefaults()` (`packages/dev-runtime/src/project.ts:536`).
+
+## File table
+
+Every path the CLI reads or writes, with ownership.
+
+| File path | Purpose | Required? | Auto-created? | Microsoft docs |
+|---|---|---|---|---|
+| `rspack.config.ts` | Project config host — `RspfxPlugin` instance (`name`, `framework`, `spfxVersion`, `dev`, `build`, `paths`, `teams`). Loaded via `jiti`. | One of `rspack/vite/rsbuild` config required | Scaffolded (`packages/templates/src/index.ts:88` `rspackConfig()`) | — (rspfx-owned; SPFx uses `gulpfile.js`/`config/*.json`) |
+| `vite.config.ts` | Alternative host — `rspfxVite()` plugin. `rspfx build` spawns one `vite build` per bundle. | Alternative | On Vite projects only | https://vitejs.dev/guide/ |
+| `rsbuild.config.ts` | Alternative host — `rspfxRsbuild()` plugin. Single `rsbuild build` via `modifyRspackConfig`. | Alternative | On Rsbuild projects only | https://rsbuild.rs/config/ |
+| `package.json` | `name` (solution default), `version` (AMD `define('<id>_<version>')` + manifest `version` when `*`). `rspfxConfig.version` overrides it. | Yes | Scaffolded (`packages/templates/src/index.ts:146` `packageJson()`) | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-overview |
+| `tsconfig.json` | `strict`, `module: ESNext`, `moduleResolution: Bundler`, `jsx` per framework, `experimentalDecorators` for extensions. | Yes | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-overview |
+| `.env` | Dotenv loaded by `loadDotEnv()` (`packages/dev-runtime/src/project.ts:107`) before `serve.json` expansion. `process.env[KEY]` set only if undefined. | No | Never — user-provided | — |
+| `assets/favicon.svg` | Dev-only favicon served at `/assets/favicon.svg` (`packages/dev-runtime/src/serve.ts:260`). | No | Scaffolded | — |
+| `config/package-solution.json` | Solution metadata: `solution.id` (solution ProductId), `solution.version` (4-part, e.g. `1.0.0.0`), `solution.includeClientSideAssets`, `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata`, `features[]`, `webApiPermissionRequests`, `paths.zippedPackage`. | Yes | Auto-created if missing (`packages/dev-runtime/src/project.ts:308`) | https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview |
+| `config/serve.json` | Dev serve settings: `initialPage` (supports `{tenantdomain}` + env interpolation), `https`, `port`, `hostname`/`ipAddress`. Precedence: CLI `--port`/`--tenant` → `serve.json` → `dev.*` in plugin → defaults (4321/localhost/https). | Yes | Auto-created if missing (`packages/dev-runtime/src/project.ts:257`) | https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/debugging-sharepoint-framework-solutions |
+| `config/write-manifests.json` | Release `cdnBasePath` — when non-empty, `release/manifests/*.manifest.json` `internalModuleBaseUrls` = `[cdnBasePath/]`; when empty/with `includeClientSideAssets:true`, packaged manifests rewrite to `HTTPS://SPCLIENTSIDEASSETLIBRARY/`. | Yes | Auto-created if missing (`packages/dev-runtime/src/project.ts:284`) | https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/serve-and-host-spfx-solutions |
+| `config/config.json` | `bundles` (entrypoint/manifest per bundle), `externals`, `localizedResources` (`"<Name>WebPartStrings": "src/webparts/<name>/loc/{locale}.js"`). When `bundles` present, authoritative for discovery; otherwise folder scan is used. | No (scan fallback) | Auto-created if missing (`packages/dev-runtime/src/project.ts:375`) | https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/localization |
+| `src/webparts/<name>/<name>.manifest.json` | Component manifest — `id` (UUID), `alias`, `componentType: WebPart`, `version: "*"` (replaced at build), `manifestVersion: 2`, `supportedHosts`, `preconfiguredEntries`. See naming rules below. | One per web part folder | Scaffolded | https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-manifest-schema |
+| `src/webparts/<name>/<name>WebPart.ts` (or `index.ts`) | Web part entrypoint class `extends BaseClientSideWebPart`. Resolved by `pickEntrypoint()` precedence. | One per web part folder | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/base-web-part |
+| `src/webparts/<name>/components/<Pascal>.*` | Framework component (tsx/vue/svelte/ts). | No — scaffolded default | Scaffolded | Framework-specific |
+| `src/webparts/<name>/styles/<Pascal>.module.scss` | Scoped styles — SCSS modules (`modules: {auto:true}`). | No | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/css-recommendations |
+| `src/webparts/<name>/loc/*.ts` | Locale modules consumed via `localizedResources` `…/{locale}.js` pattern. | No — but `config.json` references them | Scaffolded (`en-us`, `fr-fr`) | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/localize-web-parts |
+| `src/extensions/<name>/<name>.manifest.json` | Extension manifest — `componentType: Extension`, `extensionType: ApplicationCustomizer|FieldCustomizer|ListViewCommandSet`, `version: "*"`. | One per extension folder | Scaffolded for `--component` | https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions |
+| `src/extensions/<name>/<Pascal>Extension.ts` | Extension entrypoint — `<Pascal>ApplicationCustomizer` / `FieldCustomizer` / `CommandSet` / `Extension`. | One per extension folder | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/get-started/using-page-placeholder-with-extensions |
+| `src/index.ts` | Barrel placeholder (`export {};`). | No | Scaffolded | — |
+| `src/rspfx-env.d.ts` | Ambient declarations for `*.module.scss`, `*.vue`, `*.svelte`. | No | Scaffolded | — |
+| `sharepoint/assets/*` | Solution assets copied into package when referenced by `features[].assets`. | No | `.gitkeep` scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-assets |
+| `sharepoint/Resources.resx` + `Resources.<lang>.resx` | Localized `metadata.shortDescription`/`longDescription` (`"$Resources:Key"` → `<LocalizedString>` per LCID). `Resources.resx` → LCID 1033. | No | Never — user-provided | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/localize-web-parts#localize-your-web-part-metadata |
+| `teams/manifest.json` | Teams app manifest v1.13 — `id`/`entityId` = component `id`, `packageName`, `staticTabs`/`configurableTabs`, `validDomains`. Only when `teams.enabled=true` in plugin options. | No | Auto-created when `teams.enabled` (`packages/dev-runtime/src/project.ts:412`) | https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json · https://learn.microsoft.com/en-us/microsoftteams/platform/resources/schema/manifest-schema |
+| `teams/<id>_color.png` | 192×192 Teams color icon — filename MUST be `<teams.manifest.json#id>_color.png`. | No | Auto-created with teams | https://learn.microsoft.com/en-us/microsoftteams/platform/resources/schema/manifest-schema#icons |
+| `teams/<id>_outline.png` | 32×32 Teams outline icon — MUST be `<id>_outline.png`. | No | Auto-created with teams | Same as above |
+| `local/data.json` | Mock REST seed (`{ lists: [...], currentUser }`) for local preview `/_api`. | No | Never | — |
+| `dist/` (`build.outDir`) | AMD bundles `dist/<bundle>.js` (`define('<id>_<version>', …)`), `chunk.*.js`, `<Name>Strings_<locale>.js`, source maps. | Build output | Written by `rspfx build` / `rspack build` | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/bundle-and-manifest-overview |
+| `release/manifests/<id>.manifest.json` | Production component manifests — `loaderConfig` filled: `entryModuleId = bundleName`, `internalModuleBaseUrls` from `cdnBasePath`, `scriptResources` with `path`/`component`/`localizedPath`. | Build output | `assembleRelease()` (`packages/dev-runtime/src/release.ts:39`) | https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json |
+| `release/assets/*` | Copy of `dist/` for packaging (maps/manifests excluded). | Build output | Same as above | — |
+| `temp/manifests.js` | Cumulative `debugManifests` (`window.debugManifests` + AMD `define`) served at `/temp/manifests.js` (+ reload client). | Dev output | `createManifestRegenerator()` | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/debugging-sharepoint-framework-solutions |
+| `sharepoint/solution/<name>.sppkg` | Solution package — DEFLATE zip. Path from `package-solution.json` `paths.zippedPackage` (default `sharepoint/solution/<name>.sppkg`). | Package output | `rspfx package` (`packages/sppkg-builder/src/sppkg-builder.ts:105`) | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview |
+| `.rspfx/analyze.html` + `.rspfx/stats.json` | Bundle report + moduleCounts fallback for Vite/Rsbuild `rspfx analyze`. | Analyze output | `rspfx analyze` | — |
+| `~/.rspfx/certs/` | Self-signed cert key/cert + `cert.pem.trust.txt` for `https://localhost:4321` (SharePoint mode). | Dev certs | `ensureCertificates()` (`packages/manifest-server/src/index.ts:8`) | — |
+
+## Web part naming & manifest matching rules
+
+Critical for newcomers — getting these wrong yields `404` bundles or `Invalid manifest` at install.
+
+### Folder = bundleName
+
+In the default layout autodiscovery (`config/config.json` has no `bundles`), the bundle name is the folder name under `src/webparts/`:
+
+```
+src/webparts/<bundleName>/
+```
+
+`scanComponentDir()` (`packages/dev-runtime/src/project.ts:758`) enumerates each subfolder of `paths.webpartsDir` (default `src/webparts`) and pushes:
+
+```ts
+{ bundleName: dir.name, entrypoint, manifestPath: path.join(dirPath, manifests[0]) }
+```
+
+So `src/webparts/hello/` → bundle `hello` → output `dist/hello.js` → `loaderConfig.entryModuleId = "hello"` → `scriptResources["hello"] = { type: "path", path: "hello.js" }`. If you rename the folder, you rename the bundle.
+
+When `config/config.json` contains explicit `bundles`, the bundle key is authoritative and `entryModuleId` follows it regardless of folder name (`packages/dev-runtime/src/project.ts:703`, [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md#3-rewrite-config-config-json-entrypoints)):
+
+```jsonc
+// config/config.json
+{ "bundles": { "myBundle": { "components": [{ "entrypoint": "./src/webparts/hello/HelloWebPart.ts", "manifest": "./src/webparts/hello/hello.manifest.json" }] } } }
+// → entryModuleId = "myBundle",  bundle file = dist/myBundle.js
+```
+
+In that mode folder name is irrelevant to the loader, but keeping them equal avoids confusion and keeps the migration script's rewrite (`lib → src`) correct.
+
+### Manifest filename — SHOULD match folder, technically any `*.manifest.json`
+
+Each component folder must contain **exactly one** `*.manifest.json`. `generateComponentManifests()` (`packages/manifest-generator/src/component-manifests.ts:74`) throws `MULTIPLE_MANIFESTS` if a folder has 2+, and `scanComponentDir()` silently skips folders with 0.
+
+Convention is `src/webparts/<name>/<name>.manifest.json` (folder name repeated). When discovery scans, it does:
+
+```ts
+manifests = fs.readdirSync(dirPath).filter(f => f.endsWith('.manifest.json'))
+manifestPath = path.join(dirPath, manifests[0]) // first sorted entry wins
+```
+
+So naming it `hello.manifest.json` inside `hello/` works; naming it `manifest.json` also works if it is the only one. But if two files exist (e.g. leftover `hello.manifest.json` + `HelloWebPart.manifest.json`), the first lexicographic entry wins — which is why the template matches folder name and you should not leave duplicates.
+
+### Entrypoint — `pickEntrypoint()` precedence
+
+`pickEntrypoint(dirPath, dirName)` (`packages/dev-runtime/src/project.ts:791`) checks in order, returning the first file that exists:
+
+1. `index.ts`
+2. `index.tsx`
+3. `<dirName>WebPart.ts` — e.g. `hello/helloWebPart.ts` (the template default)
+4. `<dirName>WebPart.tsx`
+5. `<dirName>ApplicationCustomizer.ts`
+6. `<dirName>ApplicationCustomizer.tsx`
+7. `<dirName>FieldCustomizer.ts`
+8. `<dirName>FieldCustomizer.tsx`
+9. `<dirName>CommandSet.ts`
+10. `<dirName>CommandSet.tsx`
+11. `<dirName>Extension.ts`
+12. `<dirName>Extension.tsx`
+13. Fallback: if the folder contains exactly one `*.ts`/`*.tsx`, use that single file (covers custom names).
+
+Index wins over `<name>WebPart`. If you have both `index.ts` and `helloWebPart.ts`, `index.ts` is the entrypoint. For vanilla/extension single-file projects, the lone-file fallback suffices.
+
+Extensions follow the same scan under `src/extensions/` with suffixes `ApplicationCustomizer`/`FieldCustomizer`/`CommandSet`/`Extension`.
+
+### Manifest `id` and version — must stay in sync
+
+Every component manifest requires a UUID `id`:
+
+```jsonc
+// src/webparts/hello/hello.manifest.json
+{ "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "alias": "HelloWebPart", "componentType": "WebPart", "version": "*", ... }
+```
+
+- `id` must be globally unique — generate with `node -e "console.log(crypto.randomUUID())"`. Duplicates throw `DuplicateManifestId` (`packages/sppkg-builder/src/sppkg-builder.ts:321`) and duplicate bundle names produce `Bundle contains` collisions.
+- `version: "*"` is replaced at build time with `package.json#version` pre-release stripped (`1.2.3-beta.1` → `1.2.3`) (`packages/manifest-generator/src/component-manifests.ts:85`). Pin the same version in `package.json` and `config/package-solution.json#solution.version` (4-part `1.0.0.0`).
+- The AMD library name is `${id}_${version}` (`packages/compiler-rspack/src/config.ts:234` `library: { type: 'amd', name: '${id}_${version}' }`); `computeUniqueName()` hashes them for `chunkLoadingGlobal: webpackJsonp_<…>`.
+- When `teams.enabled=true`, the scaffolded `teams/manifest.json` `id` and `staticTabs[0].entityId` are set to the discovered component `id` (`packages/dev-runtime/src/project.ts:196` `discoverComponentId()`, `packages/templates/src/index.ts:112` `solidPng()`). They **must** match the web part `id` — Teams `contentUrl` embeds `componentId=<id>` and the catalog sync validates it. Changing the web part `id` without regenerating `teams/manifest.json` breaks Teams install with `Invalid Teams manifest` ([teams-outlook-install.md](teams-outlook-install.md)).
+
+### What can be changed freely vs. what must stay in sync
+
+| Field / path | Change freely? | Sync requirement |
+|---|---|---|
+| `src/webparts/<name>/` folder rename | **No** — unless you also update `config.json` bundle key or accept new `bundleName` | `bundleName` = folder (scan mode) = `loaderConfig.entryModuleId` + `dist/<bundle>.js` + `scriptResources` key; `rspfx package` emits `<featureId>/WebPart_<id>.xml` with that `entryModuleId` |
+| `*.manifest.json` filename inside folder | Yes — if only one exists; first file wins | Keep to `<name>.manifest.json` to avoid ordering surprises |
+| `manifest.id` (UUID) | Generate once, then freeze | Must equal `teams/manifest.json#id` + `entityId`, and is the AMD `${id}_` prefix; never duplicate across components |
+| `manifest.version: "*"` vs explicit | `*` recommended — stays in sync with `package.json` | Explicit pin divorces from `package.json` and `RSPFX version` override |
+| `manifest.alias` | Freely rename (used for `<featureId>/WebPart_<id>.xml` fallback name) | None |
+| `preconfiguredEntries[0].title` / `description` | Freely rename — appears in page picker | None |
+| `preconfiguredEntries[0].group` / `groupId` | Freely change (`Other`, `Content`, etc.) | None — `5c31a052-22b4-4f36-8f7d-4b4d8c7c2e7a` is the default group GUID, any GUID works |
+| `manifest.supportedHosts` | Add/remove hosts (`SharePointWebPart`, `SharePointFullPage`, `TeamsPersonalApp`, `TeamsTab`) — controls where host allows the web part | Must include at least one host; `Teams*` required for catalog Teams sync |
+| `manifest.safeWithCustomScriptDisabled` / `requiresCustomScript` | Boolean — no sync | Microsoft docs: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-manifest-schema |
+| `package.json#version` vs `package-solution.json#version` | Bump together on deploy | `solution.version` is the catalog upgrade key (`1.0.0.0` 4-part); `package.json` version is the bundle `_<version>` suffix |
+| `teams/manifest.json#packageName` (`com.contoso.<name>`) | Freely rename | Must be reverse-DNS unique |
+| `teams/manifest.json#validDomains` | Add `*.outlook.office.com` etc. | Must include `*.sharepoint.com`; missing entries cause `Invalid Teams manifest` or white screen |
+| `config/write-manifests.json#cdnBasePath` | Empty (`HTTPS://SPCLIENTSIDEASSETLIBRARY/`) vs CDN URL | When `includeClientSideAssets:false`, upload `release/assets/*` to that CDN or bundles 404 |
+
+### Extension folder rules
+
+Extensions live under `src/extensions/<name>/` (`configDefaults.paths.extensionsDir`):
+
+```
+src/extensions/banner/
+├── banner.manifest.json                          # componentType: Extension
+└── BannerApplicationCustomizer.ts                # class BannerApplicationCustomizer extends BaseApplicationCustomizer
+```
+
+- Manifest: `id` (UUID), `alias: "<Pascal>ApplicationCustomizer"`, `componentType: "Extension"`, `extensionType: "ApplicationCustomizer" | "FieldCustomizer" | "ListViewCommandSet"`, `version: "*"`, `manifestVersion: 2`, `requiresCustomScript: false` (`packages/templates/src/index.ts:550` `extensionManifest()`).
+- Entrypoint class name must match alias convention; template generates `<Pascal><Suffix>` where suffix follows `extensionSuffix()` (`packages/templates/src/index.ts:524`).
+- Package input type: `Extension` → `<featureId>/Extension_<id>.xml` with `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`, `ClientSideComponentProperties="null"` and a fresh `ClientSideComponentInstance` UUID per build (`packages/sppkg-builder/src/sppkg-builder.ts:84`, `reference/FORMATS.md` §4).
+- Discovery merges `src/webparts/*` + `src/extensions/*` — a project can mix both; `rspfx package` embeds them in the same `.sppkg` ([multi-webpart.md](multi-webpart.md#extensions-alongside-web-parts)).
+
+### Schema links (official Microsoft schemas)
+
+- Web part manifest: https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json
+- Extension manifest: https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json
+- `config.json`: https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json
+- `package-solution.json`: https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json
+- `serve.json`: https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json
+- `write-manifests.json`: https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json
+- Teams app manifest v1.13: https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json
+
+Microsoft Learn — SPFx manifest overview: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-manifest-schema · Extensions: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions · Teams SPFx: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/integrate-with-teams-introduction

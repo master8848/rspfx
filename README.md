@@ -91,12 +91,16 @@ It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
 | Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
 | Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
 | Command reference | [docs/commands.md](docs/commands.md) |
+| Project structure & file paths | [docs/project-structure.md](docs/project-structure.md) |
+| Deployment guide (catalog, Teams/Outlook, CDN) | [docs/deployment.md](docs/deployment.md) |
 | Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |
 | Move an existing project off gulp/Heft | [docs/migrating-from-gulp-heft.md](docs/migrating-from-gulp-heft.md) |
 | Migration overview | [docs/migration-from-spfx.md](docs/migration-from-spfx.md) |
 | Real-world case study (PnP Modern Search) | [docs/migration-case-study.md](docs/migration-case-study.md) |
 | Why you should NOT migrate (yet) | [docs/why-not-to-migrate.md](docs/why-not-to-migrate.md) |
 | Framework support | [docs/frameworks.md](docs/frameworks.md) |
+| Multi-webpart & extensions | [docs/multi-webpart.md](docs/multi-webpart.md) |
+| Teams & Outlook install | [docs/teams-outlook-install.md](docs/teams-outlook-install.md) |
 | Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
 | Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |
