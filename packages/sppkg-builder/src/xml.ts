@@ -85,6 +85,24 @@ export function buildRelsXml(relationships: Relationship[], pretty: boolean): st
   return `${XML_DECLARATION}\n${serializeXml(root, pretty)}`;
 }
 
+const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
+  js: 'application/javascript',
+  json: 'application/json',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  css: 'text/css',
+  txt: 'text/plain',
+  htm: 'text/html',
+  html: 'text/html',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  eot: 'application/vnd.ms-fontobject'
+};
+
 export function buildContentTypesXml(extensions: string[], pretty: boolean): string {
   const children: XmlNode[] = [
     {
@@ -94,7 +112,10 @@ export function buildContentTypesXml(extensions: string[], pretty: boolean): str
     { name: 'Default', attrs: { Extension: 'xml', ContentType: 'application/xml' } },
     ...extensions.map((extension) => ({
       name: 'Default',
-      attrs: { Extension: extension, ContentType: 'application/octet-stream' }
+      attrs: {
+        Extension: extension,
+        ContentType: CONTENT_TYPE_BY_EXTENSION[extension.toLowerCase()] ?? 'application/octet-stream'
+      }
     }))
   ];
   const root: XmlNode = {
@@ -197,10 +218,12 @@ export interface AppManifestOptions {
 const DEVELOPER_PROPERTY_NAMES: string[] = ['name', 'websiteUrl', 'privacyUrl', 'termsOfUseUrl', 'mpnId'];
 
 export function buildAppManifestXml(options: AppManifestOptions): string {
+  const rawProductId = options.productId.trim();
+  const productId = rawProductId.startsWith('{') && rawProductId.endsWith('}') ? rawProductId : `{${rawProductId}}`;
   const attrs: XmlAttributes = {
     xmlns: 'http://schemas.microsoft.com/sharepoint/2012/app/manifest',
     Name: options.name,
-    ProductID: options.productId,
+    ProductID: productId,
     SharePointMinVersion: '16.0.0.0',
     IsClientSideSolution: 'true'
   };

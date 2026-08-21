@@ -97,7 +97,7 @@ describe('buildPackage', () => {
       expect(zip.get('ClientSideAssets/hello.js')).toEqual(helloContent);
 
       expect(result.appManifest).toContain('IsClientSideSolution="true"');
-      expect(result.appManifest).toContain(`ProductID="${solutionId}"`);
+      expect(result.appManifest).toContain(`ProductID="{${solutionId}}"`);
       expect(result.appManifest).toContain('SkipFeatureDeployment="true"');
       expect(result.appManifest).toContain('Name="rspfx-test-solution"');
       expect(result.appManifest).toContain('<Title>rspfx-test-solution</Title>');

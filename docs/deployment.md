@@ -228,5 +228,6 @@ Cache `node_modules` and `.rspack-cache` between runs; production builds ignore 
 | API permission 403 | `webApiPermissionRequests` not yet approved in Admin `API access` — approve per §5 |
 | `DEPLOY_TIMEOUT` after 120 s | Catalog throttling or large `.sppkg` — retry; `apps/cli/src/commands/deploy.ts:62` `AbortSignal.timeout(120_000)` |
 | `{tenantdomain}` literal in workbench URL | No tenant domain configured — set `dev.tenantUrl` in `rspack.config.ts`, or `SPFX_SERVE_TENANT_DOMAIN` env, or `--tenant` flag |
+| `IsValidAppPackage:false, AppProductID:null, Title:null` on upload | SharePoint OPC parser rejected `AppManifest.xml` — verify `ProductID` is `"{<guid>}"` with braces (`packages/sppkg-builder/src/xml.ts:220`), `[Content_Types].xml` MIME types (`packages/sppkg-builder/src/xml.ts:88`), and zip root has `[Content_Types].xml` + `_rels/.rels` → `AppManifest.xml` (see [reference/FORMATS.md](../reference/FORMATS.md) §4) |
 
 For packing internals and zip entry validation see [building-packages.md](building-packages.md#what-rspfx-package-produces) and [real-tenant-validation.md](real-tenant-validation.md#validation-checklist).

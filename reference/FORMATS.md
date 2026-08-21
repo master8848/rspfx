@@ -125,12 +125,11 @@ ClientSideAssets.xml.rels
 ClientSideAssets/<file>          → bundles + assets (component JS, maps excluded)
 ```
 
-- ComponentManifest JSON is stringified into the XML attribute.
-- With `includeClientSideAssets` (production only), every manifest
-  `loaderConfig.internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']`
-  (SharePoint rewrites at install).
-- Content types: extension → mime (js → application/octet-stream by default).
-- output path from `paths.zippedPackage` (e.g. `sharepoint/solution/<name>.sppkg`).
+- ComponentManifest JSON is stringified into the XML attribute (single-quoted, entities escaped) — see `packages/sppkg-builder/src/xml.ts:188` `buildElementsXml()`.
+- With `includeClientSideAssets` (production only), every manifest `loaderConfig.internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']` (SharePoint rewrites at install).
+- `[Content_Types].xml` maps each embedded extension to its MIME type via `packages/sppkg-builder/src/xml.ts:88` `CONTENT_TYPE_BY_EXTENSION` (`js` → `application/javascript`, `json` → `application/json`, `png` → `image/png`, etc.; unknown → `application/octet-stream`); `rels` and `xml` are always `application/vnd.openxmlformats-package.relationships+xml` and `application/xml`.
+- `AppManifest.xml` `ProductID` is `{<solution.id>}` with braces (`packages/sppkg-builder/src/xml.ts:220` `buildAppManifestXml()` normalizes bare GUIDs); a bare GUID fails SharePoint OPC parsing and yields `IsValidAppPackage:false, AppProductID:null, Title:null`.
+- OPC package: zip root contains `[Content_Types].xml` and `_rels/.rels`; `_rels/.rels` has `Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/package-manifest"` → `Target="AppManifest.xml"` (`packages/sppkg-builder/src/sppkg-builder.ts:105` `buildPackage()`); output path from `paths.zippedPackage` (e.g. `sharepoint/solution/<name>.sppkg`).
 
 ## 5. Dev server (serve mode, heft-era SPFx — our reference behavior)
 
