@@ -17,6 +17,9 @@ export default {
       },
       build: {
         minify: true
+      },
+      teams: {
+        enabled: true
       }
     })
   ]
