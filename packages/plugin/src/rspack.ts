@@ -77,7 +77,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   apply(compiler: Compiler): void {
     let project: ReadProjectResult;
     try {
-      project = readProject(this.projectRoot, this._options.paths);
+      project = readProject(this.projectRoot, this._options.paths, this._options.version, this._options);
     } catch (error) {
       logger.warn(
         'RspfxPlugin: no web part bundles discovered — SPFx configuration skipped. ' +

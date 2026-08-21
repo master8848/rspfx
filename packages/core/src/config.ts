@@ -41,6 +41,10 @@ export interface PlaygroundConfig {
   enabled?: boolean;
 }
 
+export interface TeamsConfig {
+  enabled?: boolean;
+}
+
 export interface RspfxConfig {
   name: string;
   /** Build-time package version used in AMD library names and manifests; overrides package.json "version". */
@@ -55,6 +59,8 @@ export interface RspfxConfig {
   paths?: PathsConfig;
   deploy?: DeployConfig;
   playground?: PlaygroundConfig;
+  /** Teams integration; when enabled, teams/manifest.json and icons are auto-created. Disabled by default. */
+  teams?: boolean | TeamsConfig;
 }
 
 export function defineConfig(config: RspfxConfig): RspfxConfig {
@@ -98,6 +104,14 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
   if (!config.name) {
     throw new Error('rspfx: "name" is required in the bundler config (rspack.config.ts)');
   }
+  let teams: TeamsConfig | undefined;
+  if (config.teams !== undefined) {
+    if (typeof config.teams === 'boolean') {
+      teams = { enabled: config.teams };
+    } else if (typeof config.teams === 'object' && config.teams !== null) {
+      teams = { enabled: !!(config.teams as TeamsConfig).enabled };
+    }
+  }
   return {
     name: config.name,
     ...(config.version !== undefined ? { version: config.version } : {}),
@@ -124,6 +138,7 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     },
     paths: resolvePathDefaults(config.paths),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
-    ...(config.playground !== undefined ? { playground: config.playground } : {})
+    ...(config.playground !== undefined ? { playground: config.playground } : {}),
+    ...(teams !== undefined ? { teams } : {})
   };
 }

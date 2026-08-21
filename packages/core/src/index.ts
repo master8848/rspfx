@@ -6,7 +6,8 @@ export type {
   FrameworkId,
   PathsConfig,
   PlaygroundConfig,
-  RspfxConfig
+  RspfxConfig,
+  TeamsConfig
 } from './config.js';
 export { SPFX_DEFAULT_TARGET, SPFX_TARGETS, SPFX_VERSIONS, isSpfxTarget, spfxNpmVersion } from './versions.js';
 export type { SpfxReleaseStatus, SpfxTarget, SpfxToolchain, SpfxVersionInfo } from './versions.js';

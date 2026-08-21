@@ -10,7 +10,8 @@ import {
   type BuildConfig,
   type FrameworkId,
   type PathsConfig,
-  type RspfxConfig
+  type RspfxConfig,
+  type TeamsConfig
 } from '@mbsks/rspfx-core';
 import type {
   BundleEntry,
@@ -229,9 +230,24 @@ function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>):
   return undefined;
 }
 
+function isTeamsEnabled(rspfxConfig?: RspfxConfig): boolean {
+  if (!rspfxConfig?.teams) {
+    return false;
+  }
+  const teams = rspfxConfig.teams as boolean | TeamsConfig;
+  if (typeof teams === 'boolean') {
+    return teams;
+  }
+  if (typeof teams === 'object' && teams !== null) {
+    return !!(teams as TeamsConfig).enabled;
+  }
+  return false;
+}
+
 export function ensureProjectConfigs(
   projectRoot: string,
-  paths?: PathsConfig
+  paths?: PathsConfig,
+  rspfxConfig?: RspfxConfig
 ): void {
   const resolvedPaths = resolvePathDefaults(paths);
   const logger = createLogger('rspfx');
@@ -392,115 +408,117 @@ export function ensureProjectConfigs(
     }
   }
 
-  // teams/manifest.json and icons
-  const teamsDir = path.join(projectRoot, 'teams');
-  const teamsManifestPath = path.join(teamsDir, 'manifest.json');
-  let teamsComponentId: string | undefined;
-  if (fs.existsSync(teamsManifestPath)) {
-    try {
-      const manifest = JSON.parse(fs.readFileSync(teamsManifestPath, 'utf8')) as { id?: string };
-      if (typeof manifest.id === 'string' && manifest.id) {
-        teamsComponentId = manifest.id;
+  // teams/manifest.json and icons — only when teams integration is enabled
+  if (isTeamsEnabled(rspfxConfig)) {
+    const teamsDir = path.join(projectRoot, 'teams');
+    const teamsManifestPath = path.join(teamsDir, 'manifest.json');
+    let teamsComponentId: string | undefined;
+    if (fs.existsSync(teamsManifestPath)) {
+      try {
+        const manifest = JSON.parse(fs.readFileSync(teamsManifestPath, 'utf8')) as { id?: string };
+        if (typeof manifest.id === 'string' && manifest.id) {
+          teamsComponentId = manifest.id;
+        }
+      } catch (error) {
+        logger.warn(
+          `Config broken, not overwriting: ${path.relative(projectRoot, teamsManifestPath)} - ${error instanceof Error ? error.message : String(error)}`
+        );
+        teamsComponentId = discoverComponentId(projectRoot, resolvedPaths) ?? randomUUID();
+        if (!discoverComponentId(projectRoot, resolvedPaths)) {
+          logger.warn(`No web part manifest found to infer componentId for teams icons, generated id: ${teamsComponentId}`);
+        }
       }
-    } catch (error) {
-      logger.warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, teamsManifestPath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-      teamsComponentId = discoverComponentId(projectRoot, resolvedPaths) ?? randomUUID();
-      if (!discoverComponentId(projectRoot, resolvedPaths)) {
-        logger.warn(`No web part manifest found to infer componentId for teams icons, generated id: ${teamsComponentId}`);
+    } else {
+      teamsComponentId = discoverComponentId(projectRoot, resolvedPaths);
+      if (!teamsComponentId) {
+        teamsComponentId = randomUUID();
+        logger.warn(`No web part manifest found to infer componentId for teams manifest, generated new id: ${teamsComponentId}`);
       }
-    }
-  } else {
-    teamsComponentId = discoverComponentId(projectRoot, resolvedPaths);
-    if (!teamsComponentId) {
-      teamsComponentId = randomUUID();
-      logger.warn(`No web part manifest found to infer componentId for teams manifest, generated new id: ${teamsComponentId}`);
-    }
-    fs.mkdirSync(teamsDir, { recursive: true });
-    let packageName = 'my-solution';
-    try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
-      if (pkg.name) {
-        packageName = pkg.name;
+      fs.mkdirSync(teamsDir, { recursive: true });
+      let packageName = 'my-solution';
+      try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
+        if (pkg.name) {
+          packageName = pkg.name;
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-    const shortName = packageName.replace(/^@[^/]+\//, '');
-    const tabUrl = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=${teamsComponentId}%26forceLocale={locale}`;
-    const content = JSON.stringify(
-      {
-        $schema: 'https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json',
-        manifestVersion: '1.13',
-        version: '1.0.0',
-        id: teamsComponentId,
-        packageName: `com.contoso.${shortName}`,
-        developer: {
-          name: 'SPFx + Teams Dev',
-          websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
-          privacyUrl: 'https://privacy.microsoft.com/en-us/privacystatement',
-          termsOfUseUrl: 'https://www.microsoft.com/en-us/servicesagreement'
-        },
-        name: { short: shortName, full: shortName },
-        description: { short: `${shortName} description`, full: `${shortName} description` },
-        icons: {
-          outline: `${teamsComponentId}_outline.png`,
-          color: `${teamsComponentId}_color.png`
-        },
-        accentColor: '#FFFFFF',
-        staticTabs: [
-          {
-            entityId: teamsComponentId,
-            name: shortName,
-            contentUrl: tabUrl,
+      const shortName = packageName.replace(/^@[^/]+\//, '');
+      const tabUrl = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=${teamsComponentId}%26forceLocale={locale}`;
+      const content = JSON.stringify(
+        {
+          $schema: 'https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json',
+          manifestVersion: '1.13',
+          version: '1.0.0',
+          id: teamsComponentId,
+          packageName: `com.contoso.${shortName}`,
+          developer: {
+            name: 'SPFx + Teams Dev',
             websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
-            scopes: ['personal']
-          }
-        ],
-        configurableTabs: [
-          {
-            configurationUrl: tabUrl,
-            canUpdateConfiguration: true,
-            scopes: ['team']
-          }
-        ],
-        validDomains: [
-          '*.login.microsoftonline.com',
-          '*.sharepoint.com',
-          '*.sharepoint-df.com',
-          'spoppe-a.akamaihd.net',
-          'spoprod-a.akamaihd.net',
-          '*.microsoftonline.com',
-          '*.microsoftonline-p.com',
-          '*.msauth.net',
-          '*.msauthimages.net',
-          '*.msftauth.net',
-          '*.msftauthimages.net',
-          '*.office.com',
-          '*.officeapps.live.com',
-          '*.secure.aadcdn.microsoftonline-p.com'
-        ]
-      },
-      null,
-      2
-    );
-    fs.writeFileSync(teamsManifestPath, content);
-    logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, teamsManifestPath)}`);
-  }
+            privacyUrl: 'https://privacy.microsoft.com/en-us/privacystatement',
+            termsOfUseUrl: 'https://www.microsoft.com/en-us/servicesagreement'
+          },
+          name: { short: shortName, full: shortName },
+          description: { short: `${shortName} description`, full: `${shortName} description` },
+          icons: {
+            outline: `${teamsComponentId}_outline.png`,
+            color: `${teamsComponentId}_color.png`
+          },
+          accentColor: '#FFFFFF',
+          staticTabs: [
+            {
+              entityId: teamsComponentId,
+              name: shortName,
+              contentUrl: tabUrl,
+              websiteUrl: 'https://products.office.com/en-us/sharepoint/collaboration',
+              scopes: ['personal']
+            }
+          ],
+          configurableTabs: [
+            {
+              configurationUrl: tabUrl,
+              canUpdateConfiguration: true,
+              scopes: ['team']
+            }
+          ],
+          validDomains: [
+            '*.login.microsoftonline.com',
+            '*.sharepoint.com',
+            '*.sharepoint-df.com',
+            'spoppe-a.akamaihd.net',
+            'spoprod-a.akamaihd.net',
+            '*.microsoftonline.com',
+            '*.microsoftonline-p.com',
+            '*.msauth.net',
+            '*.msauthimages.net',
+            '*.msftauth.net',
+            '*.msftauthimages.net',
+            '*.office.com',
+            '*.officeapps.live.com',
+            '*.secure.aadcdn.microsoftonline-p.com'
+          ]
+        },
+        null,
+        2
+      );
+      fs.writeFileSync(teamsManifestPath, content);
+      logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, teamsManifestPath)}`);
+    }
 
-  if (teamsComponentId) {
-    for (const suffix of ['_color.png', '_outline.png'] as const) {
-      const iconPath = path.join(teamsDir, `${teamsComponentId}${suffix}`);
-      if (!fs.existsSync(iconPath)) {
-        fs.mkdirSync(path.dirname(iconPath), { recursive: true });
-        const isColor = suffix === '_color.png';
-        const width = isColor ? 192 : 32;
-        const height = isColor ? 192 : 32;
-        const rgb: [number, number, number] = isColor ? [0, 120, 212] : [50, 49, 48];
-        const buffer = solidPngBuffer(width, height, rgb);
-        fs.writeFileSync(iconPath, buffer);
-        logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, iconPath)}`);
+    if (teamsComponentId) {
+      for (const suffix of ['_color.png', '_outline.png'] as const) {
+        const iconPath = path.join(teamsDir, `${teamsComponentId}${suffix}`);
+        if (!fs.existsSync(iconPath)) {
+          fs.mkdirSync(path.dirname(iconPath), { recursive: true });
+          const isColor = suffix === '_color.png';
+          const width = isColor ? 192 : 32;
+          const height = isColor ? 192 : 32;
+          const rgb: [number, number, number] = isColor ? [0, 120, 212] : [50, 49, 48];
+          const buffer = solidPngBuffer(width, height, rgb);
+          fs.writeFileSync(iconPath, buffer);
+          logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, iconPath)}`);
+        }
       }
     }
   }
@@ -509,11 +527,12 @@ export function ensureProjectConfigs(
 export function readProject(
   projectRoot: string,
   paths?: PathsConfig,
-  versionOverride?: string
+  versionOverride?: string,
+  rspfxConfig?: RspfxConfig
 ): ReadProjectResult {
   const resolvedPaths = resolvePathDefaults(paths);
   loadDotEnv(projectRoot);
-  ensureProjectConfigs(projectRoot, resolvedPaths);
+  ensureProjectConfigs(projectRoot, resolvedPaths, rspfxConfig);
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
   if (fs.existsSync(packageJsonPath)) {

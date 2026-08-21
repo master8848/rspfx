@@ -40,7 +40,7 @@ export async function runDev(cwd: string, opts: DevOptions = {}): Promise<DevRun
   const config = loaded.config;
 
   if (loaded.bundler === 'vite' || loaded.bundler === 'rsbuild') {
-    const project = readProject(cwd, config.paths, config.version);
+    const project = readProject(cwd, config.paths, config.version, config);
     const settings = resolveServeSettings(
       { port: opts.port, tenantDomain: opts.tenant, config },
       project.serveJson

@@ -124,7 +124,7 @@ export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig):
 
 export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
   const config = resolveConfig(opts.config);
-  const project = readProject(opts.projectRoot, config.paths, config.version);
+  const project = readProject(opts.projectRoot, config.paths, config.version, config);
 
   const settings = resolveServeSettings(opts, project.serveJson);
   const mode = resolveServeMode(opts, settings.tenantDomain);
@@ -157,7 +157,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   let closing = false;
 
   const startOnce = async (port?: number): Promise<StartDevServerResult> => {
-    const currentProject = readProject(opts.projectRoot, config.paths, config.version);
+    const currentProject = readProject(opts.projectRoot, config.paths, config.version, config);
     const entries = local
       ? [...currentProject.webParts.entries, localRuntimeEntry(currentProject.webParts.packageVersion)]
       : currentProject.webParts.entries;

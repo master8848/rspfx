@@ -69,7 +69,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
     setup(api) {
       const read = (): ReadProjectResult | undefined => {
         try {
-          return readProject(root, resolved.paths, resolved.version);
+          return readProject(root, resolved.paths, resolved.version, resolved);
         } catch (error) {
           api.logger.warn(
             'rspfxRsbuild: no web part bundles discovered — SPFx pipeline skipped. ' +

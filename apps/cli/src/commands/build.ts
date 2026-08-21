@@ -38,7 +38,7 @@ export interface BuildOutput {
 export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<BuildOutput> {
   const loaded = await loadConfig(cwd);
   const config = loaded.config;
-  const project = readProject(cwd, config.paths, config.version);
+  const project = readProject(cwd, config.paths, config.version, config);
 
   const externals = collectExternals(cwd, project);
 

@@ -23,6 +23,8 @@ export interface TemplateVars {
   featureId: string;
   packageName: string;
   packageVersion: string;
+  /** When false, skip teams/manifest.json scaffold; defaults to true for backward compat. */
+  teams?: boolean;
 }
 
 export async function scaffoldProject(vars: TemplateVars, destDir: string): Promise<string[]> {
@@ -109,11 +111,15 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: `src/webparts/${vars.name}/components/${vars.namePascal}${componentExtension(vars)}`, content: component(vars) },
     { path: `src/webparts/${vars.name}/assets/.gitkeep`, content: '' },
     { path: `src/webparts/${vars.name}/loc/en-us.ts`, content: localeStrings(vars, 'en-us', 'Description') },
-    { path: `src/webparts/${vars.name}/loc/fr-fr.ts`, content: localeStrings(vars, 'fr-fr', 'La description') },
-    { path: `teams/${vars.componentId}_color.png`, content: solidPng(192, 192, [0, 120, 212]) },
-    { path: `teams/${vars.componentId}_outline.png`, content: solidPng(32, 32, [50, 49, 48]) },
-    { path: 'teams/manifest.json', content: teamsManifest(vars) }
+    { path: `src/webparts/${vars.name}/loc/fr-fr.ts`, content: localeStrings(vars, 'fr-fr', 'La description') }
   );
+  if (vars.teams !== false) {
+    files.push(
+      { path: `teams/${vars.componentId}_color.png`, content: solidPng(192, 192, [0, 120, 212]) },
+      { path: `teams/${vars.componentId}_outline.png`, content: solidPng(32, 32, [50, 49, 48]) },
+      { path: 'teams/manifest.json', content: teamsManifest(vars) }
+    );
+  }
   files.push({
     path: `src/webparts/${vars.name}/styles/${vars.namePascal}.module.scss`,
     content: stylesheet(vars)

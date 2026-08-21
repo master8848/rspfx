@@ -234,7 +234,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     (command === 'serve' ? 'development' : 'production');
 
   const createConfig = async (overrides: ViteBuildOverrides = {}): Promise<Record<string, unknown>> => {
-    const project = readProject(root, resolved.paths, resolved.version);
+    const project = readProject(root, resolved.paths, resolved.version, resolved);
     const settings = resolveServeSettings({ config: resolved }, project.serveJson);
     const mode = effectiveMode();
     const entry = selectEntry(project.webParts.entries, process.env[VITE_ENV.entry]);
@@ -311,7 +311,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
   };
 
   const currentEntryName = (): string => {
-    const project = readProject(root, resolved.paths, resolved.version);
+    const project = readProject(root, resolved.paths, resolved.version, resolved);
     return process.env[VITE_ENV.entry] ?? project.webParts.entries[0]!.name;
   };
 
@@ -362,7 +362,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     },
 
     configureServer(server) {
-      const project = readProject(root, resolved.paths, resolved.version);
+      const project = readProject(root, resolved.paths, resolved.version, resolved);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
       const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain);
       const reload = createReloadController();
@@ -467,7 +467,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       if (command !== 'build') {
         return;
       }
-      const project = readProject(root, resolved.paths, resolved.version);
+      const project = readProject(root, resolved.paths, resolved.version, resolved);
       const vite = await importViteFrom(root);
       for (const entry of project.webParts.entries.slice(1)) {
         await withEnv(entry, async () => {
