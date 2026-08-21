@@ -243,7 +243,11 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
     const developerProperties: Record<string, string> = {};
     for (const key of DEVELOPER_PROPERTY_NAMES) {
       if (options.developer[key] !== undefined) {
-        developerProperties[key] = String(options.developer[key]);
+        const value = String(options.developer[key]).trim();
+        if (value === '' || value === 'Undefined-0000') {
+          continue;
+        }
+        developerProperties[key] = value;
       }
     }
     if (Object.keys(developerProperties).length > 0) {
