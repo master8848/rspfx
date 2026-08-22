@@ -28,7 +28,12 @@ const DOUBLE_QUOTE = /"/g;
 const SINGLE_QUOTE = /'/g;
 
 export function escapeXmlText(value: string): string {
-  return value.replace(AMPERSAND, '&amp;').replace(LESS_THAN, '&lt;').replace(GREATER_THAN, '&gt;');
+  return value
+    .replace(AMPERSAND, '&amp;')
+    .replace(LESS_THAN, '&lt;')
+    .replace(GREATER_THAN, '&gt;')
+    .replace(DOUBLE_QUOTE, '&quot;')
+    .replace(SINGLE_QUOTE, '&apos;');
 }
 
 export function escapeXmlAttribute(value: string): string {
@@ -94,7 +99,7 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   gif: 'image/gif',
   svg: 'image/svg+xml',
   css: 'text/css',
-  txt: 'text/plain',
+  txt: 'application/octet-stream',
   htm: 'text/html',
   html: 'text/html',
   woff: 'font/woff',
@@ -103,21 +108,36 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   eot: 'application/vnd.ms-fontobject'
 };
 
+const DEFAULT_CONTENT_TYPES_ORDERED: [string, string][] = [
+  ['xml', 'text/xml'],
+  ['rels', 'application/vnd.openxmlformats-package.relationships+xml'],
+  ['webpart', 'text/xml'],
+  ['htm', 'text/html'],
+  ['html', 'text/html'],
+  ['aspx', 'text/xml'],
+  ['resx', 'text/xml'],
+  ['js', 'application/javascript'],
+  ['json', 'application/json'],
+  ['png', 'image/png'],
+  ['jpg', 'image/jpeg'],
+  ['bmp', 'image/bmp'],
+  ['gif', 'image/gif'],
+  ['txt', 'application/octet-stream']
+];
+
 export function buildContentTypesXml(extensions: string[], pretty: boolean): string {
-  const children: XmlNode[] = [
-    {
-      name: 'Default',
-      attrs: { Extension: 'rels', ContentType: 'application/vnd.openxmlformats-package.relationships+xml' }
-    },
-    { name: 'Default', attrs: { Extension: 'xml', ContentType: 'application/xml' } },
-    ...extensions.map((extension) => ({
-      name: 'Default',
-      attrs: {
-        Extension: extension,
-        ContentType: CONTENT_TYPE_BY_EXTENSION[extension.toLowerCase()] ?? 'application/octet-stream'
-      }
-    }))
-  ];
+  const defaultSet = new Set(DEFAULT_CONTENT_TYPES_ORDERED.map(([ext]) => ext));
+  const extra = [...new Set(extensions.map((e) => e.toLowerCase()))]
+    .filter((ext) => !defaultSet.has(ext) && ext !== 'xml' && ext !== 'rels')
+    .sort();
+  const ordered: [string, string][] = [...DEFAULT_CONTENT_TYPES_ORDERED];
+  for (const ext of extra) {
+    ordered.push([ext, CONTENT_TYPE_BY_EXTENSION[ext] ?? 'application/octet-stream']);
+  }
+  const children: XmlNode[] = ordered.map(([ext, ct]) => ({
+    name: 'Default',
+    attrs: { Extension: ext, ContentType: ct }
+  }));
   const root: XmlNode = {
     name: 'Types',
     attrs: { xmlns: 'http://schemas.openxmlformats.org/package/2006/content-types' },
@@ -149,11 +169,11 @@ export function buildFeatureXml(feature: FeatureXmlInfo, pretty: boolean): strin
   return `${XML_DECLARATION}\n${serializeXml(root, pretty)}`;
 }
 
-export function buildAppPartConfigXml(featureId: string, pretty: boolean): string {
+export function buildAppPartConfigXml(_featureId: string, pretty: boolean): string {
   const root: XmlNode = {
     name: 'AppPartConfig',
     attrs: { xmlns: 'http://schemas.microsoft.com/sharepoint/2012/app/partconfiguration' },
-    children: [{ name: 'Id', children: [featureId] }]
+    children: [{ name: 'Id', children: [randomUUID()] }]
   };
   return `${XML_DECLARATION}\n${serializeXml(root, pretty)}`;
 }
@@ -204,10 +224,11 @@ export function buildElementsXml(
 
 export interface AppManifestOptions {
   name: string;
+  title?: string;
   productId: string;
   version?: string;
   skipFeatureDeployment: boolean;
-  isDomainIsolated: boolean;
+  isDomainIsolated?: boolean;
   developer?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   localizedStrings?: { locale: string; values: Record<string, string> }[];
@@ -219,7 +240,7 @@ const DEVELOPER_PROPERTY_NAMES: string[] = ['name', 'websiteUrl', 'privacyUrl', 
 
 export function buildAppManifestXml(options: AppManifestOptions): string {
   const rawProductId = options.productId.trim();
-  const productId = rawProductId.startsWith('{') && rawProductId.endsWith('}') ? rawProductId : `{${rawProductId}}`;
+  const productId = rawProductId;
   const attrs: XmlAttributes = {
     xmlns: 'http://schemas.microsoft.com/sharepoint/2012/app/manifest',
     Name: options.name,
@@ -233,26 +254,19 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
   if (options.skipFeatureDeployment) {
     attrs.SkipFeatureDeployment = 'true';
   }
-  if (options.isDomainIsolated) {
-    attrs.IsDomainIsolated = 'true';
+  if (options.isDomainIsolated !== undefined) {
+    attrs.IsDomainIsolated = String(options.isDomainIsolated);
   }
 
-  const properties: XmlNode[] = [{ name: 'Title', children: [options.name] }];
+  const title = options.title ? String(options.title) : options.name;
+  const properties: XmlNode[] = [{ name: 'Title', children: [title] }];
 
   if (options.developer) {
     const developerProperties: Record<string, string> = {};
     for (const key of DEVELOPER_PROPERTY_NAMES) {
-      if (options.developer[key] !== undefined) {
-        const value = String(options.developer[key]).trim();
-        if (value === '' || value === 'Undefined-0000') {
-          continue;
-        }
-        developerProperties[key] = value;
-      }
+      developerProperties[key] = String(options.developer[key] ?? '');
     }
-    if (Object.keys(developerProperties).length > 0) {
-      properties.push({ name: 'DeveloperProperties', children: [JSON.stringify(developerProperties)] });
-    }
+    properties.push({ name: 'DeveloperProperties', children: [JSON.stringify(developerProperties)] });
   }
 
   if (options.metadata) {
@@ -265,8 +279,9 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
       properties.push(longDescription);
     }
     if (Array.isArray(options.metadata.categories)) {
-      for (const category of options.metadata.categories) {
-        properties.push({ name: 'Category', children: [String(category)] });
+      const categories = (options.metadata.categories as unknown[]).map((c) => String(c)).filter((c) => c.length > 0);
+      if (categories.length > 0) {
+        properties.push({ name: 'CategoryID', children: [categories.slice(0, 3).join(',')] });
       }
     }
     if (typeof options.metadata.videoUrl === 'string') {
@@ -274,6 +289,16 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
     }
     if (typeof options.metadata.appIconPath === 'string') {
       properties.push({ name: 'AppIconPath', children: [options.metadata.appIconPath] });
+    }
+    if (Array.isArray(options.metadata.screenshotPaths)) {
+      const screenshots = options.metadata.screenshotPaths as unknown[];
+      properties.push({
+        name: 'Screenshots',
+        children: screenshots.map((p) => ({
+          name: 'Screenshot',
+          children: [{ name: 'Filename', children: [String(p)] }]
+        }))
+      });
     }
   }
 

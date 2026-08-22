@@ -102,7 +102,7 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
     );
     expect(xml).toContain(
       `    <LongDescription>\n` +
-        `      <LocalizedString CultureName="en-US">A test with &amp; entities &lt;like&gt; 'those' "quotes"</LocalizedString>\n` +
+        `      <LocalizedString CultureName="en-US">A test with &amp; entities &lt;like&gt; &apos;those&apos; &quot;quotes&quot;</LocalizedString>\n` +
         `      <LocalizedString CultureName="fr-FR">Une solution de test</LocalizedString>\n` +
         `    </LongDescription>`
     );
@@ -169,12 +169,12 @@ describe('buildPackage (resx + teams)', () => {
       expect(zip.get('Resources.resx')).toEqual(await readFile(path.join(resxFixtureRoot, 'Resources.resx')));
       expect(zip.get('Resources.fr-fr.resx')).toEqual(await readFile(path.join(resxFixtureRoot, 'Resources.fr-fr.resx')));
 
-      const rels = zip.get('AppManifest.xml.rels')!.toString('utf8');
+      const rels = zip.get('_rels/AppManifest.xml.rels')!.toString('utf8');
       expect(rels).toContain(
-        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-defaultresource" Target="Resources.resx"'
+        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-defaultresource" Target="/Resources.resx"'
       );
       expect(rels).toContain(
-        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-resource" Target="Resources.fr-fr.resx"'
+        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-resource" Target="/Resources.fr-fr.resx"'
       );
 
       const appManifest = result.appManifest;
@@ -185,7 +185,7 @@ describe('buildPackage (resx + teams)', () => {
           `    </ShortDescription>`
       );
       expect(appManifest).toContain(
-        `      <LocalizedString CultureName="default">A test solution with &amp; entities &lt;like&gt; 'these' "quotes"</LocalizedString>`
+        `      <LocalizedString CultureName="default">A test solution with &amp; entities &lt;like&gt; &apos;these&apos; &quot;quotes&quot;</LocalizedString>`
       );
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
@@ -220,8 +220,8 @@ describe('buildPackage (resx + teams)', () => {
       expect(zip.get('ClientSideAssets/outline.png')).toEqual(
         await readFile(path.join(teamsFixtureRoot, 'outline.png'))
       );
-      const rels = zip.get('ClientSideAssets.xml.rels')!.toString('utf8');
-      expect(rels).toContain('Target="ClientSideAssets/manifest.json"');
+      const rels = zip.get('_rels/ClientSideAssets.xml.rels')!.toString('utf8');
+      expect(rels).toContain('Target="/ClientSideAssets/manifest.json"');
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }

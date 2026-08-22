@@ -79,14 +79,14 @@ describe('buildPackage', () => {
           '[Content_Types].xml',
           '_rels/.rels',
           'AppManifest.xml',
-          'AppManifest.xml.rels',
+          '_rels/AppManifest.xml.rels',
           `feature_${featureId}.xml`,
           `feature_${featureId}.xml.config.xml`,
-          `feature_${featureId}.xml.rels`,
+          `_rels/feature_${featureId}.xml.rels`,
           `${featureId}/WebPart_${componentId}.xml`,
           'ClientSideAssets.xml',
           'ClientSideAssets.xml.config.xml',
-          'ClientSideAssets.xml.rels',
+          '_rels/ClientSideAssets.xml.rels',
           'ClientSideAssets/hello.js'
         ].sort()
       );
@@ -97,10 +97,14 @@ describe('buildPackage', () => {
       expect(zip.get('ClientSideAssets/hello.js')).toEqual(helloContent);
 
       expect(result.appManifest).toContain('IsClientSideSolution="true"');
-      expect(result.appManifest).toContain(`ProductID="{${solutionId}}"`);
+      expect(result.appManifest).toContain(`ProductID="${solutionId}"`);
+      expect(result.appManifest).not.toContain(`ProductID="{${solutionId}}"`);
+      expect(result.appManifest).toContain('IsDomainIsolated="false"');
       expect(result.appManifest).toContain('SkipFeatureDeployment="true"');
       expect(result.appManifest).toContain('Name="rspfx-test-solution"');
       expect(result.appManifest).toContain('<Title>rspfx-test-solution</Title>');
+      expect(result.appManifest).toContain('DeveloperProperties');
+      expect(result.appManifest).toContain('&quot;name&quot;');
 
       const webPartXml = zip.get(`${featureId}/WebPart_${componentId}.xml`)!.toString('utf8');
       expect(webPartXml).toContain('Type="WebPart"');
@@ -124,14 +128,13 @@ describe('buildPackage', () => {
       expect(featureXml).toContain('Scope="Web"');
       expect(featureXml).toContain('Hidden="FALSE"');
 
-      const featureRels = zip.get(`feature_${featureId}.xml.rels`)!.toString('utf8');
-      expect(featureRels).toContain(
-        'Type="http://schemas.microsoft.com/sharepoint/2016/03/features/clientsideasset"'
-      );
-      expect(featureRels).toContain('Target="ClientSideAssets.xml"');
+      const featureRels = zip.get(`_rels/feature_${featureId}.xml.rels`)!.toString('utf8');
+      expect(featureRels).not.toContain('clientsideasset');
+      expect(featureRels).toContain('Target="/feature_');
 
       const configXml = zip.get(`feature_${featureId}.xml.config.xml`)!.toString('utf8');
-      expect(configXml).toContain(`<Id>${featureId}</Id>`);
+      expect(configXml).not.toContain(`<Id>${featureId}</Id>`);
+      expect(configXml).toMatch(/<Id>[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}<\/Id>/);
 
       expect(zip.get('ClientSideAssets.xml')!.toString('utf8')).toContain('Client Side Assets');
 
@@ -155,7 +158,7 @@ describe('buildPackage', () => {
       const names = [...zip.keys()];
       expect(names.some((name) => name.startsWith('ClientSideAssets'))).toBe(false);
       expect(names).toContain(`${featureId}/WebPart_${componentId}.xml`);
-      const featureRels = zip.get(`feature_${featureId}.xml.rels`)!.toString('utf8');
+      const featureRels = zip.get(`_rels/feature_${featureId}.xml.rels`)!.toString('utf8');
       expect(featureRels).not.toContain('clientsideasset');
       const webPartXml = zip.get(`${featureId}/WebPart_${componentId}.xml`)!.toString('utf8');
       const manifestJson = JSON.parse(extractComponentManifest(webPartXml)) as {
