@@ -23,3 +23,7 @@ examples/*/sharepoint/solution/
 apps/*/dist/
 apps/*/release/
 apps/*/temp/
+# root stray scaffold (SPFx config belongs in templates/examples/apps, not repo root)
+/config/
+# rspack persistent cache
+**/.rspack-cache/
