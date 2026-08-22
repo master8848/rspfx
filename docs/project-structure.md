@@ -182,7 +182,7 @@ Every component manifest requires a UUID `id`:
 { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "alias": "HelloWebPart", "componentType": "WebPart", "version": "*", ... }
 ```
 
-- `id` must be globally unique — generate with `node -e "console.log(crypto.randomUUID())"`. Duplicates throw `DuplicateManifestId` (`packages/sppkg-builder/src/sppkg-builder.ts:321`) and duplicate bundle names produce `Bundle contains` collisions.
+- `id` must be globally unique — generate with `node -e "console.log(crypto.randomUUID())"`. Duplicates throw `DUPLICATE_MANIFEST_ID` (`packages/sppkg-builder/src/sppkg-builder.ts:321`) and duplicate bundle names produce `Bundle contains` collisions.
 - `version: "*"` is replaced at build time with `package.json#version` pre-release stripped (`1.2.3-beta.1` → `1.2.3`) (`packages/manifest-generator/src/component-manifests.ts:85`). Pin the same version in `package.json` and `config/package-solution.json#solution.version` (4-part `1.0.0.0`).
 - The AMD library name is `${id}_${version}` (`packages/compiler-rspack/src/config.ts:234` `library: { type: 'amd', name: '${id}_${version}' }`); `computeUniqueName()` hashes them for `chunkLoadingGlobal: webpackJsonp_<…>`.
 - When `teams.enabled=true`, the scaffolded `teams/manifest.json` `id` and `staticTabs[0].entityId` are set to the discovered component `id` (`packages/dev-runtime/src/project.ts:196` `discoverComponentId()`, `packages/templates/src/index.ts:112` `solidPng()`). They **must** match the web part `id` — Teams `contentUrl` embeds `componentId=<id>` and the catalog sync validates it. Changing the web part `id` without regenerating `teams/manifest.json` breaks Teams install with `Invalid Teams manifest` ([teams-outlook-install.md](teams-outlook-install.md)).

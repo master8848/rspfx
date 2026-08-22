@@ -22,7 +22,7 @@ export async function generateManifestsJs(
       publicPath = base;
     }
   } catch (error) {
-    console.error('Unable to determine the base URL of the debug manifests file.', error);
+    console.error('[rspfx] Unable to determine the base URL of the debug manifests file.', error);
   }
   function getLocaleFromQuery() {
     try {

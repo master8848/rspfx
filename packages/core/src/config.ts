@@ -99,7 +99,7 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
 
 export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
   if (!config.name) {
-    throw new Error('rspfx: "name" is required in the bundler config (rspack.config.ts)');
+    throw new Error('"name" is required in the bundler config (rspack.config.ts)');
   }
   let teams: TeamsConfig | undefined;
   if (config.teams !== undefined) {

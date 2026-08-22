@@ -191,6 +191,6 @@ See `reference/sp-component-ids.json`. Discovered manifests are in
 }
 ```
 
-- Features without `componentIds` get ALL components; no features → one auto feature. When mixed `WebPart`+`Extension`+`Library`, the auto feature description joins types (`packages/sppkg-builder/src/sppkg-builder.ts:340`); explicit `features[].componentIds` can group libraries separately.
+- Features without `componentIds` get ALL components; no features → one auto feature. When mixed `WebPart`+`Extension`+`Library`, the auto feature description uses the generic `Component` (`packages/sppkg-builder/src/sppkg-builder.ts:340`); explicit `features[].componentIds` can group libraries separately.
 - `config/serve.json`: `{ "initialPage": "...", "https": true, "port": 4321, "hostname": "localhost" }`.
 - `config/write-manifests.json`: `{ "cdnBasePath": "https://cdn.contoso.com/my-app/" }` (release base urls; empty → pseudo-url).

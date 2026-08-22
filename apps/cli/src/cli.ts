@@ -21,7 +21,20 @@ async function guard(action: () => Promise<unknown>): Promise<void> {
   try {
     await action();
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+      const code = (error as { code: string }).code;
+      logger.error(`[${code}] ${error.message}`);
+      if (process.env.RSPFX_LOG_LEVEL === 'debug' && error.cause !== undefined) {
+        const causeMsg = error.cause instanceof Error ? error.cause.stack ?? error.cause.message : String(error.cause);
+        logger.error(`cause: ${causeMsg}`);
+      }
+    } else {
+      logger.error(error instanceof Error ? error.message : String(error));
+      if (process.env.RSPFX_LOG_LEVEL === 'debug' && error instanceof Error && error.cause !== undefined) {
+        const causeMsg = error.cause instanceof Error ? error.cause.stack ?? error.cause.message : String(error.cause);
+        logger.error(`cause: ${causeMsg}`);
+      }
+    }
     process.exitCode = 1;
   }
 }

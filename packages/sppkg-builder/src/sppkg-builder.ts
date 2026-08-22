@@ -287,14 +287,14 @@ async function loadSolutionConfig(
     raw = JSON.parse(await readFile(configPath, 'utf8'));
   } catch (error) {
     throw new RspfxError(
-      'InvalidPackageConfig',
+      'INVALID_PACKAGE_CONFIG',
       `Unable to read or parse solution configuration at '${configPath}' (${error instanceof Error ? error.message : String(error)})`,
       error
     );
   }
   const config = raw as PackageConfig;
   if (!isRecord(config.solution)) {
-    throw new RspfxError('InvalidPackageConfig', `'${configPath}' must contain a 'solution' object`);
+    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'${configPath}' must contain a 'solution' object`);
   }
   const solution = config.solution;
   const zippedPackage =
@@ -302,13 +302,13 @@ async function loadSolutionConfig(
       ? config.paths.zippedPackage
       : undefined;
   if (!zippedPackage) {
-    throw new RspfxError('InvalidPackageConfig', `'paths.zippedPackage' must be a non-empty string in '${configPath}'`);
+    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'paths.zippedPackage' must be a non-empty string in '${configPath}'`);
   }
   if (typeof solution.id !== 'string' || solution.id.trim() === '') {
-    throw new RspfxError('InvalidPackageConfig', `'solution.id' must be a non-empty string in '${configPath}'`);
+    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'solution.id' must be a non-empty string in '${configPath}'`);
   }
   if (typeof solution.name !== 'string' || solution.name.trim() === '') {
-    throw new RspfxError('InvalidPackageConfig', `'solution.name' must be a non-empty string in '${configPath}'`);
+    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'solution.name' must be a non-empty string in '${configPath}'`);
   }
   return { solution, zippedPackage };
 }
@@ -316,7 +316,7 @@ async function loadSolutionConfig(
 async function loadManifests(manifestsDir: string): Promise<ComponentManifest[]> {
   const files = await globFiles(manifestsDir, ['**/*.manifest.json']);
   if (files.length === 0) {
-    throw new RspfxError('NoManifestsFound', `No component manifests (*.manifest.json) found in '${manifestsDir}'`);
+    throw new RspfxError('NO_MANIFESTS_FOUND', `No component manifests (*.manifest.json) found in '${manifestsDir}'`);
   }
   const byId = new Map<string, ComponentManifest>();
   for (const file of files) {
@@ -325,17 +325,17 @@ async function loadManifests(manifestsDir: string): Promise<ComponentManifest[]>
       parsed = JSON.parse(await readFile(path.join(manifestsDir, file), 'utf8'));
     } catch (error) {
       throw new RspfxError(
-        'InvalidManifestJson',
+        'INVALID_MANIFEST_JSON',
         `Failed to parse component manifest '${file}': ${error instanceof Error ? error.message : String(error)}`,
         error
       );
     }
     const manifest = parsed as ComponentManifest;
     if (typeof manifest.id !== 'string' || manifest.id.trim() === '') {
-      throw new RspfxError('InvalidManifestId', `Component manifest '${file}' is missing a valid 'id'`);
+      throw new RspfxError('INVALID_MANIFEST_ID', `Component manifest '${file}' is missing a valid 'id'`);
     }
     if (byId.has(manifest.id)) {
-      throw new RspfxError('DuplicateManifestId', `Multiple component manifests use the same id '${manifest.id}'`);
+      throw new RspfxError('DUPLICATE_MANIFEST_ID', `Multiple component manifests use the same id '${manifest.id}'`);
     }
     if (!isRecord(manifest.loaderConfig)) {
       manifest.loaderConfig = { internalModuleBaseUrls: [], entryModuleId: '', scriptResources: {} };
@@ -362,7 +362,7 @@ function normalizeFeatures(solution: Record<string, unknown>, manifests: Compone
   if (configFeatures.length === 0) {
     const first = manifests[0];
     if (!first) {
-      throw new RspfxError('NoManifestsFound', 'Cannot create a feature without any component manifests');
+      throw new RspfxError('NO_MANIFESTS_FOUND', 'Cannot create a feature without any component manifests');
     }
     const name = typeof first.alias === 'string' && first.alias ? first.alias : first.id;
     const kinds = new Set(manifests.map((m) => m.componentType ?? 'WebPart'));
@@ -537,7 +537,7 @@ async function readProjectFile(projectRoot: string, relativePath: string, kind: 
     return await readFile(absolutePath);
   } catch (error) {
     throw new RspfxError(
-      'MissingElementAsset',
+      'MISSING_ELEMENT_ASSET',
       `Failed to read ${kind} '${relativePath}' referenced by feature assets (${error instanceof Error ? error.message : String(error)})`,
       error
     );
