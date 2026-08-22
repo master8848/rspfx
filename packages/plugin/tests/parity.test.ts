@@ -7,7 +7,8 @@ import { build, type CompileContext } from '@mbsks/rspfx-compiler-rspack';
 import { assembleRelease, readProject, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
 import { rspfxRsbuild, rspfxVite } from '../src/index.js';
 
-const FIXTURE = path.join(os.tmpdir(), `rspfx-parity-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+// fixture uses fs.mkdtemp(os.tmpdir() + '/rspfx-parity-') for space-free tmpdir
+let FIXTURE: string;
 
 const ENTRY_IDS: Record<string, string> = {
   alpha: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -138,7 +139,7 @@ function captureResult(): BundlerResult {
 }
 
 beforeAll(() => {
-  rmRetry(FIXTURE);
+  FIXTURE = fs.mkdtempSync(os.tmpdir() + '/rspfx-parity-');
   fs.mkdirSync(path.join(FIXTURE, 'config'), { recursive: true });
   fs.writeFileSync(
     path.join(FIXTURE, 'package.json'),
@@ -199,30 +200,18 @@ describe('bundler parity for the same fixture', () => {
 
   it('vite build produces parity output', async () => {
     cleanOutput();
-    try {
-      const vite = await import('vite');
-      await vite.build({
-        configFile: false,
-        root: FIXTURE,
-        plugins: [
-          rspfxVite({ projectRoot: FIXTURE, name: 'parity-proj', framework: 'vanilla', version: '1.0.0' })
-        ],
-        mode: 'production',
-        logLevel: 'error'
-      });
-      assertParityOutput();
-      results.vite = captureResult();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      // Vite fails when the repo path contains spaces (encoded as %20) — skip vite comparison in that env.
-      if (message.includes('%20') || message.includes('Failed to load url') || (error as { code?: string }).code === 'PLUGIN_ERROR') {
-        console.warn(`[parity] vite skipped due to path with spaces: ${message.slice(0, 200)}`);
-        // Use rspack result as stand-in so later identity checks still pass; the rspack-vs-rsbuild parity is the load-bearing gate.
-        results.vite = results.rspack ?? captureResult();
-        return;
-      }
-      throw error;
-    }
+    const vite = await import('vite');
+    await vite.build({
+      configFile: false,
+      root: FIXTURE,
+      plugins: [
+        rspfxVite({ projectRoot: FIXTURE, name: 'parity-proj', framework: 'vanilla', version: '1.0.0' })
+      ],
+      mode: 'production',
+      logLevel: 'error'
+    });
+    assertParityOutput();
+    results.vite = captureResult();
   });
 
   it('rsbuild build produces parity output', async () => {
@@ -247,7 +236,7 @@ describe('bundler parity for the same fixture', () => {
     const vite = results.vite!;
     const rsbuild = results.rsbuild!;
 
-    // When vite is skipped due to spaced path, vite.manifests is set to rspack.manifests as stand-in.
+    expect(vite).toBeDefined();
     expect(vite.manifests).toEqual(rspack.manifests);
     expect(rsbuild.manifests).toEqual(rspack.manifests);
     expect(Object.keys(vite.manifests).sort()).toEqual(
@@ -258,7 +247,6 @@ describe('bundler parity for the same fixture', () => {
     expect(rsbuild.assets).toEqual(rspack.assets);
     expect(rspack.assets).toEqual(Object.keys(ENTRY_IDS).sort().map((n) => `${n}.js`));
 
-    // rsbuild stats are load-bearing; vite may be skipped.
     const rsbuildStats = results.rsbuild!.stats;
     expect(rsbuildStats).toBeDefined();
     const counts = rsbuildStats!.moduleCounts ?? {};
@@ -266,11 +254,11 @@ describe('bundler parity for the same fixture', () => {
     for (const value of Object.values(counts)) {
       expect(value).toBeGreaterThan(0);
     }
-    if (results.vite!.stats) {
-      const vCounts = results.vite!.stats!.moduleCounts ?? {};
-      if (Object.keys(vCounts).length > 0) {
-        expect(Object.keys(vCounts).sort()).toEqual(Object.keys(ENTRY_IDS).sort());
-      }
+    expect(results.vite!.stats).toBeDefined();
+    const vCounts = results.vite!.stats!.moduleCounts ?? {};
+    expect(Object.keys(vCounts).sort()).toEqual(Object.keys(ENTRY_IDS).sort());
+    for (const value of Object.values(vCounts)) {
+      expect(value).toBeGreaterThan(0);
     }
   });
 

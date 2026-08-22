@@ -996,6 +996,15 @@ async function importFramework(framework: FrameworkId, projectRoot?: string): Pr
       }
       throw error;
     }
+    // Vite/Vitest ESM transform mishandles %20 in file URLs when the repo path contains spaces.
+    // Prefer CJS require to avoid the dev-server transform; fall back to dynamic import.
+    try {
+      const req = createRequire(pathToFileURL(path.join(projectRoot, 'package.json')).href);
+      const mod = req(resolved) as Record<string, unknown>;
+      return { ...mod, __rspfxModuleUrl: pathToFileURL(resolved).href };
+    } catch {
+      // fallback to ESM import (e.g. when preset is pure ESM)
+    }
     try {
       const mod = await import(pathToFileURL(resolved).href);
       return { ...mod, __rspfxModuleUrl: pathToFileURL(resolved).href };
