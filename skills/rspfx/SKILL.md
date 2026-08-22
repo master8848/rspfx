@@ -16,9 +16,13 @@ description: Create and build SharePoint Framework (SPFx) web parts with RSPFX �
 
 ```sh
 node -v        # need 20+
-npm i -g @mbsks/rspfx-cli
-rspfx --version
+npm i -g @mbsks/rspfx-cli@0.0.11
+rspfx --version  # 0.0.11
 ```
+
+Mono-version: all 19 publishable packages (`packages/*` + `apps/cli`) share one version via `scripts/publish.mjs:17` `0.0.11`) — `@mbsks/rspfx-core`, `@mbsks/rspfx-plugin`, `@mbsks/rspfx-compiler-rspack`, `@mbsks/rspfx-dev-runtime`, `@mbsks/rspfx-diagnostics`, `@mbsks/rspfx-fluent-adapter`, `@mbsks/rspfx-manifest-generator`, `@mbsks/rspfx-manifest-server`, `@mbsks/rspfx-plugin-api`, `@mbsks/rspfx-sharepoint-runtime`, `@mbsks/rspfx-sppkg-builder`, `@mbsks/rspfx-templates`, `@mbsks/rspfx-framework-*` (`react`/`vanilla`/`vue`/`svelte`/`solid`/`preact`), and `@mbsks/rspfx-cli` all at `0.0.11`; `examples/*` and `apps/playground` are `private:true` and never published (`scripts/publish.mjs:65`).
+
+Upgrade: `npm i -g @mbsks/rspfx-cli@latest` pulls matching peer packages via `workspace:*` in new scaffolds; pin `spfxVersion` separately (`1.20`|`1.21`|`1.22`|`1.23`) — RSPFX version and SPFx target are orthogonal.
 
 ## 2. Scaffold a project
 

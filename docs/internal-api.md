@@ -7,7 +7,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ## Shared conventions
 
-- Packages: `@mbsks/rspfx-<name>`, version `0.0.1`, ESM, `main`/`types` → `dist/`.
+- Packages: `@mbsks/rspfx-<name>`, version `0.0.11`, ESM, `main`/`types` → `dist/`; all 19 publishable packages (`packages/*` + `apps/cli`) share one version bumped together via `scripts/publish.mjs:17` (`0.0.6→0.0.7→0.0.11`; `bun run publish`); `examples/*` and `apps/playground` are `private:true` and excluded.
 - All packages build with `tsc` to `dist/`; typecheck: `pnpm -w exec tsc --noEmit -p <pkg>/tsconfig.json`.
 - Errors: throw `RspfxError(code, message, cause?)` from `@mbsks/rspfx-diagnostics`.
 - Tests: vitest, colocated `tests/*.test.ts`, happy-dom only where DOM needed.
