@@ -299,8 +299,6 @@ The `RspfxPlugin` options carry your project settings:
 - **Layout:** `paths.srcDir`, `paths.webpartsDir` (src/webparts), `paths.extensionsDir` (src/extensions), `paths.librariesDir` (src/libraries), `paths.configDir` (config)
 - **Deploy:** `deploy.appCatalogSiteUrl` (or env var)
 
-The legacy `playground` option is still accepted for compat but is ignored — there is no playground command anymore.
-
 ### Environment variables
 
 | Variable | What it does |

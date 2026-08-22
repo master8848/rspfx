@@ -16,21 +16,13 @@
     "test:watch": "vitest",
     "publish": "node scripts/publish.mjs",
     "publish:dry": "node scripts/publish.mjs --dry-run",
-    "bench": "node benchmarks/run.mjs",
-    "e2e": "node tests/e2e/run.mjs",
-    "gen-examples": "node scripts/gen-examples.mjs",
-    "clean": "node scripts/clean.mjs"
+    "bench": "node bench/bench.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "happy-dom": "^15.11.0",
     "typescript": "^5.7.0",
+    "vite": "^5.4.21",
     "vitest": "^2.1.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "@parcel/watcher"
-    ]
   }
 }

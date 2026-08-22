@@ -27,7 +27,6 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 | `rspfx new <name>` | Scaffold a new SPFx project (interactive prompts; flags for non-interactive) |
 | `rspfx dev` | Start the dev environment: Rspack dev server + `:4321` HTTPS manifest server, auto-open workbench |
 | `rspfx dev --refresh` | Dev mode with state-preserving fast refresh where the framework supports it |
-| `rspfx playground` | Standalone localhost sandbox — no SharePoint needed |
 | `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
 | `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |
 | `rspfx deploy` | Package + upload to the app catalog (creds via `config.deploy` or env vars; prints manual steps if none) |
@@ -56,7 +55,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 | `@mbsks/rspfx-dev-runtime` | Dev serve / refresh runtime |
 | `@mbsks/rspfx-framework-*` | Per-framework presets + web part classes |
 | `@mbsks/rspfx-fluent-adapter` | Fluent UI web part base (React) |
-| `@mbsks/rspfx-sharepoint-runtime` | `@microsoft/sp-*` bridges for the playground |
+| `@mbsks/rspfx-sharepoint-runtime` | `@microsoft/sp-*` bridges for local preview |
 | `@mbsks/rspfx-templates` | Project scaffolding |
 
 ## Documentation

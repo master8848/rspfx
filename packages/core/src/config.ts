@@ -37,11 +37,6 @@ export interface DeployConfig {
   appCatalogSiteUrl?: string;
 }
 
-export interface PlaygroundConfig {
-  port?: number;
-  enabled?: boolean;
-}
-
 export interface TeamsConfig {
   enabled?: boolean;
 }
@@ -59,7 +54,6 @@ export interface RspfxConfig {
   build: BuildConfig;
   paths?: PathsConfig;
   deploy?: DeployConfig;
-  playground?: PlaygroundConfig;
   /** Teams integration; when enabled, teams/manifest.json and icons are auto-created. Disabled by default. */
   teams?: boolean | TeamsConfig;
 }
@@ -141,7 +135,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     },
     paths: resolvePathDefaults(config.paths),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
-    ...(config.playground !== undefined ? { playground: config.playground } : {}),
     ...(teams !== undefined ? { teams } : {})
   };
 }

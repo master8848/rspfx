@@ -7,6 +7,8 @@ dist/
 release/
 temp/
 lib/
+!examples/shadcn/src/webparts/hello/components/lib/
+!examples/shadcn/src/webparts/hello/components/lib/**
 *.tsbuildinfo
 .rspfx/
 coverage/

@@ -5,7 +5,6 @@ export type {
   DevConfig,
   FrameworkId,
   PathsConfig,
-  PlaygroundConfig,
   RspfxConfig,
   TeamsConfig
 } from './config.js';

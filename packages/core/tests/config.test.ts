@@ -130,12 +130,10 @@ describe('resolveConfig', () => {
     const config = resolveConfig({
       name: 'x',
       dev: { tenantUrl: 'https://contoso.sharepoint.com', initialPage: 'https://{tenantdomain}/site' },
-      playground: { port: 3000, enabled: true },
       deploy: { tenantUrl: 'https://t', username: 'u', password: 'p', appCatalogSiteUrl: 'https://t/sites/appcatalog' }
     });
     expect(config.dev.tenantUrl).toBe('https://contoso.sharepoint.com');
     expect(config.dev.initialPage).toBe('https://{tenantdomain}/site');
-    expect(config.playground).toEqual({ port: 3000, enabled: true });
     expect(config.deploy).toEqual({
       tenantUrl: 'https://t',
       username: 'u',
@@ -148,7 +146,6 @@ describe('resolveConfig', () => {
     const config = resolveConfig({ name: 'x' });
     expect('tenantUrl' in config.dev).toBe(false);
     expect('initialPage' in config.dev).toBe(false);
-    expect(config.playground).toBeUndefined();
     expect(config.deploy).toBeUndefined();
   });
 

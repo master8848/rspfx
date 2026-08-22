@@ -114,7 +114,6 @@ const PKG_IMPORT_RE = /@import\s+['"]pkg:([^/'"]+)\/([^'"]+)['"]/g;
 const RSPFX_SCRIPTS = {
   dev: 'rspfx dev',
   'dev:refresh': 'rspfx dev --refresh',
-  playground: 'rspfx playground',
   build: 'rspfx build',
   package: 'rspfx package',
   analyze: 'rspfx analyze',

@@ -22,4 +22,3 @@ The same React web part as `examples/react`, built with the **Vite** plugin inst
 | `pnpm clean` | Remove build output |
 | `pnpm typecheck` | `tsc --noEmit` |
 
-> The `rspfx playground` command is Rspack-only for now — use one of the Rspack examples for the playground page.

@@ -39,7 +39,6 @@ export interface BuildConfig {
   outDir?: string;               // default 'dist'
   releaseDir?: string;           // default 'release'
 }
-export interface PlaygroundConfig { port?: number; enabled?: boolean }  // LEGACY — type retained for compat; no command or runtime uses it
 export interface DeployConfig {
   tenantUrl?: string; username?: string; password?: string;
   appCatalogSiteUrl?: string;    // e.g. https://contoso.sharepoint.com/sites/appcatalog
@@ -54,7 +53,6 @@ export interface RspfxConfig {
   language: 'typescript' | 'javascript';
   dev: DevConfig;
   build: BuildConfig;
-  playground?: PlaygroundConfig;   // LEGACY — accepted for compat, ignored by the CLI
   deploy?: DeployConfig;
 }
 export function defineConfig(config: RspfxConfig): RspfxConfig;
@@ -264,7 +262,7 @@ export interface RspfxPluginOptions extends Partial<Omit<RspfxConfig, 'name'>> {
 // manifests — overrides package.json), spfxVersion, framework, fluent, language,
 // dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
 // build (sourcemap/minify/splitChunks/outDir/releaseDir), paths (srcDir/webpartsDir/configDir),
-// deploy; defaults unchanged. The legacy `playground` option is accepted for compat but ignored.
+// deploy; defaults unchanged.
 export class RspfxPlugin implements RspfxBundlerPluginLike {
   readonly [RSPFX_PLUGIN_MARKER]: true;
   readonly options: RspfxConfig;

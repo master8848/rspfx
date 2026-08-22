@@ -8,7 +8,6 @@
   "scripts": {
     "dev": "rspfx dev",
     "dev:refresh": "rspfx dev --refresh",
-    "playground": "rspfx playground",
     "build": "rspfx build",
     "package": "rspfx package",
     "clean": "rspfx clean",

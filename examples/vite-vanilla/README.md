@@ -22,4 +22,3 @@ The same minimal vanilla web part as `examples/vanilla`, built with the **Vite**
 | `pnpm clean` | Remove build output |
 | `pnpm typecheck` | `tsc --noEmit` |
 
-> The `rspfx playground` command is Rspack-only for now — use one of the Rspack examples for the playground page.

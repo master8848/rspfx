@@ -1,6 +1,6 @@
 # RSPFX — Architecture & Implementation Plan
 
-**Status: DRAFT — pending approval. No code written.**
+**Status: Implemented — v0.0.11 shipped. See docs/architecture.md for current architecture.**
 
 A complete SPFx-compatible build toolchain powered by Rspack. Replaces Heft + webpack + gulp. Never depends on webpack, Heft, or gulp.
 
@@ -13,7 +13,7 @@ Scope decision (accepted): **Angular is removed from milestone 1.** Start with V
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              rspfx CLI                                 │
-│   new │ dev │ dev --refresh │ playground │ build │ package │ deploy    │
+│   new │ dev │ dev --refresh │ build │ package │ deploy    │
 │   doctor │ analyze │ clean                                              │
 └────────┬───────────────────────────────────────────────────────────────┘
          │
@@ -129,14 +129,14 @@ Rules:
 | `fluent-adapter` | optional | framework-react | Fluent UI web part boilerplate, theme sync | `FluentWebPart` |
 | `sharepoint-runtime` | runtime | core | shims/bridges for sp-* npm packages, framework→SPFx glue | helpers |
 | `templates` | scaffolding | — | project templates (per framework, per language) | template files |
-| `cli` | app | everything above | `new/dev/playground/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
+| `cli` | app | everything above | `new/dev/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
 
 Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend on them directly (version pinned to SPFx target); the toolchain externalizes them and emits `"type": "component"` dependency entries into manifests so SharePoint resolves its own built-in copies. `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.
 
 **Config flow:** the CLI loads the user's `rspack.config.ts` (or `vite.config.ts`)
 via jiti, scans the `plugins` array for `RSPFX_PLUGIN_MARKER`, and reads the
 plugin's `options` — the single project config (name, framework, dev, build,
-paths, playground, deploy). No config or no plugin → CLI error with guidance.
+paths, deploy). No config or no plugin → CLI error with guidance.
 `rspfx.config.ts` is removed; there is no legacy support.
 
 ---
@@ -206,9 +206,8 @@ Phase 5  Dev mode
          ✅ GATE: workbench loads web part from localhost:4321 bundles, edits
            hot-reload without restart.
 
-Phase 6  dev --refresh + playground
+Phase 6  dev --refresh
          - fast-refresh runtimes (React/Solid first)
-         - playground: standalone localhost sandbox, no SharePoint
 
 Phase 7  Framework breadth
          - Preact, Vue, Svelte web part classes + refresh
@@ -247,7 +246,7 @@ Phase 9  Benchmarks + full test suite + docs
 | M1 | Foundation + packaging core (vanilla) | **Valid `.sppkg` installs & renders in a real tenant** |
 | M2 | Compiler + build/package CLI + React/Solid | `rspfx new` → `rspfx build` → `rspfx package` one-command happy path for 3 frameworks |
 | M3 | Dev mode | Workbench-first live editing, auto browser open, <2s cold start, <300ms rebuild |
-| M4 | Fast refresh + playground | State-preserving refresh <150ms; sandbox mode without tenant |
+| M4 | Fast refresh | State-preserving refresh <150ms |
 | M5 | Framework breadth + Fluent | Preact/Vue/Svelte web part classes; Fluent web part scaffold |
 | M6 | Angular (deferred) | Angular web part class + preset on separate compiler track |
 | M7 | Benchmarks, full test suite, docs | Targets met; docs site; migration guide; examples for all frameworks |
