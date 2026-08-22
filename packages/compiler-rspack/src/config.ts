@@ -49,17 +49,26 @@ function platformOnlyExternal(data: { request?: string }): string | undefined {
 /** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
 export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
 
+const canResolveCache = new Map<string, boolean>();
+
 function canResolveFromProject(projectRoot: string, specifier: string): boolean {
+  const key = `${projectRoot}:${specifier}`;
+  const cached = canResolveCache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
   const packageName = specifier.startsWith('@')
     ? specifier.split('/').slice(0, 2).join('/')
     : specifier.split('/')[0]!;
   let dir = projectRoot;
   for (;;) {
     if (fs.existsSync(path.join(dir, 'node_modules', packageName))) {
+      canResolveCache.set(key, true);
       return true;
     }
     const parent = path.dirname(dir);
     if (parent === dir) {
+      canResolveCache.set(key, false);
       return false;
     }
     dir = parent;
@@ -140,6 +149,9 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   };
   const rules: RuleSetRule[] = [];
   const plugins: Configuration['plugins'] = [];
+  // BUILD_TIME_ALIASES are tiny stubs (react-refresh, preact-refresh, vue-loader);
+  // injecting all three is cheap (3 map entries) and avoids per-framework branching
+  // in resolve; kept unconditional for correctness — see docs/building-packages.md#sizing--performance.
   const alias: Record<string, string> = { ...BUILD_TIME_ALIASES, ...(ctx.aliases ?? {}) };
   if (ctx.framework === 'solid' && ctx.fastRefresh && !canResolveFromProject(ctx.projectRoot, 'solid-refresh')) {
     alias['solid-refresh'] = SOLID_REFRESH_STUB;
@@ -219,7 +231,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     use: [
       cssExtractLoader,
       { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-      { loader: sassLoaderPath }
+      { loader: sassLoaderPath, options: { api: 'modern' } }
     ]
   });
   if (useCssExtract) {

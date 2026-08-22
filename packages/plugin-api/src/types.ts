@@ -26,8 +26,8 @@ export interface FrameworkRsbuildContributions {
   define?: Record<string, string>;
 }
 
-export interface FrameworkPreset {
-  name: FrameworkId;
+export interface FrameworkPreset<F extends FrameworkId = FrameworkId> {
+  name: F;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
   /**
    * Vite-shaped contributions (plugins/esbuild). Absent when the framework has
@@ -42,6 +42,18 @@ export interface FrameworkPreset {
    */
   rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions;
 }
+
+/** Discriminated union of framework presets keyed by `name` for exhaustive narrowing. */
+export type FrameworkPresetUnion =
+  | FrameworkPreset<'react'>
+  | FrameworkPreset<'vue'>
+  | FrameworkPreset<'svelte'>
+  | FrameworkPreset<'solid'>
+  | FrameworkPreset<'preact'>
+  | FrameworkPreset<'vanilla'>;
+
+/** Generic helper to type a preset for a specific framework. */
+export type FrameworkPresetFor<F extends FrameworkId> = FrameworkPreset<F>;
 
 export interface CompilerHooks {
   beforeCompile?(config: unknown): unknown;

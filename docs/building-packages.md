@@ -135,6 +135,8 @@ Tips:
 
 Build-time knobs: `build.minify` (default true), `build.splitChunks` (default false), `build.sourcemap` (default false).
 
+`splitChunks: false` is the SPFx default because each web part ships as a single self-contained AMD bundle (`define('<id>_<version>', …)`); enabling `splitChunks: true` emits shared `chunk.*.js` files that reduce duplicate code across web parts but require an extra request and are not cached across tenants the same way.
+
 For reference, [PnP Modern Search](../examples/modern-search) (4 web parts, ~178 source files, Fluent UI 8, MGT, Handlebars, Adaptive Cards) builds in ~2s on a laptop (`rspfx build`).
 
 ## Troubleshooting

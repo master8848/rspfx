@@ -315,7 +315,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
               use: [
                 styleLoaderPath,
                 { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-                { loader: sassLoaderPath }
+                { loader: sassLoaderPath, options: { api: 'modern' } }
               ]
             },
             { test: /\.html$/, type: 'asset/source' }
