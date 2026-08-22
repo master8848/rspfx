@@ -548,6 +548,9 @@ function webpartManifest(vars: TemplateVars): string {
   );
 }
 
+// Keep in sync with `packages/sppkg-builder/src/xml.ts:194` Location mapping
+// (`ClientSideExtension.<extensionType>`) and `packages/dev-runtime/src/project.ts:794`
+// pickEntrypoint candidates. Duplication is intentional — single-file template helper.
 function extensionSuffix(vars: TemplateVars): string {
   switch (vars.componentType) {
     case 'applicationcustomizer':

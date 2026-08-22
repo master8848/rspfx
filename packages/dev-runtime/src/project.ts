@@ -791,6 +791,8 @@ function scanComponentDir(projectRoot: string, componentsDir: string, bundleMap:
  */
 export const discoverComponents = discoverWebParts;
 
+// Candidates mirror `packages/templates/src/index.ts:551` extensionSuffix/extensionType.
+// Kept inline for single-file readability — keep in sync when adding types.
 function pickEntrypoint(dirPath: string, dirName: string): string | undefined {
   const candidates = [
     path.join(dirPath, 'index.ts'),

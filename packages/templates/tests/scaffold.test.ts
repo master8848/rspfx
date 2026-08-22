@@ -259,7 +259,8 @@ describe('scaffoldProject extensions', () => {
   it.each([
     ['applicationcustomizer', 'ApplicationCustomizer', '@microsoft/sp-application-base', 'HelloWorldApplicationCustomizer', 'HelloWorldApplicationCustomizer.ts'],
     ['fieldcustomizer', 'FieldCustomizer', '@microsoft/sp-field-customizer-base', 'HelloWorldFieldCustomizer', 'HelloWorldFieldCustomizer.ts'],
-    ['listviewcommandset', 'ListViewCommandSet', '@microsoft/sp-listview-extensibility', 'HelloWorldCommandSet', 'HelloWorldCommandSet.ts']
+    ['listviewcommandset', 'ListViewCommandSet', '@microsoft/sp-listview-extensibility', 'HelloWorldCommandSet', 'HelloWorldCommandSet.ts'],
+    ['formcustomizer', 'FormCustomizer', '@microsoft/sp-listview-extensibility', 'HelloWorldFormCustomizer', 'HelloWorldFormCustomizer.ts']
   ] as const)(
     'scaffolds a %s extension with manifest, entry, and deps',
     (componentType, extensionType, spDep, className, entryFile) => {
@@ -372,6 +373,62 @@ describe('scaffoldProject extensions', () => {
     expect(entry).toContain('public onListViewUpdated(event: IListViewCommandSetListViewUpdatedEventParameters): void {');
     expect(entry).toContain('public onExecute(event: IListViewCommandSetExecuteEventParameters): void {');
     expect(entry).toContain('Log.info(LOG_SOURCE, `Command ${event.itemId} clicked`);');
+  });
+
+  it('scaffolds a form customizer with BaseFormCustomizer and render/dispose', () => {
+    const vars = makeVars({ componentType: 'formcustomizer' });
+    const dir = path.join(tmpRoot, 'ext-form');
+    scaffoldProject(vars, dir);
+
+    const manifest = readJson(dir, 'src/extensions/hello-world/hello-world.manifest.json');
+    expect(manifest['componentType']).toBe('Extension');
+    expect(manifest['extensionType']).toBe('FormCustomizer');
+    expect(manifest['alias']).toBe('HelloWorldFormCustomizer');
+
+    const entry = fs.readFileSync(path.join(dir, 'src/extensions/hello-world/HelloWorldFormCustomizer.ts'), 'utf-8');
+    expect(entry).toContain("import { BaseFormCustomizer } from '@microsoft/sp-listview-extensibility'");
+    expect(entry).toContain('export default class HelloWorldFormCustomizer extends BaseFormCustomizer<{}> {');
+    expect(entry).toContain('public render(): void {');
+    expect(entry).toContain('public onDispose(): void {');
+    expect(entry).toContain('super.onDispose();');
+  });
+});
+
+describe('scaffoldProject library', () => {
+  it('scaffolds a library with Library manifest and Library entry', () => {
+    const vars = makeVars({ componentType: 'library' });
+    const dir = path.join(tmpRoot, 'lib-hello');
+    scaffoldProject(vars, dir);
+
+    const manifest = readJson(dir, 'src/libraries/hello-world/hello-world.manifest.json');
+    expect(manifest['componentType']).toBe('Library');
+    expect(manifest['alias']).toBe('HelloWorldLibrary');
+    expect(manifest['version']).toBe('*');
+    expect(manifest['manifestVersion']).toBe(2);
+    expect(manifest['$schema']).toBe('https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json');
+    expect(manifest['preconfiguredEntries']).toBeUndefined();
+    expect(manifest['extensionType']).toBeUndefined();
+
+    const entryPath = 'src/libraries/hello-world/HelloWorldLibrary.ts';
+    expect(fs.existsSync(path.join(dir, entryPath))).toBe(true);
+    const entry = fs.readFileSync(path.join(dir, entryPath), 'utf-8');
+    expect(entry).toContain('export default class HelloWorldLibrary {');
+    expect(entry).toContain("return 'HelloWorld';");
+
+    const pkg = readJson(dir, 'package.json');
+    const deps = pkg['dependencies'] as Record<string, string>;
+    expect(deps['@microsoft/sp-core-library']).toBe('1.23.0');
+    expect(deps['@microsoft/sp-webpart-base']).toBeUndefined();
+    expect(deps['@microsoft/sp-application-base']).toBeUndefined();
+
+    expect(fs.existsSync(path.join(dir, 'src/webparts'))).toBe(false);
+    expect(fs.existsSync(path.join(dir, 'src/extensions'))).toBe(false);
+    expect(fs.existsSync(path.join(dir, 'config/config.json'))).toBe(false);
+    expect(fs.existsSync(path.join(dir, 'teams/manifest.json'))).toBe(false);
+
+    const sol = readJson(dir, 'config/package-solution.json');
+    const features = (sol['solution'] as Record<string, unknown>)['features'] as Array<Record<string, unknown>>;
+    expect(features[0]?.['description']).toBe("A feature which activates the Client-Side Library named 'HelloWorld'");
   });
 });
 

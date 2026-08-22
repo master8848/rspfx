@@ -46,7 +46,7 @@ function buildOptions(projectRoot: string): Parameters<typeof buildPackage>[0] {
 }
 
 describe('buildElementsXml (extensions)', () => {
-  for (const extensionType of ['ApplicationCustomizer', 'FieldCustomizer', 'ListViewCommandSet']) {
+  for (const extensionType of ['ApplicationCustomizer', 'FieldCustomizer', 'ListViewCommandSet', 'FormCustomizer']) {
     it(`emits the official elements XML for ${extensionType}`, () => {
       const xml = buildElementsXml('RspfxTestExtension', extensionManifest(extensionType), true);
       const instanceId = /ClientSideComponentInstance Id="([^"]+)"/.exec(xml)![1]!;
