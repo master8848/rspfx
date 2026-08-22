@@ -13,27 +13,32 @@ npm i @mbsks/rspfx-templates
 ## Usage
 
 ```ts
-import { scaffoldProject, scaffoldPlaygroundPage } from '@mbsks/rspfx-templates';
+import { scaffoldProject } from '@mbsks/rspfx-templates';
 import type { TemplateVars } from '@mbsks/rspfx-templates';
 
 const vars: TemplateVars = {
   name: 'hello-world',
-  packageName: 'hello-world-client-side-solution',
+  namePascal: 'HelloWorld',
+  nameCamel: 'helloWorld',
+  componentType: 'webpart',
   framework: 'react',
-  spfxVersion: '1.22',
+  spfxVersion: '1.23',
+  fluent: false,
   language: 'typescript',
-  styling: 'none'
+  componentId: '00000000-0000-0000-0000-000000000000',
+  solutionId: '00000000-0000-0000-0000-000000000001',
+  featureId: '00000000-0000-0000-0000-000000000002',
+  packageName: 'hello-world',
+  packageVersion: '1.0.0',
 };
 
 await scaffoldProject(vars, 'my-app');
-await scaffoldPlaygroundPage('my-app', vars);
 ```
 
 ## API
 
-- `scaffoldProject(vars, destDir)` — generate a complete SPFx project
-- `scaffoldPlaygroundPage(projectRoot, vars)` — add a playground sandbox page
-- `TemplateVars` — scaffold options (framework, SPFx version, language)
+- `scaffoldProject(vars, destDir)` — generate a complete SPFx project (`vars: TemplateVars, destDir: string`)
+- `TemplateVars` — scaffold options (`name, namePascal, nameCamel, componentType, framework, spfxVersion, fluent, language, componentId, solutionId, featureId, packageName, packageVersion, tenantUrl?, teams?`)
 
 ## Links
 

@@ -13,12 +13,22 @@ npm i @mbsks/rspfx-framework-vanilla
 ## Usage
 
 ```ts
-import { BaseWebPart } from '@mbsks/rspfx-core';
+import { BaseWebPart } from '@mbsks/rspfx-core/webpart';
 import { preset } from '@mbsks/rspfx-framework-vanilla';
 
-export default class MyWebPart extends BaseWebPart {
-  protected async onInit(): Promise<void> {
-    this.domElement.innerHTML = '<h1>Hello RSPFX</h1>';
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends BaseWebPart<IMyProps> {
+  protected getComponentProps(): IMyProps {
+    return this.properties;
+  }
+
+  protected renderInto(root: HTMLElement): void {
+    root.innerHTML = `<h1>Hello ${this.getComponentProps().description}</h1>`;
+  }
+
+  protected disposeFrom(root: HTMLElement): void {
+    root.replaceChildren();
   }
 }
 ```

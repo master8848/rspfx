@@ -37,7 +37,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 ## Supported targets
 
 - **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte (Angular deferred)
-- **SPFx targets:** 1.20, 1.21, 1.22
+- **SPFx targets:** 1.20, 1.21, 1.22, 1.23
 - **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
 
 ## Ecosystem
@@ -47,6 +47,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 | `@mbsks/rspfx-cli` | This package — the `rspfx` binary |
 | `@mbsks/rspfx-core` | Zero-dependency core: types, base web part, config |
 | `@mbsks/rspfx-plugin-api` | Framework preset / plugin hooks |
+| `@mbsks/rspfx-plugin` | Bundler plugins (Rspack / Vite / Rsbuild) |
 | `@mbsks/rspfx-diagnostics` | Logger, errors, benchmarks |
 | `@mbsks/rspfx-compiler-rspack` | Rspack compiler layer |
 | `@mbsks/rspfx-manifest-generator` | SPFx component manifests |

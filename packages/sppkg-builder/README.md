@@ -16,17 +16,23 @@ npm i @mbsks/rspfx-sppkg-builder
 import { buildPackage, validateSppkg } from '@mbsks/rspfx-sppkg-builder';
 import type { BuildPackageResult } from '@mbsks/rspfx-sppkg-builder';
 
-const result: BuildPackageResult = await buildPackage(project, buildResult, { solution: 'my-solution' });
-// result.sppkgPath -> sharepoint/solution/my-solution.sppkg
+const result: BuildPackageResult = await buildPackage({
+  projectRoot: process.cwd(),
+  solutionConfigPath: 'config/package-solution.json',
+  manifestsDir: 'temp/manifests',
+  assetsDir: 'dist',
+  production: true,
+});
+// result.outputPath -> sharepoint/solution/my-solution.sppkg
 
-const ok = await validateSppkg(result.sppkgPath); // entry list + zip integrity
+const { ok, errors } = await validateSppkg(result.outputPath); // zip integrity
 ```
 
 ## API
 
-- `buildPackage(project, buildResult, opts)` — assemble the `.sppkg` package
-- `validateSppkg(path)` — zip integrity + expected entry validation
-- `BuildPackageResult` — result type
+- `buildPackage(opts)` — assemble the `.sppkg` package (`opts: BuildPackageOptions { projectRoot, manifestsDir, solutionConfigPath, assetsDir, production, outDir?, prettyXml?, teamsDir?, resxDir? }`)
+- `validateSppkg(path)` — zip integrity + expected entry validation (`Promise<SppkgValidationResult>`)
+- `BuildPackageResult` — result type (`{ outputPath, zipEntries, appManifest }`)
 
 ## Links
 

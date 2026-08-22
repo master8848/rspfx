@@ -17,10 +17,14 @@ Requires `solid-js` `^1.9` as a peer dependency.
 ```ts
 import { SolidWebPart } from '@mbsks/rspfx-framework-solid/webpart';
 import { preset } from '@mbsks/rspfx-framework-solid';
+import type { JSX } from 'solid-js';
 
-export default class MyWebPart extends SolidWebPart {
-  protected async renderComponent(root: HTMLElement): Promise<void> {
-    // mount your Solid root into root
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends SolidWebPart<IMyProps> {
+  protected renderComponent(props: IMyProps): JSX.Element {
+    // return your Solid JSX using props
+    return null as unknown as JSX.Element;
   }
 }
 ```

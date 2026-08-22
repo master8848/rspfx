@@ -17,10 +17,14 @@ Requires `react` and `react-dom` `^18` as peer dependencies.
 ```ts
 import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart';
 import { preset } from '@mbsks/rspfx-framework-react';
+import type { ReactElement } from 'react';
 
-export default class MyWebPart extends ReactWebPart {
-  protected async renderComponent(root: HTMLElement): Promise<void> {
-    // render your React tree into root
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends ReactWebPart<IMyProps> {
+  protected renderComponent(props: IMyProps): ReactElement {
+    // return your React element using props
+    return null as unknown as ReactElement;
   }
 }
 ```

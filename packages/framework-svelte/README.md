@@ -15,12 +15,15 @@ Requires `svelte` `^4.2` as a peer dependency.
 ## Usage
 
 ```ts
-import { SvelteWebPart } from '@mbsks/rspfx-framework-svelte/webpart';
+import { SvelteWebPart, type SvelteWebPartComponent } from '@mbsks/rspfx-framework-svelte/webpart';
 import { preset } from '@mbsks/rspfx-framework-svelte';
 
-export default class MyWebPart extends SvelteWebPart {
-  protected async renderComponent(root: HTMLElement): Promise<void> {
-    // mount your Svelte component into root
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends SvelteWebPart<IMyProps> {
+  protected renderComponent(props: IMyProps): SvelteWebPartComponent<IMyProps> {
+    // return { component, props } for Svelte
+    return null as unknown as SvelteWebPartComponent<IMyProps>;
   }
 }
 ```

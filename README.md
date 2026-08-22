@@ -12,8 +12,8 @@ webpack, Heft, or gulp.
 - **Never webpack / Heft / gulp.** Those strings never appear in the runtime, the
   build output, or `node_modules` of generated projects. Only `@microsoft/sp-*`
   runtime dependencies are allowed in generated projects, exactly as official SPFx.
-- **Rspack is the only bundler.** The compiler layer is a thin, owned config factory
-  around Rspack; nothing else produces bundles.
+- **Rspack is the default bundler.** The compiler layer is a thin, owned config factory
+  around Rspack; Vite and Rsbuild are also supported via `@mbsks/rspfx-plugin`.
 - **Framework-agnostic core.** `@mbsks/rspfx-core` has zero dependencies — no framework, no
   bundler, no Node APIs. Frameworks plug in via the `FrameworkPreset` contract.
 - **Workbench-first development.** The SharePoint workbench is the primary dev

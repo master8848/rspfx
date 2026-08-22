@@ -13,23 +13,25 @@ npm i @mbsks/rspfx-dev-runtime
 ## Usage
 
 ```ts
-import { startServe, startPlayground, readProject, loadFrameworkPreset } from '@mbsks/rspfx-dev-runtime';
+import { startServe } from '@mbsks/rspfx-dev-runtime';
+import { resolveConfig } from '@mbsks/rspfx-core';
 
-const project = await readProject(process.cwd());
-const preset = await loadFrameworkPreset(project.framework);
-
-const handle = await startServe(project, { port: 4321, refresh: true });
+const handle = await startServe({
+  projectRoot: process.cwd(),
+  config: resolveConfig({ name: 'my-app', framework: 'react', spfxVersion: '1.23' }),
+  port: 4321,
+  fastRefresh: true,
+});
 await handle.close();
 ```
 
 ## API
 
-- `startServe(project, opts)` — dev server + manifest server + workbench launch
-- `startPlayground(project, opts)` — standalone localhost sandbox (no SharePoint)
-- `readProject(dir, paths?, version?)` — read package.json/config.json/serve.json, discover web parts (options come from the bundler config plugin; `version` overrides package.json)
-- `loadFrameworkPreset(framework)` — resolve framework preset (compiler contributions)
-- `createRefreshRuntime(project)` — websocket refresh runtime
-- `discoverWebParts(project)` — find web part entry points
+- `startServe(opts)` — dev server + manifest server + workbench launch (`opts: DevRuntimeOptions { projectRoot, config, port?, fastRefresh?, noBrowser?, tenantDomain?, mode? }`)
+- `readProject(projectRoot, paths?, versionOverride?, rspfxConfig?)` — read package.json/config.json/serve.json, discover web parts
+- `loadFrameworkPreset(framework, projectRoot?)` — resolve framework preset (compiler contributions)
+- `createRefreshRuntime(framework, opts?)` — state-preservation refresh runtime
+- `createCompileContext(opts)` — build a `CompileContext` for the compiler
 - `DevRuntimeHandle`, `DevRuntimeOptions` — types
 
 ## Links

@@ -14,22 +14,32 @@ npm i @mbsks/rspfx-compiler-rspack
 
 ```ts
 import { createRspackConfig, build, watch, startDevServer } from '@mbsks/rspfx-compiler-rspack';
+import type { CompileContext } from '@mbsks/rspfx-compiler-rspack';
 
-const rspackConfig = createRspackConfig(projectConfig, { mode: 'production' });
+// ctx is the CompileContext assembled by dev-runtime (project + config + entries)
+declare const ctx: CompileContext;
 
-// one-shot production compile to dist/ + release/
-await build(projectConfig);
+const rspackConfig = await createRspackConfig(ctx);
 
-// watch mode / dev server (workbench-first development)
-await startDevServer(projectConfig, { port: 4321 });
+// one-shot production compile to dist/
+const result = await build(ctx);
+
+// watch mode
+const handle = watch(ctx, (stats, errors) => {
+  if (errors.length) console.error(errors);
+});
+
+// dev server (workbench-first development)
+const server = await startDevServer(ctx, { port: 4321 });
+await server.close();
 ```
 
 ## API
 
-- `createRspackConfig(project, opts)` — typed Rspack configuration factory
-- `build(project, opts)` — production build (manifests + assets)
-- `watch(project, opts)` — incremental rebuilds
-- `startDevServer(project, opts)` — Rspack dev server with HMR/fast refresh
+- `createRspackConfig(ctx)` — async typed Rspack configuration factory (`ctx: CompileContext`)
+- `build(ctx)` — production build (`ctx: CompileContext`)
+- `watch(ctx, onDone)` — incremental rebuilds (`onDone: (stats, errors) => void`)
+- `startDevServer(ctx, opts)` — Rspack dev server with HMR/fast refresh (`opts: DevServerOptions`)
 
 ## Links
 

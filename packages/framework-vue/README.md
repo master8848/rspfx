@@ -17,10 +17,14 @@ Requires `vue` `^3.5` as a peer dependency.
 ```ts
 import { VueWebPart } from '@mbsks/rspfx-framework-vue/webpart';
 import { preset } from '@mbsks/rspfx-framework-vue';
+import type { Component } from 'vue';
 
-export default class MyWebPart extends VueWebPart {
-  protected async renderComponent(root: HTMLElement): Promise<void> {
-    // mount your Vue app into root
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends VueWebPart<IMyProps> {
+  protected renderComponent(props: IMyProps): Component {
+    // return your Vue component using props
+    return null as unknown as Component;
   }
 }
 ```

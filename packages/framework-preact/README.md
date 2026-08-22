@@ -17,10 +17,14 @@ Requires `preact` `^10.24` as a peer dependency.
 ```ts
 import { PreactWebPart } from '@mbsks/rspfx-framework-preact/webpart';
 import { preset } from '@mbsks/rspfx-framework-preact';
+import type { ComponentChild } from 'preact';
 
-export default class MyWebPart extends PreactWebPart {
-  protected async renderComponent(root: HTMLElement): Promise<void> {
-    // render your Preact tree into root
+interface IMyProps { description: string; }
+
+export default class MyWebPart extends PreactWebPart<IMyProps> {
+  protected renderComponent(props: IMyProps): ComponentChild {
+    // return your Preact tree using props
+    return null as unknown as ComponentChild;
   }
 }
 ```

@@ -14,18 +14,18 @@ npm i @mbsks/rspfx-manifest-generator
 
 ```ts
 import { generateComponentManifests, generateManifestsJs, findSpDependencies } from '@mbsks/rspfx-manifest-generator';
-import type { ComponentManifest, SpDependency } from '@mbsks/rspfx-manifest-generator';
+import type { ComponentManifest, ManifestContext } from '@mbsks/rspfx-manifest-generator';
 
-const manifests: ComponentManifest[] = generateComponentManifests(project, buildResult);
-const deps: SpDependency[] = findSpDependencies(manifestIds);
-const loader = generateManifestsJs(manifests, { deployPath: 'dist' });
+const manifests: ComponentManifest[] = await generateComponentManifests(ctx satisfies ManifestContext);
+const deps = findSpDependencies(process.cwd()); // Map<string, SpDependency>
+const loader = await generateManifestsJs(manifests);
 ```
 
 ## API
 
-- `generateComponentManifests(project, buildResult)` — web part manifests (`*.manifest.json`)
-- `generateManifestsJs(manifests, opts)` — AMD `manifests.js` loader script
-- `findSpDependencies(manifestIds)` — `@microsoft/sp-*` dependency mapping
+- `generateComponentManifests(ctx)` — async web part manifests (`ctx: ManifestContext`)
+- `generateManifestsJs(manifests, metadata?)` — async AMD `manifests.js` loader script
+- `findSpDependencies(projectRoot)` — `@microsoft/sp-*` dependency mapping (`Map<string, SpDependency>`)
 - `ComponentManifest`, `ManifestContext`, `SpDependency` — types
 
 ## Links
