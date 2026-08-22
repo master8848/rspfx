@@ -109,7 +109,7 @@ export function buildContentTypesXml(extensions: string[], pretty: boolean): str
       name: 'Default',
       attrs: { Extension: 'rels', ContentType: 'application/vnd.openxmlformats-package.relationships+xml' }
     },
-    { name: 'Default', attrs: { Extension: 'xml', ContentType: 'text/xml' } },
+    { name: 'Default', attrs: { Extension: 'xml', ContentType: 'application/xml' } },
     ...extensions.map((extension) => ({
       name: 'Default',
       attrs: {

@@ -113,9 +113,9 @@ describe('buildPackage (extensions)', () => {
       expect(extensionXml).toContain('<ClientSideComponentInstance Id="');
       expect(extensionXml).not.toContain('<Module');
 
-      const featureRels = zip.get(`_rels/feature_${featureId}.xml.rels`)!.toString('utf8');
-      expect(featureRels).toContain(`Target="/${featureId}/WebPart_${webPartId}.xml"`);
-      expect(featureRels).toContain(`Target="/${featureId}/Extension_${extensionId}.xml"`);
+      const featureRels = zip.get(`feature_${featureId}.xml.rels`)!.toString('utf8');
+      expect(featureRels).toContain(`Target="${featureId}/WebPart_${webPartId}.xml"`);
+      expect(featureRels).toContain(`Target="${featureId}/Extension_${extensionId}.xml"`);
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }

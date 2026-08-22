@@ -79,14 +79,14 @@ describe('buildPackage', () => {
           '[Content_Types].xml',
           '_rels/.rels',
           'AppManifest.xml',
-          '_rels/AppManifest.xml.rels',
+          'AppManifest.xml.rels',
           `feature_${featureId}.xml`,
           `feature_${featureId}.xml.config.xml`,
-          `_rels/feature_${featureId}.xml.rels`,
+          `feature_${featureId}.xml.rels`,
           `${featureId}/WebPart_${componentId}.xml`,
           'ClientSideAssets.xml',
           'ClientSideAssets.xml.config.xml',
-          '_rels/ClientSideAssets.xml.rels',
+          'ClientSideAssets.xml.rels',
           'ClientSideAssets/hello.js'
         ].sort()
       );
@@ -124,11 +124,11 @@ describe('buildPackage', () => {
       expect(featureXml).toContain('Scope="Web"');
       expect(featureXml).toContain('Hidden="FALSE"');
 
-      const featureRels = zip.get(`_rels/feature_${featureId}.xml.rels`)!.toString('utf8');
+      const featureRels = zip.get(`feature_${featureId}.xml.rels`)!.toString('utf8');
       expect(featureRels).toContain(
         'Type="http://schemas.microsoft.com/sharepoint/2016/03/features/clientsideasset"'
       );
-      expect(featureRels).toContain('Target="/ClientSideAssets.xml"');
+      expect(featureRels).toContain('Target="ClientSideAssets.xml"');
 
       const configXml = zip.get(`feature_${featureId}.xml.config.xml`)!.toString('utf8');
       expect(configXml).toContain(`<Id>${featureId}</Id>`);
@@ -155,7 +155,7 @@ describe('buildPackage', () => {
       const names = [...zip.keys()];
       expect(names.some((name) => name.startsWith('ClientSideAssets'))).toBe(false);
       expect(names).toContain(`${featureId}/WebPart_${componentId}.xml`);
-      const featureRels = zip.get(`_rels/feature_${featureId}.xml.rels`)!.toString('utf8');
+      const featureRels = zip.get(`feature_${featureId}.xml.rels`)!.toString('utf8');
       expect(featureRels).not.toContain('clientsideasset');
       const webPartXml = zip.get(`${featureId}/WebPart_${componentId}.xml`)!.toString('utf8');
       const manifestJson = JSON.parse(extractComponentManifest(webPartXml)) as {
