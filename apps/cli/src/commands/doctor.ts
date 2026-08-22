@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { SPFX_DEFAULT_TARGET } from '@mbsks/rspfx-core';
@@ -106,6 +107,8 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
   checks.push({ name: `port ${devPort} free (dev server)`, ok: portFree });
 
   checks.push(checkDistWritable(cwd, config?.build.outDir ?? 'dist'));
+  checks.push(checkCertPermissions());
+  checks.push(checkServeJsonSchema(cwd));
 
   const failed = checks.filter((check) => !check.ok).length;
   const ok = failed === 0;
@@ -210,6 +213,47 @@ function checkDistWritable(cwd: string, outDir: string): DoctorCheck {
   } catch (error) {
     return {
       name: `${outDir} writable`,
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function checkCertPermissions(): DoctorCheck {
+  const keyPath = path.join(os.homedir(), '.rspfx', 'certs', 'key.pem');
+  if (!fs.existsSync(keyPath)) {
+    return { name: 'cert permissions (key.pem 0600)', ok: true, detail: 'not generated yet' };
+  }
+  try {
+    const stat = fs.statSync(keyPath);
+    const mode = stat.mode & 0o777;
+    const ok = mode === 0o600;
+    return {
+      name: 'cert permissions (key.pem 0600)',
+      ok,
+      detail: ok ? `0o${mode.toString(8)}` : `expected 0o600, got 0o${mode.toString(8)}`
+    };
+  } catch (error) {
+    return {
+      name: 'cert permissions (key.pem 0600)',
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function checkServeJsonSchema(cwd: string): DoctorCheck {
+  const servePath = path.join(cwd, 'config', 'serve.json');
+  if (!fs.existsSync(servePath)) {
+    return { name: 'config/serve.json valid JSON', ok: true, detail: 'no serve.json' };
+  }
+  try {
+    const content = fs.readFileSync(servePath, 'utf8');
+    JSON.parse(content);
+    return { name: 'config/serve.json valid JSON', ok: true };
+  } catch (error) {
+    return {
+      name: 'config/serve.json valid JSON',
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
     };

@@ -1,4 +1,4 @@
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { isIP } from 'node:net';
@@ -55,7 +55,7 @@ interface SelfsignedPems {
 const require = createRequire(import.meta.url);
 
 const selfsigned = require('selfsigned') as {
-  generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): SelfsignedPems;
+  generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): Promise<SelfsignedPems>;
 };
 
 const logger = createLogger('rspfx');
@@ -176,7 +176,7 @@ export async function ensureCertificates(certsDir: string, hostname?: string): P
       altNames.push({ type: 2, value: hostname });
     }
   }
-  const pems = selfsigned.generate(
+  const pems = await selfsigned.generate(
     [{ name: 'commonName', value: 'localhost' }],
     {
       keySize: 2048,
@@ -191,13 +191,14 @@ export async function ensureCertificates(certsDir: string, hostname?: string): P
       ]
     }
   );
+  const trustPath = path.join(certsDir, 'cert.pem.trust.txt');
   await Promise.all([
-    writeFile(keyPath, pems.private, { mode: 0o600 }),
-    writeFile(certPath, pems.cert, { mode: 0o644 }),
+    writeFile(`${keyPath}.tmp`, pems.private, { mode: 0o600 }).then(() => rename(`${keyPath}.tmp`, keyPath)),
+    writeFile(`${certPath}.tmp`, pems.cert, { mode: 0o644 }).then(() => rename(`${certPath}.tmp`, certPath)),
     // cert.pem.trust.txt is static help text — intentionally does NOT echo the
     // custom hostname to avoid leaking/injecting unescaped hostnames into a
     // file that users may `cat` or copy-paste into shell commands.
-    writeFile(path.join(certsDir, 'cert.pem.trust.txt'), TRUST_NOTES, { mode: 0o644 })
+    writeFile(`${trustPath}.tmp`, TRUST_NOTES, { mode: 0o644 }).then(() => rename(`${trustPath}.tmp`, trustPath))
   ]);
   logger.info(
     `Generated self-signed dev certificate in ${certsDir}. See cert.pem.trust.txt for trust instructions.`

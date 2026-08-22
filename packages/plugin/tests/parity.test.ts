@@ -156,11 +156,11 @@ beforeAll(() => {
       fs.symlinkSync(repoNodeModules, path.join(FIXTURE, 'node_modules'), 'dir');
     }
   } catch {}
-  writeWebPart('alpha', ENTRY_IDS.alpha);
-  writeWebPart('beta', ENTRY_IDS.beta);
-  writeExtension('alphaExt', ENTRY_IDS.alphaExt, 'ApplicationCustomizer');
-  writeExtension('betaExt', ENTRY_IDS.betaExt, 'FieldCustomizer');
-  writeLibrary('gammaLib', ENTRY_IDS.gammaLib);
+  writeWebPart('alpha', ENTRY_IDS.alpha!);
+  writeWebPart('beta', ENTRY_IDS.beta!);
+  writeExtension('alphaExt', ENTRY_IDS.alphaExt!, 'ApplicationCustomizer');
+  writeExtension('betaExt', ENTRY_IDS.betaExt!, 'FieldCustomizer');
+  writeLibrary('gammaLib', ENTRY_IDS.gammaLib!);
 });
 
 afterAll(() => {
@@ -277,16 +277,16 @@ describe('bundler parity for the same fixture', () => {
   it('produces byte-equal release manifests for extensions and libraries', () => {
     const rspack = results.rspack!;
     // Extension manifests retain extensionType; Library retains componentType Library
-    const extManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.alphaExt}.manifest.json`]!) as Record<string, unknown>;
+    const extManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.alphaExt!}.manifest.json`]!) as Record<string, unknown>;
     expect(extManifest.componentType).toBe('Extension');
     expect(extManifest.extensionType).toBe('ApplicationCustomizer');
     expect((extManifest.loaderConfig as Record<string, unknown>).entryModuleId).toBe('alphaExt');
 
-    const fieldManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.betaExt}.manifest.json`]!) as Record<string, unknown>;
+    const fieldManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.betaExt!}.manifest.json`]!) as Record<string, unknown>;
     expect(fieldManifest.componentType).toBe('Extension');
     expect(fieldManifest.extensionType).toBe('FieldCustomizer');
 
-    const libManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.gammaLib}.manifest.json`]!) as Record<string, unknown>;
+    const libManifest = JSON.parse(rspack.manifests[`${ENTRY_IDS.gammaLib!}.manifest.json`]!) as Record<string, unknown>;
     expect(libManifest.componentType).toBe('Library');
     expect(libManifest.manifestVersion).toBe(2);
     expect((libManifest.loaderConfig as Record<string, unknown>).entryModuleId).toBe('gammaLib');

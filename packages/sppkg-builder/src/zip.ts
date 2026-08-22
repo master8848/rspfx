@@ -51,7 +51,7 @@ export async function validateSppkg(zipPath: string): Promise<SppkgValidationRes
   }
   if (
     ![...names].some((name) =>
-      /(?:^|\/)(?:WebPart|Extension|AdaptiveCardExtension)_[0-9a-fA-F-]+\.xml$/.test(name)
+      /(?:^|\/)(?:WebPart|Extension|AdaptiveCardExtension|Library)_[0-9a-fA-F-]+\.xml$/.test(name)
     )
   ) {
     errors.push(

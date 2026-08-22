@@ -1,3 +1,5 @@
+import { isAllowedOrigin } from './cors.js';
+
 export const RSPFX_HOT_PATH = '/__rspfx_hot.json';
 
 interface HotJsonResponse {
@@ -11,23 +13,6 @@ export interface ReloadController {
   readonly clientScript: string;
   tick(): void;
   handle(req: unknown, res: HotJsonResponse): void;
-}
-
-function isAllowedOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin);
-    const h = hostname.toLowerCase();
-    return (
-      h === 'localhost' ||
-      h === '127.0.0.1' ||
-      h === '::1' ||
-      h.endsWith('.sharepoint.com') ||
-      h.endsWith('.sharepoint-df.com') ||
-      h.endsWith('.sharepoint.cn')
-    );
-  } catch {
-    return false;
-  }
 }
 
 export function createReloadController(): ReloadController {
@@ -65,25 +50,47 @@ export function createReloadClientScript(): string {
     if (!current || !current.src) { return; }
     var origin = new URL(current.src, window.location.href).origin;
     var seen = null;
+    var interval = 500;
+    var handleData = function (data) {
+      if (!data || typeof data.build !== 'number') { return; }
+      if (seen !== null && seen !== data.build) {
+        window.location.reload();
+        return;
+      }
+      seen = data.build;
+    };
     var poll = function () {
       fetch(origin + '${RSPFX_HOT_PATH}', { cache: 'no-store' })
         .then(function (res) {
           if (!res.ok) { return undefined; }
           return res.json();
         })
-        .then(function (data) {
-          if (!data || typeof data.build !== 'number') { return; }
-          if (seen !== null && seen !== data.build) {
-            window.location.reload();
-            return;
-          }
-          seen = data.build;
-        })
+        .then(handleData)
         .catch(function () {})
         .then(function () {
-          setTimeout(poll, 1000);
+          setTimeout(poll, interval);
         });
     };
+    // Prefer WebSocket push from rspack dev-server when available; fall back to polling.
+    try {
+      var wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      var wsHost = new URL(origin).host;
+      var ws = new WebSocket(wsProtocol + '//' + wsHost + '/ws');
+      ws.onmessage = function (event) {
+        try {
+          var msg = JSON.parse(event.data);
+          if (msg && typeof msg.build === 'number') {
+            handleData(msg);
+          } else if (msg && (msg.type === 'hash' || msg.type === 'ok' || msg.type === 'still-ok')) {
+            fetch(origin + '${RSPFX_HOT_PATH}', { cache: 'no-store' })
+              .then(function (r) { if (!r.ok) return undefined; return r.json(); })
+              .then(handleData)
+              .catch(function () {});
+          }
+        } catch {}
+      };
+      ws.onerror = function () { try { ws.close(); } catch {} };
+    } catch {}
     poll();
   } catch (error) {
     console.warn('[rspfx] auto-reload client failed to start', error);

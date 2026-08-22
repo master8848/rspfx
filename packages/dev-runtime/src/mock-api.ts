@@ -87,27 +87,12 @@ const ALLOWED_CURRENT_USER_KEYS = new Set([
   'UserId'
 ]);
 
+import { isAllowedOrigin } from './cors.js';
+
 function sanitizeString(value: unknown): string {
   if (typeof value !== 'string') return '';
   // Strip angle brackets/quotes to prevent XSS, limit length.
   return value.replace(/[<>"']/g, '').slice(0, 256);
-}
-
-function isAllowedOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin);
-    const h = hostname.toLowerCase();
-    return (
-      h === 'localhost' ||
-      h === '127.0.0.1' ||
-      h === '::1' ||
-      h.endsWith('.sharepoint.com') ||
-      h.endsWith('.sharepoint-df.com') ||
-      h.endsWith('.sharepoint.cn')
-    );
-  } catch {
-    return false;
-  }
 }
 
 function iso(offsetDays = 0): string {
@@ -354,6 +339,28 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     const method = (override ?? request.method ?? 'GET').toUpperCase();
     const path = rawPath.replace(/^\/_api/, '').replace(/\/+$/, '') || '/';
     const query = new URLSearchParams(rawQuery);
+    // L-S2: POST requires digest or JSON; reject cross-site form POST (non-JSON without digest).
+    if (path !== '/contextinfo' && ['POST', 'PUT', 'PATCH', 'MERGE', 'DELETE'].includes(method) && requestDigest !== DIGEST) {
+      const ctEntry = Object.entries(headers).find(([n]) => n.toLowerCase() === 'content-type')?.[1];
+      const ct = Array.isArray(ctEntry) ? ctEntry[0] : ctEntry;
+      let isJson = typeof ct === 'string' && ct.toLowerCase().includes('application/json');
+      if (!isJson && request.body !== undefined) {
+        if (typeof request.body === 'string') {
+          try {
+            JSON.parse(request.body as string);
+            isJson = true;
+          } catch {}
+        } else if (typeof request.body === 'object' && request.body !== null) {
+          isJson = true;
+        }
+      }
+      // For list item creation, strictly require digest even if JSON.
+      const isItemMutation = /\/items(\(\d+\))?$/.test(path);
+      if (isItemMutation || !isJson) {
+        respondError(res, 403, 'System.UnauthorizedAccessException', 'X-RequestDigest validation failed.', originHeader);
+        return;
+      }
+    }
     const body = method === 'POST' || method === 'PATCH' || method === 'MERGE' || method === 'PUT' ? await readRequestBody(req) : {};
 
     if (method === 'POST' && path === '/contextinfo') {

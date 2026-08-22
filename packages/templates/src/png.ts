@@ -1,5 +1,6 @@
 import { deflateSync } from 'node:zlib';
 
+// Keep in sync with packages/dev-runtime/src/project.ts
 function crc32(buf: Buffer): number {
   let crc = 0xffffffff;
   for (let i = 0; i < buf.length; i++) {

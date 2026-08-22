@@ -127,6 +127,7 @@ describe('createMockSharePointApi', () => {
       makeReq({
         url: "/_api/web/lists/getbytitle('Announcements')/items",
         method: 'POST',
+        headers: { 'X-RequestDigest': '0xRSPFXLOCALPREVIEW', 'Content-Type': 'application/json' },
         body: JSON.stringify({ Title: 'Third item' })
       })
     );

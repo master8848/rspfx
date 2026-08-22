@@ -1,3 +1,5 @@
+export { RspfxErrorCode } from './codes.js';
+
 export class RspfxError extends Error {
   readonly code: string;
 

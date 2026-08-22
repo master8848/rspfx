@@ -4,6 +4,8 @@ import { describe, expect, it, afterAll, beforeAll } from 'vitest';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { resolveServeMode, startServe } from '../src/index.js';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const FIXTURE = path.join(process.cwd(), 'tests', 'fixtures', 'proj');
 
 function makeConfig(overrides: Partial<RspfxConfig> = {}): RspfxConfig {
@@ -260,7 +262,8 @@ describe('startServe local mode', () => {
       projectRoot: FIXTURE,
       config: makeConfig(),
       noBrowser: true,
-      port: 0
+      port: 0,
+      mode: 'local'
     });
 
     try {
@@ -284,7 +287,8 @@ describe('startServe local mode', () => {
       projectRoot: FIXTURE,
       config: makeConfig(),
       noBrowser: true,
-      port: 0
+      port: 0,
+      mode: 'local'
     });
 
     try {
@@ -304,7 +308,8 @@ describe('startServe local mode', () => {
       projectRoot: FIXTURE,
       config: makeConfig(),
       noBrowser: true,
-      port: 0
+      port: 0,
+      mode: 'local'
     });
 
     try {
@@ -350,7 +355,8 @@ describe('startServe local mode', () => {
       projectRoot: FIXTURE,
       config: makeConfig(),
       noBrowser: true,
-      port: 0
+      port: 0,
+      mode: 'local'
     });
 
     try {

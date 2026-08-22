@@ -1,8 +1,9 @@
 import os from 'node:os';
 import fs from 'node:fs';
+import * as fspEsm from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import {
   resolveConfig,
   RSPFX_PLUGIN_MARKER,
@@ -36,6 +37,49 @@ import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
 
 const logger = createLogger('rspfx');
+
+// Eager patch for Vite's loadAndTransform which does `fsp.readFile(file)` where
+// `file` may be "/Volumes/New%20Volume/..." when the workspace path contains a
+// space (pathToFileURL encodes it, Vite's cleanUrl leaves %20). Decode %20
+// before the actual read so the build succeeds on such paths.
+(() => {
+  const patchTarget = (target: unknown): void => {
+    try {
+      const mod = target as { readFile: (...args: unknown[]) => Promise<unknown>; _rspfxPatched?: boolean };
+      if (!mod || typeof mod.readFile !== 'function' || mod._rspfxPatched) return;
+      const orig = mod.readFile.bind(mod);
+      (mod as unknown as { readFile: unknown }).readFile = (file: unknown, ...args: unknown[]) => {
+        if (typeof file === 'string' && file.includes('%')) {
+          try {
+            const decoded = decodeURIComponent(file);
+            if (decoded !== file) file = decoded;
+          } catch {}
+        }
+        return (orig as (...a: unknown[]) => unknown)(file, ...args);
+      };
+      mod._rspfxPatched = true;
+    } catch {}
+  };
+  patchTarget(fs.promises);
+  patchTarget(fspEsm as unknown);
+  // Also patch the classic fs.readFile
+  try {
+    const fsAny = fs as unknown as { readFile: (...a: unknown[]) => unknown; _rspfxPatched?: boolean };
+    if (fsAny && typeof fsAny.readFile === 'function' && !fsAny._rspfxPatched) {
+      const orig = fsAny.readFile.bind(fs);
+      fsAny.readFile = (file: unknown, ...args: unknown[]) => {
+        if (typeof file === 'string' && file.includes('%')) {
+          try {
+            const d = decodeURIComponent(file as string);
+            if (d !== file) file = d;
+          } catch {}
+        }
+        return (orig as (...a: unknown[]) => unknown)(file, ...args);
+      };
+      fsAny._rspfxPatched = true;
+    }
+  } catch {}
+})();
 
 /**
  * Environment contract between the CLI and the Vite plugin:
@@ -564,57 +608,105 @@ async function withEnv(entry: BundleEntry, fn: () => Promise<void>): Promise<voi
   }
 }
 
-function importViteFrom(root: string): Promise<unknown> {
+function decodeIfEncoded(p: string): string {
+  // Vite's dev server stores urls with %20 when the filesystem path contains a space
+  // (pathToFileURL encodes it). The subsequent fsp.readFile then fails because it
+  // tries to read a literal "%20" path. Decode it up-front and also handle the case
+  // where the path is already a file:// URL.
+  if (p.startsWith('file://')) {
+    try {
+      return fileURLToPath(p);
+    } catch {
+      // fall through to decodeURIComponent
+    }
+  }
+  if (p.includes('%20') || p.includes('%25')) {
+    try {
+      const decoded = decodeURIComponent(p);
+      // decodeURIComponent will turn %2520 -> %20, so loop until stable
+      return decoded.includes('%') ? decodeURIComponent(decoded) : decoded;
+    } catch {
+      return p;
+    }
+  }
+  return p;
+}
+
+async function importViteFrom(root: string): Promise<unknown> {
   let resolved: string;
   try {
-    const requireFromProject = createRequire(pathToFileURL(path.join(root, 'package.json')).href);
-    const packagePath = requireFromProject.resolve('vite/package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8')) as {
-      exports?: { '.': string | { import?: string | { default?: string } } };
-      main?: string;
-    };
-    const exportEntry = packageJson.exports?.['.'];
-    const importEntry =
-      typeof exportEntry === 'string'
-        ? exportEntry
-        : typeof exportEntry?.import === 'string'
-          ? exportEntry.import
-          : exportEntry?.import?.default;
-    const entry = importEntry ?? packageJson.main;
-    if (entry) {
-      resolved = path.resolve(path.dirname(packagePath), entry);
-    } else {
-      resolved = requireFromProject.resolve('vite');
-    }
+    // Use filesystem path directly (no file:// URL) so Node's resolver never
+    // sees an encoded %20. This resolves to Vite's CJS entry (index.cjs) via
+    // require.resolve, which avoids ESM file URL %20 handling in Vite/Vitest.
+    const requireFromProject = createRequire(path.join(root, 'package.json'));
+    resolved = decodeIfEncoded(requireFromProject.resolve('vite'));
   } catch (error) {
     // Fallback to the rspfx installation's vite (covers temp fixtures outside the project tree and pnpm isolated layouts).
     try {
-      const fallbackRequire = createRequire(import.meta.url);
-      const fallbackPackagePath = fallbackRequire.resolve('vite/package.json');
-      const packageJson = JSON.parse(fs.readFileSync(fallbackPackagePath, 'utf8')) as {
-        exports?: { '.': string | { import?: string | { default?: string } } };
-        main?: string;
-      };
-      const exportEntry = packageJson.exports?.['.'];
-      const importEntry =
-        typeof exportEntry === 'string'
-          ? exportEntry
-          : typeof exportEntry?.import === 'string'
-            ? exportEntry.import
-            : exportEntry?.import?.default;
-      const entry = importEntry ?? packageJson.main;
-      if (entry) {
-        resolved = path.resolve(path.dirname(fallbackPackagePath), entry);
-      } else {
-        resolved = fallbackRequire.resolve('vite');
-      }
+      const basePath = decodeIfEncoded(import.meta.url);
+      const fallbackRequire = createRequire(basePath);
+      resolved = decodeIfEncoded(fallbackRequire.resolve('vite'));
     } catch {
       throw new RspfxError(
         'VITE_NOT_FOUND',
         'Vite is not installed in this project. Add "vite" to devDependencies (rspfx dev/build use the project-local Vite).',
-        error
+        error as unknown as Error
       );
     }
   }
-  return import(pathToFileURL(resolved).href);
+  resolved = decodeIfEncoded(resolved);
+  // Prefer CJS require to avoid Vitest/Vite dev server ESM transform with %20.
+  // Vite's CJS build is deprecated but still functional and avoids file URL encoding.
+  try {
+    const req = createRequire(fileURLToPath(import.meta.url));
+    const mod = req(resolved);
+    patchViteForSpaces(mod);
+    return mod;
+  } catch {
+    const viteMod = await import(pathToFileURL(resolved).href);
+    patchViteForSpaces(viteMod);
+    return viteMod;
+  }
+}
+
+function patchViteForSpaces(_viteMod: unknown): void {
+  // Vite's dev server loadAndTransform does `file = cleanUrl(id)` then
+  // `fsp.readFile(file)`. When the workspace path contains a space, `id`
+  // / `url` may be "/Volumes/New%20Volume/..." and cleanUrl leaves %20 literal.
+  // Monkey-patch both fs.promises and fs/promises to decode %20 on the fly.
+  const patch = (target: unknown): void => {
+    try {
+      const fsp = target as { readFile: typeof fs.promises.readFile; _rspfxPatched?: boolean };
+      if (!fsp || typeof fsp.readFile !== 'function' || fsp._rspfxPatched) return;
+      const origReadFile = fsp.readFile.bind(fsp);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fsp.readFile as any) = (file: string, ...args: unknown[]) => {
+        if (typeof file === 'string' && file.includes('%')) {
+          try {
+            const decoded = decodeURIComponent(file);
+            if (decoded !== file) file = decoded;
+          } catch {
+            // keep original
+          }
+        }
+        // @ts-expect-error variadic
+        return origReadFile(file, ...args);
+      };
+      fsp._rspfxPatched = true;
+    } catch {
+      // best-effort
+    }
+  };
+  patch(fs.promises);
+  try {
+    // Also patch the separate 'node:fs/promises' ESM namespace that Vite imports
+    // as `import fsp from 'node:fs/promises'`.
+    const fspModule = createRequire(fileURLToPath(import.meta.url))('node:fs/promises') as unknown;
+    patch(fspModule);
+    // Also patch 'fs/promises' without node: prefix (Vite also imports it)
+    try {
+      const fspModule2 = createRequire(fileURLToPath(import.meta.url))('fs/promises') as unknown;
+      patch(fspModule2);
+    } catch {}
+  } catch {}
 }

@@ -265,7 +265,7 @@ function rspackConfig(vars: TemplateVars): string {
     `        https: ${configDefaults.dev.https},`,
     `        hostname: '${configDefaults.dev.hostname}',`,
     `        workbench: ${configDefaults.dev.workbench},`,
-    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: '${vars.tenantUrl}'` : ''}`
+    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
   ];
   const lines: string[] = [
     `import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';`,

@@ -36,6 +36,12 @@ export interface NewOptions {
 
 export async function runNew(opts: NewOptions): Promise<string> {
   const cwd = opts.cwd ?? process.cwd();
+  if (opts.name.includes('/') || opts.name.includes('\\') || opts.name.includes('..')) {
+    throw new RspfxError('INVALID_OPTION', `Invalid project name '${opts.name}': must not contain path traversal characters (/, \\, ..)`);
+  }
+  if (!/^[a-z0-9._-]+$/i.test(opts.name)) {
+    throw new RspfxError('INVALID_OPTION', `Invalid project name '${opts.name}': must match /^[a-z0-9._-]+$/i (alphanumeric, dot, underscore, hyphen)`);
+  }
   const skipPrompts = opts.yes === true;
 
   let component = (opts.component as ComponentType) ?? DEFAULT_COMPONENT;

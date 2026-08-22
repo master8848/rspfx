@@ -9,7 +9,7 @@ describe('ensureCertificates', () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'rspfx-test-certs-'));
     try {
       const first = await ensureCertificates(dir);
-      expect(first.key).toContain('BEGIN RSA PRIVATE KEY');
+      expect(first.key).toMatch(/BEGIN .*PRIVATE KEY/);
       expect(first.cert).toContain('BEGIN CERTIFICATE');
       const files = await readdir(dir);
       expect(files).toContain('key.pem');

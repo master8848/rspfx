@@ -29,7 +29,7 @@ function contentTypeFor(filePath: string): string {
 function isAllowedOrigin(origin: string): boolean {
   try {
     const { hostname } = new URL(origin);
-    const h = hostname.toLowerCase();
+    const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
     return (
       h === 'localhost' ||
       h === '127.0.0.1' ||
@@ -124,8 +124,8 @@ function createStaticMiddleware(
       next();
       return;
     }
-    fs.stat(file, (err, stat) => {
-      if (err || !stat.isFile()) {
+    fs.lstat(file, (err, stat) => {
+      if (err || stat.isSymbolicLink() || !stat.isFile()) {
         next();
         return;
       }

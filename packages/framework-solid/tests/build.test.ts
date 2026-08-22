@@ -71,11 +71,10 @@ describe('framework-solid build', () => {
       rules: Array<{ use: { options: { presets: unknown[]; plugins: unknown[] } } }>;
     };
     const options = contributions.rules[0]!.use.options;
-    expect(options.plugins).toEqual([['solid-refresh/babel', { bundler: 'rspack-esm' }]]);
-    expect(options.presets[0]).toEqual([
-      'babel-preset-solid',
-      { generate: 'dom', development: true }
-    ]);
+    expect((options.plugins[0] as unknown[])[0]).toMatch(/solid-refresh/);
+    expect((options.plugins[0] as unknown[])[1]).toEqual({ bundler: 'rspack-esm' });
+    expect((options.presets[0] as unknown[])[0]).toMatch(/babel-preset-solid/);
+    expect((options.presets[0] as unknown[])[1]).toEqual({ generate: 'dom', development: true });
   });
 
   it('compiles with fast refresh on and bundles the solid-refresh runtime', async () => {

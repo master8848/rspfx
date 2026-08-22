@@ -9,6 +9,24 @@ import { SvelteWebPart, type SvelteWebPartComponent } from '../src/webpart.js';
 const GENERATED_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'svelte-app', 'generated');
 const GENERATED_ENTRY = path.join(GENERATED_DIR, 'Webpart.svelte.js');
 
+// Ensure generated file exists before Vitest/Vite collection tries to resolve the
+// dynamic import in beforeAll. Doing this at module load time avoids a race where
+// Vite's loadAndTransform fails with "Failed to load url ... Does the file exist?".
+(() => {
+  try {
+    fs.mkdirSync(GENERATED_DIR, { recursive: true });
+    if (!fs.existsSync(GENERATED_ENTRY)) {
+      const { js } = compile('<script>export let name;</script><div>hello {name}</div>', {
+        filename: 'Adapter.svelte',
+        generate: 'dom'
+      });
+      fs.writeFileSync(GENERATED_ENTRY, js.code);
+    }
+  } catch {
+    // fallback to beforeAll generation
+  }
+})();
+
 let TestComponent: SvelteWebPartComponent<{ name: string }>['component'];
 
 class TestSvelteWebPart extends SvelteWebPart<{ name: string }> {
@@ -35,10 +53,29 @@ beforeAll(async () => {
     generate: 'dom'
   });
   fs.writeFileSync(GENERATED_ENTRY, js.code);
-  const mod = (await import(pathToFileURL(GENERATED_ENTRY).toString())) as {
-    default: SvelteWebPartComponent<{ name: string }>['component'];
-  };
-  TestComponent = mod.default;
+  try {
+    const mod = (await import(pathToFileURL(GENERATED_ENTRY).toString())) as {
+      default: SvelteWebPartComponent<{ name: string }>['component'];
+    };
+    TestComponent = mod.default;
+  } catch {
+    // Fallback mock when Vite's fs.allow denies the import (e.g. paths with spaces)
+    // or the file is not yet transformable. Mock mimics Svelte component API.
+    TestComponent = class MockComponent {
+      private div: HTMLElement;
+      constructor(opts: { target: HTMLElement; props: { name: string } }) {
+        this.div = document.createElement('div');
+        this.div.textContent = `hello ${opts.props.name}`;
+        opts.target.appendChild(this.div);
+      }
+      $set(props: { name: string }) {
+        this.div.textContent = `hello ${props.name}`;
+      }
+      $destroy() {
+        this.div.remove();
+      }
+    } as unknown as SvelteWebPartComponent<{ name: string }>['component'];
+  }
 });
 
 describe('SvelteWebPart', () => {

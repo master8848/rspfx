@@ -114,9 +114,9 @@ describe('scaffoldProject', () => {
 
     const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
     expect(config).toContain('    openBrowser: false,');
-    expect(config).toContain("    tenantUrl: 'https://contoso.sharepoint.com'");
+    expect(config).toContain('    tenantUrl: "https://contoso.sharepoint.com"');
     expect(config).not.toContain('fluent');
-    expect(config).toMatch(/openBrowser: false,\n {8}tenantUrl: 'https:\/\/contoso\.sharepoint\.com'/);
+    expect(config).toMatch(/openBrowser: false,\n {8}tenantUrl: "https:\/\/contoso\.sharepoint\.com"/);
   });
 
   it('writes a webpart manifest with componentType WebPart and an alias', () => {

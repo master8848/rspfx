@@ -2,3 +2,13 @@ packages:
   - "packages/*"
   - "apps/*"
   - "examples/*"
+public-hoist-pattern:
+  - "*vite*"
+  - "happy-dom"
+  - "@vitejs/*"
+  - "@sveltejs/vite-plugin-svelte*"
+  - "vite-plugin-solid"
+  - "bare-specifiers"
+onlyBuiltDependencies:
+  - esbuild
+  - "@parcel/watcher"

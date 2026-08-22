@@ -120,7 +120,9 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const sourcemap = build.sourcemap ?? false;
   const minify = build.minify ?? true;
   const splitChunks = build.splitChunks ?? false;
-  const useCache = ctx.serveMode === true;
+  // Persistent filesystem cache: enabled in serve mode for fast incremental rebuilds,
+  // and optionally in production/build when RSPFX_CACHE=1 (e.g. CI opt-in).
+  const useCache = ctx.serveMode === true || process.env.RSPFX_CACHE === '1' || process.env.RSPFX_CACHE === 'true';
 
   const devtool: Configuration['devtool'] = ctx.production
     ? sourcemap
@@ -199,18 +201,36 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     options: { jsc: swcJsc }
   });
 
+  // CSS handling: in SPFx production bundles CSS is inlined via style-loader (sppkg has no external css).
+  // When RSPFX_EXTRACT_CSS=1 is set, production extracts CSS via CssExtractRspackPlugin for apps that can host *.css.
+  const useCssExtract =
+    ctx.production &&
+    (process.env.RSPFX_EXTRACT_CSS === '1' || process.env.RSPFX_EXTRACT_CSS === 'true') &&
+    typeof (rspack as unknown as { CssExtractRspackPlugin?: unknown }).CssExtractRspackPlugin === 'function';
+  const cssExtractLoader = useCssExtract
+    ? (rspack as unknown as { CssExtractRspackPlugin: { loader: string } }).CssExtractRspackPlugin.loader
+    : styleLoaderPath;
   rules.push({
     test: /\.css$/,
-    use: [styleLoaderPath, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
+    use: [cssExtractLoader, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
   });
   rules.push({
     test: /\.s[ac]ss$/i,
     use: [
-      styleLoaderPath,
+      cssExtractLoader,
       { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
       { loader: sassLoaderPath }
     ]
   });
+  if (useCssExtract) {
+    const CssExtractPlugin = (rspack as unknown as { CssExtractRspackPlugin: new (opts: unknown) => unknown })
+      .CssExtractRspackPlugin;
+    plugins.push(
+      new CssExtractPlugin({ filename: '[name].css', chunkFilename: 'chunk.[name].css' }) as unknown as NonNullable<
+        Configuration['plugins']
+      >[number]
+    );
+  }
 
   rules.push({ test: /\.html$/, type: 'asset/source' });
 

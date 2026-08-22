@@ -1,0 +1,43 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "vite-proj-client-side-solution",
+    "id": "f3c3f06b-ef6a-4c65-af66-c486e82317e5",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-0000"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "vite-proj description"
+      },
+      "longDescription": {
+        "default": "vite-proj description"
+      },
+      "categories": [],
+      "screenshotPaths": []
+    },
+    "features": [
+      {
+        "title": "ViteProj Feature",
+        "description": "A feature which activates the Client-Side WebPart named 'ViteProj'",
+        "id": "22acd53d-c6d0-4f1e-a07a-2a512682d825",
+        "version": "1.0.0.0",
+        "assets": {
+          "elementManifests": [],
+          "elementFiles": []
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "sharepoint/solution/vite-proj.sppkg"
+  }
+}

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { buildPackage, validateSppkg, type BuildPackageOptions } from '../src/index.js';
 import { buildElementsXml } from '../src/xml.js';
-import { readZipEntries } from '../src/zip.js';
+import { readZipEntries, writeZip } from '../src/zip.js';
 
 const fixtureRoot = fileURLToPath(new URL('./fixtures/proj', import.meta.url));
 const solutionId = 'e2b3f8c8-2c9a-4f1e-9c3d-000000000001';
@@ -278,6 +278,21 @@ describe('buildPackage', () => {
         loaderConfig: { internalModuleBaseUrls: string[] };
       };
       expect(manifestJson.loaderConfig.internalModuleBaseUrls).toEqual(['HTTPS://SPCLIENTSIDEASSETLIBRARY/']);
+      const validation = await validateSppkg(result.outputPath);
+      expect(validation).toEqual({ ok: true, errors: [] });
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects feature component ids that contain path traversal', async () => {
+    const projectRoot = await makeProject();
+    try {
+      const evilPath = path.join(projectRoot, 'config/package-solution.json');
+      const cfg = JSON.parse(await readFile(evilPath, 'utf8')) as { solution: { features: { id: string }[] } };
+      cfg.solution.features[0]!.id = '../../evil';
+      await writeFile(evilPath, JSON.stringify(cfg, null, 2));
+      await expect(buildPackage(buildOptions(projectRoot))).rejects.toThrow('SPPKG_TRAVERSAL');
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }
@@ -321,6 +336,27 @@ describe('validateSppkg', () => {
       const validation = await validateSppkg(notAZip);
       expect(validation.ok).toBe(false);
       expect(validation.errors.join(' ').toLowerCase()).toContain('zip');
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('validates a Library-only package as ok', async () => {
+    const projectRoot = await makeProject();
+    try {
+      const fid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+      const cid = 'cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa';
+      const libZip = path.join(projectRoot, 'lib-only.sppkg');
+      await writeZip(libZip, [
+        { name: '[Content_Types].xml', buffer: Buffer.from('<Types/>') },
+        { name: '_rels/.rels', buffer: Buffer.from('<rels/>') },
+        { name: 'AppManifest.xml', buffer: Buffer.from('<App/>') },
+        { name: `feature_${fid}.xml`, buffer: Buffer.from('<Feature/>') },
+        { name: `${fid}/Library_${cid}.xml`, buffer: Buffer.from('<Elements/>') }
+      ]);
+      const validation = await validateSppkg(libZip);
+      expect(validation.ok).toBe(true);
+      expect(validation.errors).toEqual([]);
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }

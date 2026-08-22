@@ -132,8 +132,8 @@ function loadDotEnv(projectRoot: string): void {
         process.env[key] = value;
       }
     }
-  } catch {
-    // ignore .env parse errors
+  } catch (e) {
+    createLogger('rspfx').debug(`Failed to parse .env: ${String(e)}`);
   }
 }
 
@@ -144,6 +144,7 @@ function toPascal(name: string): string {
     .join('');
 }
 
+// Keep in sync with packages/templates/src/png.ts
 function crc32(buf: Buffer): number {
   let crc = 0xffffffff;
   for (let i = 0; i < buf.length; i++) {
@@ -155,6 +156,7 @@ function crc32(buf: Buffer): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+// Keep in sync with packages/templates/src/png.ts
 function chunk(type: string, data: Buffer): Buffer {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length);
@@ -164,6 +166,7 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, typeBuf, data, crc]);
 }
 
+// Keep in sync with packages/templates/src/png.ts
 function solidPngBuffer(
   width: number,
   height: number,
@@ -209,7 +212,8 @@ function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>):
         let files: string[] = [];
         try {
           files = fs.readdirSync(sub);
-        } catch {
+        } catch (e) {
+          createLogger('rspfx').debug(`Failed to read component subdir ${sub}: ${String(e)}`);
           continue;
         }
         for (const file of files.filter((f) => f.endsWith('.manifest.json'))) {
@@ -218,13 +222,13 @@ function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>):
             if (content.id) {
               return content.id;
             }
-          } catch {
-            // ignore broken manifest
+          } catch (e) {
+            createLogger('rspfx').debug(`Failed to parse manifest ${path.join(sub, file)}: ${String(e)}`);
           }
         }
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      createLogger('rspfx').debug(`Failed to discover components in ${full}: ${String(e)}`);
     }
   }
   return undefined;

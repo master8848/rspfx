@@ -1,10 +1,33 @@
 import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import { createRequire } from 'node:module';
 import prefresh from '@prefresh/vite';
 import PreactRefreshRspackPlugin from '@rspack/plugin-preact-refresh';
+
+const require = createRequire(import.meta.url);
+function resolveOrFallback(spec: string): string {
+  try {
+    return require.resolve(spec);
+  } catch {
+    return spec;
+  }
+}
 
 export const preset: FrameworkPreset = {
   name: 'preact',
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
+    const getRefreshPlugins = (): unknown[] => {
+      if (!opts.fastRefresh) return [];
+      try {
+        require.resolve('preact');
+      } catch {
+        return [];
+      }
+      try {
+        return [new PreactRefreshRspackPlugin({})];
+      } catch {
+        return [];
+      }
+    };
     return {
       swc: {
         jsc: {
@@ -18,7 +41,7 @@ export const preset: FrameworkPreset = {
           }
         }
       },
-      plugins: opts.fastRefresh ? [new PreactRefreshRspackPlugin({})] : []
+      plugins: getRefreshPlugins() as never[],
     };
   },
   vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
@@ -38,17 +61,29 @@ export const preset: FrameworkPreset = {
             options: {
               presets: [
                 [
-                  '@babel/preset-react',
-                  { runtime: 'automatic', importSource: 'preact', development: opts.fastRefresh }
+                  resolveOrFallback('@babel/preset-react'),
+                  { runtime: 'automatic', importSource: resolveOrFallback('preact'), development: opts.fastRefresh }
                 ],
-                '@babel/preset-typescript'
+                resolveOrFallback('@babel/preset-typescript')
               ],
-              plugins: opts.fastRefresh ? ['@prefresh/babel-plugin'] : []
+              plugins: opts.fastRefresh ? [resolveOrFallback('@prefresh/babel-plugin')] : []
             }
           }
         }
       ],
-      plugins: opts.fastRefresh ? [new PreactRefreshRspackPlugin({})] : []
+      plugins: (() => {
+        if (!opts.fastRefresh) return [];
+        try {
+          require.resolve('preact');
+        } catch {
+          return [];
+        }
+        try {
+          return [new PreactRefreshRspackPlugin({})];
+        } catch {
+          return [];
+        }
+      })()
     };
   }
 };

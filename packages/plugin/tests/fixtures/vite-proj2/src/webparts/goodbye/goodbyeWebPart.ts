@@ -1,0 +1,1 @@
+export default class GoodbyeWebPart { public render(): void {} }

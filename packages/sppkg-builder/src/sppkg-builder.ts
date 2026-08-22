@@ -102,6 +102,15 @@ const REL_CONTENT_RESOURCE = 'http://schemas.microsoft.com/sharepoint/2012/app/r
 
 const SP_CLIENT_SIDE_ASSET_LIBRARY = 'HTTPS://SPCLIENTSIDEASSETLIBRARY/';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function assertUuid(value: string, label: string): string {
+  if (!UUID_RE.test(value)) {
+    throw new RspfxError('SPPKG_TRAVERSAL', `SPPKG_TRAVERSAL: ${label} must be a UUID, got '${value}'`);
+  }
+  return value;
+}
+
 export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPackageResult> {
   const projectRoot = path.resolve(opts.projectRoot);
   const { solution, zippedPackage } = await loadSolutionConfig(projectRoot, opts.solutionConfigPath);
@@ -150,15 +159,19 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
   };
 
   for (const feature of features) {
-    addEntry(`feature_${feature.id}.xml`, buildFeatureXml(feature, pretty));
-    addEntry(`feature_${feature.id}.xml.config.xml`, buildAppPartConfigXml(feature.id, pretty));
+    assertUuid(feature.id, 'feature.id');
+    const featureXmlName = toZipPath(`feature_${feature.id}.xml`);
+    const featureConfigName = toZipPath(`feature_${feature.id}.xml.config.xml`);
+    addEntry(featureXmlName, buildFeatureXml(feature, pretty));
+    addEntry(featureConfigName, buildAppPartConfigXml(feature.id, pretty));
     const relationships: Relationship[] = [
-      { type: REL_PART_CONFIGURATION, target: `/feature_${feature.id}.xml.config.xml` }
+      { type: REL_PART_CONFIGURATION, target: `/${featureConfigName}` }
     ];
     for (const component of feature.components) {
+      assertUuid(component.id, 'component.id');
       const componentType = component.componentType ?? 'WebPart';
       const componentName = typeof component.alias === 'string' && component.alias ? component.alias : feature.title;
-      const componentFile = `${feature.id}/${componentType}_${component.id}.xml`;
+      const componentFile = toZipPath(`${feature.id}/${componentType}_${component.id}.xml`);
       addEntry(componentFile, buildElementsXml(componentName, component, pretty));
       relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: `/${componentFile}` });
     }
@@ -251,7 +264,12 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
 
   const debugDir = path.join(path.dirname(outputPath), 'debug', path.basename(outputPath, path.extname(outputPath)));
   for (const entry of orderedEntries) {
-    const target = path.join(debugDir, ...entry.name.split('/'));
+    const safeName = toZipPath(entry.name);
+    const target = path.join(debugDir, ...safeName.split('/'));
+    const rel = path.relative(debugDir, target);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new RspfxError('SPPKG_TRAVERSAL', `Refusing to write debug file outside debug dir: '${entry.name}'`);
+    }
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, entry.buffer);
   }

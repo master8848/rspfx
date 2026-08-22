@@ -61,7 +61,7 @@ describe('new', () => {
 
     const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
-    expect(config).toContain("tenantUrl: 'https://contoso.sharepoint.com'");
+    expect(config).toContain('tenantUrl: "https://contoso.sharepoint.com"');
   });
 
   it('rejects unknown framework values', async () => {

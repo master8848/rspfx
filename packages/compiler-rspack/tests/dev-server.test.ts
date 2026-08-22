@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startDevServer, type CompileContext } from '../src/index.js';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'basic');
 const COMPONENT_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
 const VERSION = '1.0.0';

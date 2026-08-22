@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, afterAll, beforeAll } from 'vitest';
 import { registerPlugin } from '@mbsks/rspfx-plugin-api';
@@ -84,7 +85,12 @@ describe('rspfxVite native build', () => {
       }
     });
 
-    const vite = await import('vite');
+    // Use CJS require via createRequire with decoded fileURLToPath to avoid
+    // Vitest/Vite dev-server ESM transform which mishandles spaces (%20 -> loadAndTransform).
+    const requireFromTest = createRequire(fileURLToPath(import.meta.url));
+    const vite = requireFromTest('vite') as {
+      build: (options: Record<string, unknown>) => Promise<unknown>;
+    };
     await vite.build({
       configFile: false,
       root: FIXTURE,

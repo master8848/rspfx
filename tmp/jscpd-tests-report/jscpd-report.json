@@ -1,0 +1,2649 @@
+{
+  "duplicates": [
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 557
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",",
+      "lines": 24,
+      "secondFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 553
+        },
+        "name": "dev-runtime/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 36,
+          "line": 2,
+          "position": 38
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 38,
+          "line": 25,
+          "position": 556
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",",
+      "lines": 24,
+      "secondFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 38,
+          "line": 25,
+          "position": 552
+        },
+        "name": "diagnostics/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 36,
+          "line": 2,
+          "position": 38
+        }
+      },
+      "tokens": 73
+    },
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 557
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",",
+      "lines": 24,
+      "secondFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 556
+        },
+        "name": "fluent-adapter/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 39,
+          "line": 2,
+          "position": 41
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 557
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",",
+      "lines": 24,
+      "secondFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 39,
+          "line": 25,
+          "position": 560
+        },
+        "name": "manifest-generator/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 43,
+          "line": 2,
+          "position": 45
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 26,
+        "endLoc": {
+          "column": 44,
+          "line": 26,
+          "position": 602
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",\n    \"@mbsks/rspfx-plugin-api\": \"workspace:*\",",
+      "lines": 25,
+      "secondFile": {
+        "end": 27,
+        "endLoc": {
+          "column": 16,
+          "line": 27,
+          "position": 573
+        },
+        "name": "plugin-api/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 35,
+          "line": 2,
+          "position": 37
+        }
+      },
+      "tokens": 77
+    },
+    {
+      "firstFile": {
+        "end": 24,
+        "endLoc": {
+          "column": 19,
+          "line": 24,
+          "position": 517
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {",
+      "lines": 23,
+      "secondFile": {
+        "end": 24,
+        "endLoc": {
+          "column": 19,
+          "line": 24,
+          "position": 508
+        },
+        "name": "plugin/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 31,
+          "line": 2,
+          "position": 33
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 26,
+        "endLoc": {
+          "column": 44,
+          "line": 26,
+          "position": 602
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",\n    \"@mbsks/rspfx-plugin-api\": \"workspace:*\",",
+      "lines": 25,
+      "secondFile": {
+        "end": 26,
+        "endLoc": {
+          "column": 45,
+          "line": 26,
+          "position": 601
+        },
+        "name": "sppkg-builder/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 38,
+          "line": 2,
+          "position": 40
+        }
+      },
+      "tokens": 77
+    },
+    {
+      "firstFile": {
+        "end": 26,
+        "endLoc": {
+          "column": 44,
+          "line": 26,
+          "position": 602
+        },
+        "name": "compiler-rspack/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-compiler-rspack\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",\n    \"@mbsks/rspfx-plugin-api\": \"workspace:*\",",
+      "lines": 25,
+      "secondFile": {
+        "end": 27,
+        "endLoc": {
+          "column": 16,
+          "line": 27,
+          "position": 572
+        },
+        "name": "templates/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 34,
+          "line": 2,
+          "position": 36
+        }
+      },
+      "tokens": 77
+    },
+    {
+      "firstFile": {
+        "end": 22,
+        "endLoc": {
+          "column": 23,
+          "line": 22,
+          "position": 700
+        },
+        "name": "compiler-rspack/tests/build.test.ts",
+        "start": 10,
+        "startLoc": {
+          "column": 23,
+          "line": 10,
+          "position": 421
+        }
+      },
+      "format": "typescript",
+      "fragment": "const VERSION = '1.0.0';\n\nfunction makeCtx(): CompileContext {\n  return {\n    projectRoot: FIXTURE,\n    framework: 'vanilla',\n    fastRefresh: false,\n    production: true,\n    entries: [\n      {\n        name: 'testwebpart',\n        import: path.join(FIXTURE, 'src', 'index.ts'),\n        componentIds: [COMPONENT_ID],",
+      "lines": 13,
+      "secondFile": {
+        "end": 20,
+        "endLoc": {
+          "column": 23,
+          "line": 20,
+          "position": 654
+        },
+        "name": "compiler-rspack/tests/watch.test.ts",
+        "start": 8,
+        "startLoc": {
+          "column": 52,
+          "line": 8,
+          "position": 375
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 32,
+        "endLoc": {
+          "column": 13,
+          "line": 32,
+          "position": 978
+        },
+        "name": "compiler-rspack/tests/build.test.ts",
+        "start": 17,
+        "startLoc": {
+          "column": 20,
+          "line": 17,
+          "position": 568
+        }
+      },
+      "format": "typescript",
+      "fragment": "    production: true,\n    entries: [\n      {\n        name: 'testwebpart',\n        import: path.join(FIXTURE, 'src', 'index.ts'),\n        componentIds: [COMPONENT_ID],\n        version: VERSION\n      }\n    ],\n    externals: ['@microsoft/sp-core-library'],\n    aliases: { XxxWebPartStrings: path.join(FIXTURE, 'src', 'loc', 'en-us') },\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,",
+      "lines": 16,
+      "secondFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 13,
+          "line": 34,
+          "position": 1114
+        },
+        "name": "compiler-rspack/tests/dev-server.test.ts",
+        "start": 19,
+        "startLoc": {
+          "column": 21,
+          "line": 19,
+          "position": 704
+        }
+      },
+      "tokens": 76
+    },
+    {
+      "firstFile": {
+        "end": 73,
+        "endLoc": {
+          "column": 45,
+          "line": 73,
+          "position": 2586
+        },
+        "name": "compiler-rspack/tests/build.test.ts",
+        "start": 68,
+        "startLoc": {
+          "column": 62,
+          "line": 68,
+          "position": 2354
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('inlines SCSS into the JS bundle (no external css files)', async () => {\n    const result = await build(makeCtx());\n    const bundlePath = path.join(FIXTURE, OUT_DIR, 'testwebpart.js');\n    const content = fs.readFileSync(bundlePath, 'utf8');\n\n    expect(result.outputFiles).not.toContain('testwebpart.css');",
+      "lines": 6,
+      "secondFile": {
+        "end": 95,
+        "endLoc": {
+          "column": 45,
+          "line": 95,
+          "position": 3496
+        },
+        "name": "compiler-rspack/tests/build.test.ts",
+        "start": 90,
+        "startLoc": {
+          "column": 66,
+          "line": 90,
+          "position": 3264
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 47,
+        "endLoc": {
+          "column": 26,
+          "line": 47,
+          "position": 1461
+        },
+        "name": "compiler-rspack/tests/config.test.ts",
+        "start": 38,
+        "startLoc": {
+          "column": 44,
+          "line": 38,
+          "position": 1125
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const config = await getConfig(makeCtx());\n    const entries = config.entry as Record<\n      string,\n      { import: string; library: { type: string; name: string } }\n    >;\n    expect(entries['testwebpart']).toEqual({\n      import: '/tmp/proj/src/index.ts',\n      library: { type: 'amd', name: 'aaaaaaaa-0000-0000-0000-000000000001_1.0.0' }\n    });\n    expect(config.output?.library).toEqual({ type: 'amd' });",
+      "lines": 10,
+      "secondFile": {
+        "end": 59,
+        "endLoc": {
+          "column": 26,
+          "line": 59,
+          "position": 2126
+        },
+        "name": "compiler-rspack/tests/plugin.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 37,
+          "line": 50,
+          "position": 1790
+        }
+      },
+      "tokens": 67
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 9,
+          "line": 58,
+          "position": 1857
+        },
+        "name": "compiler-rspack/tests/config.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 58,
+          "line": 50,
+          "position": 1561
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('uses a distinct per-entry AMD name for every bundle', async () => {\n    const second: BundleEntry = {\n      name: 'secondwebpart',\n      import: '/tmp/proj/src/second.ts',\n      componentIds: ['bbbbbbbb-0000-0000-0000-000000000002'],\n      version: '2.0.0'\n    };\n    const config = await getConfig(makeCtx({ entries: [ENTRY, second] }));\n    const entries = config.entry as Record<",
+      "lines": 9,
+      "secondFile": {
+        "end": 85,
+        "endLoc": {
+          "column": 9,
+          "line": 85,
+          "position": 2812
+        },
+        "name": "compiler-rspack/tests/config.test.ts",
+        "start": 77,
+        "startLoc": {
+          "column": 53,
+          "line": 77,
+          "position": 2516
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 112,
+        "endLoc": {
+          "column": 107,
+          "line": 112,
+          "position": 4187
+        },
+        "name": "compiler-rspack/tests/config.test.ts",
+        "start": 106,
+        "startLoc": {
+          "column": 49,
+          "line": 106,
+          "position": 3800
+        }
+      },
+      "format": "typescript",
+      "fragment": "    expect((config.externals as unknown as string[])?.slice(0, 2)).toEqual([\n      '@microsoft/sp-core-library',\n      '@microsoft/sp-webpart-base'\n    ]);\n    const platformExternal = (config.externals as unknown[])[2] as (data: { request?: string }) => string | undefined;\n    expect(typeof platformExternal).toBe('function');\n    expect(platformExternal({ request: '@msinternal/sp-telemetry' })).toBe('amd @msinternal/sp-telemetry');",
+      "lines": 7,
+      "secondFile": {
+        "end": 73,
+        "endLoc": {
+          "column": 107,
+          "line": 73,
+          "position": 2798
+        },
+        "name": "compiler-rspack/tests/plugin.test.ts",
+        "start": 67,
+        "startLoc": {
+          "column": 39,
+          "line": 67,
+          "position": 2411
+        }
+      },
+      "tokens": 80
+    },
+    {
+      "firstFile": {
+        "end": 38,
+        "endLoc": {
+          "column": 1,
+          "line": 38,
+          "position": 1163
+        },
+        "name": "compiler-rspack/tests/dev-server.test.ts",
+        "start": 26,
+        "startLoc": {
+          "column": 6,
+          "line": 26,
+          "position": 882
+        }
+      },
+      "format": "typescript",
+      "fragment": "      }\n    ],\n    externals: ['@microsoft/sp-core-library'],\n    aliases: { XxxWebPartStrings: path.join(FIXTURE, 'src', 'loc', 'en-us') },\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: 'dist',\n      releaseDir: 'release'\n    }\n  };\n}",
+      "lines": 13,
+      "secondFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 1,
+          "line": 34,
+          "position": 1007
+        },
+        "name": "compiler-rspack/tests/watch.test.ts",
+        "start": 22,
+        "startLoc": {
+          "column": 6,
+          "line": 22,
+          "position": 726
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 47,
+        "endLoc": {
+          "column": 7,
+          "line": 47,
+          "position": 1416
+        },
+        "name": "compiler-rspack/tests/dev-server.test.ts",
+        "start": 41,
+        "startLoc": {
+          "column": 2,
+          "line": 41,
+          "position": 1202
+        }
+      },
+      "format": "typescript",
+      "fragment": "  beforeAll(() => {\n    fs.rmSync(path.join(FIXTURE, 'dist'), { recursive: true, force: true });\n    fs.rmSync(path.join(FIXTURE, '.rspack-cache'), { recursive: true, force: true });\n  });\n\n  afterAll(() => {\n    fs.rmSync(path.join(FIXTURE, '.rspack-cache'), { recursive: true, force: true });",
+      "lines": 7,
+      "secondFile": {
+        "end": 64,
+        "endLoc": {
+          "column": 7,
+          "line": 64,
+          "position": 1747
+        },
+        "name": "compiler-rspack/tests/watch.test.ts",
+        "start": 58,
+        "startLoc": {
+          "column": 2,
+          "line": 58,
+          "position": 1533
+        }
+      },
+      "tokens": 65
+    },
+    {
+      "firstFile": {
+        "end": 114,
+        "endLoc": {
+          "column": 9,
+          "line": 114,
+          "position": 4207
+        },
+        "name": "compiler-rspack/tests/stubs.test.ts",
+        "start": 108,
+        "startLoc": {
+          "column": 89,
+          "line": 108,
+          "position": 3888
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('aliases solid-refresh to the stub only when it cannot be resolved from the project', async () => {\n    const aliasOf = async (ctx: CompileContext): Promise<Record<string, string> | undefined> => {\n      const config = (await createRspackConfig(ctx)) as Configuration;\n      return config.resolve?.alias as Record<string, string> | undefined;\n    };\n    const missing = makeTempProject(false);\n    const installed = makeTempProject(true);",
+      "lines": 7,
+      "secondFile": {
+        "end": 133,
+        "endLoc": {
+          "column": 9,
+          "line": 133,
+          "position": 5114
+        },
+        "name": "compiler-rspack/tests/stubs.test.ts",
+        "start": 127,
+        "startLoc": {
+          "column": 62,
+          "line": 127,
+          "position": 4795
+        }
+      },
+      "tokens": 69
+    },
+    {
+      "firstFile": {
+        "end": 32,
+        "endLoc": {
+          "column": 5,
+          "line": 32,
+          "position": 810
+        },
+        "name": "core/tests/config.test.ts",
+        "start": 7,
+        "startLoc": {
+          "column": 6,
+          "line": 7,
+          "position": 277
+        }
+      },
+      "format": "typescript",
+      "fragment": "      dev: {\n        port: 4321,\n        https: true,\n        hostname: 'localhost',\n        workbench: true,\n        fastRefresh: false,\n        openBrowser: false\n      },\n      build: {\n        sourcemap: false,\n        minify: true,\n        splitChunks: false,\n        outDir: 'dist',\n        releaseDir: 'release'\n      },\n      paths: {\n        srcDir: 'src',\n        webpartsDir: 'src/webparts',\n        extensionsDir: 'src/extensions',\n        librariesDir: 'src/libraries',\n        configDir: 'config'\n      }\n    });\n  });\n\n  it('is what a minimal config resolves to', () => {",
+      "lines": 26,
+      "secondFile": {
+        "end": 76,
+        "endLoc": {
+          "column": 5,
+          "line": 76,
+          "position": 1891
+        },
+        "name": "core/tests/config.test.ts",
+        "start": 51,
+        "startLoc": {
+          "column": 6,
+          "line": 51,
+          "position": 1358
+        }
+      },
+      "tokens": 83
+    },
+    {
+      "firstFile": {
+        "end": 12,
+        "endLoc": {
+          "column": 32,
+          "line": 12,
+          "position": 385
+        },
+        "name": "core/tests/version.test.ts",
+        "start": 7,
+        "startLoc": {
+          "column": 37,
+          "line": 7,
+          "position": 226
+        }
+      },
+      "format": "typescript",
+      "fragment": "      const v = Version.parse('1.0.0');\n      expect(v.major).toBe(1);\n      expect(v.minor).toBe(0);\n      expect(v.patch).toBe(0);\n      expect(v.build).toBe(0);\n      expect(v.toString()).toBe('1.0.0');",
+      "lines": 6,
+      "secondFile": {
+        "end": 21,
+        "endLoc": {
+          "column": 32,
+          "line": 21,
+          "position": 644
+        },
+        "name": "core/tests/version.test.ts",
+        "start": 16,
+        "startLoc": {
+          "column": 39,
+          "line": 16,
+          "position": 485
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 12,
+        "endLoc": {
+          "column": 32,
+          "line": 12,
+          "position": 385
+        },
+        "name": "core/tests/version.test.ts",
+        "start": 7,
+        "startLoc": {
+          "column": 37,
+          "line": 7,
+          "position": 226
+        }
+      },
+      "format": "typescript",
+      "fragment": "      const v = Version.parse('1.0.0');\n      expect(v.major).toBe(1);\n      expect(v.minor).toBe(0);\n      expect(v.patch).toBe(0);\n      expect(v.build).toBe(0);\n      expect(v.toString()).toBe('1.0.0');",
+      "lines": 6,
+      "secondFile": {
+        "end": 30,
+        "endLoc": {
+          "column": 32,
+          "line": 30,
+          "position": 938
+        },
+        "name": "core/tests/version.test.ts",
+        "start": 25,
+        "startLoc": {
+          "column": 35,
+          "line": 25,
+          "position": 779
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 37,
+        "endLoc": {
+          "column": 19,
+          "line": 37,
+          "position": 988
+        },
+        "name": "dev-runtime/tests/dev-runtime.test.ts",
+        "start": 16,
+        "startLoc": {
+          "column": 25,
+          "line": 16,
+          "position": 579
+        }
+      },
+      "format": "typescript",
+      "fragment": "    dev: { https: false },\n    ...overrides\n  });\n}\n\nfunction rmRetry(target: string): void {\n  for (let attempt = 0; attempt < 5; attempt++) {\n    try {\n      fs.rmSync(target, { recursive: true, force: true });\n      return;\n    } catch {\n      // Files may still be flushing; retry briefly.\n    }\n    const end = Date.now() + 100;\n    while (Date.now() < end) {\n      // busy-wait\n    }\n  }\n}\n\nbeforeAll(() => {\n  rmRetry(FIXTURE);",
+      "lines": 22,
+      "secondFile": {
+        "end": 35,
+        "endLoc": {
+          "column": 19,
+          "line": 35,
+          "position": 961
+        },
+        "name": "dev-runtime/tests/release.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 26,
+          "line": 14,
+          "position": 552
+        }
+      },
+      "tokens": 93
+    },
+    {
+      "firstFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 1,
+          "line": 34,
+          "position": 949
+        },
+        "name": "dev-runtime/tests/dev-runtime.test.ts",
+        "start": 21,
+        "startLoc": {
+          "column": 0,
+          "line": 21,
+          "position": 607
+        }
+      },
+      "format": "typescript",
+      "fragment": "function rmRetry(target: string): void {\n  for (let attempt = 0; attempt < 5; attempt++) {\n    try {\n      fs.rmSync(target, { recursive: true, force: true });\n      return;\n    } catch {\n      // Files may still be flushing; retry briefly.\n    }\n    const end = Date.now() + 100;\n    while (Date.now() < end) {\n      // busy-wait\n    }\n  }\n}",
+      "lines": 14,
+      "secondFile": {
+        "end": 33,
+        "endLoc": {
+          "column": 1,
+          "line": 33,
+          "position": 1187
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 20,
+        "startLoc": {
+          "column": 0,
+          "line": 20,
+          "position": 845
+        }
+      },
+      "tokens": 75
+    },
+    {
+      "firstFile": {
+        "end": 103,
+        "endLoc": {
+          "column": 9,
+          "line": 103,
+          "position": 3379
+        },
+        "name": "dev-runtime/tests/release.test.ts",
+        "start": 91,
+        "startLoc": {
+          "column": 73,
+          "line": 91,
+          "position": 3063
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('generates component manifests and copies bundles to release/assets', async () => {\n    const config = makeConfig();\n    const project = readProject(FIXTURE, config.paths, config.version);\n    const output = await assembleRelease({\n      projectRoot: FIXTURE,\n      config,\n      project,\n      externals: [],\n      outputFiles: ['hello.js'],\n      production: true\n    });\n\n    const manifestPath = path.join(",
+      "lines": 13,
+      "secondFile": {
+        "end": 130,
+        "endLoc": {
+          "column": 9,
+          "line": 130,
+          "position": 4389
+        },
+        "name": "dev-runtime/tests/release.test.ts",
+        "start": 118,
+        "startLoc": {
+          "column": 84,
+          "line": 118,
+          "position": 4073
+        }
+      },
+      "tokens": 62
+    },
+    {
+      "firstFile": {
+        "end": 99,
+        "endLoc": {
+          "column": 30,
+          "line": 99,
+          "position": 3335
+        },
+        "name": "dev-runtime/tests/release.test.ts",
+        "start": 91,
+        "startLoc": {
+          "column": 73,
+          "line": 91,
+          "position": 3063
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('generates component manifests and copies bundles to release/assets', async () => {\n    const config = makeConfig();\n    const project = readProject(FIXTURE, config.paths, config.version);\n    const output = await assembleRelease({\n      projectRoot: FIXTURE,\n      config,\n      project,\n      externals: [],\n      outputFiles: ['hello.js'],",
+      "lines": 9,
+      "secondFile": {
+        "end": 151,
+        "endLoc": {
+          "column": 30,
+          "line": 151,
+          "position": 5087
+        },
+        "name": "dev-runtime/tests/release.test.ts",
+        "start": 143,
+        "startLoc": {
+          "column": 55,
+          "line": 143,
+          "position": 4815
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 45,
+          "line": 34,
+          "position": 853
+        },
+        "name": "framework-preact/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-framework-preact\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@babel/core\": \"^7.26.0\",\n    \"@babel/preset-react\": \"^7.26.0\",\n    \"@babel/preset-typescript\": \"^7.26.0\",\n    \"@mbsks/rspfx-core\": \"workspace:*\",\n    \"@mbsks/rspfx-plugin-api\": \"workspace:*\",",
+      "lines": 33,
+      "secondFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 45,
+          "line": 34,
+          "position": 852
+        },
+        "name": "framework-react/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "tokens": 106
+    },
+    {
+      "firstFile": {
+        "end": 30,
+        "endLoc": {
+          "column": 29,
+          "line": 30,
+          "position": 686
+        },
+        "name": "framework-preact/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-framework-preact\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@babel/core\": \"^7.26.0\",",
+      "lines": 29,
+      "secondFile": {
+        "end": 30,
+        "endLoc": {
+          "column": 29,
+          "line": 30,
+          "position": 685
+        },
+        "name": "framework-solid/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 40,
+          "line": 2,
+          "position": 42
+        }
+      },
+      "tokens": 90
+    },
+    {
+      "firstFile": {
+        "end": 29,
+        "endLoc": {
+          "column": 19,
+          "line": 29,
+          "position": 656
+        },
+        "name": "framework-preact/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-framework-preact\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {",
+      "lines": 28,
+      "secondFile": {
+        "end": 29,
+        "endLoc": {
+          "column": 19,
+          "line": 29,
+          "position": 656
+        },
+        "name": "framework-svelte/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "tokens": 86
+    },
+    {
+      "firstFile": {
+        "end": 31,
+        "endLoc": {
+          "column": 36,
+          "line": 31,
+          "position": 723
+        },
+        "name": "framework-preact/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-framework-preact\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@babel/core\": \"^7.26.0\",\n    \"@babel/preset-react\": \"^7.26.0\",",
+      "lines": 30,
+      "secondFile": {
+        "end": 31,
+        "endLoc": {
+          "column": 44,
+          "line": 31,
+          "position": 742
+        },
+        "name": "framework-vanilla/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 42,
+          "line": 2,
+          "position": 44
+        }
+      },
+      "tokens": 93
+    },
+    {
+      "firstFile": {
+        "end": 31,
+        "endLoc": {
+          "column": 37,
+          "line": 31,
+          "position": 724
+        },
+        "name": "framework-preact/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 41,
+          "line": 2,
+          "position": 43
+        }
+      },
+      "format": "json",
+      "fragment": "  \"name\": \"@mbsks/rspfx-framework-preact\",\n  \"version\": \"0.0.11\",\n  \"private\": false,\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@babel/core\": \"^7.26.0\",\n    \"@babel/preset-react\": \"^7.26.0\",",
+      "lines": 30,
+      "secondFile": {
+        "end": 31,
+        "endLoc": {
+          "column": 45,
+          "line": 31,
+          "position": 739
+        },
+        "name": "framework-vue/package.json",
+        "start": 2,
+        "startLoc": {
+          "column": 38,
+          "line": 2,
+          "position": 40
+        }
+      },
+      "tokens": 94
+    },
+    {
+      "firstFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "format": "typescript",
+      "fragment": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nimport { beforeAll, describe, expect, it } from 'vitest';\nimport { build, type CompileContext } from '../../compiler-rspack/src/index.js';\nimport { preset } from '../src/index.js';\n\nconst FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'preact-app');",
+      "lines": 8,
+      "secondFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-react/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "format": "typescript",
+      "fragment": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nimport { beforeAll, describe, expect, it } from 'vitest';\nimport { build, type CompileContext } from '../../compiler-rspack/src/index.js';\nimport { preset } from '../src/index.js';\n\nconst FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'preact-app');",
+      "lines": 8,
+      "secondFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-solid/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "format": "typescript",
+      "fragment": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nimport { beforeAll, describe, expect, it } from 'vitest';\nimport { build, type CompileContext } from '../../compiler-rspack/src/index.js';\nimport { preset } from '../src/index.js';\n\nconst FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'preact-app');",
+      "lines": 8,
+      "secondFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-svelte/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "format": "typescript",
+      "fragment": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nimport { beforeAll, describe, expect, it } from 'vitest';\nimport { build, type CompileContext } from '../../compiler-rspack/src/index.js';\nimport { preset } from '../src/index.js';\n\nconst FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'preact-app');",
+      "lines": 8,
+      "secondFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-vanilla/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "format": "typescript",
+      "fragment": "import fs from 'node:fs';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nimport { beforeAll, describe, expect, it } from 'vitest';\nimport { build, type CompileContext } from '../../compiler-rspack/src/index.js';\nimport { preset } from '../src/index.js';\n\nconst FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'preact-app');",
+      "lines": 8,
+      "secondFile": {
+        "end": 8,
+        "endLoc": {
+          "column": 83,
+          "line": 8,
+          "position": 363
+        },
+        "name": "framework-vue/tests/build.test.ts",
+        "start": 1,
+        "startLoc": {
+          "column": 0,
+          "line": 1,
+          "position": 0
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1252
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 23,
+          "line": 14,
+          "position": 501
+        }
+      },
+      "format": "typescript",
+      "fragment": "    framework: 'preact',\n    fastRefresh: false,\n    production: false,\n    entries: [\n      {\n        name: 'test',\n        import: path.join(FIXTURE, 'src', 'index.jsx'),\n        componentIds: ['test'],\n        version: '1.0.0'\n      }\n    ],\n    externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'],\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,\n      releaseDir: 'release'\n    },\n    serveMode: false,\n    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]\n  };\n}\n\ninterface StatsLike {\n  toJson(opts: { all: boolean; errors: boolean; warnings: boolean }): {\n    errors?: { message: string }[];\n    warnings?: unknown[];\n  };\n}\n\ndescribe('framework-preact build', () => {",
+      "lines": 32,
+      "secondFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1250
+        },
+        "name": "framework-react/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 22,
+          "line": 14,
+          "position": 499
+        }
+      },
+      "tokens": 150
+    },
+    {
+      "firstFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 106,
+          "line": 34,
+          "position": 1070
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 23,
+          "line": 14,
+          "position": 501
+        }
+      },
+      "format": "typescript",
+      "fragment": "    framework: 'preact',\n    fastRefresh: false,\n    production: false,\n    entries: [\n      {\n        name: 'test',\n        import: path.join(FIXTURE, 'src', 'index.jsx'),\n        componentIds: ['test'],\n        version: '1.0.0'\n      }\n    ],\n    externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'],\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,\n      releaseDir: 'release'\n    },\n    serveMode: false,\n    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]",
+      "lines": 21,
+      "secondFile": {
+        "end": 36,
+        "endLoc": {
+          "column": 5,
+          "line": 36,
+          "position": 1119
+        },
+        "name": "framework-solid/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 22,
+          "line": 14,
+          "position": 538
+        }
+      },
+      "tokens": 101
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1252
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 20,
+        "startLoc": {
+          "column": 53,
+          "line": 20,
+          "position": 648
+        }
+      },
+      "format": "typescript",
+      "fragment": "        import: path.join(FIXTURE, 'src', 'index.jsx'),\n        componentIds: ['test'],\n        version: '1.0.0'\n      }\n    ],\n    externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'],\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,\n      releaseDir: 'release'\n    },\n    serveMode: false,\n    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]\n  };\n}\n\ninterface StatsLike {\n  toJson(opts: { all: boolean; errors: boolean; warnings: boolean }): {\n    errors?: { message: string }[];\n    warnings?: unknown[];\n  };\n}\n\ndescribe('framework-preact build', () => {",
+      "lines": 26,
+      "secondFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1251
+        },
+        "name": "framework-svelte/tests/build.test.ts",
+        "start": 20,
+        "startLoc": {
+          "column": 52,
+          "line": 20,
+          "position": 647
+        }
+      },
+      "tokens": 122
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1759
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 64,
+          "line": 50,
+          "position": 1455
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('compiles a preact JSX entry with the preset contributions', async () => {\n    const result = await build(makeCtx());\n    const stats = result.stats as unknown as StatsLike;\n    const json = stats.toJson({ all: false, errors: true, warnings: true });\n    expect(json.errors ?? []).toHaveLength(0);\n    expect(result.outputFiles).toContain('test.js');\n  });\n\n  it('transforms JSX via the preact automatic runtime', () => {",
+      "lines": 9,
+      "secondFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1755
+        },
+        "name": "framework-react/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 63,
+          "line": 50,
+          "position": 1451
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1759
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 64,
+          "line": 50,
+          "position": 1455
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('compiles a preact JSX entry with the preset contributions', async () => {\n    const result = await build(makeCtx());\n    const stats = result.stats as unknown as StatsLike;\n    const json = stats.toJson({ all: false, errors: true, warnings: true });\n    expect(json.errors ?? []).toHaveLength(0);\n    expect(result.outputFiles).toContain('test.js');\n  });\n\n  it('transforms JSX via the preact automatic runtime', () => {",
+      "lines": 9,
+      "secondFile": {
+        "end": 61,
+        "endLoc": {
+          "column": 5,
+          "line": 61,
+          "position": 1824
+        },
+        "name": "framework-solid/tests/build.test.ts",
+        "start": 53,
+        "startLoc": {
+          "column": 63,
+          "line": 53,
+          "position": 1520
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1759
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 64,
+          "line": 50,
+          "position": 1455
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('compiles a preact JSX entry with the preset contributions', async () => {\n    const result = await build(makeCtx());\n    const stats = result.stats as unknown as StatsLike;\n    const json = stats.toJson({ all: false, errors: true, warnings: true });\n    expect(json.errors ?? []).toHaveLength(0);\n    expect(result.outputFiles).toContain('test.js');\n  });\n\n  it('transforms JSX via the preact automatic runtime', () => {",
+      "lines": 9,
+      "secondFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1764
+        },
+        "name": "framework-svelte/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 70,
+          "line": 50,
+          "position": 1460
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1759
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 64,
+          "line": 50,
+          "position": 1455
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('compiles a preact JSX entry with the preset contributions', async () => {\n    const result = await build(makeCtx());\n    const stats = result.stats as unknown as StatsLike;\n    const json = stats.toJson({ all: false, errors: true, warnings: true });\n    expect(json.errors ?? []).toHaveLength(0);\n    expect(result.outputFiles).toContain('test.js');\n  });\n\n  it('transforms JSX via the preact automatic runtime', () => {",
+      "lines": 9,
+      "secondFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1760
+        },
+        "name": "framework-vanilla/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 63,
+          "line": 50,
+          "position": 1456
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1759
+        },
+        "name": "framework-preact/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 64,
+          "line": 50,
+          "position": 1455
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('compiles a preact JSX entry with the preset contributions', async () => {\n    const result = await build(makeCtx());\n    const stats = result.stats as unknown as StatsLike;\n    const json = stats.toJson({ all: false, errors: true, warnings: true });\n    expect(json.errors ?? []).toHaveLength(0);\n    expect(result.outputFiles).toContain('test.js');\n  });\n\n  it('transforms JSX via the preact automatic runtime', () => {",
+      "lines": 9,
+      "secondFile": {
+        "end": 58,
+        "endLoc": {
+          "column": 5,
+          "line": 58,
+          "position": 1743
+        },
+        "name": "framework-vue/tests/build.test.ts",
+        "start": 50,
+        "startLoc": {
+          "column": 58,
+          "line": 50,
+          "position": 1439
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 23,
+        "endLoc": {
+          "column": 9,
+          "line": 23,
+          "position": 866
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 46,
+          "line": 12,
+          "position": 376
+        }
+      },
+      "format": "typescript",
+      "fragment": "function initialize(webPart: TestPreactWebPart, domElement: HTMLElement): void {\n  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({\n    domElement,\n    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }\n  });\n  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n    properties: { title: 'Hello' },\n    dataVersion: '1.0'\n  });\n}\n\ndescribe('PreactWebPart', () => {",
+      "lines": 12,
+      "secondFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 9,
+          "line": 25,
+          "position": 1030
+        },
+        "name": "framework-react/tests/webpart.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 45,
+          "line": 14,
+          "position": 540
+        }
+      },
+      "tokens": 101
+    },
+    {
+      "firstFile": {
+        "end": 23,
+        "endLoc": {
+          "column": 9,
+          "line": 23,
+          "position": 866
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 46,
+          "line": 12,
+          "position": 376
+        }
+      },
+      "format": "typescript",
+      "fragment": "function initialize(webPart: TestPreactWebPart, domElement: HTMLElement): void {\n  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({\n    domElement,\n    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }\n  });\n  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n    properties: { title: 'Hello' },\n    dataVersion: '1.0'\n  });\n}\n\ndescribe('PreactWebPart', () => {",
+      "lines": 12,
+      "secondFile": {
+        "end": 33,
+        "endLoc": {
+          "column": 9,
+          "line": 33,
+          "position": 1249
+        },
+        "name": "framework-solid/tests/adapter.test.ts",
+        "start": 22,
+        "startLoc": {
+          "column": 45,
+          "line": 22,
+          "position": 759
+        }
+      },
+      "tokens": 101
+    },
+    {
+      "firstFile": {
+        "end": 17,
+        "endLoc": {
+          "column": 69,
+          "line": 17,
+          "position": 716
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 46,
+          "line": 12,
+          "position": 376
+        }
+      },
+      "format": "typescript",
+      "fragment": "function initialize(webPart: TestPreactWebPart, domElement: HTMLElement): void {\n  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({\n    domElement,\n    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }\n  });\n  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({",
+      "lines": 6,
+      "secondFile": {
+        "end": 43,
+        "endLoc": {
+          "column": 69,
+          "line": 43,
+          "position": 1842
+        },
+        "name": "framework-svelte/tests/webpart.test.ts",
+        "start": 38,
+        "startLoc": {
+          "column": 46,
+          "line": 38,
+          "position": 1502
+        }
+      },
+      "tokens": 66
+    },
+    {
+      "firstFile": {
+        "end": 23,
+        "endLoc": {
+          "column": 9,
+          "line": 23,
+          "position": 866
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 46,
+          "line": 12,
+          "position": 376
+        }
+      },
+      "format": "typescript",
+      "fragment": "function initialize(webPart: TestPreactWebPart, domElement: HTMLElement): void {\n  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({\n    domElement,\n    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }\n  });\n  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n    properties: { title: 'Hello' },\n    dataVersion: '1.0'\n  });\n}\n\ndescribe('PreactWebPart', () => {",
+      "lines": 12,
+      "secondFile": {
+        "end": 30,
+        "endLoc": {
+          "column": 9,
+          "line": 30,
+          "position": 1110
+        },
+        "name": "framework-vanilla/tests/webpart.test.ts",
+        "start": 19,
+        "startLoc": {
+          "column": 62,
+          "line": 19,
+          "position": 620
+        }
+      },
+      "tokens": 101
+    },
+    {
+      "firstFile": {
+        "end": 23,
+        "endLoc": {
+          "column": 9,
+          "line": 23,
+          "position": 866
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 46,
+          "line": 12,
+          "position": 376
+        }
+      },
+      "format": "typescript",
+      "fragment": "function initialize(webPart: TestPreactWebPart, domElement: HTMLElement): void {\n  (webPart as unknown as { _internalInitialize(ctx: { domElement: HTMLElement; manifest: unknown }): void })._internalInitialize({\n    domElement,\n    manifest: { id: '00000000-0000-0000-0000-000000000000', alias: 'TestWebPart' }\n  });\n  (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n    properties: { title: 'Hello' },\n    dataVersion: '1.0'\n  });\n}\n\ndescribe('PreactWebPart', () => {",
+      "lines": 12,
+      "secondFile": {
+        "end": 23,
+        "endLoc": {
+          "column": 9,
+          "line": 23,
+          "position": 896
+        },
+        "name": "framework-vue/tests/webpart.test.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 43,
+          "line": 12,
+          "position": 406
+        }
+      },
+      "tokens": 101
+    },
+    {
+      "firstFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 23,
+          "line": 34,
+          "position": 1308
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 26,
+        "startLoc": {
+          "column": 41,
+          "line": 26,
+          "position": 1060
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    expect(domElement.textContent).toBe('Hello');\n  });\n\n  it('re-renders with updated properties', () => {\n    const domElement = document.createElement('div');\n    const webPart = new TestPreactWebPart();",
+      "lines": 9,
+      "secondFile": {
+        "end": 34,
+        "endLoc": {
+          "column": 23,
+          "line": 34,
+          "position": 1329
+        },
+        "name": "framework-vue/tests/webpart.test.ts",
+        "start": 26,
+        "startLoc": {
+          "column": 38,
+          "line": 26,
+          "position": 1081
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 5,
+          "line": 45,
+          "position": 1692
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 34,
+        "startLoc": {
+          "column": 41,
+          "line": 34,
+          "position": 1326
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n      properties: { title: 'Updated' },\n      dataVersion: '1.0'\n    });\n    webPart.render();\n    expect(domElement.textContent).toBe('Updated');\n  });\n\n  it('unmounts the component tree on dispose', () => {",
+      "lines": 12,
+      "secondFile": {
+        "end": 65,
+        "endLoc": {
+          "column": 5,
+          "line": 65,
+          "position": 2437
+        },
+        "name": "framework-solid/tests/adapter.test.ts",
+        "start": 54,
+        "startLoc": {
+          "column": 40,
+          "line": 54,
+          "position": 2071
+        }
+      },
+      "tokens": 85
+    },
+    {
+      "firstFile": {
+        "end": 42,
+        "endLoc": {
+          "column": 22,
+          "line": 42,
+          "position": 1650
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 34,
+        "startLoc": {
+          "column": 41,
+          "line": 34,
+          "position": 1326
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n      properties: { title: 'Updated' },\n      dataVersion: '1.0'\n    });\n    webPart.render();\n    expect(domElement.textContent).toBe('Updated');",
+      "lines": 9,
+      "secondFile": {
+        "end": 50,
+        "endLoc": {
+          "column": 22,
+          "line": 50,
+          "position": 1972
+        },
+        "name": "framework-vanilla/tests/webpart.test.ts",
+        "start": 42,
+        "startLoc": {
+          "column": 42,
+          "line": 42,
+          "position": 1648
+        }
+      },
+      "tokens": 72
+    },
+    {
+      "firstFile": {
+        "end": 42,
+        "endLoc": {
+          "column": 51,
+          "line": 42,
+          "position": 1679
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 34,
+        "startLoc": {
+          "column": 41,
+          "line": 34,
+          "position": 1326
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { _internalDeserialize(data: { properties: { title: string }; dataVersion: string }): void })._internalDeserialize({\n      properties: { title: 'Updated' },\n      dataVersion: '1.0'\n    });\n    webPart.render();\n    expect(domElement.textContent).toBe('Updated');",
+      "lines": 9,
+      "secondFile": {
+        "end": 42,
+        "endLoc": {
+          "column": 51,
+          "line": 42,
+          "position": 1697
+        },
+        "name": "framework-vue/tests/webpart.test.ts",
+        "start": 34,
+        "startLoc": {
+          "column": 38,
+          "line": 34,
+          "position": 1344
+        }
+      },
+      "tokens": 80
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 3,
+          "line": 53,
+          "position": 2022
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 47,
+        "startLoc": {
+          "column": 41,
+          "line": 47,
+          "position": 1837
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { onDispose(): void }).onDispose();\n    expect(domElement.childNodes.length).toBe(0);\n  });\n});",
+      "lines": 7,
+      "secondFile": {
+        "end": 73,
+        "endLoc": {
+          "column": 3,
+          "line": 73,
+          "position": 2786
+        },
+        "name": "framework-solid/tests/adapter.test.ts",
+        "start": 67,
+        "startLoc": {
+          "column": 40,
+          "line": 67,
+          "position": 2601
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 3,
+          "line": 53,
+          "position": 2022
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 47,
+        "startLoc": {
+          "column": 41,
+          "line": 47,
+          "position": 1837
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { onDispose(): void }).onDispose();\n    expect(domElement.childNodes.length).toBe(0);\n  });\n});",
+      "lines": 7,
+      "secondFile": {
+        "end": 112,
+        "endLoc": {
+          "column": 3,
+          "line": 112,
+          "position": 4400
+        },
+        "name": "framework-svelte/tests/webpart.test.ts",
+        "start": 106,
+        "startLoc": {
+          "column": 41,
+          "line": 106,
+          "position": 4215
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 52,
+        "endLoc": {
+          "column": 5,
+          "line": 52,
+          "position": 2018
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 47,
+        "startLoc": {
+          "column": 41,
+          "line": 47,
+          "position": 1837
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { onDispose(): void }).onDispose();\n    expect(domElement.childNodes.length).toBe(0);\n  });",
+      "lines": 6,
+      "secondFile": {
+        "end": 61,
+        "endLoc": {
+          "column": 5,
+          "line": 61,
+          "position": 2386
+        },
+        "name": "framework-vanilla/tests/webpart.test.ts",
+        "start": 56,
+        "startLoc": {
+          "column": 42,
+          "line": 56,
+          "position": 2205
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 3,
+          "line": 53,
+          "position": 2022
+        },
+        "name": "framework-preact/tests/webpart.test.ts",
+        "start": 47,
+        "startLoc": {
+          "column": 41,
+          "line": 47,
+          "position": 1837
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const webPart = new TestPreactWebPart();\n    initialize(webPart, domElement);\n    webPart.render();\n    (webPart as unknown as { onDispose(): void }).onDispose();\n    expect(domElement.childNodes.length).toBe(0);\n  });\n});",
+      "lines": 7,
+      "secondFile": {
+        "end": 54,
+        "endLoc": {
+          "column": 3,
+          "line": 54,
+          "position": 2076
+        },
+        "name": "framework-vue/tests/webpart.test.ts",
+        "start": 48,
+        "startLoc": {
+          "column": 38,
+          "line": 48,
+          "position": 1891
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 31,
+        "endLoc": {
+          "column": 45,
+          "line": 31,
+          "position": 742
+        },
+        "name": "framework-svelte/package.json",
+        "start": 12,
+        "startLoc": {
+          "column": 17,
+          "line": 12,
+          "position": 283
+        }
+      },
+      "format": "json",
+      "fragment": "      \"default\": \"./dist/index.js\"\n    },\n    \"./webpart\": {\n      \"types\": \"./dist/webpart.d.ts\",\n      \"import\": \"./dist/webpart.js\",\n      \"default\": \"./dist/webpart.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"license\": \"MIT\",\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.build.json\",\n    \"typecheck\": \"tsc --noEmit -p tsconfig.json\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"@mbsks/rspfx-core\": \"workspace:*\",\n    \"@mbsks/rspfx-plugin-api\": \"workspace:*\",",
+      "lines": 20,
+      "secondFile": {
+        "end": 32,
+        "endLoc": {
+          "column": 3,
+          "line": 32,
+          "position": 746
+        },
+        "name": "framework-vanilla/package.json",
+        "start": 12,
+        "startLoc": {
+          "column": 17,
+          "line": 12,
+          "position": 284
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1251
+        },
+        "name": "framework-svelte/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 23,
+          "line": 14,
+          "position": 501
+        }
+      },
+      "format": "typescript",
+      "fragment": "    framework: 'svelte',\n    fastRefresh: false,\n    production: false,\n    entries: [\n      {\n        name: 'test',\n        import: path.join(FIXTURE, 'src', 'index.ts'),\n        componentIds: ['test'],\n        version: '1.0.0'\n      }\n    ],\n    externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'],\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,\n      releaseDir: 'release'\n    },\n    serveMode: false,\n    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]\n  };\n}\n\ninterface StatsLike {\n  toJson(opts: { all: boolean; errors: boolean; warnings: boolean }): {\n    errors?: { message: string }[];\n    warnings?: unknown[];\n  };\n}\n\ndescribe('framework-svelte build', () => {",
+      "lines": 32,
+      "secondFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1253
+        },
+        "name": "framework-vanilla/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 24,
+          "line": 14,
+          "position": 503
+        }
+      },
+      "tokens": 150
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1251
+        },
+        "name": "framework-svelte/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 23,
+          "line": 14,
+          "position": 501
+        }
+      },
+      "format": "typescript",
+      "fragment": "    framework: 'svelte',\n    fastRefresh: false,\n    production: false,\n    entries: [\n      {\n        name: 'test',\n        import: path.join(FIXTURE, 'src', 'index.ts'),\n        componentIds: ['test'],\n        version: '1.0.0'\n      }\n    ],\n    externals: ['@microsoft/sp-core-library', '@microsoft/sp-webpart-base'],\n    build: {\n      sourcemap: false,\n      minify: false,\n      splitChunks: false,\n      outDir: OUT_DIR,\n      releaseDir: 'release'\n    },\n    serveMode: false,\n    swcContributions: [preset.contributions({ fastRefresh: false }) as unknown as Record<string, unknown>]\n  };\n}\n\ninterface StatsLike {\n  toJson(opts: { all: boolean; errors: boolean; warnings: boolean }): {\n    errors?: { message: string }[];\n    warnings?: unknown[];\n  };\n}\n\ndescribe('framework-svelte build', () => {",
+      "lines": 32,
+      "secondFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1245
+        },
+        "name": "framework-vue/tests/build.test.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 20,
+          "line": 14,
+          "position": 495
+        }
+      },
+      "tokens": 150
+    },
+    {
+      "firstFile": {
+        "end": 35,
+        "endLoc": {
+          "column": 48,
+          "line": 35,
+          "position": 1237
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 18,
+        "startLoc": {
+          "column": 1,
+          "line": 18,
+          "position": 842
+        }
+      },
+      "format": "typescript",
+      "fragment": "};\n\nfunction rmRetry(target: string): void {\n  for (let attempt = 0; attempt < 5; attempt++) {\n    try {\n      fs.rmSync(target, { recursive: true, force: true });\n      return;\n    } catch {\n      // Files may still be flushing; retry briefly.\n    }\n    const end = Date.now() + 100;\n    while (Date.now() < end) {\n      // busy-wait\n    }\n  }\n}\n\nfunction writeWebPart(name: string, id: string): void {",
+      "lines": 18,
+      "secondFile": {
+        "end": 29,
+        "endLoc": {
+          "column": 7,
+          "line": 29,
+          "position": 801
+        },
+        "name": "plugin/tests/rspack-build.test.ts",
+        "start": 10,
+        "startLoc": {
+          "column": 58,
+          "line": 10,
+          "position": 409
+        }
+      },
+      "tokens": 88
+    },
+    {
+      "firstFile": {
+        "end": 54,
+        "endLoc": {
+          "column": 1,
+          "line": 54,
+          "position": 1849
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 18,
+        "startLoc": {
+          "column": 1,
+          "line": 18,
+          "position": 842
+        }
+      },
+      "format": "typescript",
+      "fragment": "};\n\nfunction rmRetry(target: string): void {\n  for (let attempt = 0; attempt < 5; attempt++) {\n    try {\n      fs.rmSync(target, { recursive: true, force: true });\n      return;\n    } catch {\n      // Files may still be flushing; retry briefly.\n    }\n    const end = Date.now() + 100;\n    while (Date.now() < end) {\n      // busy-wait\n    }\n  }\n}\n\nfunction writeWebPart(name: string, id: string): void {\n  const dir = path.join(FIXTURE, 'src', 'webparts', name);\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(\n    path.join(dir, `${name}.manifest.json`),\n    JSON.stringify({\n      id,\n      alias: `${name[0]!.toUpperCase()}${name.slice(1)}WebPart`,\n      componentType: 'WebPart',\n      version: '1.0.0',\n      manifestVersion: 2,\n      supportedPlatforms: ['Windows'],\n      preconfiguredEntries: []\n    })\n  );\n  fs.writeFileSync(\n    path.join(dir, `${name}WebPart.ts`),\n    `export default class ${name[0]!.toUpperCase()}${name.slice(1)}WebPart {\\n  public render(): void {}\\n}\\n`\n  );\n}",
+      "lines": 37,
+      "secondFile": {
+        "end": 47,
+        "endLoc": {
+          "column": 1,
+          "line": 47,
+          "position": 1504
+        },
+        "name": "plugin/tests/vite-build.test.ts",
+        "start": 11,
+        "startLoc": {
+          "column": 101,
+          "line": 11,
+          "position": 497
+        }
+      },
+      "tokens": 224
+    },
+    {
+      "firstFile": {
+        "end": 42,
+        "endLoc": {
+          "column": 54,
+          "line": 42,
+          "position": 1496
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 36,
+        "startLoc": {
+          "column": 50,
+          "line": 36,
+          "position": 1295
+        }
+      },
+      "format": "typescript",
+      "fragment": "  const dir = path.join(FIXTURE, 'src', 'webparts', name);\n  fs.mkdirSync(dir, { recursive: true });\n  fs.writeFileSync(\n    path.join(dir, `${name}.manifest.json`),\n    JSON.stringify({\n      id,\n      alias: `${name[0]!.toUpperCase()}${name.slice(1)}WebPart`,",
+      "lines": 7,
+      "secondFile": {
+        "end": 63,
+        "endLoc": {
+          "column": 54,
+          "line": 63,
+          "position": 2185
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 57,
+        "startLoc": {
+          "column": 52,
+          "line": 57,
+          "position": 1984
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 145,
+        "endLoc": {
+          "column": 26,
+          "line": 145,
+          "position": 5269
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 137,
+        "startLoc": {
+          "column": 37,
+          "line": 137,
+          "position": 5073
+        }
+      },
+      "format": "typescript",
+      "fragment": "  return { assets, manifests, stats };\n}\n\nbeforeAll(() => {\n  rmRetry(FIXTURE);\n  fs.mkdirSync(path.join(FIXTURE, 'config'), { recursive: true });\n  fs.writeFileSync(\n    path.join(FIXTURE, 'package.json'),\n    JSON.stringify({ name: 'parity-proj', version: '1.0.0' }, null, 2)",
+      "lines": 9,
+      "secondFile": {
+        "end": 54,
+        "endLoc": {
+          "column": 26,
+          "line": 54,
+          "position": 1697
+        },
+        "name": "plugin/tests/vite-build.test.ts",
+        "start": 46,
+        "startLoc": {
+          "column": 3,
+          "line": 46,
+          "position": 1501
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 150,
+        "endLoc": {
+          "column": 33,
+          "line": 150,
+          "position": 5528
+        },
+        "name": "plugin/tests/parity.test.ts",
+        "start": 145,
+        "startLoc": {
+          "column": 40,
+          "line": 145,
+          "position": 5283
+        }
+      },
+      "format": "typescript",
+      "fragment": "    JSON.stringify({ name: 'parity-proj', version: '1.0.0' }, null, 2)\n  );\n  fs.writeFileSync(path.join(FIXTURE, 'config', 'serve.json'), JSON.stringify({ https: false }));\n  fs.writeFileSync(\n    path.join(FIXTURE, 'config', 'write-manifests.json'),\n    JSON.stringify({ cdnBasePath: 'https://cdn.example.com/parity-proj' })",
+      "lines": 6,
+      "secondFile": {
+        "end": 62,
+        "endLoc": {
+          "column": 33,
+          "line": 62,
+          "position": 1966
+        },
+        "name": "plugin/tests/vite-build.test.ts",
+        "start": 54,
+        "startLoc": {
+          "column": 38,
+          "line": 54,
+          "position": 1709
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 64,
+        "endLoc": {
+          "column": 1,
+          "line": 64,
+          "position": 1901
+        },
+        "name": "sharepoint-runtime/tests/context.test.ts",
+        "start": 18,
+        "startLoc": {
+          "column": 46,
+          "line": 18,
+          "position": 568
+        }
+      },
+      "format": "typescript",
+      "fragment": "import { LOCAL_THEMES } from '../src/index.js';\n\nconst pageContextServiceKey = { id: 'sp-page-context:PageContext' };\nconst themeServiceKey = { id: 'sp-component-base:ThemeProvider' };\n\n/**\n * Minimal ServiceScope mirroring the real semantics: provide() before finish(),\n * consume() after finish(), whenFinished() callbacks run at finish().\n */\nclass TestScope implements ScopeLike {\n  private readonly registrations = new Map<string, unknown>();\n  private readonly pendingCallbacks: Array<() => void> = [];\n  private finished = false;\n\n  provide(key: unknown, instance: unknown): unknown {\n    const id = (key as { id: string }).id;\n    if (this.registrations.has(id)) {\n      throw new Error(`provide() duplicate key ${id}`);\n    }\n    this.registrations.set(id, instance);\n    return instance;\n  }\n\n  consume(key: unknown): unknown {\n    const id = (key as { id: string }).id;\n    const instance = this.registrations.get(id);\n    if (!this.finished || instance === undefined) {\n      throw new Error(`consume() before finish() or unknown key ${id}`);\n    }\n    return instance;\n  }\n\n  whenFinished(callback: () => void): void {\n    if (this.finished) {\n      callback();\n    } else {\n      this.pendingCallbacks.push(callback);\n    }\n  }\n\n  finish(): void {\n    this.finished = true;\n    for (const callback of this.pendingCallbacks.splice(0)) {\n      callback();\n    }\n  }\n}",
+      "lines": 47,
+      "secondFile": {
+        "end": 57,
+        "endLoc": {
+          "column": 1,
+          "line": 57,
+          "position": 1633
+        },
+        "name": "sharepoint-runtime/tests/extension-contexts.test.ts",
+        "start": 15,
+        "startLoc": {
+          "column": 57,
+          "line": 15,
+          "position": 460
+        }
+      },
+      "tokens": 256
+    },
+    {
+      "firstFile": {
+        "end": 110,
+        "endLoc": {
+          "column": 17,
+          "line": 110,
+          "position": 4547
+        },
+        "name": "sharepoint-runtime/tests/http.test.ts",
+        "start": 102,
+        "startLoc": {
+          "column": 52,
+          "line": 102,
+          "position": 4264
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('sends the real SPHttpClient v4 headers on get', async () => {\n    const calls: RequestInit[] = [];\n    const transport: MockTransport = (url, init) => {\n      calls.push(init ?? {});\n      return Promise.resolve(new Response('{}', { status: 200 }));\n    };\n    const client = createMockSPHttpClient(transport);\n\n    await client.get(1, 'http://localhost/_api/web', {});",
+      "lines": 9,
+      "secondFile": {
+        "end": 126,
+        "endLoc": {
+          "column": 17,
+          "line": 126,
+          "position": 5059
+        },
+        "name": "sharepoint-runtime/tests/http.test.ts",
+        "start": 118,
+        "startLoc": {
+          "column": 40,
+          "line": 118,
+          "position": 4776
+        }
+      },
+      "tokens": 69
+    },
+    {
+      "firstFile": {
+        "end": 88,
+        "endLoc": {
+          "column": 11,
+          "line": 88,
+          "position": 3123
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 78,
+        "startLoc": {
+          "column": 34,
+          "line": 78,
+          "position": 2722
+        }
+      },
+      "format": "typescript",
+      "fragment": "      '/dist/TestStrings_fr-fr.js': () => {\n        (window as unknown as { define(id: string | undefined, deps: string[], factory: unknown): void }).define(\n          undefined,\n          [],\n          () => ({ hello: 'bonjour' })\n        );\n      },\n      '/dist/testwp.js': () => {\n        (window as unknown as { define(id: string | undefined, deps: string[], factory: unknown): void }).define(\n          'wp-id_1.0.0',\n          ['TestStrings'],",
+      "lines": 11,
+      "secondFile": {
+        "end": 190,
+        "endLoc": {
+          "column": 11,
+          "line": 190,
+          "position": 6540
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 178,
+        "startLoc": {
+          "column": 35,
+          "line": 178,
+          "position": 6010
+        }
+      },
+      "tokens": 95
+    },
+    {
+      "firstFile": {
+        "end": 101,
+        "endLoc": {
+          "column": 5,
+          "line": 101,
+          "position": 3503
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 82,
+        "startLoc": {
+          "column": 36,
+          "line": 82,
+          "position": 2917
+        }
+      },
+      "format": "typescript",
+      "fragment": "          () => ({ hello: 'bonjour' })\n        );\n      },\n      '/dist/testwp.js': () => {\n        (window as unknown as { define(id: string | undefined, deps: string[], factory: unknown): void }).define(\n          'wp-id_1.0.0',\n          ['TestStrings'],\n          (strings: unknown) => ({\n            default: class FakeWebPart {\n              public constructor() {\n                captured.push(strings);\n              }\n              public _internalInitialize(): void {}\n              public _internalDeserialize(): void {}\n              public render(): void {}\n            }\n          })\n        );\n      }\n    });",
+      "lines": 20,
+      "secondFile": {
+        "end": 151,
+        "endLoc": {
+          "column": 7,
+          "line": 151,
+          "position": 5180
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 132,
+        "startLoc": {
+          "column": 36,
+          "line": 132,
+          "position": 4556
+        }
+      },
+      "tokens": 106
+    },
+    {
+      "firstFile": {
+        "end": 110,
+        "endLoc": {
+          "column": 29,
+          "line": 110,
+          "position": 3756
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 88,
+        "startLoc": {
+          "column": 24,
+          "line": 88,
+          "position": 3136
+        }
+      },
+      "format": "typescript",
+      "fragment": "          ['TestStrings'],\n          (strings: unknown) => ({\n            default: class FakeWebPart {\n              public constructor() {\n                captured.push(strings);\n              }\n              public _internalInitialize(): void {}\n              public _internalDeserialize(): void {}\n              public render(): void {}\n            }\n          })\n        );\n      }\n    });\n\n    const { status } = mountCard('wp-id');\n    const { mountOne } = await import('../src/local-bootstrap.js');\n    await mountOne(\n      {\n        id: 'wp-id',\n        alias: 'FakeWebPart',\n        bundleName: 'testwp',\n        amdId: 'wp-id_1.0.0',",
+      "lines": 23,
+      "secondFile": {
+        "end": 212,
+        "endLoc": {
+          "column": 29,
+          "line": 212,
+          "position": 7174
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 190,
+        "startLoc": {
+          "column": 25,
+          "line": 190,
+          "position": 6554
+        }
+      },
+      "tokens": 102
+    },
+    {
+      "firstFile": {
+        "end": 112,
+        "endLoc": {
+          "column": 47,
+          "line": 112,
+          "position": 3849
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 92,
+        "startLoc": {
+          "column": 37,
+          "line": 92,
+          "position": 3289
+        }
+      },
+      "format": "typescript",
+      "fragment": "                captured.push(strings);\n              }\n              public _internalInitialize(): void {}\n              public _internalDeserialize(): void {}\n              public render(): void {}\n            }\n          })\n        );\n      }\n    });\n\n    const { status } = mountCard('wp-id');\n    const { mountOne } = await import('../src/local-bootstrap.js');\n    await mountOne(\n      {\n        id: 'wp-id',\n        alias: 'FakeWebPart',\n        bundleName: 'testwp',\n        amdId: 'wp-id_1.0.0',\n        localizedResources: ['TestStrings'],\n        preconfiguredEntries: [{ properties: {} }]",
+      "lines": 21,
+      "secondFile": {
+        "end": 255,
+        "endLoc": {
+          "column": 20,
+          "line": 255,
+          "position": 8550
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 234,
+        "startLoc": {
+          "column": 39,
+          "line": 234,
+          "position": 8002
+        }
+      },
+      "tokens": 91
+    },
+    {
+      "firstFile": {
+        "end": 119,
+        "endLoc": {
+          "column": 40,
+          "line": 119,
+          "position": 4029
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 101,
+        "startLoc": {
+          "column": 5,
+          "line": 101,
+          "position": 3503
+        }
+      },
+      "format": "typescript",
+      "fragment": "    });\n\n    const { status } = mountCard('wp-id');\n    const { mountOne } = await import('../src/local-bootstrap.js');\n    await mountOne(\n      {\n        id: 'wp-id',\n        alias: 'FakeWebPart',\n        bundleName: 'testwp',\n        amdId: 'wp-id_1.0.0',\n        localizedResources: ['TestStrings'],\n        preconfiguredEntries: [{ properties: {} }]\n      },\n      resolveLocale('fr-fr'),\n      { createWebPartContext: fakeWebPartContext }\n    );\n\n    expect(captured).toHaveLength(1);\n    expect(captured[0]).toEqual({ hello: 'bonjour' });",
+      "lines": 19,
+      "secondFile": {
+        "end": 171,
+        "endLoc": {
+          "column": 40,
+          "line": 171,
+          "position": 5749
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 153,
+        "startLoc": {
+          "column": 4,
+          "line": 153,
+          "position": 5223
+        }
+      },
+      "tokens": 96
+    },
+    {
+      "firstFile": {
+        "end": 120,
+        "endLoc": {
+          "column": 45,
+          "line": 120,
+          "position": 4089
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 111,
+        "startLoc": {
+          "column": 43,
+          "line": 111,
+          "position": 3800
+        }
+      },
+      "format": "typescript",
+      "fragment": "        localizedResources: ['TestStrings'],\n        preconfiguredEntries: [{ properties: {} }]\n      },\n      resolveLocale('fr-fr'),\n      { createWebPartContext: fakeWebPartContext }\n    );\n\n    expect(captured).toHaveLength(1);\n    expect(captured[0]).toEqual({ hello: 'bonjour' });\n    expect(status.textContent).toBe('ready');",
+      "lines": 10,
+      "secondFile": {
+        "end": 221,
+        "endLoc": {
+          "column": 45,
+          "line": 221,
+          "position": 7462
+        },
+        "name": "sharepoint-runtime/tests/local-bootstrap.test.ts",
+        "start": 212,
+        "startLoc": {
+          "column": 28,
+          "line": 212,
+          "position": 7173
+        }
+      },
+      "tokens": 64
+    },
+    {
+      "firstFile": {
+        "end": 200,
+        "endLoc": {
+          "column": 12,
+          "line": 200,
+          "position": 8231
+        },
+        "name": "sppkg-builder/tests/localization.test.ts",
+        "start": 195,
+        "startLoc": {
+          "column": 69,
+          "line": 195,
+          "position": 7957
+        }
+      },
+      "format": "typescript",
+      "fragment": "  it('emits literal $Resources: strings when resxDir is not provided', async () => {\n    const projectRoot = await makeProject();\n    try {\n      const configPath = path.join(projectRoot, 'config/package-solution.json');\n      const config = JSON.parse(await readFile(configPath, 'utf8')) as { solution: Record<string, unknown> };\n      config.solution.metadata = { shortDescription: '$Resources:SolutionTitle' };",
+      "lines": 6,
+      "secondFile": {
+        "end": 209,
+        "endLoc": {
+          "column": 12,
+          "line": 209,
+          "position": 9527
+        },
+        "name": "sppkg-builder/tests/sppkg-builder.test.ts",
+        "start": 204,
+        "startLoc": {
+          "column": 43,
+          "line": 204,
+          "position": 9253
+        }
+      },
+      "tokens": 55
+    }
+  ],
+  "statistics": {
+    "detectionDate": "2026-08-22T15:26:53.438Z",
+    "formats": {
+      "json": {
+        "clones": 14,
+        "duplicatedLines": 350,
+        "duplicatedTokens": 1121,
+        "lines": 774,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 45.21963824289406,
+        "percentageTokens": 46.982397317686505,
+        "sources": 18,
+        "tokens": 2386
+      },
+      "markdown": {
+        "clones": 0,
+        "duplicatedLines": 0,
+        "duplicatedTokens": 0,
+        "lines": 627,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 0.0,
+        "percentageTokens": 0.0,
+        "sources": 17,
+        "tokens": 3333
+      },
+      "typescript": {
+        "clones": 58,
+        "duplicatedLines": 717,
+        "duplicatedTokens": 4879,
+        "lines": 8469,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 8.466170740347149,
+        "percentageTokens": 7.7849757467449585,
+        "sources": 63,
+        "tokens": 62672
+      }
+    },
+    "total": {
+      "clones": 72,
+      "duplicatedLines": 1067,
+      "duplicatedTokens": 6000,
+      "lines": 9870,
+      "newClones": 0,
+      "newDuplicatedLines": 0,
+      "percentage": 10.810536980749747,
+      "percentageTokens": 8.773084177742685,
+      "sources": 98,
+      "tokens": 68391
+    }
+  }
+}

@@ -1,5 +1,8 @@
 import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import { createRequire } from 'node:module';
 import solidPlugin from 'vite-plugin-solid';
+
+const require = createRequire(import.meta.url);
 
 export const preset: FrameworkPreset = {
   name: 'solid',
@@ -14,12 +17,12 @@ export const preset: FrameworkPreset = {
             options: {
               presets: [
                 [
-                  'babel-preset-solid',
+                  require.resolve('babel-preset-solid'),
                   { generate: 'dom', ...(opts.fastRefresh ? { development: true } : {}) }
                 ],
-                '@babel/preset-typescript'
+                require.resolve('@babel/preset-typescript')
               ],
-              plugins: opts.fastRefresh ? [['solid-refresh/babel', { bundler: 'rspack-esm' }]] : []
+              plugins: opts.fastRefresh ? [[require.resolve('solid-refresh/babel'), { bundler: 'rspack-esm' }]] : []
             }
           }
         }
@@ -43,12 +46,12 @@ export const preset: FrameworkPreset = {
             options: {
               presets: [
                 [
-                  'babel-preset-solid',
+                  require.resolve('babel-preset-solid'),
                   { generate: 'dom', ...(opts.fastRefresh ? { development: true } : {}) }
                 ],
-                '@babel/preset-typescript'
+                require.resolve('@babel/preset-typescript')
               ],
-              plugins: opts.fastRefresh ? [['solid-refresh/babel', { bundler: 'rspack-esm' }]] : []
+              plugins: opts.fastRefresh ? [[require.resolve('solid-refresh/babel'), { bundler: 'rspack-esm' }]] : []
             }
           }
         }
