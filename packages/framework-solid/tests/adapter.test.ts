@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('solid-js/web', async () => {
   const require = createRequire(import.meta.url);
   const clientPath = require.resolve('../node_modules/solid-js/web/dist/dev.js');
-  const mod = await import(pathToFileURL(clientPath).toString());
+  const mod = require(clientPath) as Record<string, unknown>;
   return mod;
 });
 

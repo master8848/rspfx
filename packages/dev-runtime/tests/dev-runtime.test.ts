@@ -362,7 +362,7 @@ describe('startServe local mode', () => {
     try {
       const createdRes = await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-RequestDigest': '0xRSPFXLOCALPREVIEW' },
         body: JSON.stringify({ Title: 'New item from test' })
       });
       expect(createdRes.status).toBe(201);

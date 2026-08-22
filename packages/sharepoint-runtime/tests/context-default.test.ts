@@ -35,15 +35,15 @@ describe('createLocalWebPartContext default path (real @microsoft/*)', () => {
     const pageContextMod = requireReal(realPath('@microsoft/sp-page-context/lib-commonjs/index.js')) as Record<string, unknown>;
     const componentBase = requireReal(realPath('@microsoft/sp-component-base/lib-commonjs/index.js')) as Record<string, unknown>;
 
-    expect(coreLib.ServiceScope).toBeDefined();
-    const ServiceScope = coreLib.ServiceScope as { startNewRoot(): unknown };
+    expect(coreLib!.ServiceScope).toBeDefined();
+    const ServiceScope = coreLib!.ServiceScope as { startNewRoot(): unknown };
     expect(typeof ServiceScope.startNewRoot).toBe('function');
     const root = ServiceScope.startNewRoot() as Record<string, unknown>;
     // Real ServiceScope has provide/consume/whenFinished/finish; stub is minimal.
     expect(typeof root.provide).toBe('function');
     expect(typeof root.consume).toBe('function');
 
-    expect((coreLib.SPEvent as unknown)).toBeDefined();
+    expect((coreLib!.SPEvent as unknown)).toBeDefined();
     expect(webpartBase.WebPartContext).toBeDefined();
     expect(typeof webpartBase.WebPartContext).toBe('function');
 
