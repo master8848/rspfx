@@ -46,6 +46,21 @@ Source manifest (`src/webparts/<name>/<name>.manifest.json`) + build-time additi
 - External (sp-*) dependency versions come from the referenced package's own manifest
   `version` field (read from node_modules at build time — do not hardcode).
 
+Library manifest source (`src/libraries/<name>/<name>.manifest.json`, schema `https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json`) — minimal form harvested from official generator (no `preconfiguredEntries`, no `extensionType`, `alias` is library name, `version: "*"`):
+
+```jsonc
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json",
+  "id": "<componentId>",
+  "alias": "MyLibrary",
+  "componentType": "Library",
+  "version": "*",
+  "manifestVersion": 2
+}
+```
+
+Built library manifest adds `loaderConfig` identical to web part (`internalModuleBaseUrls`, `entryModuleId = bundleName`, `scriptResources` with `path`/`component` types); `alias` and `id` unchanged.
+
 ## 2. Bundle format (webpack → Rspack equivalents)
 
 Official webpack output config (harvested from WebpackConfigurationGenerator):
@@ -112,15 +127,17 @@ AppManifest.xml                  → <App xmlns="http://schemas.microsoft.com/sh
 _rels/AppManifest.xml.rels       → /feature_<featureId>.xml, /ClientSideAssets.xml, /Resources.resx
 feature_<featureId>.xml          → <Feature xmlns="http://schemas.microsoft.com/sharepoint/" Title Description Id Version Scope="Web" Hidden="FALSE"/>
 feature_<featureId>.xml.config.xml → <AppPartConfig ...><Id>randomUUID</Id></AppPartConfig>
-_rels/feature_<featureId>.xml.rels → /feature_<featureId>.xml.config.xml, /<featureId>/WebPart_<componentId>.xml
+_rels/feature_<featureId>.xml.rels → /feature_<featureId>.xml.config.xml, /<featureId>/WebPart_<componentId>.xml, /<featureId>/Extension_<componentId>.xml, /<featureId>/Library_<componentId>.xml
 <featureId>/WebPart_<componentId>.xml → <Elements xmlns="http://schemas.microsoft.com/sharepoint/"><ClientSideComponent Name Id ComponentManifest='{json}' Type="WebPart"/><Module Name Url="_catalogs/wp" List="113"/></Elements>
+<featureId>/Extension_<componentId>.xml → <Elements xmlns="http://schemas.microsoft.com/sharepoint/"><ClientSideComponent Name Id ComponentManifest='{json}' Type="Extension" Location="ClientSideExtension.<extensionType>" ClientSideComponentProperties="null" ClientSideComponentInstance="<uuid>"/></Elements>  // no Module
+<featureId>/Library_<componentId>.xml → <Elements xmlns="http://schemas.microsoft.com/sharepoint/"><ClientSideComponent Name Id ComponentManifest='{json}' Type="Library"/></Elements>  // no Module, no Location, no Instance
 ClientSideAssets.xml             → assets feature (only when includeClientSideAssets)
 ClientSideAssets.xml.config.xml  → <AppPartConfig ...><Id>randomUUID</Id></AppPartConfig>
 _rels/ClientSideAssets.xml.rels  → /ClientSideAssets.xml.config.xml, /ClientSideAssets/<file>
 ClientSideAssets/<file>          → bundles + assets (component JS, maps excluded)
 ```
 
-- ComponentManifest JSON is stringified into the XML attribute (single-quoted, entities escaped) — see `packages/sppkg-builder/src/xml.ts:188` `buildElementsXml()`.
+- ComponentManifest JSON is stringified into the XML attribute (single-quoted, entities escaped) — see `packages/sppkg-builder/src/xml.ts:188` `buildElementsXml()`; `Type` is `WebPart`/`Extension`/`Library`, only `WebPart` includes `<Module Name Url="_catalogs/wp" List="113"/>`, `Extension` includes `Location`+`ClientSideComponentProperties`+`ClientSideComponentInstance`, `Library` has none of those (`packages/sppkg-builder/src/xml.ts:181`).
 - With `includeClientSideAssets` (production only), every manifest `loaderConfig.internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']` (SharePoint rewrites at install).
 - `[Content_Types].xml` is ordered via `packages/sppkg-builder/src/xml.ts:111` `DEFAULT_CONTENT_TYPES_ORDERED` (`xml` → `text/xml`, `rels` → `application/vnd.openxmlformats-package.relationships+xml`, `webpart` → `text/xml`, `htm` → `text/html`, `html` → `text/html`, `aspx` → `text/xml`, `resx` → `text/xml`, `js` → `application/javascript`, `json` → `application/json`, `png` → `image/png`, `jpg` → `image/jpeg`, `bmp` → `image/bmp`, `gif` → `image/gif`, `txt` → `application/octet-stream`; extra extensions appended sorted via `packages/sppkg-builder/src/xml.ts:88` `CONTENT_TYPE_BY_EXTENSION`).
 - `AppManifest.xml` `ProductID` is the raw `solution.id` GUID without braces (`packages/sppkg-builder/src/xml.ts:240`); `IsDomainIsolated` is emitted as `String(boolean)` when defined including `false` (`packages/sppkg-builder/src/xml.ts:258`); `DeveloperProperties` is `JSON.stringify` of 5 keys `name, websiteUrl, privacyUrl, termsOfUseUrl, mpnId` even when empty (`packages/sppkg-builder/src/xml.ts:269`); `Title` falls back to `solution.name` when `solution.title` is absent (`packages/sppkg-builder/src/xml.ts:261`); `categories` emit one `CategoryID` with comma-joined values (`packages/sppkg-builder/src/xml.ts:284`); `Screenshots` emits `Screenshot/Filename` per `metadata.screenshotPaths` (`packages/sppkg-builder/src/xml.ts:296`); `AppPartConfig` `Id` is `randomUUID()` (`packages/sppkg-builder/src/xml.ts:172`); `escapeXmlText` escapes `&quot;`/`&apos;` (`packages/sppkg-builder/src/xml.ts:31`).
@@ -174,6 +191,6 @@ See `reference/sp-component-ids.json`. Discovered manifests are in
 }
 ```
 
-- Features without `componentIds` get ALL components; no features → one auto feature.
+- Features without `componentIds` get ALL components; no features → one auto feature. When mixed `WebPart`+`Extension`+`Library`, the auto feature description joins types (`packages/sppkg-builder/src/sppkg-builder.ts:340`); explicit `features[].componentIds` can group libraries separately.
 - `config/serve.json`: `{ "initialPage": "...", "https": true, "port": 4321, "hostname": "localhost" }`.
 - `config/write-manifests.json`: `{ "cdnBasePath": "https://cdn.contoso.com/my-app/" }` (release base urls; empty → pseudo-url).

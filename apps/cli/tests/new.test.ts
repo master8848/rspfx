@@ -154,7 +154,7 @@ describe('new', () => {
   it('rejects unknown component values', async () => {
     const tmp = makeTmpDir('new-bad-component');
     await expect(
-      runNew({ name: 'bad', cwd: tmp, component: 'library', install: false, yes: true })
+      runNew({ name: 'bad', cwd: tmp, component: 'unknown', install: false, yes: true })
     ).rejects.toThrow(/Unknown component/);
     rmRf(tmp);
   });

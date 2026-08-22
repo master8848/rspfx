@@ -6,7 +6,7 @@ import { stdin as input, stdout as output } from 'node:process';
 export const FRAMEWORK_CHOICES: readonly FrameworkId[] = ['react', 'vanilla', 'solid', 'preact', 'vue', 'svelte'];
 export const DEFAULT_FRAMEWORK: FrameworkId = 'react';
 
-export const COMPONENT_CHOICES: readonly ComponentType[] = ['webpart', 'applicationcustomizer', 'fieldcustomizer', 'listviewcommandset'];
+export const COMPONENT_CHOICES: readonly ComponentType[] = ['webpart', 'applicationcustomizer', 'fieldcustomizer', 'listviewcommandset', 'library'];
 export const DEFAULT_COMPONENT: ComponentType = 'webpart';
 
 export async function promptChoice(

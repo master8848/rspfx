@@ -46,7 +46,7 @@ Scope boundaries are documented in [docs/why-not-to-migrate.md](why-not-to-migra
 | Gap | Severity | File / env var | Mitigation |
 |---|---|---|---|
 | Extension `.sppkg` path still landing — compile/discovery + local preview done (`ApplicationCustomizerContext` placeholder, `FieldCustomizerContext` sample rows, `ListViewCommandSetContext` toolbar) but deploy unverified | High | `src/extensions/` in `packages/manifest-generator`, `packages/dev-runtime` | Use extensions in local preview (`?locale=fr-fr`/`?market=`); gate production on tenant validation |
-| Library components (`src/libraries/`) not supported | High | `docs/why-not-to-migrate.md` | Keep libraries on official toolchain |
+| Library components (`src/libraries/`) | High | `src/libraries/` scan `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` (`Type="Library"` no Module/Location/Instance) | Library compile/package landed; validate tenant install via [real-tenant-validation.md](real-tenant-validation.md) before production — format still verified-by-reference until M1 gate |
 | Performance measured only on M1 Pro — `examples/shadcn` cold 633 ms (`docs/performance.md:24`), no official-tool comparison | Medium | `docs/performance.md:24`, `bench/bench.mjs`, `bench/compare-official.mjs`, `BENCH_RUNS` | Run `node bench/bench.mjs examples/shadcn` and `node bench/compare-official.mjs` with `BENCH_RUNS=3`; methodology in `bench/README.md` and [docs/performance.md](performance.md) |
 | No long-term support / no build-plugin ecosystem (no spfx-fast-serve, PnP build plugins, custom heft rigs); framework presets not final until M5 | Medium | `docs/why-not-to-migrate.md`, `docs/roadmap.md` | Port CI via `rspfx doctor` + `rspfx build` (~10 lines) and scope to web-parts-only on SPFx 1.20–1.23 |
 
@@ -61,7 +61,8 @@ Adopt now if the solution is web-parts-only on SPFx 1.20–1.23, the team owns C
 | 1 web part, React, standard config, SharePoint Online | Adopt — `rspfx new --framework react --yes`, `rspfx doctor`, `rspfx dev --mode local`, `rspfx package` |
 | 4 web parts, localization, PnP controls | Adopt — `localizedPath` modules and `?locale=` preview work; see [docs/compatibility.md](compatibility.md) |
 | Extension (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet) | Wait — local preview works, tenant install unverified |
-| Library, Angular, 2019/on-prem, risk-averse enterprise | Wait — hard blockers in [docs/why-not-to-migrate.md](why-not-to-migrate.md) |
+| Library (`src/libraries/` `componentType: Library`) | Adopt — compile/package done, gate production on [real-tenant validation](real-tenant-validation.md) |
+| Angular, 2019/on-prem, risk-averse enterprise | Wait — hard blockers in [docs/why-not-to-migrate.md](why-not-to-migrate.md) |
 | Need Turbopack or Vite-only `/_api` mock | Wait — see [docs/roadmap.md:37](roadmap.md#feasibility-of-the-open-items) |
 
 Revisit after the M1 gate passes and `bench/compare-official.mjs` is validated on your hardware — both tracked in [docs/roadmap.md](roadmap.md#real-tenant-validation).

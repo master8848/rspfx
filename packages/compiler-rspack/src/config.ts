@@ -223,6 +223,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     plugins.push(new SpfxLocalizedResourcesPlugin(ctx.localizedResources));
   }
 
+  // Library uses the same AMD wrapper as WebPart/Extension — loaderConfig/entryModuleId drive the difference.
   const config: Configuration = {
     mode,
     context: ctx.projectRoot,

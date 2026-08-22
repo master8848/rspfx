@@ -24,7 +24,7 @@ export interface LocalPageComponent {
   alias: string;
   bundleName: string;
   amdId: string;
-  componentType?: 'WebPart' | 'Extension';
+  componentType?: 'WebPart' | 'Extension' | 'Library';
   extensionType?: string;
   localizedResources?: string[];
   items?: Record<string, { title?: { default?: string }; type?: string }>;
@@ -42,6 +42,11 @@ export function buildLocalPageHtml(opts: LocalPageOptions): string {
   const componentsJson = JSON.stringify(opts.components).replace(/</g, '\\u003c');
   // Escape origin for safe interpolation into <script src="...">; hostname is validated via URL parsing.
   const safeOrigin = escapeHtml(opts.origin);
+  const libraries = opts.components.filter((c) => c.componentType === 'Library');
+  const librariesSection =
+    libraries.length > 0
+      ? `<section id="rspfx-libraries" style="max-width:900px;margin:24px auto;padding:0 20px;"><h2 style="font-size:14px;font-weight:600;">Libraries (${libraries.length})</h2><ul style="font-size:13px;color:#323130;">${libraries.map((lib) => `<li><code>${escapeHtml(lib.id)}</code> — ${escapeHtml(lib.alias)} (dist/${escapeHtml(lib.bundleName)}.js — loadable via import('${escapeHtml(lib.alias)}'))</li>`).join('')}</ul><p style="font-size:12px;color:#605e5c;">Libraries are not mountable; they are AMD bundles loadable from web parts.</p></section>`
+      : `<section id="rspfx-libraries" style="display:none;"></section>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -130,6 +135,7 @@ export function buildLocalPageHtml(opts: LocalPageOptions): string {
   <span class="rspfx-hint">no SharePoint required — run <code>rspfx dev --tenant &lt;url&gt;</code> to debug in the real workbench, or add <code>?locale=fr-fr</code> to preview another language</span>
 </header>
 <div id="__rspfx_host"></div>
+${librariesSection}
 <script>
   window.__RSPFX_COMPONENTS__ = ${componentsJson};
   try { Object.defineProperty(window, '__RSPFX_COMPONENTS__', { value: window.__RSPFX_COMPONENTS__, writable: false, configurable: false }); } catch {}
@@ -150,7 +156,7 @@ export function readLocalPageComponents(
     const manifest = JSON.parse(fs.readFileSync(bundle.manifestPath, 'utf8')) as {
       id?: string;
       alias?: string;
-      componentType?: 'WebPart' | 'Extension';
+      componentType?: 'WebPart' | 'Extension' | 'Library';
       extensionType?: string;
       items?: Record<string, { title?: { default?: string }; type?: string }>;
       preconfiguredEntries?: { properties?: Record<string, unknown> }[];

@@ -202,6 +202,8 @@ export function buildElementsXml(
       name: 'ClientSideComponentInstance',
       attrs: { Id: randomUUID(), Title: name, Description: name }
     });
+  } else if (componentType === 'Library') {
+    // Type=Library, no Module/Location/Instance — only ComponentManifest. No extra attrs/children.
   }
   const children: XmlNode[] = [
     {
@@ -211,6 +213,7 @@ export function buildElementsXml(
       ...(componentChildren.length > 0 ? { children: componentChildren } : {})
     }
   ];
+  // Only WebPart/AdaptiveCardExtension get a Module; Library and Extension have no Module.
   if (componentType === 'WebPart' || componentType === 'AdaptiveCardExtension') {
     children.push({ name: 'Module', attrs: { Name: name, Url: '_catalogs/wp', List: '113' } });
   }

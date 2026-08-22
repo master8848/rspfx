@@ -23,6 +23,7 @@ describe('configDefaults', () => {
         srcDir: 'src',
         webpartsDir: 'src/webparts',
         extensionsDir: 'src/extensions',
+        librariesDir: 'src/libraries',
         configDir: 'config'
       }
     });
@@ -66,6 +67,7 @@ describe('resolveConfig', () => {
         srcDir: 'src',
         webpartsDir: 'src/webparts',
         extensionsDir: 'src/extensions',
+        librariesDir: 'src/libraries',
         configDir: 'config'
       }
     });
@@ -112,12 +114,14 @@ describe('resolveConfig', () => {
       srcDir: 'components',
       webpartsDir: 'components/widgets',
       extensionsDir: 'src/extensions',
+      librariesDir: 'src/libraries',
       configDir: 'config'
     });
     expect(resolvePathDefaults()).toEqual({
       srcDir: 'src',
       webpartsDir: 'src/webparts',
       extensionsDir: 'src/extensions',
+      librariesDir: 'src/libraries',
       configDir: 'config'
     });
   });

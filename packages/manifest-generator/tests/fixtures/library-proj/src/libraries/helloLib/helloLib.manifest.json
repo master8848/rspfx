@@ -1,0 +1,8 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json",
+  "id": "dddddddd-4444-4555-8666-777777777777",
+  "alias": "HelloLibLibrary",
+  "componentType": "Library",
+  "version": "*",
+  "manifestVersion": 2
+}

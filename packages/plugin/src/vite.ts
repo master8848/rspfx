@@ -521,6 +521,12 @@ function selectEntry(
   return entry;
 }
 
+/**
+ * Libraries are scanned via generateComponentManifests (manifest-generator/src/component-manifests.ts)
+ * — no extra handling needed here. This covers SP deps via manifest scanning, plus
+ * project externals (including library aliases when a web part imports a library) and
+ * localized resource names.
+ */
 function collectExternals(
   root: string,
   projectExternals: string[],
@@ -579,11 +585,34 @@ function importViteFrom(root: string): Promise<unknown> {
       resolved = requireFromProject.resolve('vite');
     }
   } catch (error) {
-    throw new RspfxError(
-      'VITE_NOT_FOUND',
-      'Vite is not installed in this project. Add "vite" to devDependencies (rspfx dev/build use the project-local Vite).',
-      error
-    );
+    // Fallback to the rspfx installation's vite (covers temp fixtures outside the project tree and pnpm isolated layouts).
+    try {
+      const fallbackRequire = createRequire(import.meta.url);
+      const fallbackPackagePath = fallbackRequire.resolve('vite/package.json');
+      const packageJson = JSON.parse(fs.readFileSync(fallbackPackagePath, 'utf8')) as {
+        exports?: { '.': string | { import?: string | { default?: string } } };
+        main?: string;
+      };
+      const exportEntry = packageJson.exports?.['.'];
+      const importEntry =
+        typeof exportEntry === 'string'
+          ? exportEntry
+          : typeof exportEntry?.import === 'string'
+            ? exportEntry.import
+            : exportEntry?.import?.default;
+      const entry = importEntry ?? packageJson.main;
+      if (entry) {
+        resolved = path.resolve(path.dirname(fallbackPackagePath), entry);
+      } else {
+        resolved = fallbackRequire.resolve('vite');
+      }
+    } catch {
+      throw new RspfxError(
+        'VITE_NOT_FOUND',
+        'Vite is not installed in this project. Add "vite" to devDependencies (rspfx dev/build use the project-local Vite).',
+        error
+      );
+    }
   }
   return import(pathToFileURL(resolved).href);
 }

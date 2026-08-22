@@ -26,6 +26,7 @@ export interface PathsConfig {
   srcDir?: string;
   webpartsDir?: string;
   extensionsDir?: string;
+  librariesDir?: string;
   configDir?: string;
 }
 
@@ -87,6 +88,7 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
     srcDir: 'src',
     webpartsDir: 'src/webparts',
     extensionsDir: 'src/extensions',
+    librariesDir: 'src/libraries',
     configDir: 'config'
   }
 };
@@ -96,6 +98,7 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
     srcDir: paths?.srcDir ?? configDefaults.paths.srcDir,
     webpartsDir: paths?.webpartsDir ?? configDefaults.paths.webpartsDir,
     extensionsDir: paths?.extensionsDir ?? configDefaults.paths.extensionsDir,
+    librariesDir: paths?.librariesDir ?? configDefaults.paths.librariesDir,
     configDir: paths?.configDir ?? configDefaults.paths.configDir
   };
 }

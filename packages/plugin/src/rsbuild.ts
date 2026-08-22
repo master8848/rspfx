@@ -414,6 +414,12 @@ function computeUniqueName(entries: BundleEntry[]): string {
   return createHash('md5').update(joined).digest('hex');
 }
 
+/**
+ * Libraries are scanned via generateComponentManifests (manifest-generator/src/component-manifests.ts)
+ * — no extra handling needed here. This covers SP deps via manifest scanning, plus
+ * project externals (including library aliases when a web part imports a library) and
+ * localized resource names.
+ */
 function collectExternals(
   root: string,
   projectExternals: string[],

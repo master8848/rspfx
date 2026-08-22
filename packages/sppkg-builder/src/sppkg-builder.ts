@@ -347,7 +347,16 @@ function normalizeFeatures(solution: Record<string, unknown>, manifests: Compone
       throw new RspfxError('NoManifestsFound', 'Cannot create a feature without any component manifests');
     }
     const name = typeof first.alias === 'string' && first.alias ? first.alias : first.id;
-    const componentKind = (first.componentType ?? 'WebPart') === 'Extension' ? 'Extension' : 'WebPart';
+    const kinds = new Set(manifests.map((m) => m.componentType ?? 'WebPart'));
+    let componentKind: string;
+    if (kinds.size === 1) {
+      const only = [...kinds][0]!;
+      if (only === 'Library') componentKind = 'Library';
+      else if (only === 'Extension') componentKind = 'Extension';
+      else componentKind = 'WebPart';
+    } else {
+      componentKind = 'Component';
+    }
     return [
       {
         title: `${name} Feature`,

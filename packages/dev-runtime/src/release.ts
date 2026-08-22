@@ -67,6 +67,7 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
     })),
     webpartsDir: config.paths?.webpartsDir,
     extensionsDir: config.paths?.extensionsDir,
+    librariesDir: config.paths?.librariesDir,
     entryModuleIds
   });
 

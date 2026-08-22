@@ -1,5 +1,9 @@
 node_modules/
+!packages/manifest-generator/tests/fixtures/proj/node_modules/
+!packages/manifest-generator/tests/fixtures/proj/node_modules/**
 dist/
+!packages/manifest-generator/tests/fixtures/proj/node_modules/**/dist/
+!packages/manifest-generator/tests/fixtures/proj/node_modules/**/dist/**
 release/
 temp/
 lib/

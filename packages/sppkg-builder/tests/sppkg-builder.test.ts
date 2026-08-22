@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { buildPackage, validateSppkg, type BuildPackageOptions } from '../src/index.js';
+import { buildElementsXml } from '../src/xml.js';
 import { readZipEntries } from '../src/zip.js';
 
 const fixtureRoot = fileURLToPath(new URL('./fixtures/proj', import.meta.url));
@@ -229,6 +230,65 @@ describe('buildPackage', () => {
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }
+  });
+
+  it('builds a library package with Type=Library and no Module', async () => {
+    const projectRoot = await makeProject();
+    try {
+      const manifestsDir = path.join(projectRoot, 'release/manifests');
+      const assetsDir = path.join(projectRoot, 'release/assets');
+      // Replace web part manifest with a library manifest (componentType: Library, version *)
+      const original = JSON.parse(
+        await readFile(path.join(manifestsDir, `${componentId}.manifest.json`), 'utf8')
+      ) as Record<string, unknown>;
+      const libraryId = 'dddddddd-4444-4555-8666-777777777777';
+      const libraryManifest = {
+        ...original,
+        id: libraryId,
+        alias: 'HelloLibrary',
+        componentType: 'Library',
+        version: '1.0.0',
+        manifestVersion: 2,
+        extensionType: undefined,
+        loaderConfig: {
+          ...(original.loaderConfig as Record<string, unknown>),
+          entryModuleId: 'helloLib'
+        }
+      };
+      delete (libraryManifest as Record<string, unknown>).extensionType;
+      await rm(path.join(manifestsDir, `${componentId}.manifest.json`));
+      await writeFile(path.join(manifestsDir, `${libraryId}.manifest.json`), JSON.stringify(libraryManifest, null, 2));
+      await writeFile(path.join(assetsDir, 'helloLib.js'), 'define([], () => {});\n');
+      await rm(path.join(assetsDir, 'hello.js'));
+      // Update feature componentIds to point to the library so the Library xml lands in the expected feature.
+      const solutionPath = path.join(projectRoot, 'config/package-solution.json');
+      const solutionJson = JSON.parse(await readFile(solutionPath, 'utf8')) as {
+        solution: { features: { componentIds: string[] }[] };
+      };
+      solutionJson.solution.features[0]!.componentIds = [libraryId];
+      await writeFile(solutionPath, JSON.stringify(solutionJson, null, 2));
+      const result = await buildPackage(buildOptions(projectRoot));
+      const zip = await readZipEntries(result.outputPath);
+      const libXml = zip.get(`${featureId}/Library_${libraryId}.xml`)!.toString('utf8');
+      expect(libXml).toContain('Type="Library"');
+      expect(libXml).not.toContain('<Module');
+      expect(libXml).not.toContain('Location=');
+      expect(libXml).toContain("ComponentManifest='");
+      const manifestJson = JSON.parse(extractComponentManifest(libXml)) as {
+        loaderConfig: { internalModuleBaseUrls: string[] };
+      };
+      expect(manifestJson.loaderConfig.internalModuleBaseUrls).toEqual(['HTTPS://SPCLIENTSIDEASSETLIBRARY/']);
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('buildElementsXml for Library has Type=Library with no Module/Location', () => {
+    const xml = buildElementsXml('HelloLibrary', { id: 'dddddddd-4444-4555-8666-777777777777', componentType: 'Library' }, true);
+    expect(xml).toContain('Type="Library"');
+    expect(xml).not.toContain('<Module');
+    expect(xml).not.toContain('Location=');
+    expect(xml).toContain("ComponentManifest='");
   });
 });
 

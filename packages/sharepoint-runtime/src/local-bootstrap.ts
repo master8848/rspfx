@@ -32,7 +32,7 @@ interface RspfxLocalComponent {
   alias: string;
   bundleName: string;
   amdId: string;
-  componentType?: 'WebPart' | 'Extension';
+  componentType?: 'WebPart' | 'Extension' | 'Library';
   extensionType?: string;
   localizedResources?: string[];
   items?: Record<string, { title?: { default?: string }; type?: string }>;
@@ -239,9 +239,48 @@ function boot(): void {
     return;
   }
   for (const component of components) {
+    if (component.componentType === 'Library') {
+      continue;
+    }
     host.appendChild(createCard(component));
   }
+  renderLibrariesSection(components);
   mountAll(components).catch((error) => showFatal(error));
+}
+
+function renderLibrariesSection(components: RspfxLocalComponent[]): void {
+  const libraries = components.filter((c) => c.componentType === 'Library');
+  let section = document.getElementById('rspfx-libraries');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'rspfx-libraries';
+    document.body.appendChild(section);
+  }
+  if (libraries.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  section.replaceChildren();
+  const heading = document.createElement('h2');
+  heading.textContent = `Libraries (${libraries.length})`;
+  heading.style.cssText = 'font-size:14px;font-weight:600;';
+  section.appendChild(heading);
+  const list = document.createElement('ul');
+  list.style.cssText = 'font-size:13px;color:#323130;';
+  for (const lib of libraries) {
+    const item = document.createElement('li');
+    const code = document.createElement('code');
+    code.textContent = lib.id;
+    item.appendChild(code);
+    item.append(` — ${lib.alias} (dist/${lib.bundleName}.js — loadable via import('${lib.alias}'))`);
+    list.appendChild(item);
+  }
+  section.appendChild(list);
+  const hint = document.createElement('p');
+  hint.style.cssText = 'font-size:12px;color:#605e5c;';
+  hint.textContent = 'Libraries are not mountable; they are AMD bundles loadable from web parts.';
+  section.appendChild(hint);
 }
 
 function createCard(component: RspfxLocalComponent): HTMLElement {
@@ -278,6 +317,9 @@ function createCard(component: RspfxLocalComponent): HTMLElement {
 async function mountAll(components: RspfxLocalComponent[], seams: LocalMountSeams = {}): Promise<void> {
   const locale = resolveLocale(readLocaleQuery());
   for (const component of components) {
+    if (component.componentType === 'Library') {
+      continue;
+    }
     await mountOne(component, locale, seams);
   }
 }
@@ -292,6 +334,9 @@ export async function mountOne(
   locale: ResolvedLocale = resolveLocale(readLocaleQuery()),
   seams: LocalMountSeams = {}
 ): Promise<void> {
+  if (component.componentType === 'Library') {
+    return;
+  }
   const root = document.querySelector<HTMLElement>(
     `#rspfx-wp-${CSS.escape(component.id)} .rspfx-wp-root`
   );
@@ -596,7 +641,8 @@ function componentManifest(component: RspfxLocalComponent): Record<string, unkno
     alias: component.alias,
     version: '1.0.0',
     manifestVersion: 2,
-    componentType: component.componentType === 'Extension' ? 'Extension' : 'WebPart',
+    componentType:
+      component.componentType === 'Extension' ? 'Extension' : component.componentType === 'Library' ? 'Library' : 'WebPart',
     extensionType: component.extensionType,
     preconfiguredEntries: component.preconfiguredEntries ?? [],
     items: component.items ?? {},

@@ -28,5 +28,6 @@ export interface ManifestContext {
   localizedResources?: LocalizedResourceEntry[];
   webpartsDir?: string;
   extensionsDir?: string;
+  librariesDir?: string;
   entryModuleIds?: Record<string, string>;
 }

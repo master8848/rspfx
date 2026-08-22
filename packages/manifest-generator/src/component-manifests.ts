@@ -45,6 +45,7 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
   const manifests: ComponentManifest[] = [];
   scanComponentsDir(ctx, manifests, spDependencies, ctx.webpartsDir ?? 'src/webparts');
   scanComponentsDir(ctx, manifests, spDependencies, ctx.extensionsDir ?? 'src/extensions');
+  scanComponentsDir(ctx, manifests, spDependencies, ctx.librariesDir ?? 'src/libraries');
   return manifests;
 }
 

@@ -231,4 +231,38 @@ describe('generateComponentManifests', () => {
     expect(byType['Extension']!.loaderConfig.entryModuleId).toBe('myExt');
     expect(byType['Extension']!.extensionType).toBe('ListViewCommandSet');
   });
+
+  it('passes library manifests through with componentType Library and no extensionType', async () => {
+    const libraryRoot = fileURLToPath(new URL('./fixtures/library-proj', import.meta.url));
+    const manifests = await generateComponentManifests(
+      ctx({ projectRoot: libraryRoot, externals: ['@microsoft/sp-core-library'] })
+    );
+    expect(manifests).toHaveLength(1);
+    const manifest = manifests[0]!;
+    expect(manifest.componentType).toBe('Library');
+    expect(manifest.alias).toBe('HelloLibLibrary');
+    expect(manifest.manifestVersion).toBe(2);
+    expect(manifest.version).toBe('1.2.3');
+    expect(manifest.$schema).toBeUndefined();
+    expect((manifest as unknown as { extensionType?: unknown }).extensionType).toBeUndefined();
+    expect(manifest.loaderConfig.entryModuleId).toBe('helloLib');
+    expect(manifest.loaderConfig.scriptResources['helloLib']).toEqual({
+      type: 'path',
+      path: 'helloLib.js'
+    });
+    expect(manifest.loaderConfig.scriptResources['@microsoft/sp-core-library']).toEqual({
+      type: 'component',
+      id: '7263c7d0-1d6a-45ec-8d85-d4d1d234171b',
+      version: '1.23.2'
+    });
+  });
+
+  it('honors librariesDir override', async () => {
+    const libraryRoot = fileURLToPath(new URL('./fixtures/library-proj', import.meta.url));
+    const manifests = await generateComponentManifests(
+      ctx({ projectRoot: libraryRoot, librariesDir: 'src/libraries', externals: [] })
+    );
+    expect(manifests).toHaveLength(1);
+    expect(manifests[0]!.componentType).toBe('Library');
+  });
 });

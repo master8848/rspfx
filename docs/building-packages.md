@@ -85,6 +85,7 @@ Key semantics, all read from `config/package-solution.json`:
 - `webApiPermissionRequests` — emitted as `RequestedWebApiPermission` entries in `AppManifest.xml`.
 - `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata` — passed through to `AppManifest.xml`.
 - `componentType: "Extension"` — produces `<featureId>/Extension_<componentId>.xml` with `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`, `ClientSideComponentProperties="null"`, per-build `ClientSideComponentInstance`; no `<Module>`.
+- `componentType: "Library"` — produces `<featureId>/Library_<componentId>.xml` with `Type="Library"`, single-quoted `ComponentManifest`, no `<Module>`/`Location`/`Instance`/`ClientSideComponentProperties` (`packages/sppkg-builder/src/xml.ts:181`).
 
 `rspfx package` auto-detects two optional folders:
 

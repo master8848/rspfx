@@ -194,7 +194,7 @@ function solidPngBuffer(
 }
 
 function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>): string | undefined {
-  const dirs = [paths.webpartsDir, paths.extensionsDir];
+  const dirs = [paths.webpartsDir, paths.extensionsDir, paths.librariesDir];
   for (const dir of dirs) {
     const full = path.join(projectRoot, dir);
     if (!fs.existsSync(full)) {
@@ -585,7 +585,8 @@ export function readProject(
     configJson,
     resolvedPaths.webpartsDir,
     { version: versionOverride ?? packageJson.version },
-    resolvedPaths.extensionsDir
+    resolvedPaths.extensionsDir,
+    resolvedPaths.librariesDir
   );
   return {
     webParts,
@@ -697,7 +698,8 @@ export function discoverWebParts(
   configJson: ProjectConfigJson | undefined,
   webpartsDir = 'src/webparts',
   packageJson?: { version?: string },
-  extensionsDir = 'src/extensions'
+  extensionsDir = 'src/extensions',
+  librariesDir = 'src/libraries'
 ): DiscoveredWebParts {
   const bundleMap: WebPartBundle[] = [];
   if (configJson?.bundles) {
@@ -717,11 +719,12 @@ export function discoverWebParts(
   } else {
     scanComponentDir(projectRoot, webpartsDir, bundleMap);
     scanComponentDir(projectRoot, extensionsDir, bundleMap);
+    scanComponentDir(projectRoot, librariesDir, bundleMap);
   }
 
   if (bundleMap.length === 0) {
     throw new Error(
-      'No web part or extension bundles found. Expected src/webparts/<name>/<name>WebPart.ts + <name>.manifest.json or src/extensions/<name>/<Name>Extension.ts + <name>.manifest.json'
+      'No web part, extension, or library bundles found. Expected src/webparts/<name>/<name>WebPart.ts + <name>.manifest.json, src/extensions/<name>/<Name>Extension.ts + <name>.manifest.json, or src/libraries/<name>/<name>.manifest.json'
     );
   }
 
@@ -800,8 +803,14 @@ function pickEntrypoint(dirPath: string, dirName: string): string | undefined {
     path.join(dirPath, `${dirName}FieldCustomizer.tsx`),
     path.join(dirPath, `${dirName}CommandSet.ts`),
     path.join(dirPath, `${dirName}CommandSet.tsx`),
+    path.join(dirPath, `${dirName}FormCustomizer.ts`),
+    path.join(dirPath, `${dirName}FormCustomizer.tsx`),
     path.join(dirPath, `${dirName}Extension.ts`),
-    path.join(dirPath, `${dirName}Extension.tsx`)
+    path.join(dirPath, `${dirName}Extension.tsx`),
+    path.join(dirPath, `${dirName}.ts`),
+    path.join(dirPath, `${dirName}.tsx`),
+    path.join(dirPath, `${dirName}Library.ts`),
+    path.join(dirPath, `${dirName}Library.tsx`)
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {

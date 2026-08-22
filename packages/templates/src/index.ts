@@ -4,9 +4,9 @@ import { configDefaults, spfxNpmVersion } from '@mbsks/rspfx-core';
 import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 import { solidPng } from './png.js';
 
-export const EXTENSION_TYPES = ['applicationcustomizer', 'fieldcustomizer', 'listviewcommandset'] as const;
+export const EXTENSION_TYPES = ['applicationcustomizer', 'fieldcustomizer', 'listviewcommandset', 'formcustomizer'] as const;
 export type ExtensionType = (typeof EXTENSION_TYPES)[number];
-export type ComponentType = 'webpart' | ExtensionType;
+export type ComponentType = 'webpart' | ExtensionType | 'library';
 
 export interface TemplateVars {
   name: string;
@@ -78,7 +78,11 @@ function frameworkDeps(vars: TemplateVars): Record<string, string> {
 }
 
 function isExtension(vars: TemplateVars): boolean {
-  return vars.componentType !== 'webpart';
+  return (EXTENSION_TYPES as readonly string[]).includes(vars.componentType);
+}
+
+function isLibrary(vars: TemplateVars): boolean {
+  return vars.componentType === 'library';
 }
 
 function buildFiles(vars: TemplateVars): TemplateFile[] {
@@ -97,6 +101,13 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     { path: 'src/index.ts', content: 'export {};\n' },
     { path: 'src/rspfx-env.d.ts', content: declarations(vars) }
   ];
+  if (isLibrary(vars)) {
+    files.push(
+      { path: `src/libraries/${vars.name}/${vars.name}.manifest.json`, content: libraryManifest(vars) },
+      { path: `src/libraries/${vars.name}/${vars.namePascal}Library.ts`, content: libraryEntry(vars) }
+    );
+    return files;
+  }
   if (isExtension(vars)) {
     files.push(
       { path: `src/extensions/${vars.name}/${vars.name}.manifest.json`, content: extensionManifest(vars) },
@@ -146,11 +157,15 @@ function componentExtension(vars: TemplateVars): string {
 function packageJson(vars: TemplateVars): string {
   const spVersion = spfxNpmVersion(vars.spfxVersion);
   const framework = frameworkDeps(vars);
-  const spDeps = isExtension(vars) ? extensionSpDeps(vars) : {
-    '@microsoft/sp-core-library': spVersion,
-    '@microsoft/sp-webpart-base': spVersion,
-    '@microsoft/sp-property-pane': spVersion
-  };
+  const spDeps = isLibrary(vars)
+    ? { '@microsoft/sp-core-library': spVersion }
+    : isExtension(vars)
+      ? extensionSpDeps(vars)
+      : {
+          '@microsoft/sp-core-library': spVersion,
+          '@microsoft/sp-webpart-base': spVersion,
+          '@microsoft/sp-property-pane': spVersion
+        };
   return JSON.stringify(
     {
       name: vars.packageName,
@@ -198,6 +213,12 @@ function extensionSpDeps(vars: TemplateVars): Record<string, string> {
         '@microsoft/decorators': spVersion
       };
     case 'listviewcommandset':
+      return {
+        '@microsoft/sp-core-library': spVersion,
+        '@microsoft/sp-listview-extensibility': spVersion,
+        '@microsoft/decorators': spVersion
+      };
+    case 'formcustomizer':
       return {
         '@microsoft/sp-core-library': spVersion,
         '@microsoft/sp-listview-extensibility': spVersion,
@@ -308,13 +329,17 @@ function componentLabel(vars: TemplateVars): string {
       return 'field customizer';
     case 'listviewcommandset':
       return 'list view command set';
+    case 'formcustomizer':
+      return 'form customizer';
+    case 'library':
+      return 'library';
     default:
       return 'web part';
   }
 }
 
 function readme(vars: TemplateVars): string {
-  const build = isExtension(vars)
+  const build = isExtension(vars) || isLibrary(vars)
     ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (vanilla, TypeScript).`
     : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (${vars.framework}, ${vars.language}).`;
   return [
@@ -362,9 +387,11 @@ function packageSolution(vars: TemplateVars): string {
         features: [
           {
             title: `${vars.namePascal} Feature`,
-            description: isExtension(vars)
-              ? `A feature which activates the Client-Side Extension named '${vars.namePascal}'`
-              : `A feature which activates the Client-Side WebPart named '${vars.namePascal}'`,
+            description: isLibrary(vars)
+              ? `A feature which activates the Client-Side Library named '${vars.namePascal}'`
+              : isExtension(vars)
+                ? `A feature which activates the Client-Side Extension named '${vars.namePascal}'`
+                : `A feature which activates the Client-Side WebPart named '${vars.namePascal}'`,
             id: vars.featureId,
             version: '1.0.0.0',
             assets: { elementManifests: [], elementFiles: [] }
@@ -529,6 +556,8 @@ function extensionSuffix(vars: TemplateVars): string {
       return 'FieldCustomizer';
     case 'listviewcommandset':
       return 'CommandSet';
+    case 'formcustomizer':
+      return 'FormCustomizer';
     default:
       throw new Error(`Unexpected component type: ${vars.componentType}`);
   }
@@ -542,6 +571,8 @@ function extensionType(vars: TemplateVars): string {
       return 'FieldCustomizer';
     case 'listviewcommandset':
       return 'ListViewCommandSet';
+    case 'formcustomizer':
+      return 'FormCustomizer';
     default:
       throw new Error(`Unexpected component type: ${vars.componentType}`);
   }
@@ -588,9 +619,37 @@ function extensionEntry(vars: TemplateVars): string {
       return fieldCustomizerEntry(vars);
     case 'listviewcommandset':
       return listViewCommandSetEntry(vars);
+    case 'formcustomizer':
+      return formCustomizerEntry(vars);
     default:
       throw new Error(`Unexpected component type: ${vars.componentType}`);
   }
+}
+
+function libraryManifest(vars: TemplateVars): string {
+  return JSON.stringify(
+    {
+      $schema: 'https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json',
+      id: vars.componentId,
+      alias: `${vars.namePascal}Library`,
+      componentType: 'Library',
+      version: '*',
+      manifestVersion: 2
+    },
+    null,
+    2
+  );
+}
+
+function libraryEntry(vars: TemplateVars): string {
+  return [
+    `export default class ${vars.namePascal}Library {`,
+    `  public name(): string {`,
+    `    return '${vars.namePascal}';`,
+    `  }`,
+    `}`,
+    ``
+  ].join('\n');
 }
 
 function applicationCustomizerEntry(vars: TemplateVars): string {
@@ -678,6 +737,36 @@ function listViewCommandSetEntry(vars: TemplateVars): string {
     `  @override`,
     `  public onExecute(event: IListViewCommandSetExecuteEventParameters): void {`,
     `    Log.info(LOG_SOURCE, \`Command \${event.itemId} clicked\`);`,
+    `  }`,
+    `}`,
+    ``
+  ].join('\n');
+}
+
+function formCustomizerEntry(vars: TemplateVars): string {
+  const logSource = `${vars.namePascal}FormCustomizer`;
+  return [
+    `import { Log } from '@microsoft/sp-core-library';`,
+    `import { override } from '@microsoft/decorators';`,
+    `import { BaseFormCustomizer } from '@microsoft/sp-listview-extensibility';`,
+    ``,
+    `const LOG_SOURCE: string = '${logSource}';`,
+    ``,
+    `export default class ${logSource} extends BaseFormCustomizer<{}> {`,
+    `  @override`,
+    `  public onInit(): Promise<void> {`,
+    `    Log.info(LOG_SOURCE, 'Initialized ${vars.name}');`,
+    `    return Promise.resolve();`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public render(): void {`,
+    `    this.domElement.innerHTML = \`<div>Hello from \${LOG_SOURCE}</div>\`;`,
+    `  }`,
+    ``,
+    `  @override`,
+    `  public onDispose(): void {`,
+    `    super.onDispose();`,
     `  }`,
     `}`,
     ``

@@ -34,6 +34,9 @@ my-app/
 │   └── extensions/<name>/        # extensions — same scan, extension entrypoint suffix
 │       ├── <name>.manifest.json
 │       └── <Pascal><Suffix>.ts   # <Suffix> = ApplicationCustomizer | FieldCustomizer | CommandSet | Extension
+│   └── libraries/<name>/         # libraries — componentType Library, alias, no preconfiguredEntries
+│       ├── <name>.manifest.json  # componentType: Library, version "*", alias — https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json
+│       └── <Pascal>Library.ts    # library entry — default export class, entryModuleId = bundleName
 ├── teams/
 │   ├── manifest.json             # Teams app manifest v1.13 — only when teams.enabled=true
 │   ├── <id>_color.png            # 192×192
@@ -61,7 +64,7 @@ my-app/
 └── ~/.rspfx/certs/               # dev HTTPS self-signed certs (825-day, 2048-bit; machine-wide if trusted)
 ```
 
-Defaults for relocatable roots live in `packages/core/src/config.ts:70` `configDefaults.paths` (`src`, `src/webparts`, `src/extensions`, `config`). Override via `paths` in the plugin options; the CLI resolves them with `resolvePathDefaults()` (`packages/dev-runtime/src/project.ts:536`).
+Defaults for relocatable roots live in `packages/core/src/config.ts:70` `configDefaults.paths` (`src`, `src/webparts`, `src/extensions`, `src/libraries`, `config`). Override via `paths` in the plugin options; the CLI resolves them with `resolvePathDefaults()` (`packages/dev-runtime/src/project.ts:536`).
 
 ## File table
 
@@ -87,6 +90,8 @@ Every path the CLI reads or writes, with ownership.
 | `src/webparts/<name>/loc/*.ts` | Locale modules consumed via `localizedResources` `…/{locale}.js` pattern. | No — but `config.json` references them | Scaffolded (`en-us`, `fr-fr`) | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/localize-web-parts |
 | `src/extensions/<name>/<name>.manifest.json` | Extension manifest — `componentType: Extension`, `extensionType: ApplicationCustomizer|FieldCustomizer|ListViewCommandSet`, `version: "*"`. | One per extension folder | Scaffolded for `--component` | https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json · https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions |
 | `src/extensions/<name>/<Pascal>Extension.ts` | Extension entrypoint — `<Pascal>ApplicationCustomizer` / `FieldCustomizer` / `CommandSet` / `Extension`. | One per extension folder | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/get-started/using-page-placeholder-with-extensions |
+| `src/libraries/<name>/<name>.manifest.json` | Library manifest — `id` (UUID), `alias`, `componentType: Library`, `version: "*"`, `manifestVersion: 2`, no `preconfiguredEntries`. | One per library folder | Scaffolded for `--component library` | https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json |
+| `src/libraries/<name>/<Pascal>Library.ts` | Library entrypoint — default export class, `alias` matches manifest. Resolved by `pickEntrypoint()` (`packages/dev-runtime/src/project.ts:791`). | One per library folder | Scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/library-component/overview |
 | `src/index.ts` | Barrel placeholder (`export {};`). | No | Scaffolded | — |
 | `src/rspfx-env.d.ts` | Ambient declarations for `*.module.scss`, `*.vue`, `*.svelte`. | No | Scaffolded | — |
 | `sharepoint/assets/*` | Solution assets copied into package when referenced by `features[].assets`. | No | `.gitkeep` scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-assets |
@@ -213,16 +218,32 @@ src/extensions/banner/
 - Manifest: `id` (UUID), `alias: "<Pascal>ApplicationCustomizer"`, `componentType: "Extension"`, `extensionType: "ApplicationCustomizer" | "FieldCustomizer" | "ListViewCommandSet"`, `version: "*"`, `manifestVersion: 2`, `requiresCustomScript: false` (`packages/templates/src/index.ts:550` `extensionManifest()`).
 - Entrypoint class name must match alias convention; template generates `<Pascal><Suffix>` where suffix follows `extensionSuffix()` (`packages/templates/src/index.ts:524`).
 - Package input type: `Extension` → `<featureId>/Extension_<id>.xml` with `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`, `ClientSideComponentProperties="null"` and a fresh `ClientSideComponentInstance` UUID per build (`packages/sppkg-builder/src/sppkg-builder.ts:84`, `reference/FORMATS.md` §4).
-- Discovery merges `src/webparts/*` + `src/extensions/*` — a project can mix both; `rspfx package` embeds them in the same `.sppkg` ([multi-webpart.md](multi-webpart.md#extensions-alongside-web-parts)).
+- Discovery merges `src/webparts/*` + `src/extensions/*` + `src/libraries/*` — a project can mix all three; `rspfx package` embeds them in the same `.sppkg` ([multi-webpart.md](multi-webpart.md#extensions-alongside-web-parts)).
+
+### Library folder rules
+
+Libraries live under `src/libraries/<name>/` (`configDefaults.paths.librariesDir`):
+
+```
+src/libraries/utils/
+├── utils.manifest.json                           # componentType: Library
+└── UtilsLibrary.ts                               # class UtilsLibrary — default export
+```
+
+- Manifest: `id` (UUID), `alias: "<Pascal>Library"`, `componentType: "Library"`, `version: "*"`, `manifestVersion: 2`, no `preconfiguredEntries`, no `extensionType` (`packages/templates/src/index.ts:620` `libraryManifest()`).
+- Entrypoint class name matches `alias`; template generates `<Pascal>Library` via `libraryEntry()` (`packages/templates/src/index.ts:640`).
+- Package output: `Library` → `<featureId>/Library_<id>.xml` with `Type="Library"`, single-quoted `ComponentManifest`, no `<Module>`/`Location`/`Instance` (`packages/sppkg-builder/src/xml.ts:181`, `reference/FORMATS.md` §4).
+- Discovery scans `src/libraries/*` via `scanComponentDir()` (`packages/dev-runtime/src/project.ts:758`) after webparts/extensions; `pickEntrypoint()` (`packages/dev-runtime/src/project.ts:791`) handles `<dirName>Library.ts|tsx` and `<dirName>.ts|tsx` candidates.
 
 ### Schema links (official Microsoft schemas)
 
 - Web part manifest: https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json
 - Extension manifest: https://developer.microsoft.com/json-schemas/spfx/client-side-extension-manifest.schema.json
+- Library manifest: https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json
 - `config.json`: https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json
 - `package-solution.json`: https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json
 - `serve.json`: https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json
 - `write-manifests.json`: https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json
 - Teams app manifest v1.13: https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json
 
-Microsoft Learn — SPFx manifest overview: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-manifest-schema · Extensions: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions · Teams SPFx: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/integrate-with-teams-introduction
+Microsoft Learn — SPFx manifest overview: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-manifest-schema · Extensions: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/extensions/overview-extensions · Library: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/library-component/overview · Teams SPFx: https://learn.microsoft.com/en-us/sharepoint/dev/spfx/integrate-with-teams-introduction

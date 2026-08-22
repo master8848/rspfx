@@ -180,11 +180,11 @@ if (fs.existsSync(configJsonPath)) {
         }
       }
       const manifestPath = entry.components?.[0]?.manifest ?? '';
-      const match = manifestPath.match(/src\/webparts\/([^/]+)\//);
+      const match = manifestPath.match(/src\/(?:webparts|extensions|libraries)\/([^/]+)\//);
       if (match && match[1] && match[1] !== bundleName) {
         cfg.bundles[match[1]] = cfg.bundles[bundleName];
         delete cfg.bundles[bundleName];
-        log(`✓ config.json: renamed bundle "${bundleName}" → "${match[1]}" (must match web part folder)`);
+        log(`✓ config.json: renamed bundle "${bundleName}" → "${match[1]}" (must match component folder)`);
       }
     }
   }
@@ -317,10 +317,10 @@ if (removed.length === 0) {
   log('  • no known Heft/gulp toolchain devDependencies were present — double-check manually');
 }
 if (fs.existsSync(path.join(projectRoot, 'src', 'extensions'))) {
-  log('  • src/extensions/ exists — application extensions are NOT yet supported by RSPFX (see docs/why-not-to-migrate.md)');
+  log('  • src/extensions/ detected — extension components will be built as AMD bundles (Type=Extension)');
 }
 if (fs.existsSync(path.join(projectRoot, 'src', 'libraries'))) {
-  log('  • src/libraries/ exists — SPFx library components are NOT yet supported by RSPFX');
+  log('  • src/libraries/ detected — library components will be built as AMD bundles (Type=Library)');
 }
 log('  • multi-locale: string modules resolve to the default locale; multi-locale bundles need');
 log('    localizedPath scriptResources in the source manifest (not generated from config.json yet)');
