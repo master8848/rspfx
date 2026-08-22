@@ -14,7 +14,7 @@ Scaffold a new SPFx project (web part or extension) and install dependencies.
 
 | Flag | Description |
 |---|---|
-| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` (default `webpart`). Extensions scaffold as vanilla TypeScript only — `--framework` / `--language` / `--fluent` are rejected for them |
+| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` (default `webpart`). Extensions and libraries scaffold as vanilla TypeScript only — `--framework` / `--language` / `--fluent` are rejected for them |
 | `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` (web parts only) |
 | `--language <lang>` | `ts` (typescript) \| `js` (javascript) (web parts only) |
 | `--fluent` | Enable the Fluent UI adapter (React only) |
@@ -291,12 +291,21 @@ path — the Rsbuild dev flow is workbench-only for now.
 
 ### Options
 
-The options object carries: `name`, `version` (build-time version used in AMD
-library names and manifests — overrides package.json), `spfxVersion`,
-`framework`, `fluent`, `language`, `dev` (port/https/hostname/
-workbench/fastRefresh/openBrowser/tenantUrl/initialPage), `build`
-(sourcemap/minify/splitChunks/outDir/releaseDir), `paths`
-(srcDir/webpartsDir/configDir), `deploy`. Defaults are unchanged
-(port 4321, https true, hostname localhost, minify true, dist/release,
-src/src/webparts/config). The legacy `playground` option is still accepted for
-compat but is ignored — there is no playground command or runtime anymore.
+The `RspfxPlugin` options carry your project settings:
+
+- **Identity:** `name`, `version` (used in AMD ids and manifests), `spfxVersion`, `framework`, `fluent`, `language`
+- **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser`, `dev.fastRefresh`, `dev.workbench`/`initialPage`
+- **Build:** `build.minify` (true), `build.sourcemap` (false), `build.outDir` (dist), `build.releaseDir` (release)
+- **Layout:** `paths.srcDir`, `paths.webpartsDir` (src/webparts), `paths.extensionsDir` (src/extensions), `paths.librariesDir` (src/libraries), `paths.configDir` (config)
+- **Deploy:** `deploy.appCatalogSiteUrl` (or env var)
+
+The legacy `playground` option is still accepted for compat but is ignored — there is no playground command anymore.
+
+### Environment variables
+
+| Variable | What it does |
+|---|---|
+| `RSPFX_LOG_LEVEL` | Log verbosity (debug/info/warn) — see `packages/diagnostics/src/logger.ts:30` |
+| `SPFX_SERVE_TENANT_DOMAIN` | Tenant domain fallback for `dev.tenantUrl` — see `packages/dev-runtime/src/serve.ts:102` |
+| `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` | Bearer token and catalog URL for `rspfx deploy` — see `apps/cli/src/commands/deploy.ts:16` |
+| `RSPFX_NPM_OTP` | One-time password for `node scripts/publish.mjs:34` |

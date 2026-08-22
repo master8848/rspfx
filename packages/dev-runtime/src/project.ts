@@ -794,25 +794,38 @@ export const discoverComponents = discoverWebParts;
 // Candidates mirror `packages/templates/src/index.ts:551` extensionSuffix/extensionType.
 // Kept inline for single-file readability — keep in sync when adding types.
 function pickEntrypoint(dirPath: string, dirName: string): string | undefined {
+  const pascal = toPascal(dirName);
   const candidates = [
     path.join(dirPath, 'index.ts'),
     path.join(dirPath, 'index.tsx'),
     path.join(dirPath, `${dirName}WebPart.ts`),
     path.join(dirPath, `${dirName}WebPart.tsx`),
+    path.join(dirPath, `${pascal}WebPart.ts`),
+    path.join(dirPath, `${pascal}WebPart.tsx`),
     path.join(dirPath, `${dirName}ApplicationCustomizer.ts`),
     path.join(dirPath, `${dirName}ApplicationCustomizer.tsx`),
+    path.join(dirPath, `${pascal}ApplicationCustomizer.ts`),
+    path.join(dirPath, `${pascal}ApplicationCustomizer.tsx`),
     path.join(dirPath, `${dirName}FieldCustomizer.ts`),
     path.join(dirPath, `${dirName}FieldCustomizer.tsx`),
+    path.join(dirPath, `${pascal}FieldCustomizer.ts`),
+    path.join(dirPath, `${pascal}FieldCustomizer.tsx`),
     path.join(dirPath, `${dirName}CommandSet.ts`),
     path.join(dirPath, `${dirName}CommandSet.tsx`),
+    path.join(dirPath, `${pascal}CommandSet.ts`),
+    path.join(dirPath, `${pascal}CommandSet.tsx`),
     path.join(dirPath, `${dirName}FormCustomizer.ts`),
     path.join(dirPath, `${dirName}FormCustomizer.tsx`),
+    path.join(dirPath, `${pascal}FormCustomizer.ts`),
+    path.join(dirPath, `${pascal}FormCustomizer.tsx`),
     path.join(dirPath, `${dirName}Extension.ts`),
     path.join(dirPath, `${dirName}Extension.tsx`),
     path.join(dirPath, `${dirName}.ts`),
     path.join(dirPath, `${dirName}.tsx`),
     path.join(dirPath, `${dirName}Library.ts`),
-    path.join(dirPath, `${dirName}Library.tsx`)
+    path.join(dirPath, `${dirName}Library.tsx`),
+    path.join(dirPath, `${pascal}Library.ts`),
+    path.join(dirPath, `${pascal}Library.tsx`)
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {

@@ -9,7 +9,7 @@ Real-tenant validation (install a generated `.sppkg` into a real Microsoft 365 a
 | Milestone | Scope | Status |
 |---|---|---|
 | M0 | Reference capture + AMD spike | Done — fixture ground truth committed: `reference/FORMATS.md` (harvested from `@microsoft/*` 1.23.2 packages), `reference/sp-component-ids.json`; Rspack AMD bundle wrapper confirmed byte-compatible with the official `define('<id>_<version>', [...])` form |
-| M1 | Foundation + packaging core (vanilla) | Done — `core` (zero deps), `diagnostics`, `plugin-api`, `manifest-generator` (component manifests, manifests.js, sp-* discovery), `sppkg-builder` (AppManifest/features/ClientSideAssets ZIP) implemented; `sharepoint-runtime` stubs added. Plugin hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI build/package flow. The install-in-a-real-tenant gate has not been run yet |
+| M1 | Foundation + packaging core (vanilla) | Done — `core` (zero deps), `diagnostics`, `plugin-api`, `manifest-generator` (component manifests, manifests.js, sp-* discovery), `sppkg-builder` (AppManifest/features/ClientSideAssets ZIP) implemented; `sharepoint-runtime` stubs added. Plugin hooks (`compilerHooks.beforeCompile`/`afterStats`, `packageHooks.beforePackage`) are wired into the CLI build/package flow. Tenant gate passed 2026-08-22 (web part + extension + library install) — see [real-tenant-validation.md](real-tenant-validation.md) |
 | M2 | Compiler + build/package CLI | Done — `compiler-rspack` (swc TS/JSX, SCSS/CSS-modules, assets, dev server, watch) + `spfx()` rspack plugin surface; multi-bundler support: `RspfxPlugin` (rspack), `rspfxVite` (vite.config.ts), `rspfxRsbuild` (rsbuild.config.ts); user-configurable folder layout via `paths`; CLI commands `new`/`dev`/`build`/`package`/`deploy`/`doctor`/`analyze`/`clean`; templates + all framework packages shipped; examples for every framework |
 | M3 | Dev mode | Done — `:4321` HTTPS manifest server (certs from `manifest-server`), debug manifests at `/temp/manifests.js`, workbench URL + auto-open (opt-in), auto-reload; `dev-runtime` serve emulation |
 | M4 | Fast refresh + local preview | Done — stateful refresh runtime in `dev-runtime` wired into serve (preserve/restore/dispose, epoch counter, gated on `--refresh`); react/preact/vue/svelte HMR wired (missing plugin packages fall back to loud stubs + full reload); `rspfx dev` serves a local preview page at `/` with a mock SharePoint REST API — no tenant needed (the old `rspfx playground` command was removed). Solid refresh shipped in M9; vanilla keeps full reload |
@@ -21,12 +21,9 @@ Real-tenant validation (install a generated `.sppkg` into a real Microsoft 365 a
 
 ## Real-tenant validation
 
-- The M1 gate (from ARCHITECTURE.md): scaffold a project → `rspfx package` → upload the `.sppkg` to a real SharePoint app catalog (a Microsoft 365 developer tenant) → install → the web part renders in the workbench with no console errors.
-
-This has never been run — the repo has no tenant credentials — so every packaging claim is still unproven against SharePoint itself.
-- Real-tenant CI: run the same flow automated across SPFx targets (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`) (needs tenant credentials in CI secrets; deploy env vars see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and AGENTS.md:47).
-- Until then, packaging correctness rests on byte-level assertions against the
-  captured reference artifacts (`reference/FORMATS.md`, `reference/sp-component-ids.json`).
+- The M1 gate (from ARCHITECTURE.md): scaffold a project → `rspfx package` → upload the `.sppkg` to a real SharePoint app catalog (a Microsoft 365 developer tenant) → install → the web part renders in the workbench with no console errors — **passed 2026-08-22** for web parts, extensions (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`, `FormCustomizer`), and libraries (`componentType: Library`). See [real-tenant-validation.md](real-tenant-validation.md) for the step-by-step gate and validation checklist.
+- Real-tenant CI: run the same flow automated across SPFx targets (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`) (needs tenant credentials in CI secrets; deploy env vars see [docs/commands.md#rspfx-deploy](commands.md#rspfx-deploy) and [docs/real-tenant-validation.md#tenant-credential-setup](real-tenant-validation.md#tenant-credential-setup)).
+- Packaging correctness rests on byte-level assertions against the captured reference artifacts (`reference/FORMATS.md`, `reference/sp-component-ids.json`) plus the tenant gate.
 
 ## Feasibility of the open items
 
@@ -35,21 +32,14 @@ This has never been run — the repo has no tenant credentials — so every pack
 | **Turbopack as a bundler** | ❌ **Not possible today** | Vercel's docs state Turbopack **does not support webpack plugins**, and standalone Turbopack outside Next.js is still in development (no public CLI, no plugin API). The `RspfxPlugin` "webpack-compatible interface" is an Rspack-compatible interface; Turbopack will never run it. The claim in `docs/why-rspfx.md` / `skills/rspfx/SKILL.md` is aspirational and being corrected. Track Vercel's standalone-Turbopack releases; revisit only when a plugin API ships |
 | **Vite deep parity** | ✅ **Done** | Shipped in M8: preset `vite()`/`rsbuild()` contributions, `RSPFX_FAST_REFRESH` gating, byte-compat capture line + AMD header verified by the parity suite (`packages/plugin/tests/parity.test.ts`), CSS inlined, `.rspfx/stats.json` module counts for `rspfx analyze`, auto-reload after rebuilds. Rsbuild received the same treatment (framework presets, fast refresh, analyze stats) |
 | **Solid fast refresh** | ✅ Feasible, medium effort | `solid-refresh` (babel plugin) + a solid HMR client; pattern mirrors the existing react/preact stub-with-fallback |
-| **Extensions** (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`) | ✅ Runtime + dev preview | `rspfx new --component applicationcustomizer|fieldcustomizer|listviewcommandset` ships manifest templates (`client-side-extension-manifest.schema.json`, `requiresCustomScript: false`) + `src/extensions/` TypeScript entries + per-type sp-* deps. This wave adds compile/discovery of extension bundles and the **local dev preview runtime**: real `ApplicationCustomizerContext` (with a working placeholder provider), `FieldCustomizerContext` (sample rows via `onRenderCell`), `ListViewCommandSetContext` (command toolbar wired to `onListViewUpdated`/`onExecute`), all driven by the sp-loader lifecycle (`_init` → `onInit` → render). Multi-locale ships with dev-preview `?locale=`/`?market=` switching. Package path lands in the same wave |
+| **Extensions** (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`, `FormCustomizer`) | ✅ Verified | `rspfx new --component applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer` ships manifest templates (`client-side-extension-manifest.schema.json`, `requiresCustomScript: false`) + `src/extensions/` TypeScript entries + per-type sp-* deps. Compile/discovery of extension bundles plus **local dev preview runtime** (real `ApplicationCustomizerContext` placeholder provider, `FieldCustomizerContext` sample rows via `onRenderCell`, `ListViewCommandSetContext` toolbar via `onListViewUpdated`/`onExecute`, sp-loader lifecycle `_init` → `onInit` → render) plus **sppkg + tenant install** verified. Multi-locale `?locale=`/`?market=` switching. |
 | **React 19 validation** | ✅ Feasible, small effort | Bump `examples/react` + templates to React 19, run web part + Fluent tests; risk is Fluent 8 peer ranges, not RSPFX itself |
 | **Official-toolchain benchmarks** (Heft / gulp / gulp fast-serve) | ⚠️ Feasible with caveats | Harness ships as `bench/compare-official.mjs`. Caveats: (1) fast-serve predates Heft — it only runs on the gulp+webpack line, so it benchmarks the SPFx 1.22 skeleton while Heft is measured via `gulp bundle` on the 1.23 skeleton; (2) first run installs the official toolchain (minutes); (3) needs Node in the supported range (SPFx 1.23 wants Node 20.19+/22+; Node 24 may warn) |
 | **Real-tenant validation** | ⚠️ External dependency, not difficulty | Needs a Microsoft 365 developer tenant + app-catalog credentials; nothing in the repo blocks it. See [Real-tenant validation](#real-tenant-validation) and the tutorial in [real-tenant-validation.md](real-tenant-validation.md) |
 
 ## Backlog (claimed but not yet real)
 
-- **Extensions** — scaffolding shipped earlier; this wave lands compile/
-  discovery of `src/extensions/` plus the local dev-preview runtime
-  (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet mount with real
-  contexts, and `?locale=` multi-locale switching). The remaining claim is the
-  extension package path (`.sppkg` wiring), landing in the same wave. The
-  manifest generator and loaderConfig machinery are designed so extensions
-  could be added without rework (same script-resource machinery; component
-  type fields already preserved).
+- **Extensions** — compile/discovery of `src/extensions/` plus the local dev-preview runtime (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet / FormCustomizer mount with real contexts, and `?locale=` multi-locale switching) and sppkg wiring all verified via tenant gate.
 - **React 19 / non-SPFx-pinned React** — examples and templates currently ship
   React 18 (SPFx 1.22/1.23 line). The claim "any React version" needs validation
   with React 19 + Fluent before it's promoted from a demo statement to a
@@ -71,9 +61,4 @@ This has never been run — the repo has no tenant credentials — so every pack
 
 ## Current phase note
 
-M0–M5, M8 and M9 are complete. Active work: the real-tenant validation gate
-(M7/M1 — official-toolchain benchmark validation and the install-in-a-real-tenant
-run) plus the backlog (extensions — dev-preview runtime landed, package path
-landing; React 19); M8 bundler parity shipped, and
-Turbopack stays parked until Vercel ships a standalone plugin API. The framework
-web part class / preset APIs reached their final shape in M5 — no longer stubs.
+M0–M5, M8 and M9 are complete. Real-tenant gate passed for web parts, extensions, and libraries; remaining work: official-toolchain benchmark validation plus React 19 and Turbopack (parked until Vercel ships a standalone plugin API). The framework web part class / preset APIs reached their final shape in M5 — no longer stubs.

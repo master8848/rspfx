@@ -59,22 +59,20 @@ the pieces (`dist` + `release`) that `rspfx package` assembles.
 
 ## What `rspfx package` produces
 
-The `.sppkg` is a DEFLATE zip with the official layout (see [reference/FORMATS.md](../reference/FORMATS.md)):
+The `.sppkg` is a standard SharePoint package — a zip with a defined layout (full spec in [reference/FORMATS.md](../reference/FORMATS.md)):
 
 ```
-[Content_Types].xml                       ordered via packages/sppkg-builder/src/xml.ts:111 (xml text/xml, rels, webpart, htm, html, aspx, resx, js, json, png, jpg, bmp, gif, txt)
-_rels/.rels                              → /AppManifest.xml
-AppManifest.xml                           solution metadata, WebApiPermissionRequests, version — ProductID raw GUID, IsDomainIsolated String(boolean), DeveloperProperties 5 keys, CategoryID, Screenshots
-_rels/AppManifest.xml.rels                → /feature_<id>.xml, /ClientSideAssets.xml, /Resources.resx
-feature_<id>.xml                          one feature per package-solution.json feature
-feature_<id>.xml.config.xml               AppPartConfig with randomUUID Id
-_rels/feature_<id>.xml.rels               → /feature_<id>.xml.config.xml, /<featureId>/WebPart_<componentId>.xml
-<featureId>/<ComponentType>_<componentId>.xml   component manifest JSON stringified into ComponentManifest attribute
-Resources.resx                            present when sharepoint/Resources*.resx exists (CultureName="default")
-ClientSideAssets.xml                      present when includeClientSideAssets = true
-ClientSideAssets.xml.config.xml           AppPartConfig with randomUUID Id
-_rels/ClientSideAssets.xml.rels           → /ClientSideAssets.xml.config.xml, /ClientSideAssets/<file>
-ClientSideAssets/                         bundles, chunks, teams/ folder (if any), rewritten manifests
+[Content_Types].xml                       — content types, xml first
+_rels/.rels                               → AppManifest.xml
+AppManifest.xml                            — solution metadata, permissions, version
+_rels/AppManifest.xml.rels                 → feature + assets
+feature_<id>.xml                           — one per feature in package-solution.json
+feature_<id>.xml.config.xml                — feature config
+_rels/feature_<id>.xml.rels                → feature config + component manifests
+<featureId>/<type>_<id>.xml                — your component manifest (WebPart / Extension / Library)
+Resources.resx                             — when sharepoint/Resources*.resx exists
+ClientSideAssets.xml                       — when bundling assets into the package
+ClientSideAssets/                          — your bundles, chunks, and Teams files
 ```
 
 Key semantics, all read from `config/package-solution.json`:
@@ -84,10 +82,10 @@ Key semantics, all read from `config/package-solution.json`:
 - `includeClientSideAssets: false` (or `cdnBasePath` in `config/write-manifests.json`) — manifests keep CDN base URL; only metadata ships; upload `release/assets/*` to CDN.
 - `webApiPermissionRequests` — emitted as `RequestedWebApiPermission` entries in `AppManifest.xml`.
 - `skipFeatureDeployment`, `isDomainIsolated`, `developer`, `metadata` — passed through to `AppManifest.xml`.
-- `componentType: "Extension"` — produces `<featureId>/Extension_<componentId>.xml` with `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"`, `ClientSideComponentProperties="null"`, per-build `ClientSideComponentInstance`; no `<Module>`.
-- `componentType: "Library"` — produces `<featureId>/Library_<componentId>.xml` with `Type="Library"`, single-quoted `ComponentManifest`, no `<Module>`/`Location`/`Instance`/`ClientSideComponentProperties` (`packages/sppkg-builder/src/xml.ts:181`).
+- **Extension** (`componentType: Extension`) → `<featureId>/Extension_<id>.xml` with `Location` and a per-build instance — no `<Module>`.
+- **Library** (`componentType: Library`) → `<featureId>/Library_<id>.xml` with single-quoted manifest — no `<Module>` or `<Location>`.
 
-`rspfx package` auto-detects two optional folders:
+RSPFX also auto-detects two optional folders:
 
 - `teams/` — when present (`manifest.json` + icons), files are included under `ClientSideAssets/`.
 - `sharepoint/Resources*.resx` — `Resources.resx` (`CultureName="default"`) plus `Resources.<lang>.resx` land at zip root; also powers localized `metadata.shortDescription` / `longDescription` (`"$Resources:KeyName"` → `<LocalizedString CultureName="...">` per locale).

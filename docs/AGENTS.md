@@ -29,8 +29,6 @@ Enforced at the file level. Over budget: relocate content to its fact home, then
 | File | Limit |
 |---|---|
 | `docs/AGENTS.md` (this file) | 1,000 |
-| `docs/wasm.md` | 1,800 |
-| `docs/optimization-notes.md` | 2,000 |
 | `.agents/notes/README.md` | 500 |
 
 Repository reference pages have no hard budget but stay concise; `docs/internal-api.md` is exempt due to API contract size.

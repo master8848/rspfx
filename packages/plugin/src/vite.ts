@@ -98,13 +98,16 @@ interface ViteStatsJson {
   moduleCounts?: Record<string, number>;
 }
 
-let presetCache: Promise<FrameworkPreset> | undefined;
+const presetCache = new Map<string, Promise<FrameworkPreset>>();
 
 function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPreset> {
-  presetCache ??= loadFrameworkPreset(framework, root).then(
-    (mod) => mod.preset as unknown as FrameworkPreset
-  );
-  return presetCache;
+  const key = `${root}:${framework}`;
+  let cached = presetCache.get(key);
+  if (!cached) {
+    cached = loadFrameworkPreset(framework, root).then((mod) => mod.preset as unknown as FrameworkPreset);
+    presetCache.set(key, cached);
+  }
+  return cached;
 }
 
 function writeStats(root: string, entryName: string, moduleCount: number): void {
@@ -247,8 +250,8 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         : undefined;
 
     const fastRefresh =
-      command === 'serve' &&
-      (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));    const preset = await loadPreset(root, resolved.framework);
+      command === 'serve' && (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
+    const preset = await loadPreset(root, resolved.framework);
     const viteContribs = preset.vite?.({ fastRefresh });
     const define: Record<string, string> = {
       DEBUG: JSON.stringify(mode === 'development'),
@@ -384,6 +387,8 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         externals: collectExternals(root, project.externals, project.localizedResources),
         localizedResources: project.localizedResources,
         webpartsDir: resolved.paths?.webpartsDir,
+        extensionsDir: resolved.paths?.extensionsDir,
+        librariesDir: resolved.paths?.librariesDir,
         entryModuleIds,
         refreshRuntime,
         bundleUrlSuffix: () => `?t=${reload.current}`
@@ -446,16 +451,13 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         reload.handle(_req, res as ConnectResponse);
       });
 
-      const workbenchUrl = buildWorkbenchUrl(settings, resolved);
-      if (workbenchUrl && (resolved.dev.openBrowser ?? false)) {
-        devServer.httpServer?.once('listening', () => {
-          originRef.value = updateOriginWithActualPort(settings, devServer);
-          openBrowser(workbenchUrl);
-          logger.info(`Workbench: ${workbenchUrl}`);
-        });
-      }
       devServer.httpServer?.once('listening', () => {
         originRef.value = updateOriginWithActualPort(settings, devServer);
+        const workbenchUrl = buildWorkbenchUrl({ ...settings, origin: originRef.value }, resolved);
+        if (workbenchUrl && (resolved.dev.openBrowser ?? false)) {
+          openBrowser(workbenchUrl);
+          logger.info(`Workbench: ${workbenchUrl}`);
+        }
         for (const plugin of getPlugins()) {
           plugin.devHooks?.afterStart?.({ url: originRef.value });
         }

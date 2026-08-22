@@ -20,6 +20,7 @@ export interface ManifestRegeneratorOptions {
   localizedResources: LocalizedResource[];
   webpartsDir?: string;
   extensionsDir?: string;
+  librariesDir?: string;
   entryModuleIds: Record<string, string>;
   refreshRuntime?: RefreshRuntime;
   bundleUrlSuffix?: () => string;
@@ -62,6 +63,7 @@ export function createManifestRegenerator(opts: ManifestRegeneratorOptions): Man
           })),
           webpartsDir: opts.webpartsDir,
           extensionsDir: opts.extensionsDir,
+          librariesDir: opts.librariesDir,
           entryModuleIds: opts.entryModuleIds
         });
         const debugManifests = await collectDebugManifests({

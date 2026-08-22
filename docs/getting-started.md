@@ -1,8 +1,10 @@
 # Getting Started
 
+RSPFX builds SharePoint web parts with Rspack instead of gulp + webpack — you get the same `.sppkg` SharePoint expects, in seconds.
+
 ## 1. Install
 
-Requirements: **Node 20+** and **pnpm** (npm/yarn also work).
+Requirements: **Node 20+** and **pnpm** (npm and yarn also work).
 
 ```sh
 npm i -g @mbsks/rspfx-cli
@@ -15,7 +17,7 @@ rspfx --version
 rspfx new my-app
 ```
 
-Runs interactively: prompts for framework (vanilla / react / solid / preact / vue / svelte), language (typescript / javascript), styling (css / scss), Fluent UI (y/n), SPFx target (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`), and package manager. Then it scaffolds the project and installs dependencies.
+This walks you through a few prompts — framework (React, Vue, Svelte, etc.), language, styling, and SPFx version — then scaffolds the project and installs dependencies.
 
 Non-interactive (useful for CI):
 
@@ -53,17 +55,15 @@ my-app/
 └── local/                       # optional — mock REST seed (local/data.json) for the dev local preview
 ```
 
-Every path above is a default — `paths` in the plugin options (`srcDir`, `webpartsDir`, `configDir`) relocates the source, web parts, and config folders; see [building-packages.md](building-packages.md), and the exhaustive map with naming rules in [project-structure.md](project-structure.md).
+Every path above is a default — you can move folders by setting `paths` in the plugin options (for example `paths.srcDir` or `paths.webpartsDir`). See [building-packages.md](building-packages.md) and the full map in [project-structure.md](project-structure.md).
 
-The project config lives in your bundler config as a plugin instance — the
-`RspfxPlugin` from `@mbsks/rspfx-plugin` in `rspack.config.ts` (the default;
-`rspfxVite` in `vite.config.ts` for Vite-based projects):
+Your project config lives directly in the bundler config:
 
 ```ts
+// rspack.config.ts (or vite.config.ts with rspfxVite)
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
 export default {
-  mode: 'development',
   plugins: [
     new RspfxPlugin({
       name: 'my-app',
@@ -75,11 +75,7 @@ export default {
 };
 ```
 
-The CLI loads the bundler config via jiti, finds the plugin by its marker symbol, and uses its options.
-
-Key defaults: `dev.port` 4321, `dev.https` true, `dev.fastRefresh` false, `dev.openBrowser` false, `dev.workbench` true, `build.outDir` dist, `build.releaseDir` release.
-
-The `version` option overrides package.json for the AMD library names and manifests.
+The CLI reads this config and uses its options — no extra config file needed.
 
 ## 3. Development workflow
 
@@ -93,7 +89,7 @@ A mock SharePoint REST API runs at `/_api` (lists, items, current user, context 
 
 For takeover blockers and the real-tenant gate see [roadblocks.md](roadblocks.md) and [real-tenant-validation.md](real-tenant-validation.md).
 
-When a tenant is configured (`dev.tenantUrl`, env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47), or `rspfx dev --tenant …`), or with an explicit `--mode sharepoint`, it instead serves over `https://localhost:4321` (self-signed cert) and opens the workbench in your browser.
+When a tenant is configured — via `dev.tenantUrl` in the config, the `SPFX_SERVE_TENANT_DOMAIN` env var, or `rspfx dev --tenant …` — or with `--mode sharepoint`, it serves over `https://localhost:4321` (self-signed cert) and opens the workbench.
 
 ### The workbench URL
 
@@ -108,17 +104,19 @@ The browser opens:
   `https://localhost:4321/temp/manifests.js`. It is **percent-encoded** in the URL.
   The workbench loads your web part bundles from `https://localhost:4321/dist/*`.
 
-### Telling rspfx your tenant
+### Telling RSPFX your tenant
 
-The workbench page is on your SharePoint tenant, so rspfx needs to know it:
+The workbench lives on your SharePoint tenant, so RSPFX needs to know it:
 
-- Set `dev.tenantUrl` in the plugin options in `rspack.config.ts`, or
-- Set the env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47) (replaces the `{tenantdomain}` token in `config/serve.json`'s `initialPage`), or
-- Override per-run: `rspfx dev --tenant https://contoso.sharepoint.com`.
+- Set `dev.tenantUrl` in `rspack.config.ts`, or
+- Set `SPFX_SERVE_TENANT_DOMAIN` (replaces `{tenantdomain}` in `config/serve.json`), or
+- Pass `rspfx dev --tenant https://contoso.sharepoint.com` for one run.
 
 ### HTTPS certificate trust (SharePoint mode only)
 
-The `:4321` server in SharePoint mode (tenant configured via `dev.tenantUrl`, env var (see [docs/commands.md#rspfx-dev](commands.md#rspfx-dev) and AGENTS.md:47), or `--tenant`) uses a self-signed certificate generated and cached in `~/.rspfx/certs` (825-day, 2048-bit, created on first run; trust instructions are printed once). Local mode (`rspfx dev --mode local`, the default when no tenant is configured) is plain HTTP on `http://localhost:4321` and needs no certificate.
+**Local preview** (default): plain HTTP on `http://localhost:4321` — no certificate needed.
+
+**SharePoint workbench**: HTTPS on `https://localhost:4321` — uses a self-signed cert cached in `~/.rspfx/certs` (825-day, created on first run; trust steps are printed once).
 
 > **Warning: dev-only, machine-wide trust.** Importing trusts the cert for all browsers/users on the machine. Use only on a development machine. To remove: macOS `sudo security remove-trusted-cert ~/.rspfx/certs/cert.pem` or Keychain Access → System → delete; Windows `certutil -delstore Root <thumbprint>` or `certlm.msc` → Trusted Root → remove. See `~/.rspfx/certs/cert.pem.trust.txt` for the exact filename printed by the CLI.
 

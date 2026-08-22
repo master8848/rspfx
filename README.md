@@ -44,10 +44,9 @@ rspfx package     # production build → .sppkg
 
 | Command | What it does |
 |---|---|
-| `rspfx new <name>` | Scaffold a new SPFx project (interactive prompts; flags for non-interactive) |
-| `rspfx dev` | Start the dev environment: Rspack dev server + `:4321` HTTPS manifest server, auto-open workbench |
-| `rspfx dev --refresh` | Dev mode with state-preserving fast refresh where the framework supports it |
-| `rspfx playground` | Standalone localhost sandbox — no SharePoint needed |
+| `rspfx new <name>` | Scaffold a new project — web part, extension, or library |
+| `rspfx dev` | Start the dev server — local preview at `http://localhost:4321`, or HTTPS workbench when a tenant is set |
+| `rspfx dev --refresh` | Same, with state-preserving fast refresh |
 | `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
 | `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |
 | `rspfx deploy` | Package + upload to the app catalog (REST creds via `config.deploy` or env vars; prints manual steps if none) |

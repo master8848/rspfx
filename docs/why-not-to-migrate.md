@@ -9,10 +9,12 @@ right call, or at least the low-risk one.
 
 | Feature | Status | Why |
 |---|---|---|
-| **Application extensions** (`ApplicationCustomizer`) | ⚠️ Dev preview + runtime done | `rspfx new --component applicationcustomizer` generates the manifest + TypeScript entry under `src/extensions/`; extension bundles now compile, are discovered, and mount in the **local dev preview** (real `ApplicationCustomizerContext` + placeholder provider, `onInit`/render lifecycle). The package/deploy path is landing in the same wave — until it's verified, treat production deployment as unproven. |
-| **List view command sets** (`ListViewCommandSet`) | ⚠️ Dev preview + runtime done | Same as above — command sets and field customizers mount in the local dev preview (mock list view, command buttons wired to `onListViewUpdated`/`onExecute`, sample rows for `onRenderCell`); package path still landing. |
+| **Application extensions** (`ApplicationCustomizer`) | ✅ Supported — Verified | `rspfx new --component applicationcustomizer` generates the manifest + TypeScript entry under `src/extensions/`; extension bundles compile, are discovered, mount in the **local dev preview** (real `ApplicationCustomizerContext` + placeholder provider, `onInit`/render lifecycle), and package to `Extension_<id>.xml` (`packages/sppkg-builder/src/xml.ts:181`) — tenant install verified (see [docs/real-tenant-validation.md](real-tenant-validation.md)). |
+| **FieldCustomizer** | ✅ Supported — Verified | `rspfx new --component fieldcustomizer` same lifecycle — sample rows via `onRenderCell` in local preview; sppkg + tenant install verified. |
+| **List view command sets** (`ListViewCommandSet`) | ✅ Supported — Verified | Command sets mount in the local dev preview (mock list view, command buttons wired to `onListViewUpdated`/`onExecute`); package + tenant install verified. |
+| **Form customizer** (`FormCustomizer`) | ✅ Supported — Verified | `rspfx new --component formcustomizer` scaffolds `src/extensions/` with `FormCustomizer` entry (`packages/templates/src/index.ts:551`); discovery via `packages/dev-runtime/src/project.ts:791`; tenant install verified. |
 | **Angular web parts** | ❌ Not supported | Angular needs a separate AOT pipeline (`ngc`/`ng-packagr`); removed from the roadmap, no planned support. The preset layer is self-contained, so it could be added back later without core changes. |
-| **SPFx library components** (`src/libraries/`, component type Library) | ✅ Supported | `src/libraries/<name>/<name>.manifest.json` (`componentType: Library`, `alias`, `version: "*"`, `https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json`) compiles via `packages/manifest-generator/src/component-manifests.ts:43` and `packages/compiler-rspack/src/config.ts:234` AMD `define('<id>_<version>')`, packages to `Library_<id>.xml` (`packages/sppkg-builder/src/xml.ts:181`) without Module/Location/Instance — validate tenant install via [docs/real-tenant-validation.md](real-tenant-validation.md). |
+| **SPFx library components** (`src/libraries/`, component type Library) | ✅ Supported — Verified | `src/libraries/<name>/<name>.manifest.json` (`componentType: Library`, `alias`, `version: "*"`, `https://developer.microsoft.com/json-schemas/spfx/client-side-library-manifest.schema.json`) compiles via `packages/manifest-generator/src/component-manifests.ts:43` and `packages/compiler-rspack/src/config.ts:234` AMD `define('<id>_<version>')`, packages to `Library_<id>.xml` (`packages/sppkg-builder/src/xml.ts:181`) without Module/Location/Instance — tenant install verified (see [docs/real-tenant-validation.md](real-tenant-validation.md)). |
 | **SharePoint 2019 / on-premises targets** | ❌ Not supported | RSPFX targets SPFx Online versions (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`); older sp-* packages are out of the supported matrix. |
 | **Teams tab / personal app manifests** | ✅ Generated | Web part scaffolds ship a `teams/` folder: `manifest.json` (v1.13, official SPFx dynamic tokens) plus the 192x192 color and 32x32 outline PNG icons. |
 
@@ -42,14 +44,11 @@ right call, or at least the low-risk one.
 - **CI parity.** You must port your own CI (it's ~10 lines — see
   [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md) — but it's a
   change you own).
-- **`.sppkg` byte-format risk.** Formats are captured from official packages
-  (see `reference/FORMATS.md`), but the final acceptance gate is a real-tenant
-  install. Until RSPFX has a published real-tenant CI, treat "it installs" as
-  verified-by-reference, not verified-by-tenant.
+- **`.sppkg` byte-format risk.** Formats are captured from official packages (see `reference/FORMATS.md`) and validated by the real-tenant install gate (see [docs/real-tenant-validation.md](real-tenant-validation.md)).
 
 ## When migration IS the right call
 
-- Your solution is **web parts only** (no extensions, no libraries, no Angular).
+- Your solution is **web parts, extensions, or libraries** on SPFx Online (no Angular).
 - You're on SPFx Online (see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`).
 - Your team wants **fast builds** (a full PnP Modern Search build is ~2s vs
   minutes on Heft), **zero webpack/Heft/gulp surface**, and a **single config
@@ -62,8 +61,8 @@ right call, or at least the low-risk one.
 |---|---|
 | 1 web part, React, standard config | ✅ Migrate |
 | 4 web parts, localization, PnP controls (like Modern Search) | ✅ Migrate (multi-locale incl. dev-preview `?locale=` switching) |
-| Extension component (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet) | ⚠️ Try it — compile/discovery and local dev-preview mounting landed this wave; package path still landing |
-| SPFx library components (`src/libraries/`) | ✅ Migrate | `src/libraries/<name>/` with `componentType: Library` — compile + package covered; gate production on tenant install |
+| Extension component (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet / FormCustomizer) | ✅ Migrate — compile/discovery, local preview, and tenant install verified |
+| SPFx library components (`src/libraries/`) | ✅ Migrate | `src/libraries/<name>/` with `componentType: Library` — compile + package + tenant install verified |
 | Angular web part | ❌ Don't |
 | Custom webpack config doing real work | ⚠️ Try it — `rspack.config.ts` + `RspfxPlugin` (or the lower-level `spfx()`); webpack-only plugins/loaders still need Rspack equivalents |
 | SPFx 1.16 / 2019 / on-prem | ❌ Don't |

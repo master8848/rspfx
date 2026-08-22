@@ -190,6 +190,8 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
       externals: ctx.externals.filter((external): external is string => typeof external === 'string'),
       localizedResources: currentProject.localizedResources,
       webpartsDir: config.paths?.webpartsDir,
+      extensionsDir: config.paths?.extensionsDir,
+      librariesDir: config.paths?.librariesDir,
       entryModuleIds,
       refreshRuntime,
       bundleUrlSuffix: () => `?t=${reload.current}`

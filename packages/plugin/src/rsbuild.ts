@@ -105,6 +105,8 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           externals: collectExternals(root, project.externals, project.localizedResources),
           localizedResources: project.localizedResources,
           webpartsDir: resolved.paths?.webpartsDir,
+          extensionsDir: resolved.paths?.extensionsDir,
+          librariesDir: resolved.paths?.librariesDir,
           entryModuleIds,
           bundleUrlSuffix: () => `?t=${reload.current}`
         });

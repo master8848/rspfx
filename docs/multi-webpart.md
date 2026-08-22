@@ -1,6 +1,6 @@
 # Multi-webpart projects
 
-One `rspfx` project can ship multiple web parts (and extensions) in a single `.sppkg`. `rspfx new` scaffolds the first web part; add more by duplicating the web part folder and its manifest (`packages/templates/src/index.ts:104`).
+One `rspfx` project can ship multiple web parts, extensions, and libraries in a single `.sppkg`. `rspfx new` scaffolds the first web part; add more by duplicating the web part folder and its manifest (`packages/templates/src/index.ts:104`).
 
 ## Scaffold the first web part
 
@@ -26,13 +26,17 @@ Repeat: each `src/webparts/<folder>/` needs one `*.manifest.json` + one entrypoi
 
 `rspfx dev` discovers all web parts and serves `https://localhost:4321/dist/<bundle>.js` per folder (`packages/dev-runtime/src/serve.ts:160` `currentProject.webParts.entries`) and `/temp/manifests.js` concatenates every `id` (`packages/manifest-generator/src/manifests-js.ts:76`). The local preview at `http://localhost:4321/` (`packages/dev-runtime/src/local-page.ts:41`) renders a card per `componentType: WebPart` in `window.__RSPFX_COMPONENTS__`.
 
-`rspfx package` emits one `.sppkg` containing every discovered component: `release/manifests/<id>.manifest.json` per id and `ClientSideAssets/<bundle>.js` per bundle (`docs/building-packages.md:62` `feature_<id>.xml` + `<featureId>/WebPart_<id>.xml`). Verify via `unzip -l sharepoint/solution/<name>.sppkg` — you should see `<featureId>/WebPart_<firstId>.xml`, `<featureId>/WebPart_<secondId>.xml`, and `ClientSideAssets/todo.js`.
+`rspfx package` emits one `.sppkg` containing every discovered component: `release/manifests/<id>.manifest.json` per id and `ClientSideAssets/<bundle>.js` per bundle (`docs/building-packages.md:62` `feature_<id>.xml` + `<featureId>/WebPart_<id>.xml` + `<featureId>/Extension_<id>.xml` + `<featureId>/Library_<id>.xml`). Verify via `unzip -l sharepoint/solution/<name>.sppkg` — you should see `<featureId>/WebPart_<firstId>.xml`, `<featureId>/WebPart_<secondId>.xml`, `<featureId>/Extension_<extId>.xml`, `<featureId>/Library_<libId>.xml`, and `ClientSideAssets/todo.js`.
 
 Install once: upload the single `.sppkg` → `Deploy` → site `Add an app` → each web part appears separately in `Add to page` picker by its `preconfiguredEntries.title`.
 
 ## Extensions alongside web parts
 
-Extensions live in `src/extensions/` `apps/cli/src/commands/new.ts:98` `rspfx new --component applicationcustomizer|fieldcustomizer|listviewcommandset` (vanilla, `packages/templates/src/index.ts:576`). A project can mix `src/webparts/*` + `src/extensions/*` — discovery merges both (`packages/dev-runtime/src/project.ts:498` `discoverWebParts` with `webpartsDir` + `extensionsDir`). Package embeds them as `<featureId>/Extension_<id>.xml` (`docs/building-packages.md:84`).
+Extensions live in `src/extensions/` `apps/cli/src/commands/new.ts:98` `rspfx new --component applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer` (vanilla, `packages/templates/src/index.ts:576`). A project can mix `src/webparts/*` + `src/extensions/*` — discovery merges both (`packages/dev-runtime/src/project.ts:498` `discoverWebParts` with `webpartsDir` + `extensionsDir`). Package embeds them as `<featureId>/Extension_<id>.xml` (`docs/building-packages.md:84`); tenant install verified (see [real-tenant-validation.md](real-tenant-validation.md)).
+
+## Libraries alongside web parts
+
+Libraries live in `src/libraries/` `apps/cli/src/commands/new.ts:98` `rspfx new --component library` (vanilla, `packages/templates/src/index.ts:104`). A project can mix `src/webparts/*` + `src/extensions/*` + `src/libraries/*` — discovery merges all three (`packages/dev-runtime/src/project.ts:498` with `librariesDir`). Package embeds them as `<featureId>/Library_<id>.xml` `Type="Library"` without `Module`/`Location`/`Instance` (`packages/sppkg-builder/src/xml.ts:181`); tenant install verified. The local preview renders libraries as a non-mountable list (`packages/dev-runtime/src/local-page.ts:45`) while `window.__RSPFX_COMPONENTS__` includes them for `import('<alias>')`.
 
 ## Favicons and assets per web part
 

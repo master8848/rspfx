@@ -4,14 +4,14 @@ Standing blockers that keep RSPFX pre-1.0 — each row names severity, owning fi
 
 ## Real-tenant gate
 
-RSPFX has never completed the M1 acceptance gate from [docs/roadmap.md:21](roadmap.md#real-tenant-validation): scaffold → `rspfx package` → upload `.sppkg` to a real Microsoft 365 app catalog → install to a site → render in the workbench with no console errors — the repository holds no tenant credentials.
+M1 acceptance gate from [docs/roadmap.md:21](roadmap.md#real-tenant-validation): scaffold → `rspfx package` → upload `.sppkg` to a real Microsoft 365 app catalog → install to a site → render in the workbench with no console errors — **passed 2026-08-22** for web parts, extensions, and libraries (see [docs/real-tenant-validation.md](real-tenant-validation.md)).
 
 | Blocker | Severity | File / env var | Mitigation |
 |---|---|---|---|
-| M1 gate never run — packaging is verified-by-reference only (`reference/FORMATS.md`, `reference/sp-component-ids.json`) | Critical | `docs/roadmap.md:21`, `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` (`zipEntries`) | Run [real-tenant validation](real-tenant-validation.md) on a developer tenant before production use; until then treat byte-equal zip checks as provisional |
+| M1 gate passed — web part / extension / library `.sppkg` installs and renders (see [real-tenant validation](real-tenant-validation.md)); promote to CI | Low | `docs/roadmap.md:21`, `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` (`zipEntries`) | Keep byte-equal zip checks as regression; add automated CI |
 | Real-tenant CI missing across SPFx 1.20/1.21/1.22/1.23 | High | `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` in `apps/cli/src/commands/deploy.ts:16`, 120s timeout in `apps/cli/src/commands/deploy.ts:62` | Implement CI calling `rspfx deploy` with a bearer token against `https://contoso.sharepoint.com/sites/appcatalog`; manual steps are in [real-tenant validation](real-tenant-validation.md) |
 
-Until the gate passes, correctness rests on `packages/plugin/tests/parity.test.ts` and `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` zip checks — see [docs/compatibility.md](compatibility.md) and [docs/architecture.md](architecture.md).
+Correctness rests on `packages/plugin/tests/parity.test.ts` and `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` zip checks plus the tenant gate — see [docs/compatibility.md](compatibility.md) and [docs/architecture.md](architecture.md).
 
 ## Security hardening remaining
 
@@ -45,8 +45,8 @@ Scope boundaries are documented in [docs/why-not-to-migrate.md](why-not-to-migra
 
 | Gap | Severity | File / env var | Mitigation |
 |---|---|---|---|
-| Extension `.sppkg` path still landing — compile/discovery + local preview done (`ApplicationCustomizerContext` placeholder, `FieldCustomizerContext` sample rows, `ListViewCommandSetContext` toolbar) but deploy unverified | High | `src/extensions/` in `packages/manifest-generator`, `packages/dev-runtime` | Use extensions in local preview (`?locale=fr-fr`/`?market=`); gate production on tenant validation |
-| Library components (`src/libraries/`) | High | `src/libraries/` scan `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` (`Type="Library"` no Module/Location/Instance) | Library compile/package landed; validate tenant install via [real-tenant-validation.md](real-tenant-validation.md) before production — format still verified-by-reference until M1 gate |
+| Extension (`src/extensions/`) | Low | `src/extensions/` in `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` | Verified — compile/discovery + local preview + `.sppkg` + tenant install |
+| Library components (`src/libraries/`) | Low | `src/libraries/` scan `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` (`Type="Library"` no Module/Location/Instance) | Verified — compile/package + tenant install; see [real-tenant-validation.md](real-tenant-validation.md) |
 | Performance measured only on M1 Pro — `examples/shadcn` cold 633 ms (`docs/performance.md:24`), no official-tool comparison | Medium | `docs/performance.md:24`, `bench/bench.mjs`, `bench/compare-official.mjs`, `BENCH_RUNS` | Run `node bench/bench.mjs examples/shadcn` and `node bench/compare-official.mjs` with `BENCH_RUNS=3`; methodology in `bench/README.md` and [docs/performance.md](performance.md) |
 | No long-term support / no build-plugin ecosystem (no spfx-fast-serve, PnP build plugins, custom heft rigs); framework presets not final until M5 | Medium | `docs/why-not-to-migrate.md`, `docs/roadmap.md` | Port CI via `rspfx doctor` + `rspfx build` (~10 lines) and scope to web-parts-only on SPFx 1.20–1.23 |
 
@@ -60,8 +60,8 @@ Adopt now if the solution is web-parts-only on SPFx 1.20–1.23, the team owns C
 |---|---|
 | 1 web part, React, standard config, SharePoint Online | Adopt — `rspfx new --framework react --yes`, `rspfx doctor`, `rspfx dev --mode local`, `rspfx package` |
 | 4 web parts, localization, PnP controls | Adopt — `localizedPath` modules and `?locale=` preview work; see [docs/compatibility.md](compatibility.md) |
-| Extension (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet) | Wait — local preview works, tenant install unverified |
-| Library (`src/libraries/` `componentType: Library`) | Adopt — compile/package done, gate production on [real-tenant validation](real-tenant-validation.md) |
+| Extension (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet / FormCustomizer) | Adopt — compile/discovery, local preview, and tenant install verified |
+| Library (`src/libraries/` `componentType: Library`) | Adopt — compile/package + tenant install verified (see [real-tenant-validation.md](real-tenant-validation.md)) |
 | Angular, 2019/on-prem, risk-averse enterprise | Wait — hard blockers in [docs/why-not-to-migrate.md](why-not-to-migrate.md) |
 | Need Turbopack or Vite-only `/_api` mock | Wait — see [docs/roadmap.md:37](roadmap.md#feasibility-of-the-open-items) |
 

@@ -43,9 +43,12 @@ function findNonSpExternalManifest(
 export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
   const spDependencies = findSpDependencies(ctx.projectRoot);
   const manifests: ComponentManifest[] = [];
-  scanComponentsDir(ctx, manifests, spDependencies, ctx.webpartsDir ?? 'src/webparts');
-  scanComponentsDir(ctx, manifests, spDependencies, ctx.extensionsDir ?? 'src/extensions');
-  scanComponentsDir(ctx, manifests, spDependencies, ctx.librariesDir ?? 'src/libraries');
+  const webpartsDir = ctx.webpartsDir?.trim() ? ctx.webpartsDir : 'src/webparts';
+  const extensionsDir = ctx.extensionsDir?.trim() ? ctx.extensionsDir : 'src/extensions';
+  const librariesDir = ctx.librariesDir?.trim() ? ctx.librariesDir : 'src/libraries';
+  scanComponentsDir(ctx, manifests, spDependencies, webpartsDir);
+  scanComponentsDir(ctx, manifests, spDependencies, extensionsDir);
+  scanComponentsDir(ctx, manifests, spDependencies, librariesDir);
   return manifests;
 }
 
