@@ -221,10 +221,6 @@ const EnvironmentInitializer = Environment as unknown as {
   _initialize(data: { type: EnvironmentType }): void;
 };
 
-// The root vitest stub for sp-core-library omits DisplayMode; fall back to the
-// real enum's Read value (1) so tests never touch the real package.
-const LOCAL_DISPLAY_MODE_READ = (DisplayMode as unknown as { Read?: number } | undefined)?.Read ?? 1;
-
 function boot(): void {
   try {
     EnvironmentInitializer._initialize({ type: EnvironmentType.Local });
@@ -412,7 +408,7 @@ async function mountWebPart(
     onInit(): Promise<void> | void;
     render(): void;
   };
-  internal._internalInitialize(context, false, LOCAL_DISPLAY_MODE_READ);
+  internal._internalInitialize(context, false, DisplayMode.Read);
   internal._internalDeserialize({
     properties: component.preconfiguredEntries?.[0]?.properties ?? {},
     dataVersion: '1.0'
