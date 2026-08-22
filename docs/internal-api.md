@@ -367,7 +367,7 @@ export interface BuildPackageOptions {
 }
 export async function buildPackage(opts: BuildPackageOptions): Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>;
 // Zip via yazl or jszip (DEFLATE level 9). Full layout: reference/FORMATS.md §4. Must include:
-// [Content_Types].xml, _rels/.rels, AppManifest.xml (+.rels), feature_<id>.xml (+.config.xml, +.rels),
+// [Content_Types].xml, _rels/.rels → /AppManifest.xml, AppManifest.xml + _rels/AppManifest.xml.rels, feature_<id>.xml + .config.xml + _rels/feature_<id>.xml.rels,
 // <featureId>/<ComponentType>_<componentId>.xml, ClientSideAssets feature + files (when includeClientSideAssets && production),
 // rewrite manifest base urls to ['HTTPS://SPCLIENTSIDEASSETLIBRARY/'] when includeClientSideAssets.
 // Extension components (componentType 'Extension'): elements XML uses Type="Extension", Location="ClientSideExtension.<extensionType>",

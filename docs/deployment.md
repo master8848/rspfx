@@ -48,18 +48,17 @@ pnpm package
 
 # verify:
 unzip -l sharepoint/solution/<name>.sppkg | head -20
-# expect: [Content_Types].xml, _rels/.rels, AppManifest.xml, feature_<id>.xml(.config.xml/.rels),
-#         <featureId>/WebPart_<id>.xml (or Extension_<id>.xml), ClientSideAssets.xml + ClientSideAssets/<bundle>.js when includeClientSideAssets
+# expect: [Content_Types].xml, _rels/.rels → /AppManifest.xml, AppManifest.xml, _rels/AppManifest.xml.rels, feature_<id>.xml + .config.xml + _rels/feature_<id>.xml.rels, <featureId>/WebPart_<id>.xml (or Extension_<id>.xml), ClientSideAssets.xml + .config.xml + _rels/ClientSideAssets.xml.rels + ClientSideAssets/<bundle>.js when includeClientSideAssets
 ```
 
-`.sppkg` layout (`packages/sppkg-builder/src/sppkg-builder.ts:105` `buildPackage()`, [reference/FORMATS.md](../reference/FORMATS.md) §4):
+`.sppkg` layout (`packages/sppkg-builder/src/sppkg-builder.ts:239` `buildPackage()`, [reference/FORMATS.md](../reference/FORMATS.md) §4):
 
 | Zip entry | Source | When |
 |---|---|---|
-| `[Content_Types].xml` | Generated — extensions from embedded files | Always |
-| `_rels/.rels` → `AppManifest.xml` | Generated | Always |
-| `AppManifest.xml` + `.rels` | `config/package-solution.json` `solution.*` + `paths.zippedPackage`, plus `features` → rels, `webApiPermissionRequests` → `RequestedWebApiPermission` | Always |
-| `feature_<featureId>.xml` + `.config.xml` + `.rels` | `solution.features[]` (or auto-feature when `features` empty) | Always |
+| `[Content_Types].xml` | Generated — ordered via `packages/sppkg-builder/src/xml.ts:111` `DEFAULT_CONTENT_TYPES_ORDERED` (`xml` text/xml, `rels`, `webpart`, `htm`, `html`, `aspx`, `resx`, `js`, `json`, `png`, `jpg`, `bmp`, `gif`, `txt`) | Always |
+| `_rels/.rels` → `/AppManifest.xml` | Generated | Always |
+| `AppManifest.xml` + `_rels/AppManifest.xml.rels` | `config/package-solution.json` `solution.*` + `paths.zippedPackage`, plus `features` → rels, `webApiPermissionRequests` → `RequestedWebApiPermission` (`ProductID` raw GUID, `IsDomainIsolated` String(boolean), `DeveloperProperties` 5 keys, `CategoryID`, `Screenshots`) | Always |
+| `feature_<featureId>.xml` + `.config.xml` + `_rels/feature_<featureId>.xml.rels` | `solution.features[]` (or auto-feature when `features` empty) — `Id` is `randomUUID()` | Always |
 | `<featureId>/WebPart_<componentId>.xml` | `release/manifests/<id>.manifest.json` JSON stringified into `ComponentManifest` attribute | Always |
 | `<featureId>/Extension_<componentId>.xml` | Same, for `componentType: Extension` — `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"` | When extensions present |
 | `ClientSideAssets.xml` + `ClientSideAssets/<bundle>.js` + `teams/*` | `release/assets/*` + `teams/` (auto-detected) rewritten with `internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']` | Only when `solution.includeClientSideAssets:true` **and** production build |
@@ -228,6 +227,6 @@ Cache `node_modules` and `.rspack-cache` between runs; production builds ignore 
 | API permission 403 | `webApiPermissionRequests` not yet approved in Admin `API access` — approve per §5 |
 | `DEPLOY_TIMEOUT` after 120 s | Catalog throttling or large `.sppkg` — retry; `apps/cli/src/commands/deploy.ts:62` `AbortSignal.timeout(120_000)` |
 | `{tenantdomain}` literal in workbench URL | No tenant domain configured — set `dev.tenantUrl` in `rspack.config.ts`, or `SPFX_SERVE_TENANT_DOMAIN` env, or `--tenant` flag |
-| `IsValidAppPackage:false, AppProductID:null, Title:null` on upload | SharePoint OPC parser rejected `AppManifest.xml` — verify `ProductID` is `"{<guid>}"` with braces (`packages/sppkg-builder/src/xml.ts:220`), `[Content_Types].xml` MIME types (`packages/sppkg-builder/src/xml.ts:88`), and zip root has `[Content_Types].xml` + `_rels/.rels` → `AppManifest.xml` (see [reference/FORMATS.md](../reference/FORMATS.md) §4) |
+| `IsValidAppPackage:false, AppProductID:null, Title:null` on upload | SharePoint OPC parser rejected the package — verify `AppManifest.xml` `ProductID` is raw GUID without braces (`packages/sppkg-builder/src/xml.ts:240`), `[Content_Types].xml` `xml` is `text/xml` and `txt` is `application/octet-stream` in ordered `packages/sppkg-builder/src/xml.ts:111` `DEFAULT_CONTENT_TYPES_ORDERED`, zip root has `[Content_Types].xml` + `_rels/.rels` → `/AppManifest.xml` with `_rels/AppManifest.xml.rels` and `_rels/feature_<id>.xml.rels` targets prefixed `/` (`packages/sppkg-builder/src/sppkg-builder.ts:239`), `IsDomainIsolated` emitted even when `false`, and `DeveloperProperties`/`Screenshots`/`CategoryID` match official heft 1.23.2 (see [reference/FORMATS.md](../reference/FORMATS.md) §4); validate via `apps/playground` catalog gate `Title` `rspfx-playground-client-side-solution` `AppProductID` `22222222-2222-4222-8222-222222222200` `IsValidAppPackage:true` |
 
 For packing internals and zip entry validation see [building-packages.md](building-packages.md#what-rspfx-package-produces) and [real-tenant-validation.md](real-tenant-validation.md#validation-checklist).

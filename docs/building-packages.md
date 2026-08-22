@@ -62,16 +62,19 @@ the pieces (`dist` + `release`) that `rspfx package` assembles.
 The `.sppkg` is a DEFLATE zip with the official layout (see [reference/FORMATS.md](../reference/FORMATS.md)):
 
 ```
-[Content_Types].xml
-_rels/.rels
-AppManifest.xml            solution metadata, WebApiPermissionRequests, version
-AppManifest.xml.rels
-feature_<id>.xml           one feature per package-solution.json feature
-feature_<id>.xml.config.xml
-<featureId>/<ComponentType>_<componentId>.xml   component manifest (JSON) per component
-Resources.resx             present when sharepoint/Resources*.resx exists
-ClientSideAssets.xml       present when includeClientSideAssets = true
-ClientSideAssets/          bundles, chunks, teams/ folder (if any), rewritten manifests
+[Content_Types].xml                       ordered via packages/sppkg-builder/src/xml.ts:111 (xml text/xml, rels, webpart, htm, html, aspx, resx, js, json, png, jpg, bmp, gif, txt)
+_rels/.rels                              → /AppManifest.xml
+AppManifest.xml                           solution metadata, WebApiPermissionRequests, version — ProductID raw GUID, IsDomainIsolated String(boolean), DeveloperProperties 5 keys, CategoryID, Screenshots
+_rels/AppManifest.xml.rels                → /feature_<id>.xml, /ClientSideAssets.xml, /Resources.resx
+feature_<id>.xml                          one feature per package-solution.json feature
+feature_<id>.xml.config.xml               AppPartConfig with randomUUID Id
+_rels/feature_<id>.xml.rels               → /feature_<id>.xml.config.xml, /<featureId>/WebPart_<componentId>.xml
+<featureId>/<ComponentType>_<componentId>.xml   component manifest JSON stringified into ComponentManifest attribute
+Resources.resx                            present when sharepoint/Resources*.resx exists (CultureName="default")
+ClientSideAssets.xml                      present when includeClientSideAssets = true
+ClientSideAssets.xml.config.xml           AppPartConfig with randomUUID Id
+_rels/ClientSideAssets.xml.rels           → /ClientSideAssets.xml.config.xml, /ClientSideAssets/<file>
+ClientSideAssets/                         bundles, chunks, teams/ folder (if any), rewritten manifests
 ```
 
 Key semantics, all read from `config/package-solution.json`:

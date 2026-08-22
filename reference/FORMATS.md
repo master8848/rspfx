@@ -107,29 +107,24 @@ sp-* node_modules manifests with base urls rewritten to
 
 ```
 [Content_Types].xml
-_rels/.rels                      → AppManifest.xml
-AppManifest.xml                  → <App xmlns="http://schemas.microsoft.com/sharepoint/2012/app/manifest"
-                                    Name ProductID SharePointMinVersion="16.0.0.0" IsClientSideSolution="true"
-                                    [Version] [SkipFeatureDeployment] [IsDomainIsolated]> <Properties>...</App>
-AppManifest.xml.rels             → features, resources
+_rels/.rels                      → /AppManifest.xml
+AppManifest.xml                  → <App xmlns="http://schemas.microsoft.com/sharepoint/2012/app/manifest" Name ProductID SharePointMinVersion="16.0.0.0" IsClientSideSolution="true" [Version] [SkipFeatureDeployment] [IsDomainIsolated]> <Properties>...</App>
+_rels/AppManifest.xml.rels       → /feature_<featureId>.xml, /ClientSideAssets.xml, /Resources.resx
 feature_<featureId>.xml          → <Feature xmlns="http://schemas.microsoft.com/sharepoint/" Title Description Id Version Scope="Web" Hidden="FALSE"/>
-feature_<featureId>.xml.config.xml → <AppPartConfig ...><Id>uuid</Id></AppPartConfig>
-feature_<featureId>.xml.rels     → partconfiguration, feature-elementmanifest, clientsideasset, content-resource...
-<featureId>/WebPart_<componentId>.xml → <Elements xmlns="http://schemas.microsoft.com/sharepoint/">
-                                          <ClientSideComponent Name Id ComponentManifest='{json}' Type="WebPart"/>
-                                          <Module Name Url="_catalogs/wp" List="113"/>
-                                        </Elements>
+feature_<featureId>.xml.config.xml → <AppPartConfig ...><Id>randomUUID</Id></AppPartConfig>
+_rels/feature_<featureId>.xml.rels → /feature_<featureId>.xml.config.xml, /<featureId>/WebPart_<componentId>.xml
+<featureId>/WebPart_<componentId>.xml → <Elements xmlns="http://schemas.microsoft.com/sharepoint/"><ClientSideComponent Name Id ComponentManifest='{json}' Type="WebPart"/><Module Name Url="_catalogs/wp" List="113"/></Elements>
 ClientSideAssets.xml             → assets feature (only when includeClientSideAssets)
-ClientSideAssets.xml.config.xml
-ClientSideAssets.xml.rels
+ClientSideAssets.xml.config.xml  → <AppPartConfig ...><Id>randomUUID</Id></AppPartConfig>
+_rels/ClientSideAssets.xml.rels  → /ClientSideAssets.xml.config.xml, /ClientSideAssets/<file>
 ClientSideAssets/<file>          → bundles + assets (component JS, maps excluded)
 ```
 
 - ComponentManifest JSON is stringified into the XML attribute (single-quoted, entities escaped) — see `packages/sppkg-builder/src/xml.ts:188` `buildElementsXml()`.
 - With `includeClientSideAssets` (production only), every manifest `loaderConfig.internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']` (SharePoint rewrites at install).
-- `[Content_Types].xml` maps each embedded extension to its MIME type via `packages/sppkg-builder/src/xml.ts:88` `CONTENT_TYPE_BY_EXTENSION` (`js` → `application/javascript`, `json` → `application/json`, `png` → `image/png`, etc.; unknown → `application/octet-stream`); `rels` and `xml` are always `application/vnd.openxmlformats-package.relationships+xml` and `application/xml`.
-- `AppManifest.xml` `ProductID` is `{<solution.id>}` with braces (`packages/sppkg-builder/src/xml.ts:220` `buildAppManifestXml()` normalizes bare GUIDs); a bare GUID fails SharePoint OPC parsing and yields `IsValidAppPackage:false, AppProductID:null, Title:null`.
-- OPC package: zip root contains `[Content_Types].xml` and `_rels/.rels`; `_rels/.rels` has `Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/package-manifest"` → `Target="AppManifest.xml"` (`packages/sppkg-builder/src/sppkg-builder.ts:105` `buildPackage()`); output path from `paths.zippedPackage` (e.g. `sharepoint/solution/<name>.sppkg`).
+- `[Content_Types].xml` is ordered via `packages/sppkg-builder/src/xml.ts:111` `DEFAULT_CONTENT_TYPES_ORDERED` (`xml` → `text/xml`, `rels` → `application/vnd.openxmlformats-package.relationships+xml`, `webpart` → `text/xml`, `htm` → `text/html`, `html` → `text/html`, `aspx` → `text/xml`, `resx` → `text/xml`, `js` → `application/javascript`, `json` → `application/json`, `png` → `image/png`, `jpg` → `image/jpeg`, `bmp` → `image/bmp`, `gif` → `image/gif`, `txt` → `application/octet-stream`; extra extensions appended sorted via `packages/sppkg-builder/src/xml.ts:88` `CONTENT_TYPE_BY_EXTENSION`).
+- `AppManifest.xml` `ProductID` is the raw `solution.id` GUID without braces (`packages/sppkg-builder/src/xml.ts:240`); `IsDomainIsolated` is emitted as `String(boolean)` when defined including `false` (`packages/sppkg-builder/src/xml.ts:258`); `DeveloperProperties` is `JSON.stringify` of 5 keys `name, websiteUrl, privacyUrl, termsOfUseUrl, mpnId` even when empty (`packages/sppkg-builder/src/xml.ts:269`); `Title` falls back to `solution.name` when `solution.title` is absent (`packages/sppkg-builder/src/xml.ts:261`); `categories` emit one `CategoryID` with comma-joined values (`packages/sppkg-builder/src/xml.ts:284`); `Screenshots` emits `Screenshot/Filename` per `metadata.screenshotPaths` (`packages/sppkg-builder/src/xml.ts:296`); `AppPartConfig` `Id` is `randomUUID()` (`packages/sppkg-builder/src/xml.ts:172`); `escapeXmlText` escapes `&quot;`/`&apos;` (`packages/sppkg-builder/src/xml.ts:31`).
+- OPC package: zip root contains `[Content_Types].xml` and `_rels/.rels`; `_rels/.rels` has `Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/package-manifest"` → `Target="/AppManifest.xml"` (`packages/sppkg-builder/src/sppkg-builder.ts:239`); all relationship `Target` values are prefixed with `/` (`packages/sppkg-builder/src/xml.ts:48` `createRelationshipsXml` equivalent); `AppManifest` relationships live in `_rels/AppManifest.xml.rels`, feature relationships in `_rels/feature_<id>.xml.rels`, asset relationships in `_rels/ClientSideAssets.xml.rels`; output path from `paths.zippedPackage` (e.g. `sharepoint/solution/<name>.sppkg`) and SharePoint validates `IsValidAppPackage:true` with `Title`/`AppProductID` populated.
 
 ## 5. Dev server (serve mode, heft-era SPFx — our reference behavior)
 
