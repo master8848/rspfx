@@ -86,7 +86,7 @@ Key semantics, all read from `config/package-solution.json`:
 `rspfx package` auto-detects two optional folders:
 
 - `teams/` — when present (`manifest.json` + icons), files are included under `ClientSideAssets/`.
-- `sharepoint/Resources*.resx` — `Resources.resx` (LCID 1033) plus `Resources.<lang>.resx` land at zip root; also powers localized `metadata.shortDescription` / `longDescription` (`"$Resources:KeyName"` → `<LocalizedString>` per locale).
+- `sharepoint/Resources*.resx` — `Resources.resx` (`CultureName="default"`) plus `Resources.<lang>.resx` land at zip root; also powers localized `metadata.shortDescription` / `longDescription` (`"$Resources:KeyName"` → `<LocalizedString CultureName="...">` per locale).
 
 `rspfx package` runs the same zip validation the tests use (`validateSppkg`) and
 reports entry count on success.

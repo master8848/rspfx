@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { localeToLcid } from './lcid.js';
+import { localeToCultureName } from './lcid.js';
 
 export interface XmlAttributes {
   [name: string]: string;
@@ -109,7 +109,7 @@ export function buildContentTypesXml(extensions: string[], pretty: boolean): str
       name: 'Default',
       attrs: { Extension: 'rels', ContentType: 'application/vnd.openxmlformats-package.relationships+xml' }
     },
-    { name: 'Default', attrs: { Extension: 'xml', ContentType: 'application/xml' } },
+    { name: 'Default', attrs: { Extension: 'xml', ContentType: 'text/xml' } },
     ...extensions.map((extension) => ({
       name: 'Default',
       attrs: {
@@ -283,8 +283,8 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
     children.push({
       name: 'WebApiPermissionRequests',
       children: options.webApiPermissionRequests.map((request) => ({
-        name: 'RequestedWebApiPermission',
-        attrs: { Resource: request.resource, Scope: request.scope }
+        name: 'WebApiPermissionRequest',
+        attrs: { ResourceId: request.resource, Scope: request.scope }
       }))
     });
   }
@@ -295,20 +295,12 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
 
 function localizedElement(name: string, locales: Record<string, unknown>): XmlNode {
   const children: XmlNode[] = [];
-  for (const [rawLcid, value] of Object.entries(locales)) {
-    let lcidStr: string;
-    if (rawLcid === 'default') {
-      lcidStr = '1033';
-    } else if (/^[0-9]+$/.test(rawLcid)) {
-      lcidStr = rawLcid;
-    } else {
-      // May be a locale tag like "en-us" or "en_us" — normalize via localeToLcid for numeric-only guarantee.
-      lcidStr = String(localeToLcid(rawLcid));
-    }
+  for (const [rawLocale, value] of Object.entries(locales)) {
+    const cultureName = localeToCultureName(rawLocale);
     children.push({
       name: 'LocalizedString',
-      // LCID is numeric-only (validated above); Value is escaped via escapeXmlAttribute in serializeXml.
-      attrs: { LCID: lcidStr, Value: String(value) }
+      attrs: { CultureName: cultureName },
+      children: [String(value)]
     });
   }
   return { name, children };
@@ -327,8 +319,8 @@ function resolveMetadataValue(
   }
   const key = value.slice('$Resources:'.length);
   const entries = (localizedStrings ?? [])
-    .map(({ locale, values }) => ({ lcid: localeToLcid(locale), text: values[key] }))
-    .filter((entry): entry is { lcid: number; text: string } => entry.text !== undefined);
+    .map(({ locale, values }) => ({ cultureName: localeToCultureName(locale), text: values[key] }))
+    .filter((entry): entry is { cultureName: string; text: string } => entry.text !== undefined);
   if (entries.length === 0) {
     return { name, children: [value] };
   }
@@ -336,7 +328,8 @@ function resolveMetadataValue(
     name,
     children: entries.map((entry) => ({
       name: 'LocalizedString',
-      attrs: { LCID: String(entry.lcid), Value: entry.text }
+      attrs: { CultureName: entry.cultureName },
+      children: [entry.text]
     }))
   };
 }

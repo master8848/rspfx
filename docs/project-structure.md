@@ -40,7 +40,7 @@ my-app/
 │   └── <id>_outline.png          # 32×32
 ├── sharepoint/
 │   ├── assets/.gitkeep           # optional solution assets
-│   └── Resources.resx            # optional — LCID 1033 default; Resources.<lang>.resx per locale
+│   └── Resources.resx            # optional — CultureName "default"; Resources.<lang>.resx per locale
 ├── local/
 │   └── data.json                 # optional — mock REST seed for local preview (/_api)
 ├── dist/                         # build.outDir — AMD bundles (<name>.js), chunks, locale modules, maps
@@ -90,7 +90,7 @@ Every path the CLI reads or writes, with ownership.
 | `src/index.ts` | Barrel placeholder (`export {};`). | No | Scaffolded | — |
 | `src/rspfx-env.d.ts` | Ambient declarations for `*.module.scss`, `*.vue`, `*.svelte`. | No | Scaffolded | — |
 | `sharepoint/assets/*` | Solution assets copied into package when referenced by `features[].assets`. | No | `.gitkeep` scaffolded | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-assets |
-| `sharepoint/Resources.resx` + `Resources.<lang>.resx` | Localized `metadata.shortDescription`/`longDescription` (`"$Resources:Key"` → `<LocalizedString>` per LCID). `Resources.resx` → LCID 1033. | No | Never — user-provided | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/localize-web-parts#localize-your-web-part-metadata |
+| `sharepoint/Resources.resx` + `Resources.<lang>.resx` | Localized `metadata.shortDescription`/`longDescription` (`"$Resources:Key"` → `<LocalizedString CultureName="...">` per locale). `Resources.resx` → `CultureName="default"`. | No | Never — user-provided | https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/localize-web-parts#localize-your-web-part-metadata |
 | `teams/manifest.json` | Teams app manifest v1.13 — `id`/`entityId` = component `id`, `packageName`, `staticTabs`/`configurableTabs`, `validDomains`. Only when `teams.enabled=true` in plugin options. | No | Auto-created when `teams.enabled` (`packages/dev-runtime/src/project.ts:412`) | https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json · https://learn.microsoft.com/en-us/microsoftteams/platform/resources/schema/manifest-schema |
 | `teams/<id>_color.png` | 192×192 Teams color icon — filename MUST be `<teams.manifest.json#id>_color.png`. | No | Auto-created with teams | https://learn.microsoft.com/en-us/microsoftteams/platform/resources/schema/manifest-schema#icons |
 | `teams/<id>_outline.png` | 32×32 Teams outline icon — MUST be `<id>_outline.png`. | No | Auto-created with teams | Same as above |

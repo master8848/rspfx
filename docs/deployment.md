@@ -63,7 +63,7 @@ unzip -l sharepoint/solution/<name>.sppkg | head -20
 | `<featureId>/WebPart_<componentId>.xml` | `release/manifests/<id>.manifest.json` JSON stringified into `ComponentManifest` attribute | Always |
 | `<featureId>/Extension_<componentId>.xml` | Same, for `componentType: Extension` — `Type="Extension"`, `Location="ClientSideExtension.<extensionType>"` | When extensions present |
 | `ClientSideAssets.xml` + `ClientSideAssets/<bundle>.js` + `teams/*` | `release/assets/*` + `teams/` (auto-detected) rewritten with `internalModuleBaseUrls = ['HTTPS://SPCLIENTSIDEASSETLIBRARY/']` | Only when `solution.includeClientSideAssets:true` **and** production build |
-| `Resources.resx` + `Resources.<lang>.resx` | `sharepoint/Resources*.resx` parsed, `"$Resources:Key"` in `solution.metadata` → `<LocalizedString>` per LCID (1033 default) | When `sharepoint/Resources*.resx` exists |
+| `Resources.resx` + `Resources.<lang>.resx` | `sharepoint/Resources*.resx` parsed, `"$Resources:Key"` in `solution.metadata` → `<LocalizedString CultureName="...">` per locale (`default` for `Resources.resx`) | When `sharepoint/Resources*.resx` exists |
 
 Microsoft docs: SPFx publish overview https://learn.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview · Solution package https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/package-and-deploy · App catalog https://learn.microsoft.com/en-us/sharepoint/use-app-catalog
 

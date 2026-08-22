@@ -96,14 +96,14 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
     });
     expect(xml).toContain(
       `    <ShortDescription>\n` +
-        `      <LocalizedString LCID="1033" Value="RSPFX test solution"/>\n` +
-        `      <LocalizedString LCID="1036" Value="Solution de test RSPFX"/>\n` +
+        `      <LocalizedString CultureName="en-US">RSPFX test solution</LocalizedString>\n` +
+        `      <LocalizedString CultureName="fr-FR">Solution de test RSPFX</LocalizedString>\n` +
         `    </ShortDescription>`
     );
     expect(xml).toContain(
       `    <LongDescription>\n` +
-        `      <LocalizedString LCID="1033" Value="A test with &amp; entities &lt;like&gt; &apos;those&apos; &quot;quotes&quot;"/>\n` +
-        `      <LocalizedString LCID="1036" Value="Une solution de test"/>\n` +
+        `      <LocalizedString CultureName="en-US">A test with &amp; entities &lt;like&gt; 'those' "quotes"</LocalizedString>\n` +
+        `      <LocalizedString CultureName="fr-FR">Une solution de test</LocalizedString>\n` +
         `    </LongDescription>`
     );
   });
@@ -117,8 +117,8 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
         { locale: 'fr-fr', values: {} }
       ]
     });
-    expect(xml).toContain('<LocalizedString LCID="1033" Value="default text"/>');
-    expect(xml).not.toContain('LCID="1036"');
+    expect(xml).toContain('<LocalizedString CultureName="en-US">default text</LocalizedString>');
+    expect(xml).not.toContain('CultureName="fr-FR"');
   });
 
   it('falls back to the literal string when the key is missing everywhere', () => {
@@ -145,7 +145,7 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
       metadata: { shortDescription: { default: 'RSPFX test solution' }, longDescription: 'plain string' },
       localizedStrings
     });
-    expect(xml).toContain('<LocalizedString LCID="1033" Value="RSPFX test solution"/>');
+    expect(xml).toContain('<LocalizedString CultureName="default">RSPFX test solution</LocalizedString>');
     expect(xml).not.toContain('LongDescription');
   });
 });
@@ -169,23 +169,23 @@ describe('buildPackage (resx + teams)', () => {
       expect(zip.get('Resources.resx')).toEqual(await readFile(path.join(resxFixtureRoot, 'Resources.resx')));
       expect(zip.get('Resources.fr-fr.resx')).toEqual(await readFile(path.join(resxFixtureRoot, 'Resources.fr-fr.resx')));
 
-      const rels = zip.get('AppManifest.xml.rels')!.toString('utf8');
+      const rels = zip.get('_rels/AppManifest.xml.rels')!.toString('utf8');
       expect(rels).toContain(
-        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-defaultresource" Target="Resources.resx"'
+        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-defaultresource" Target="/Resources.resx"'
       );
       expect(rels).toContain(
-        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-resource" Target="Resources.fr-fr.resx"'
+        'Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/content-resource" Target="/Resources.fr-fr.resx"'
       );
 
       const appManifest = result.appManifest;
       expect(appManifest).toContain(
         `    <ShortDescription>\n` +
-          `      <LocalizedString LCID="1033" Value="RSPFX test solution"/>\n` +
-          `      <LocalizedString LCID="1036" Value="Solution de test RSPFX"/>\n` +
+          `      <LocalizedString CultureName="default">RSPFX test solution</LocalizedString>\n` +
+          `      <LocalizedString CultureName="fr-FR">Solution de test RSPFX</LocalizedString>\n` +
           `    </ShortDescription>`
       );
       expect(appManifest).toContain(
-        `      <LocalizedString LCID="1033" Value="A test solution with &amp; entities &lt;like&gt; &apos;these&apos; &quot;quotes&quot;"/>`
+        `      <LocalizedString CultureName="default">A test solution with &amp; entities &lt;like&gt; 'these' "quotes"</LocalizedString>`
       );
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
@@ -220,8 +220,8 @@ describe('buildPackage (resx + teams)', () => {
       expect(zip.get('ClientSideAssets/outline.png')).toEqual(
         await readFile(path.join(teamsFixtureRoot, 'outline.png'))
       );
-      const rels = zip.get('ClientSideAssets.xml.rels')!.toString('utf8');
-      expect(rels).toContain('Target="ClientSideAssets/manifest.json"');
+      const rels = zip.get('_rels/ClientSideAssets.xml.rels')!.toString('utf8');
+      expect(rels).toContain('Target="/ClientSideAssets/manifest.json"');
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }

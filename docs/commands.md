@@ -130,8 +130,7 @@ The command auto-detects optional inputs when present:
 - **`sharepoint/Resources*.resx`** — embedded at the package root and used to
   resolve `"$Resources:KeyName"` values in
   `metadata.shortDescription`/`longDescription` of `package-solution.json`
-  into localized `<LocalizedString>` entries (default resx → LCID 1033, each
-  `<lang>.resx` → its language's LCID).
+  into localized `<LocalizedString CultureName="...">` entries (`Resources.resx` → `CultureName="default"`, each `Resources.<lang>.resx` → its `CultureName`).
 
 ## `rspfx deploy`
 

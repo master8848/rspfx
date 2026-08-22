@@ -153,43 +153,43 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
     addEntry(`feature_${feature.id}.xml`, buildFeatureXml(feature, pretty));
     addEntry(`feature_${feature.id}.xml.config.xml`, buildAppPartConfigXml(feature.id, pretty));
     const relationships: Relationship[] = [
-      { type: REL_PART_CONFIGURATION, target: `feature_${feature.id}.xml.config.xml` }
+      { type: REL_PART_CONFIGURATION, target: `/feature_${feature.id}.xml.config.xml` }
     ];
     for (const component of feature.components) {
       const componentType = component.componentType ?? 'WebPart';
       const componentName = typeof component.alias === 'string' && component.alias ? component.alias : feature.title;
       const componentFile = `${feature.id}/${componentType}_${component.id}.xml`;
       addEntry(componentFile, buildElementsXml(componentName, component, pretty));
-      relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: componentFile });
+      relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: `/${componentFile}` });
     }
     if (assetsFeature) {
-      relationships.push({ type: REL_FEATURE_CLIENTSIDEASSET, target: 'ClientSideAssets.xml' });
+      relationships.push({ type: REL_FEATURE_CLIENTSIDEASSET, target: '/ClientSideAssets.xml' });
     }
     for (const relativePath of feature.assets.elementManifests) {
       const zipName = toZipPath(relativePath);
       addEntry(zipName, await readProjectFile(projectRoot, relativePath, 'element manifest'));
-      relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: zipName });
+      relationships.push({ type: REL_FEATURE_ELEMENT_MANIFEST, target: `/${zipName}` });
     }
     for (const relativePath of feature.assets.elementFiles) {
       const zipName = toZipPath(relativePath);
       addEntry(zipName, await readProjectFile(projectRoot, relativePath, 'element file'));
-      relationships.push({ type: REL_CONTENT_RESOURCE, target: zipName });
+      relationships.push({ type: REL_CONTENT_RESOURCE, target: `/${zipName}` });
     }
-    addEntry(`feature_${feature.id}.xml.rels`, buildRelsXml(relationships, pretty));
+    addEntry(`_rels/feature_${feature.id}.xml.rels`, buildRelsXml(relationships, pretty));
   }
 
   if (assetsFeature) {
     addEntry('ClientSideAssets.xml', buildFeatureXml(assetsFeature, pretty));
     addEntry('ClientSideAssets.xml.config.xml', buildAppPartConfigXml(assetsFeature.id, pretty));
     const relationships: Relationship[] = [
-      { type: REL_PART_CONFIGURATION, target: 'ClientSideAssets.xml.config.xml' }
+      { type: REL_PART_CONFIGURATION, target: '/ClientSideAssets.xml.config.xml' }
     ];
     for (const asset of clientSideAssets) {
       const zipName = `ClientSideAssets/${toZipPath(asset.packageFilename)}`;
       addEntry(zipName, await readFile(asset.originalFilename));
-      relationships.push({ type: REL_CLIENTSIDEASSET, target: zipName });
+      relationships.push({ type: REL_CLIENTSIDEASSET, target: `/${zipName}` });
     }
-    addEntry('ClientSideAssets.xml.rels', buildRelsXml(relationships, pretty));
+    addEntry('_rels/ClientSideAssets.xml.rels', buildRelsXml(relationships, pretty));
   }
 
   for (const resx of resxFiles) {
@@ -198,15 +198,15 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
 
   const appManifestRelationships: Relationship[] = features.map((feature) => ({
     type: REL_MANIFEST_FEATURE,
-    target: `feature_${feature.id}.xml`
+    target: `/feature_${feature.id}.xml`
   }));
   if (assetsFeature) {
-    appManifestRelationships.push({ type: REL_MANIFEST_CLIENTSIDEASSET, target: 'ClientSideAssets.xml' });
+    appManifestRelationships.push({ type: REL_MANIFEST_CLIENTSIDEASSET, target: '/ClientSideAssets.xml' });
   }
   for (const resx of resxFiles) {
     appManifestRelationships.push({
       type: resx.name === 'Resources.resx' ? REL_CONTENT_DEFAULT_RESOURCE : REL_CONTENT_RESOURCE,
-      target: resx.name
+      target: `/${resx.name}`
     });
   }
 
@@ -238,9 +238,9 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
 
   const orderedEntries: ZipFileEntry[] = [
     { name: '[Content_Types].xml', buffer: Buffer.from(buildContentTypesXml([...extensions].sort(), pretty), 'utf8') },
-    { name: '_rels/.rels', buffer: Buffer.from(buildRelsXml([{ type: REL_PACKAGE_MANIFEST, target: 'AppManifest.xml' }], pretty), 'utf8') },
+    { name: '_rels/.rels', buffer: Buffer.from(buildRelsXml([{ type: REL_PACKAGE_MANIFEST, target: '/AppManifest.xml' }], pretty), 'utf8') },
     { name: 'AppManifest.xml', buffer: Buffer.from(appManifest, 'utf8') },
-    { name: 'AppManifest.xml.rels', buffer: Buffer.from(buildRelsXml(appManifestRelationships, pretty), 'utf8') },
+    { name: '_rels/AppManifest.xml.rels', buffer: Buffer.from(buildRelsXml(appManifestRelationships, pretty), 'utf8') },
     ...entries
   ];
 
@@ -483,7 +483,7 @@ async function collectResx(resxDir: string): Promise<ResxFile[]> {
     const content = await readFile(absolute);
     const locale =
       relativePath === 'Resources.resx'
-        ? 'en-us'
+        ? 'default'
         : relativePath.slice('Resources.'.length, -'.resx'.length).toLowerCase();
     resxFiles.push({ name: zipName, buffer: content, locale, values: parseResx(content.toString('utf8')) });
   }

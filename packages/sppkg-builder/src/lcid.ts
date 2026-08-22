@@ -64,3 +64,44 @@ export function localeToLcid(locale: string): number {
   const lcid = LOCALE_TO_LCID[normalized] ?? LOCALE_TO_LCID[hyphenated];
   return typeof lcid === 'number' && Number.isFinite(lcid) ? lcid : 1033;
 }
+
+const LCID_TO_CULTURE: Record<number, string> = Object.fromEntries(
+  Object.entries(LOCALE_TO_LCID).map(([locale, lcid]) => [lcid, locale])
+) as Record<number, string>;
+
+export function lcidToCultureName(lcid: number): string {
+  const culture = LCID_TO_CULTURE[lcid];
+  if (culture) {
+    const parts = culture.split('-');
+    if (parts.length === 2) {
+      return `${parts[0]!}-${parts[1]!.toUpperCase()}`;
+    }
+    if (parts.length === 3) {
+      return `${parts[0]!}-${parts[1]!}-${parts[2]!.toUpperCase()}`;
+    }
+    return culture;
+  }
+  return `en-US`;
+}
+
+export function localeToCultureName(locale: string): string {
+  if (locale === 'default') {
+    return 'default';
+  }
+  const normalized = locale.toLowerCase().replace(/_/g, '-');
+  if (/^[0-9]+$/.test(normalized)) {
+    return lcidToCultureName(Number(normalized));
+  }
+  const lcid = LOCALE_TO_LCID[normalized];
+  if (lcid !== undefined) {
+    return lcidToCultureName(lcid);
+  }
+  const parts = normalized.split('-');
+  if (parts.length === 2) {
+    return `${parts[0]!}-${parts[1]!.toUpperCase()}`;
+  }
+  if (parts.length === 3) {
+    return `${parts[0]!}-${parts[1]!}-${parts[2]!.toUpperCase()}`;
+  }
+  return normalized;
+}

@@ -372,9 +372,9 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<{ outputP
 // rewrite manifest base urls to ['HTTPS://SPCLIENTSIDEASSETLIBRARY/'] when includeClientSideAssets.
 // Extension components (componentType 'Extension'): elements XML uses Type="Extension", Location="ClientSideExtension.<extensionType>",
 // ClientSideComponentProperties="null", and a ClientSideComponentInstance child (fresh random UUID per build); no <Module>.
-// resxDir: Resources.resx (default → LCID 1033) + Resources.<lang>.resx parsed by src/resx.ts (regex, no deps; LCID table in
+// resxDir: Resources.resx (CultureName "default") + Resources.<lang>.resx parsed by src/resx.ts (regex, no deps; CultureName mapping in
 // src/lcid.ts) and embedded at the zip root with content-defaultresource/content-resource rels; AppManifest metadata values
-// "$Resources:Key" resolve into <LocalizedString> entries per locale (missing keys fall back to the literal string).
+// "$Resources:Key" resolve into <LocalizedString CultureName="..."> entries per locale (missing keys fall back to the literal string).
 export function validateSppkg(zipPath: string): Promise<{ ok: boolean; errors: string[] }>; // unzip + schema checks
 ```
 
