@@ -15,7 +15,7 @@ rspfx deploy     → upload .sppkg to app catalog via REST       (implies packag
 | `pnpm build` / `npm run build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, bundle analysis (`rspfx analyze`) — package.json `build` script runs `rspfx build` |
 | `pnpm package` / `npm run package` | `sharepoint/solution/<name>.sppkg` (DEFLATE zip) — path from `config/package-solution.json:355` `paths.zippedPackage` (default `sharepoint/solution/<name>.sppkg`) | Ship — upload the `.sppkg` |
 | `rspfx package` | Same as `pnpm package` (same codepath). `rspfx package --no-build` skips compile and packages existing `release/` | Incremental packaging |
-| `rspfx deploy` | Packages then `POST` to app catalog REST (`/_api/web/tenantappcatalog/Add`); bearer token `RSPFX_ACCESS_TOKEN`, catalog URL `RSPFX_APP_CATALOG_URL` or `config.deploy.appCatalogSiteUrl` | Automated upload; without token prints manual steps and exits 0 |
+| `rspfx deploy` | Packages then `POST` to `/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='<file>',overwrite=true)` (see `apps/cli/src/commands/deploy.ts:50`); bearer token `RSPFX_ACCESS_TOKEN`, catalog URL `RSPFX_APP_CATALOG_URL` or `config.deploy.appCatalogSiteUrl` | Automated upload; without token prints manual steps and exits 0 |
 
 National clouds use the same pipeline — only the catalog hostname differs (`*.sharepoint.com` vs `*.sharepoint.cn` / `*.sharepoint.de` etc.).
 

@@ -65,10 +65,7 @@ which is exactly RSPFX's supported surface.
 
 These are the honest limits (tracked in [why-not-to-migrate.md](why-not-to-migrate.md)):
 
-1. **Multi-locale runtime switching.** String modules resolve to `en-us` and are
-   bundled. RSPFX does not yet emit `localizedPath` manifest entries from
-   `config.json` `localizedResources`, so sp-loader won't swap locale modules —
-   the migrated solution renders default-locale strings.
+1. **Multi-locale runtime switching.** `config.json` `localizedResources` are compiled to per-locale AMD modules (`dist/<name>_<locale>.js`) and emitted as `localizedPath` manifest entries (`packages/manifest-generator/src/component-manifests.ts:148`), so string modules swap at runtime with `en-us` fallback and `?locale=` preview support.
 2. **`pkg:` SCSS imports** need a one-line rewrite (bundled sass-loader <16.5).
 3. **Bundle-name constraint.** Bundle keys must equal web part folder names
    (RSPFX's `entryModuleId` convention) — a mechanical rename in `config.json`.

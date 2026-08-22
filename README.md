@@ -18,7 +18,7 @@ webpack, Heft, or gulp.
   bundler, no Node APIs. Frameworks plug in via the `FrameworkPreset` contract.
 - **Workbench-first development.** The SharePoint workbench is the primary dev
   surface, exactly like official `gulp serve`: an HTTPS manifest server on
-  `:4321`, debug manifests, auto-opened browser.
+  `:4321`, debug manifests, browser opens only with `--browser`.
 
 ## Quick start
 
@@ -30,7 +30,7 @@ pnpm build        # build all @mbsks/rspfx-* packages
 pnpm test         # run the vitest suite
 ```
 
-Use the CLI in your own projects (installed globally from npm once published):
+Use the CLI in your own projects (installed globally from npm):
 
 ```sh
 npm i -g @mbsks/rspfx-cli
@@ -52,7 +52,7 @@ rspfx package     # production build → .sppkg
 | `rspfx deploy` | Package + upload to the app catalog (REST creds via `config.deploy` or env vars; prints manual steps if none) |
 | `rspfx doctor` | Environment/config/port/dependency checks; exit code 1 on failures |
 | `rspfx analyze` | Build + bundle size report to `.rspfx/analyze.html` |
-| `rspfx clean` | Remove `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache` |
+| `rspfx clean` | Remove `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache`, `sharepoint/solution` |
 
 ## Supported targets
 

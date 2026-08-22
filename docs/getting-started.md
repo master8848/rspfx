@@ -41,10 +41,9 @@ my-app/
 ├── package.json
 ├── tsconfig.json
 ├── src/
-│   ├── index.ts
 │   └── webparts/<name>/
 │       ├── <name>.manifest.json # component manifest (id, preconfiguredEntries, properties)
-│       ├── <name>WebPart.ts     # web part class (extends BaseClientSideWebPart from @microsoft/sp-webpart-base)
+│       ├── <name>WebPart.ts     # web part class (extends framework base class, e.g. BaseReactWebPart from @mbsks/rspfx-framework-react)
 │       ├── components/          # framework component(s)
 │       └── styles/              # *.module.scss | css
 ├── config/

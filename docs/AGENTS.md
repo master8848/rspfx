@@ -8,7 +8,7 @@ Reference documents are lookup scope, current behavior, exact signatures. Tutori
 
 ## Fact homes
 
-One home per fact; elsewhere link there. Rationale and design decisions → `.agents/notes/implemented/{class}/YYYY-MM-DD-slug.md`. Current behavior, flags, file paths, env vars → the owning `docs/` reference page (`docs/commands.md` for CLI flags, `docs/internal-api.md` for package APIs, `docs/architecture.md` for pipeline). Operator env vars (`RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN`, `RSPFX_ACCESS_TOKEN`, `RSPFX_APP_CATALOG_URL`) → `docs/commands.md` and `AGENTS.md:47`. Standing rules and writing constraints → this file.
+One home per fact; elsewhere link there. Rationale and design decisions → `.agents/notes/implemented/{class}/YYYY-MM-DD-slug.md`. Current behavior, flags, file paths, env vars → the owning `docs/` reference page (`docs/commands.md` for CLI flags, `docs/internal-api.md` for package APIs, `docs/architecture.md` for pipeline). Operator env vars (`RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN`, `RSPFX_ACCESS_TOKEN`, `RSPFX_APP_CATALOG_URL`) → `docs/commands.md#environment-variables`. Standing rules and writing constraints → this file.
 
 ## Writing rules
 

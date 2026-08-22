@@ -2,7 +2,7 @@
 
 Goal: `rspfx new --component webpart|applicationcustomizer|fieldcustomizer|listviewcommandset|library` → `rspfx build` (rspack/vite/rsbuild) → `rspfx package` → valid `.sppkg` with `WebPart_*.xml` / `Extension_*.xml` / `Library_*.xml`, installable via app catalog. Optimize last — get compilation of all component types correct first (current approach: copied Microsoft toolchain logic).
 
-Status: Extensions compile/discovery/local-preview done, `.sppkg` wiring landing; Library not supported (`docs/why-not-to-migrate.md:15`, `docs/roadblocks.md:49`). This plan makes both production-ready and parity-tested.
+Status: Extensions and Library compile/discovery/local-preview and `.sppkg` wiring done — both verified via tenant gate (see [docs/real-tenant-validation.md](../real-tenant-validation.md)).
 
 ## 0. Ground Truth Harvest (blocks everything)
 

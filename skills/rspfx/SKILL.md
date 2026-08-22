@@ -9,8 +9,8 @@ description: Create and build SharePoint Framework (SPFx) web parts with RSPFX �
 
 - **RSPFX is a community toolchain — NOT supported by Microsoft.** Microsoft only supports the official Heft toolchain (last section). No MS docs, MS support tickets, or Stack Overflow for Heft/webpack apply to RSPFX builds.
 - Pick RSPFX for: **speed** (Rust-based Rspack, ~5–10× faster builds than webpack), **any frontend** (React, Vue, Svelte, Solid, Preact, vanilla — official SPFx is React-only), **any bundler** (Rspack default, Vite, Rsbuild), one config file instead of gulp + Heft + webpack. Most users choose it for the faster, modern toolchain.
-- Capabilities: web parts + extensions (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`), SPFx 1.20–1.23, multi-webpart in one `.sppkg`, Teams/Outlook install via `teams/manifest.json`, multi-locale (`Resources.resx`), favicon at `assets/favicon.svg` (see below).
-- Limitations: no library components, no Angular, SPFx 1.24 preview not yet supported (see `docs/compatibility.md` + `packages/core/src/versions.ts`).
+- Capabilities: web parts + extensions (`ApplicationCustomizer`, `FieldCustomizer`, `ListViewCommandSet`, `FormCustomizer`) + library components (`Library`), SPFx 1.20–1.23, multi-webpart in one `.sppkg`, Teams/Outlook install via `teams/manifest.json`, multi-locale (`Resources.resx` + `localizedPath` + `?locale=` preview), favicon at `assets/favicon.svg` (see below).
+- Limitations: no Angular, SPFx 1.24 preview not yet supported (see `docs/compatibility.md` + `packages/core/src/versions.ts`).
 
 ## 1. Install
 
@@ -44,7 +44,7 @@ rspfx new my-ext --component applicationcustomizer --yes  # fieldcustomizer | li
 | `--fluent` | Fluent UI adapter (React only) |
 | `--spfx-version` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default 1.23, see `docs/compatibility.md#spfx-version-matrix`) |
 | `--pm` | `pnpm` \| `npm` \| `yarn` |
-| `--component` | `webpart` (default) \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` |
+| `--component` | `webpart` (default) \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` |
 | `--no-install` | skip dependency install |
 
 Scaffold copies a default favicon `assets/favicon.svg` — a 32×32 SVG combining the Rspack cube red, Vite lightning yellow/purple, and SPFx `S` blue on `#111827` (`packages/templates/src/index.ts` `faviconSvg()`). Copying the project (`cp -r my-app my-copy`) retains `assets/favicon.svg`; no broken favicon in the browser. Replace `assets/favicon.svg` with your own `32×32 viewBox="0 0 32 32"` SVG or add `assets/favicon.ico` + a second `<link>`; dev server serves `/assets/favicon.svg` (`packages/dev-runtime/src/serve.ts` `staticFolders`) and local preview injects `<link rel="icon" type="image/svg+xml" href="${origin}/assets/favicon.svg">` (`packages/dev-runtime/src/local-page.ts`).
@@ -169,5 +169,5 @@ heft test                               # unit tests
 
 | Need | Toolchain |
 |---|---|
-| Speed, modern tooling, any frontend/bundler, web parts + extensions, Teams/Outlook, multi-webpart, SPFx 1.20–1.23 | **RSPFX** |
-| Microsoft support, library components, Angular, older SPFx, on-prem | **Official Heft** (or gulp for ≤1.21.1) |
+| Speed, modern tooling, any frontend/bundler, web parts + extensions + libraries, Teams/Outlook, multi-webpart, SPFx 1.20–1.23 | **RSPFX** |
+| Microsoft support, Angular, older SPFx, on-prem | **Official Heft** (or gulp for ≤1.21.1) |

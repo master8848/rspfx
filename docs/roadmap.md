@@ -39,7 +39,6 @@ Real-tenant validation (install a generated `.sppkg` into a real Microsoft 365 a
 
 ## Backlog (claimed but not yet real)
 
-- **Extensions** — compile/discovery of `src/extensions/` plus the local dev-preview runtime (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet / FormCustomizer mount with real contexts, and `?locale=` multi-locale switching) and sppkg wiring all verified via tenant gate.
 - **React 19 / non-SPFx-pinned React** — examples and templates currently ship
   React 18 (SPFx 1.22/1.23 line). The claim "any React version" needs validation
   with React 19 + Fluent before it's promoted from a demo statement to a

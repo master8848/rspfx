@@ -15,7 +15,7 @@ npm i -g @mbsks/rspfx-cli
 ```sh
 rspfx new my-app
 cd my-app
-rspfx dev        # dev server + SharePoint workbench (auto-opens on :4321)
+rspfx dev        # dev server + SharePoint workbench (browser opens only with --browser)
 rspfx package    # production build → sharepoint/solution/my-app.sppkg
 rspfx deploy     # upload to the app catalog (REST creds required)
 ```
@@ -25,14 +25,14 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 | Command | What it does |
 |---|---|
 | `rspfx new <name>` | Scaffold a new SPFx project (interactive prompts; flags for non-interactive) |
-| `rspfx dev` | Start the dev environment: Rspack dev server + `:4321` HTTPS manifest server, auto-open workbench |
+| `rspfx dev` | Start the dev environment: Rspack dev server + `:4321` manifest server (HTTPS in sharepoint mode, HTTP in local preview); browser opens only with `--browser` |
 | `rspfx dev --refresh` | Dev mode with state-preserving fast refresh where the framework supports it |
 | `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
 | `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |
 | `rspfx deploy` | Package + upload to the app catalog (creds via `config.deploy` or env vars; prints manual steps if none) |
 | `rspfx doctor` | Environment/config/port/dependency checks; exit code 1 on failures |
 | `rspfx analyze` | Build + bundle size report to `.rspfx/analyze.html` |
-| `rspfx clean` | Remove `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache` |
+| `rspfx clean` | Remove `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache`, `sharepoint/solution` |
 
 ## Supported targets
 

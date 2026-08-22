@@ -248,8 +248,10 @@ Phase 9  Benchmarks + full test suite + docs
 | M3 | Dev mode | Workbench-first live editing, auto browser open, <2s cold start, <300ms rebuild |
 | M4 | Fast refresh | State-preserving refresh <150ms |
 | M5 | Framework breadth + Fluent | Preact/Vue/Svelte web part classes; Fluent web part scaffold |
-| M6 | Angular (deferred) | Angular web part class + preset on separate compiler track |
-| M7 | Benchmarks, full test suite, docs | Targets met; docs site; migration guide; examples for all frameworks |
+| M6 | Angular | Removed — not supported; no roadmap slot (see docs/roadmap.md) |
+| M7 | Benchmarks, full test suite, docs | In progress — `bench/bench.mjs` + `docs/performance.md`; harness ships |
+| M8 | Bundler parity (Vite/Rsbuild deep parity + parity suite) | Done — `rspfxVite`/`rspfxRsbuild` parity verified by `packages/plugin/tests/parity.test.ts` |
+| M9 | Fast refresh for all frameworks (vanilla excluded) | Done — Solid wired via `solid-refresh` |
 
 Tests everywhere: unit (vitest), integration (fixture → sppkg → manifest validation), packaging (zip layout vs captured reference), compatibility (real-tenant CI on SPFx 1.20–1.23), framework tests, benchmarks (scripted).
 

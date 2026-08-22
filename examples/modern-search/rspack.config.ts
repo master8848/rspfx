@@ -8,7 +8,7 @@ export default {
       name: 'modern-search-web-parts',
       version: '4.23.3',
       framework: 'react',
-      spfxVersion: '1.22',
+      spfxVersion: '1.23',
       language: 'typescript',
       dev: {
         tenantUrl: 'https://contoso.sharepoint.com',
