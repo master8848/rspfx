@@ -1,231 +1,139 @@
 ---
 name: rspfx
-description: Build SharePoint Framework (SPFx) web parts with RSPFX (community, Rspack-powered) or the official Microsoft Heft toolchain. Use for scaffolding (rspfx new), dev server, packaging .sppkg, and choosing toolchains.
+description: Build SharePoint Framework (SPFx) web parts with RSPFX (community, Vite-powered) or the official Microsoft Heft toolchain. Use for scaffolding (rspfx new), dev server, packaging .sppkg, and choosing toolchains.
 ---
 
 # RSPFX — Fast SPFx Toolchain
 
-RSPFX builds the same `sharepoint/solution/*.sppkg` as the official toolchain, using `Rspack` (default), `Vite`, or `Rsbuild` via `@mbsks/rspfx-plugin`.
+RSPFX builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp, using `Vite` (default) — covers almost everything. `Rsbuild` only if user insists. `Rspack` only in very niche cases (rarely needed).
 
-Supports SPFx `1.20`–`1.23` (default 1.23, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multiple web parts per package, and Teams/Outlook install.
+Supports SPFx `1.20`–`1.23` (default `1.23`, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
 
-> Not supported by Microsoft. Use Heft when you need official support. See bottom of this file.
+> Not Microsoft-supported. Need support/Angular/`<1.20`/on-prem → use Heft (bottom).
+
+## Source & inspection (AI-first)
+
+This repo is AI-maintained. Docs/skill can lag — **code is truth**.
+
+- **Repo:** `https://github.com/master8848/rspfx` (`skills/rspfx/SKILL.md`, `docs/*.md`, `ARCHITECTURE.md`).
+- **When to read code:** limitation, config not working, bundler behavior — check `packages/plugin/src/vite.ts`, `packages/plugin/src/rsbuild.ts`, `packages/compiler-rspack/*`, `apps/cli/src/*` directly instead of guessing from docs.
+- **Version:** `rspfx --version` (or `npx @mbsks/rspfx-cli --version`), `package.json` `version`, `CHANGELOG.md` `## [X.Y.Z]`, git tag `vX.Y.Z`.
+- **Clone to inspect (temp):** `git clone https://github.com/master8848/rspfx.git $(mktemp -d)` — AI picks temp per OS (`mktemp -d` / `$TMPDIR` / `$env:TEMP`). No need to keep; inspect and discard.
+
+Skill + `docs/` is enough for all workflows; drill into `docs/` or code only when needed.
 
 ## When to use which
 
 | Need | Use |
 |---|---|
-| Speed, any framework/bundler, fast dev, `1.20`–`1.23` | **RSPFX** |
-| Microsoft support, Angular, `1.19` or older, on-prem | **Official Heft** |
+| Speed, any framework, `1.20`–`1.23` | **RSPFX** |
+| Microsoft support, Angular, `<1.19`, on-prem | **Heft** |
 
 ## Framework support
 
-| Framework | RSPFX | Official Heft |
+| Framework | RSPFX | Heft |
 |---|---|---|
-| React, vanilla JS | ✓ | ✓ |
+| React, vanilla | ✓ | ✓ |
 | Vue, Svelte, Solid, Preact | ✓ | — |
-
-Need Vue/Svelte/Solid/Preact → use RSPFX; need Angular or Microsoft support → stay on Heft.
 
 ## Install
 
 ```sh
-npx @mbsks/rspfx-cli --help        # no install needed
-npm i -g @mbsks/rspfx-cli          # or global
-rspfx --version
-rspfx --help
+npx @mbsks/rspfx-cli --help
+npm i -g @mbsks/rspfx-cli   # optional
+rspfx --version; rspfx --help
 ```
-
-Use `npx` if you already use `pnpm`/`npm` locally; global is optional.
 
 ## Existing project — quickest switch
 
 ```sh
-npx @mbsks/rspfx-cli migrate --dry-run   # preview changes
-npx @mbsks/rspfx-cli migrate              # apply: writes rspack.config.ts, updates package.json + config/config.json
-pnpm install
-pnpm dev                                  # local preview at http://localhost:4321
-pnpm build                                # production to dist/ + release/
+npx @mbsks/rspfx-cli migrate --dry-run   # preview
+npx @mbsks/rspfx-cli migrate              # writes vite.config.ts (default)
+pnpm install; pnpm dev; pnpm build
 ```
 
-`rspfx migrate` is idempotent and never touches `src/` beyond the two documented rewrites.
+Idempotent, touches only `package.json`, `config/config.json`, `tsconfig.json` if rig-based, and removes `config/rig.json` etc. Rewrites `@import 'pkg:…'` SCSS. Flags: `--dry-run`, `--bundler vite|rsbuild|rspack` (default `vite`; `rsbuild` if persist, `rspack` very niche), `--revert` (or `git restore .`).
 
-What it does: drops Heft/gulp/webpack devDependencies, adds `@mbsks/rspfx-plugin` and `rspfx` scripts to `package.json`, rewrites `config/config.json` entrypoints from `./lib/` to `./src/`, renames bundle keys to match `src/webparts/<name>` folders, rewrites `@import 'pkg:…'` SCSS imports, removes Heft-only files (`config/rig.json`, `config/typescript.json`, `config/sass.json`, `config/deploy-azure-storage.json`), writes `rspack.config.ts` with `RspfxPlugin` and a plain `tsconfig.json` if the old one extends a rig.
+Manifests stay: `config/package-solution.json`, `src/*/*.manifest.json`. `rspfx dev` synthesizes `config/` so `gulpfile.js` can stay. Native `npx vite build` / `npx rsbuild build` / `npx rspack build` all work after migrate.
 
-Flags:
+Docs: `docs/migrating-from-gulp-heft.md`, `docs/why-not-to-migrate.md`.
 
-| Flag | Effect |
-|---|---|
-| `--dry-run` | Print planned edits, change nothing |
-| `--bundler rspack\|vite\|rsbuild` | Scaffold `rspack.config.ts`, `vite.config.ts`, or `rsbuild.config.ts` |
-| `--revert` | Undo the last `migrate` (or `git restore .` if committed) |
-
-Same manifests: `config/package-solution.json` and `src/*/*.manifest.json` (`src/webparts/<name>/*.manifest.json`, `src/extensions/*/*.manifest.json`, `src/libraries/*/*.manifest.json`) stay untouched.
-
-Switching is just the build command: `pnpm build` / `rspfx build` runs RSPFX, `heft build` / `gulp bundle --ship` still runs Heft on the same checkout until you commit the migration.
-
-Revert: `rspfx migrate --revert` or `git restore . && git clean -fd` if you committed before migrating.
-
-No extra `@microsoft/sp-*` installs: keep the `sp-*` versions you already have (pinned to your `spfxVersion`); RSPFX externalizes them from `node_modules` and emits `"type": "component"` entries so SharePoint resolves its own copies.
-
-After migrate, native commands work too: `npx rspack build --mode production`, `npx vite build`, `npx rsbuild build` all produce the same output as `rspfx build` / `pnpm build`.
-
-Docs: `docs/migrating-from-gulp-heft.md`, `docs/migration-case-study.md`, `docs/why-not-to-migrate.md`.
-
-## Keep both toolchains (interchangeable)
-
-Same manifests: `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` stay untouched, so both toolchains produce the same `sharepoint/solution/*.sppkg`.
-`rspfx dev` synthesizes `config/` at runtime, so Heft files (`gulpfile.js`, `config/rig.json`, `config/typescript.json`) can stay on disk.
-Keep dual scripts in `package.json` and choose per command: `pnpm build:heft` → `heft build`, `pnpm build:rspfx` → `rspfx build` (or `pnpm build` vs `heft build`).
-`rspfx migrate` adds `rspack.config.ts` alongside `gulpfile.js`; revert with `rspfx migrate --revert` or `git restore .`.
-Tip: `git commit` before `migrate`, keep both configs on separate branches if teams mix toolchains.
-
-Example `package.json` scripts:
-
-```json
-{ "scripts": { "build:heft": "heft build && heft package-solution --production", "build:rspfx": "rspfx package", "dev:heft": "heft start --clean", "dev:rspfx": "rspfx dev" } }
-```
-
-Files on disk when keeping both: `gulpfile.js` + `rspack.config.ts`, `config/config.json` + `config/rig.json`.
+Keep both: `gulpfile.js` + `vite.config.ts` on disk, dual scripts `build:heft` / `build:rspfx`. Commit before migrate.
 
 ## New project
 
 ```sh
-rspfx new my-app                  # interactive
-rspfx new my-app --yes            # defaults
+rspfx new my-app --yes
 rspfx new my-app --framework react --language ts --spfx-version 1.23 --pm pnpm --yes
 ```
 
-Common flags: `--framework vanilla|react|vue|svelte|solid|preact`, `--language ts|js`, `--spfx-version 1.20|1.21|1.22|1.23`, `--pm pnpm|npm|yarn`, `--component webpart|applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer|library`, `--no-install`, `--yes`.
-
-Project layout is the standard SPFx layout: `src/webparts/<name>/`, `config/package-solution.json`, `config/serve.json`, `config/write-manifests.json`, `sharepoint/assets/`.
+Flags: `--framework vanilla|react|vue|svelte|solid|preact`, `--language ts|js`, `--spfx-version 1.20-1.23`, `--pm pnpm|npm|yarn`, `--component webpart|applicationcustomizer|...|library`, `--no-install`. Layout: `src/webparts/<name>/`, `config/package-solution.json`.
 
 ## Develop and build
 
-`pnpm dev` and `rspfx dev` are the same after migration; `pnpm build` and `rspfx build` are the same.
-
 ```sh
-pnpm dev                                          # local preview (HTTP, no tenant)
 pnpm dev -- --tenant https://contoso.sharepoint.com  # SharePoint workbench (HTTPS)
-rspfx dev --refresh                               # state-preserving fast refresh
-rspfx dev --mode local                            # force local preview
-rspfx build                                       # production bundles
-rspfx package                                     # build + sharepoint/solution/*.sppkg
-rspfx doctor                                      # checks setup — run first if something breaks
-rspfx analyze                                     # bundle size to .rspfx/analyze.html
-rspfx clean                                       # remove dist/ release/ temp/ .rspfx/
+pnpm dev                                              # local http://localhost:4321
+rspfx dev --refresh; rspfx dev --mode local
+rspfx build; rspfx package; rspfx doctor; rspfx analyze; rspfx clean
 ```
 
-Local preview (default, no tenant): `http://localhost:4321` at `/`, no cert needed, add `?locale=fr-fr` to preview another language.
+Local: `http://localhost:4321` no cert. SharePoint: `https://localhost:4321` cert in `~/.rspfx/certs` (tenant via `dev.tenantUrl` in `vite.config.ts` or `--tenant` / `SPFX_SERVE_TENANT_DOMAIN`).
 
-SharePoint mode (tenant set via `dev.tenantUrl` in `rspack.config.ts`, `SPFX_SERVE_TENANT_DOMAIN`, or `--tenant`): `https://localhost:4321` with a self-signed cert in `~/.rspfx/certs` that the CLI prints how to trust.
+Docs: `docs/getting-started.md`, `docs/commands.md`, `docs/building-packages.md`.
 
-Manual install: upload `sharepoint/solution/*.sppkg` to the app catalog → Deploy → Add to a site.
-
-Docs: `docs/getting-started.md`, `docs/commands.md`, `docs/building-packages.md`, `docs/deployment.md`.
-
-## You do not need to install `@microsoft/sp-*` manually
-
-Keep the `@microsoft/sp-*` versions your project already pins for the chosen `spfxVersion` in `packages/core/src/versions.ts:13`.
-
-`@mbsks/rspfx-plugin` (`RspfxPlugin` / `rspfxVite` / `rspfxRsbuild`) externalizes `sp-*` automatically; the loader config and `manifests.js` reference SharePoint's built-in copies, so nothing extra is installed for externals.
+No `@microsoft/sp-*` install needed — `spfxVersion` pins versions, plugin externalizes `sp-*` (`packages/core/src/versions.ts:13`).
 
 ## Config — bundler owns it
 
-The CLI finds the plugin by its marker in your bundler config; no extra config file needed.
-
-Rspack (`rspack.config.ts`, default):
+Default Vite. Only deviate with reason.
 
 ```ts
-import { RspfxPlugin } from '@mbsks/rspfx-plugin';
-export default { plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react', spfxVersion: '1.23', dev: { tenantUrl: 'https://contoso.sharepoint.com' } })] };
+// vite.config.ts (default)
+import { defineConfig } from 'vite';
+import { rspfxVite } from '@mbsks/rspfx-plugin';
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23', dev: { tenantUrl: 'https://contoso.sharepoint.com' } })] });
 ```
 
-Vite (`vite.config.ts`): `plugins: [rspfxVite({ ... })]`.
+- `rsbuild.config.ts`: `plugins: [rspfxRsbuild({ ... })]` — if user insists on Rsbuild.
+- `rspack.config.ts`: `plugins: [new RspfxPlugin({ ... })]` — very niche only.
 
-Rsbuild (`rsbuild.config.ts`): `plugins: [rspfxRsbuild({ ... })]`.
+Options: `name`, `spfxVersion`, `framework`, `language`, `dev.port/tenantUrl/openBrowser/fastRefresh`, `build.outDir/releaseDir`, `paths.*`, `deploy.appCatalogSiteUrl`.
 
-Options: `name`, `spfxVersion`, `framework`, `language`, `dev.port`/`tenantUrl`/`openBrowser`/`fastRefresh`, `build.outDir`/`releaseDir`, `paths.srcDir`/`webpartsDir`/`configDir`, `deploy.appCatalogSiteUrl` (`apps/cli/src/commands/deploy.ts:16`, `docs/commands.md#environment-variables`).
+## Styling
 
-## Styling — CSS Modules, global CSS, Tailwind
+Vite is default for all FE work incl. styling. All CSS inlined (`build.cssCodeSplit:false` / `output.injectStyles:true`); never `type:"css"` / `CssExtractRspackPlugin`. `.sppkg` has no external CSS.
 
-Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts:340`) is the recommended bundler for styling; Rsbuild and Rspack also work (see `docs/styling.md`). All CSS is inlined into the JS bundle (`style-loader` / `output.injectStyles: true` / `build.cssCodeSplit: false`); never use `type: "css"` or `CssExtractRspackPlugin` — the `.sppkg` has no external CSS.
+- `*.module.css/scss` → CSS Modules `auto: /\.module\.\w+$/i` `asIs` (Vite `scopeBehaviour:'local'`); plain `*.css/scss` → global. Need SCSS: `pnpm add -D sass`.
+- Tailwind v4: `pnpm add -D tailwindcss @tailwindcss/postcss postcss`, `postcss.config.mjs` `{plugins:{"@tailwindcss/postcss":{}}}`, `src/app.css` `@import "tailwindcss"`, import in web part. Detected via `postcss.config.*` incl. `.json`.
 
-SCSS/CSS Modules (auto): `*.module.css` and `*.module.scss` hash class names via `css-loader` `modules: { auto: true }` (`packages/compiler-rspack/src/config.ts:183`). Plain `*.css`/`*.scss` stays global. Install `sass` (`pnpm add -D sass`) for SCSS.
+Refs: `packages/plugin/src/vite.ts:330`, `packages/compiler-rspack/src/config.ts:212`, `packages/compiler-rspack/src/helpers/css.ts:38`, `docs/styling.md`.
 
-Vite — CSS Modules (recommended):
+## Query lists — prefer PnPjs
 
-```ts
-// src/webparts/hello/components/Hello.module.scss
-.hello { color: #0078d4; }
+```sh
+pnpm add @pnp/sp @pnp/graph
 ```
-```ts
-// src/webparts/hello/components/Hello.tsx
-import styles from './Hello.module.scss';
-export const Hello = () => <div className={styles.hello}>Hello</div>;
-```
-
-Vite — global CSS (including Tailwind entry):
-
-```ts
-// src/app.css
-@import "tailwindcss";
-```
-```ts
-import './app.css';
-```
-
-Vite — Tailwind v4 via `postcss.config.mjs` (no custom patch):
-
-```js
-// postcss.config.mjs
-export default { plugins: { '@tailwindcss/postcss': {} } };
-```
-
-Install `pnpm add -D tailwindcss @tailwindcss/postcss postcss`, add `postcss.config.mjs` above, add `src/app.css` with `@import "tailwindcss"`, and import `src/app.css` from the web part. Rsbuild uses `tools.postcss` `postcssOptions.plugins` + `output.injectStyles: true` (`packages/plugin/src/rsbuild.ts:319`); Rspack uses `module.rules` with `style-loader` + `css-loader` `modules: { auto: true }` + `sass-loader` `api: "modern"` (`packages/compiler-rspack/src/config.ts:183`).
-
-CSS inlining is the default (`packages/compiler-rspack/src/config.ts:182` `styleLoaderPath`, `packages/plugin/src/vite.ts:340` `cssCodeSplit: false`). Disable only with `build.css: false` in `rspfxVite`/`rspfxRsbuild`/`RspfxPlugin` options, then provide your own rules and keep inlining. Helpers `rspfxCssInlineRule()`/`rspfxSassRule()` from `@mbsks/rspfx-plugin` return the shared inline rules; PostCSS is file-based (`postcss.config.js|.cjs|.mjs` detection) — never add `TailwindPostCSSPatch`. Full reference: `docs/styling.md`.
-
-## Query SharePoint lists — prefer PnPjs
-
-Use `@pnp/sp` (PnPjs) over raw `fetch`/`SPHttpClient` for `select`/`filter`/`expand`/`batch`/`paging`/`caching`; it handles digest, OData, and batching.
-Install: `pnpm add @pnp/sp @pnp/graph @pnp/nodejs` (`@pnp/nodejs` only needed for Node scripts).
-Init in `src/webparts/<name>/<Name>WebPart.ts:onInit()`: `import { spfi } from "@pnp/sp"; import { SPFx } from "@pnp/sp"; const sp = spfi().using(SPFx(this.context));`
-Query: `await sp.web.lists.getByTitle("MyList").items.select("Title").top(10)()` — add `.filter("Title eq 'A'").expand("Author")`, `.paged()`, `.using(Caching())`, or `sp.createBatch()` for batches.
-Fallback: `this.context.spHttpClient.get(url, SPHttpClient.configurations.v1)` only for edge cases PnPjs doesn't cover.
-Docs: https://pnp.github.io/pnpjs/
+`onInit`: `spfi().using(SPFx(this.context))` → `sp.web.lists.getByTitle("MyList").items.select("Title").top(10)()` (add `.filter`/`.expand`/`.paged()`/`Caching()`/batch). Fallback `SPHttpClient` only for edge cases. https://pnp.github.io/pnpjs/
 
 ## Teams, multi-webpart, assets
 
-One `.sppkg` can sync to Teams/Outlook: `rspfx package` includes `teams/manifest.json`, then Deploy → Sync to Teams in the catalog.
-
-Multiple web parts: copy `src/webparts/<name>/` to a new folder with a new `id` in its `*.manifest.json` (`docs/multi-webpart.md`).
-
-Assets: `assets/` for local preview (e.g. `assets/favicon.svg`), `src/webparts/<name>/assets/` for web part images.
-
-Env vars: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN`, `RSPFX_ACCESS_TOKEN`, `RSPFX_APP_CATALOG_URL` (`docs/commands.md#environment-variables`).
+One `.sppkg` → Teams/Outlook via `teams/manifest.json` sync. Multi: copy `src/webparts/<name>/` with new `id` in `*.manifest.json` (`docs/multi-webpart.md`). Assets: `assets/` preview, `src/webparts/<name>/assets/` web part. Env: `RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN`, `RSPFX_ACCESS_TOKEN`, `RSPFX_APP_CATALOG_URL`.
 
 ## Tips
 
-- Commit or back up before `rspfx migrate`; run with `--dry-run` first.
-- Run `rspfx doctor` after migrate and before `pnpm dev` — it checks Node `20+`, config load, port `4321`, and `sp-*` version alignment.
-- Use `Vite` (`--bundler vite`) for the fastest dev loop; use `Rspack` for the closest prod parity.
-- If `pnpm dev` 404s a bundle, the `config/config.json` bundle key does not match the `src/webparts/<name>` folder — rename the key or set `paths.webpartsDir`.
-- Set `dev.tenantUrl` once in `rspack.config.ts` instead of passing `--tenant` each time.
+- `git commit` + `--dry-run` before `migrate`; `rspfx doctor` after.
+- Bundler: default Vite; `Rsbuild` only if persist; `Rspack` very niche — almost never needed.
+- `pnpm dev` 404 → `config/config.json` bundle key ≠ `src/webparts/<name>` folder.
+- Set `dev.tenantUrl` in `vite.config.ts` once.
 
 ---
 
-## Official Microsoft toolchain (Heft)
-
-Use when you need Microsoft support, Angular, or SPFx `< 1.20`.
+## Official Heft (when required)
 
 ```sh
-npm install @rushstack/heft yo @microsoft/generator-sharepoint --global
-yo @microsoft/sharepoint
-heft trust-dev-cert
-heft start --clean
-heft build
-heft package-solution --production
+npm i -g @rushstack/heft yo @microsoft/generator-sharepoint
+yo @microsoft/sharepoint; heft start --clean; heft build; heft package-solution --production
 ```
 
-For `1.21.1` and older the toolchain is `gulp` (`gulp serve`, `gulp bundle --ship`, `gulp package-solution --ship`). Microsoft docs: https://learn.microsoft.com/sharepoint/dev/spfx/set-up-your-development-environment
+`gulp` for `≤1.21.1`: `gulp serve` / `gulp bundle --ship`. https://learn.microsoft.com/sharepoint/dev/spfx/set-up-your-development-environment
