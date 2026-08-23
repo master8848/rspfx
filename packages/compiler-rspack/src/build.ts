@@ -22,8 +22,8 @@ function runCompiler(compiler: Compiler): Promise<Stats> {
   });
 }
 
-export async function build(ctx: CompileContext): Promise<BuildResult> {
-  const config = (await createRspackConfig(ctx)) as Configuration;
+export async function build(ctx: CompileContext, userModuleRules?: unknown[]): Promise<BuildResult> {
+  const config = (await createRspackConfig(ctx, userModuleRules)) as Configuration;
   const compiler = rspack(config);
   const stats = await runCompiler(compiler);
 

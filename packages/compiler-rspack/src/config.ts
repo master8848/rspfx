@@ -40,7 +40,8 @@ const POSTCSS_CONFIG_FILES = [
   'postcss.config.mjs',
   'postcss.config.ts',
   'postcss.config.cts',
-  'postcss.config.mts'
+  'postcss.config.mts',
+  'postcss.config.json'
 ];
 
 function tryResolve(name: string, projectRoot: string): string | undefined {
@@ -88,7 +89,7 @@ function computeUniqueName(ctx: CompileContext): string {
   return createHash('md5').update(joined).digest('hex');
 }
 
-export async function createRspackConfig(ctx: CompileContext): Promise<unknown> {
+export async function createRspackConfig(ctx: CompileContext, userModuleRules?: unknown[]): Promise<unknown> {
   if (ctx.entries.length === 0) {
     throw new RspfxError('COMPILE_NO_ENTRIES', 'compiler-rspack: at least one bundle entry is required');
   }
@@ -130,7 +131,8 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     DEPRECATED_UNIT_TEST: JSON.stringify(false),
     'process.env.NODE_ENV': JSON.stringify(mode)
   };
-  const rules: RuleSetRule[] = [];
+  const userRules = (userModuleRules ?? (ctx as unknown as { userModuleRules?: unknown[] }).userModuleRules ?? []) as RuleSetRule[];
+  const rules: RuleSetRule[] = [...userRules];
   const plugins: Configuration['plugins'] = [];
   // BUILD_TIME_ALIASES are tiny stubs (react-refresh, preact-refresh, vue-loader);
   // injecting all three is cheap (3 map entries) and avoids per-framework branching
@@ -208,11 +210,15 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
   const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;
 
   if (cssEnabled && styleLoaderPath && cssLoaderPath) {
+    // css-loader: modules.auto => implicit mode: 'local' (see vite.ts:330 explicit scopeBehaviour: 'local'); :global{} leaks
     const cssUse: unknown[] = [
       styleLoaderPath,
       {
         loader: cssLoaderPath,
-        options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' } }
+        options: {
+          modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' },
+          importLoaders: hasPostcss && postcssLoaderPath ? 1 : 0
+        }
       }
     ];
     if (postcssAvailable && postcssLoaderPath) {
@@ -227,6 +233,7 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
 
   if (scssEnabled && hasSass && styleLoaderPath && cssLoaderPath && sassLoaderPath) {
     const importLoaders = (postcssAvailable ? 1 : 0) + 1;
+    // same implicit mode: 'local' as above; exportLocalsConvention: 'asIs' preserves original class names
     const scssUse: unknown[] = [
       styleLoaderPath,
       {

@@ -40,6 +40,7 @@ export interface CompileContext {
   serveMode?: boolean;
   additionalPlugins?: unknown[];
   swcContributions?: Record<string, unknown>[];
+  userModuleRules?: unknown[];
 }
 
 export interface BuildResult {

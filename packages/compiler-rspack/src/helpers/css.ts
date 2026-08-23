@@ -11,7 +11,8 @@ const POSTCSS_CONFIG_FILES = [
   'postcss.config.mjs',
   'postcss.config.ts',
   'postcss.config.cts',
-  'postcss.config.mts'
+  'postcss.config.mts',
+  'postcss.config.json'
 ];
 
 function tryResolve(name: string, projectRoot: string): string | undefined {
@@ -49,9 +50,16 @@ export function rspfxCssInlineRule(projectRoot?: string): RuleSetRule {
   const postcssPath = tryResolve('postcss', root);
   const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;
 
+  // css-loader implicit mode: 'local' via auto (vite.ts:330 explicit scopeBehaviour: 'local'); :global{} leaks
   const use: unknown[] = [
     sPath,
-    { loader: cPath, options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' } } }
+    {
+      loader: cPath,
+      options: {
+        modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' },
+        importLoaders: postcssAvailable && postcssLoaderPath ? 1 : 0
+      }
+    }
   ];
   if (postcssAvailable && postcssLoaderPath) {
     use.push({ loader: postcssLoaderPath });
@@ -77,6 +85,7 @@ export function rspfxSassRule(projectRoot?: string): RuleSetRule {
   const sassLoaderResolved = sassLoaderPath ?? 'sass-loader';
 
   const importLoaders = (postcssAvailable ? 1 : 0) + 1;
+  // same implicit local mode; exportLocalsConvention: 'asIs' (see config.ts:218 and vite.ts:330)
   const use: unknown[] = [
     sPath,
     { loader: cPath, options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }, importLoaders } }
