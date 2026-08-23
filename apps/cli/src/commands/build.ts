@@ -1,24 +1,24 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { build } from '@mbsks/rspfx-compiler-rspack';
-import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
-import type { ComponentManifest } from '@mbsks/rspfx-manifest-generator';
-import { createLogger } from '@mbsks/rspfx-diagnostics';
+import fs from "node:fs";
+import path from "node:path";
+import { build } from "@mbsks/rspfx-compiler-rspack";
+import type { RspfxConfig } from "@mbsks/rspfx-core";
 import {
-  readProject,
-  loadFrameworkPreset,
-  resolveContributionLoaders,
-  createCompileContext,
+  type ReadProjectResult,
   assembleRelease,
-  type ReadProjectResult
-} from '@mbsks/rspfx-dev-runtime';
-import type { RspfxConfig } from '@mbsks/rspfx-core';
-import { getPlugins } from '@mbsks/rspfx-plugin-api';
-import { loadConfig } from '../config.js';
-import { runViteBuild } from '../vite.js';
-import { runRsbuildBuild } from '../rsbuild.js';
+  createCompileContext,
+  loadFrameworkPreset,
+  readProject,
+  resolveContributionLoaders,
+} from "@mbsks/rspfx-dev-runtime";
+import { createLogger } from "@mbsks/rspfx-diagnostics";
+import { findSpDependencies } from "@mbsks/rspfx-manifest-generator";
+import type { ComponentManifest } from "@mbsks/rspfx-manifest-generator";
+import { getPlugins } from "@mbsks/rspfx-plugin-api";
+import { loadConfigOrRefuseOfficial } from "../hybrid.js";
+import { runRsbuildBuild } from "../rsbuild.js";
+import { runViteBuild } from "../vite.js";
 
-const logger = createLogger('rspfx');
+const logger = createLogger("rspfx");
 
 export interface BuildOptions {
   minify?: boolean;
@@ -35,8 +35,11 @@ export interface BuildOutput {
   releaseAssetsDir: string;
 }
 
-export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<BuildOutput> {
-  const loaded = await loadConfig(cwd);
+export async function runBuild(
+  cwd: string,
+  opts: BuildOptions = {},
+): Promise<BuildOutput> {
+  const loaded = await loadConfigOrRefuseOfficial(cwd);
   const config = loaded.config;
   const project = readProject(cwd, config.paths, config.version, config);
 
@@ -45,22 +48,27 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
   let stats: unknown;
   let outputFiles: string[];
 
-  if (loaded.bundler === 'vite' || loaded.bundler === 'rsbuild') {
-    const distDir = path.join(cwd, config.build.outDir ?? 'dist');
+  if (loaded.bundler === "vite" || loaded.bundler === "rsbuild") {
+    const distDir = path.join(cwd, config.build.outDir ?? "dist");
     fs.rmSync(distDir, { recursive: true, force: true });
     fs.mkdirSync(distDir, { recursive: true });
-    if (loaded.bundler === 'vite') {
+    if (loaded.bundler === "vite") {
       await runViteBuild(cwd);
     } else {
       await runRsbuildBuild(cwd);
     }
-    outputFiles = fs.readdirSync(distDir).filter((file) => file.endsWith('.js'));
+    outputFiles = fs
+      .readdirSync(distDir)
+      .filter((file) => file.endsWith(".js"));
     stats = undefined;
   } else {
     const frameworkPreset = await loadFrameworkPreset(config.framework, cwd);
     const contributions = resolveContributionLoaders(
-      frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<string, unknown>,
-      frameworkPreset.moduleUrl
+      frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<
+        string,
+        unknown
+      >,
+      frameworkPreset.moduleUrl,
     );
 
     const ctx = createCompileContext({
@@ -76,8 +84,8 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
       build: {
         ...config.build,
         ...(opts.minify !== undefined ? { minify: opts.minify } : {}),
-        ...(opts.sourcemap !== undefined ? { sourcemap: opts.sourcemap } : {})
-      }
+        ...(opts.sourcemap !== undefined ? { sourcemap: opts.sourcemap } : {}),
+      },
     });
     ctx.swcContributions = [contributions as Record<string, unknown>];
 
@@ -100,28 +108,32 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
       project,
       externals,
       outputFiles,
-      production: true
+      production: true,
     });
   }
 
-  const distDir = path.join(cwd, config.build.outDir ?? 'dist');
-  const releaseDir = path.join(cwd, config.build.releaseDir ?? 'release');
-  const releaseManifestsDir = path.join(releaseDir, 'manifests');
-  const releaseAssetsDir = path.join(releaseDir, 'assets');
+  const distDir = path.join(cwd, config.build.outDir ?? "dist");
+  const releaseDir = path.join(cwd, config.build.releaseDir ?? "release");
+  const releaseManifestsDir = path.join(releaseDir, "manifests");
+  const releaseAssetsDir = path.join(releaseDir, "assets");
 
   const manifests: ComponentManifest[] = [];
   if (fs.existsSync(releaseManifestsDir)) {
     for (const file of fs.readdirSync(releaseManifestsDir)) {
-      if (!file.endsWith('.manifest.json')) {
+      if (!file.endsWith(".manifest.json")) {
         continue;
       }
       manifests.push(
-        JSON.parse(fs.readFileSync(path.join(releaseManifestsDir, file), 'utf8')) as ComponentManifest
+        JSON.parse(
+          fs.readFileSync(path.join(releaseManifestsDir, file), "utf8"),
+        ) as ComponentManifest,
       );
     }
   }
 
-  logger.info(`Release output: ${releaseDir}/manifests (${manifests.length} components), ${releaseDir}/assets`);
+  logger.info(
+    `Release output: ${releaseDir}/manifests (${manifests.length} components), ${releaseDir}/assets`,
+  );
   return {
     stats,
     outputFiles,
@@ -129,10 +141,14 @@ export async function runBuild(cwd: string, opts: BuildOptions = {}): Promise<Bu
     distDir,
     releaseDir,
     releaseManifestsDir,
-    releaseAssetsDir
+    releaseAssetsDir,
   };
 }
 
 function collectExternals(cwd: string, project: ReadProjectResult): string[] {
-  return [...findSpDependencies(cwd).keys(), ...project.externals, ...project.localizedResources.map((r) => r.name)];
+  return [
+    ...findSpDependencies(cwd).keys(),
+    ...project.externals,
+    ...project.localizedResources.map((r) => r.name),
+  ];
 }

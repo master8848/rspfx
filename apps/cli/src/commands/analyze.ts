@@ -1,11 +1,15 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { gzipSync } from 'node:zlib';
-import { createLogger, formatBytes, RspfxError } from '@mbsks/rspfx-diagnostics';
-import { loadConfig } from '../config.js';
-import { runBuild } from './build.js';
+import fs from "node:fs";
+import path from "node:path";
+import { gzipSync } from "node:zlib";
+import {
+  RspfxError,
+  createLogger,
+  formatBytes,
+} from "@mbsks/rspfx-diagnostics";
+import { loadConfigOrRefuseOfficial } from "../hybrid.js";
+import { runBuild } from "./build.js";
 
-const logger = createLogger('rspfx');
+const logger = createLogger("rspfx");
 
 export interface AnalyzeOptions {
   build?: boolean;
@@ -18,28 +22,47 @@ interface BundleRow {
   modules: number;
 }
 
-export async function runAnalyze(cwd: string, opts: AnalyzeOptions = {}): Promise<{ reportPath: string; rows: BundleRow[] }> {
-  const { config } = await loadConfig(cwd);
-  const distDir = path.join(cwd, config.build.outDir ?? 'dist');
+export async function runAnalyze(
+  cwd: string,
+  opts: AnalyzeOptions = {},
+): Promise<{ reportPath: string; rows: BundleRow[] }> {
+  const { config } = await loadConfigOrRefuseOfficial(cwd);
+  const distDir = path.join(cwd, config.build.outDir ?? "dist");
 
-  let stats: { toJson(options: { all: boolean; chunks: boolean; chunkModules: boolean }): unknown } | undefined;
+  let stats:
+    | {
+        toJson(options: {
+          all: boolean;
+          chunks: boolean;
+          chunkModules: boolean;
+        }): unknown;
+      }
+    | undefined;
   if (opts.build !== false) {
     const result = await runBuild(cwd, {});
     stats = result.stats as typeof stats;
   } else {
     if (!fs.existsSync(distDir)) {
-      throw new RspfxError('ANALYZE_NO_DIST', `No build output found in ${distDir}. Run "rspfx build" or drop --no-build.`);
+      throw new RspfxError(
+        "ANALYZE_NO_DIST",
+        `No build output found in ${distDir}. Run "rspfx build" or drop --no-build.`,
+      );
     }
   }
 
   const moduleCounts = collectModuleCounts(stats);
-  const statsFallback = moduleCounts.size === 0 ? readStatsModuleCounts(cwd) : undefined;
+  const statsFallback =
+    moduleCounts.size === 0 ? readStatsModuleCounts(cwd) : undefined;
   for (const [name, count] of statsFallback ?? []) {
     moduleCounts.set(name, count);
   }
   const rows: BundleRow[] = [];
   for (const file of fs.readdirSync(distDir)) {
-    if (file.endsWith('.map') || file.endsWith('.manifest.json') || !fs.statSync(path.join(distDir, file)).isFile()) {
+    if (
+      file.endsWith(".map") ||
+      file.endsWith(".manifest.json") ||
+      !fs.statSync(path.join(distDir, file)).isFile()
+    ) {
       continue;
     }
     const content = fs.readFileSync(path.join(distDir, file));
@@ -47,29 +70,37 @@ export async function runAnalyze(cwd: string, opts: AnalyzeOptions = {}): Promis
       name: file,
       size: content.length,
       gzipSize: gzipSync(content).length,
-      modules: moduleCounts.get(file.replace(/\.js$/, '')) ?? 0
+      modules: moduleCounts.get(file.replace(/\.js$/, "")) ?? 0,
     });
   }
   rows.sort((a, b) => b.size - a.size);
 
-  const reportPath = path.join(cwd, '.rspfx', 'analyze.html');
+  const reportPath = path.join(cwd, ".rspfx", "analyze.html");
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, renderReport(rows));
 
-  console.table(rows.map((row) => ({ ...row, size: formatBytes(row.size), gzip: formatBytes(row.gzipSize) })));
+  console.table(
+    rows.map((row) => ({
+      ...row,
+      size: formatBytes(row.size),
+      gzip: formatBytes(row.gzipSize),
+    })),
+  );
   logger.success(`Analysis written to ${reportPath}`);
   return { reportPath, rows };
 }
 
 function collectModuleCounts(stats: unknown): Map<string, number> {
   const counts = new Map<string, number>();
-  if (!stats || typeof (stats as { toJson?: unknown }).toJson !== 'function') {
+  if (!stats || typeof (stats as { toJson?: unknown }).toJson !== "function") {
     return counts;
   }
-  const json = (stats as { toJson(options: unknown): { chunks?: unknown } }).toJson({
+  const json = (
+    stats as { toJson(options: unknown): { chunks?: unknown } }
+  ).toJson({
     all: false,
     chunks: true,
-    chunkModules: true
+    chunkModules: true,
   });
   const chunks = Array.isArray(json.chunks) ? json.chunks : [];
   for (const chunk of chunks) {
@@ -93,15 +124,17 @@ function collectModuleCounts(stats: unknown): Map<string, number> {
 }
 
 function readStatsModuleCounts(cwd: string): Map<string, number> | undefined {
-  const statsPath = path.join(cwd, '.rspfx', 'stats.json');
+  const statsPath = path.join(cwd, ".rspfx", "stats.json");
   if (!fs.existsSync(statsPath)) {
     return undefined;
   }
   try {
-    const parsed = JSON.parse(fs.readFileSync(statsPath, 'utf8')) as { moduleCounts?: Record<string, unknown> };
+    const parsed = JSON.parse(fs.readFileSync(statsPath, "utf8")) as {
+      moduleCounts?: Record<string, unknown>;
+    };
     const counts = new Map<string, number>();
     for (const [name, count] of Object.entries(parsed.moduleCounts ?? {})) {
-      if (typeof count === 'number') {
+      if (typeof count === "number") {
         counts.set(name, count);
       }
     }
@@ -115,9 +148,9 @@ function renderReport(rows: BundleRow[]): string {
   const body = rows
     .map(
       (row) =>
-        `<tr><td>${escapeHtml(row.name)}</td><td>${formatBytes(row.size)}</td><td>${formatBytes(row.gzipSize)}</td><td>${row.modules}</td></tr>`
+        `<tr><td>${escapeHtml(row.name)}</td><td>${formatBytes(row.size)}</td><td>${formatBytes(row.gzipSize)}</td><td>${row.modules}</td></tr>`,
     )
-    .join('\n');
+    .join("\n");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -147,5 +180,9 @@ ${body}
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

@@ -41,6 +41,8 @@ Start the dev environment: Rspack dev server + manifest server on `:4321` (HTTPS
 
 Dev output is unminified with readable module names and source maps; rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
 
+Officially scaffolded SPFx projects (gulp/Heft, no rspfx config) run in hybrid mode: `rspfx dev` synthesizes its config from `config/config.json`, `config/serve.json`, and `package.json` — see [hybrid-dev.md](hybrid-dev.md).
+
 | Flag | Description |
 |---|---|
 | `--refresh` | Enable fast refresh (state-preserving where supported); on Vite/Rsbuild projects the flag (or `dev.fastRefresh`) sets `RSPFX_FAST_REFRESH=1` for the spawned dev process |
@@ -91,7 +93,9 @@ rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 ## `rspfx build`
 
 Production compile: bundles to `build.outDir` (`dist`), component manifests and
-assets to `build.releaseDir` (`release`).
+assets to `build.releaseDir` (`release`). On an official SPFx project this
+command refuses with `OFFICIAL_TOOLCHAIN_BUILD` — see
+[hybrid-dev.md](hybrid-dev.md).
 
 | Flag | Description |
 |---|---|

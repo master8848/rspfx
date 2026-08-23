@@ -631,6 +631,15 @@ Bin `rspfx`. Commands (commander):
 Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`, or
 `rsbuild.config.ts`), find the plugin by `RSPFX_PLUGIN_MARKER`, read `.options`
 → `resolveConfig`. Guidance error when no config or no plugin is found.
+Hybrid mode (`apps/cli/src/hybrid.ts`, see
+[docs/hybrid-dev.md](hybrid-dev.md)): `detectOfficialProject(projectRoot)`
+→ `{ toolchainMarker } | undefined` (requires `config/config.json` + `gulpfile.js`/`heft.json`/`.yo-rc.json`);
+`loadOfficialConfig(projectRoot)` → synthesized `RspfxConfig` (name/version from
+package.json, `spfxVersion` from the `@microsoft/sp-core-library` dependency,
+framework from dependency scan, language `typescript`); used by `runDev` on
+`CONFIG_NOT_FOUND`. `loadConfigOrRefuseOfficial(projectRoot)` replaces
+`loadConfig` in `build/package/deploy/analyze` and throws
+`RspfxError('OFFICIAL_TOOLCHAIN_BUILD')` on official projects.
 Per-command bundler awareness: for Vite configs, `dev`/`build`/`package` spawn
 the project-local `vite`/`vite build` (one build per web part bundle); for
 Rsbuild configs a single `rsbuild build` runs and `dev` spawns `rsbuild dev`;

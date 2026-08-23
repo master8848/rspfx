@@ -45,7 +45,7 @@ rspfx package     # production build → .sppkg
 | Command | What it does |
 |---|---|
 | `rspfx new <name>` | Scaffold a new project — web part, extension, or library |
-| `rspfx dev` | Start the dev server — local preview at `http://localhost:4321`, or HTTPS workbench when a tenant is set |
+| `rspfx dev` | Start the dev server — local preview at `http://localhost:4321`, or HTTPS workbench when a tenant is set. Works on official SPFx projects too ([hybrid mode](docs/hybrid-dev.md)) |
 | `rspfx dev --refresh` | Same, with state-preserving fast refresh |
 | `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
 | `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |
@@ -90,6 +90,7 @@ It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
 | Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
 | Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
 | Command reference | [docs/commands.md](docs/commands.md) |
+| Hybrid dev on official projects (gulp/Heft) | [docs/hybrid-dev.md](docs/hybrid-dev.md) |
 | Project structure & file paths | [docs/project-structure.md](docs/project-structure.md) |
 | Deployment guide (catalog, Teams/Outlook, CDN) | [docs/deployment.md](docs/deployment.md) |
 | Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |
