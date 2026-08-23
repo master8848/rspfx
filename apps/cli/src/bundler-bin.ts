@@ -57,6 +57,15 @@ export function resolveRsbuildBin(projectRoot: string): string {
   );
 }
 
+export function resolveRspackBin(projectRoot: string): string {
+  return resolveBin(
+    projectRoot,
+    '@rspack/cli',
+    'RSPACK_NOT_FOUND',
+    'Rspack is not installed in this project. Add "@rspack/cli" to devDependencies (rspfx dev/build drive the project-local Rspack).'
+  );
+}
+
 export function runBundlerBuild(projectRoot: string, bin: string, buildFailedCode: string, label: string): void {
   const result = spawnSync(process.execPath, [bin, 'build'], {
     cwd: projectRoot,

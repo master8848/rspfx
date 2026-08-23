@@ -11,6 +11,7 @@ export interface LoadedProject {
   config: RspfxConfig;
   bundler: BundlerId;
   configFile: string;
+  userModuleRules?: unknown[];
 }
 
 const CONFIG_CANDIDATES: readonly { bundler: BundlerId; file: string }[] = [
@@ -82,5 +83,11 @@ export async function loadConfig(projectRoot: string): Promise<LoadedProject> {
         `new RspfxPlugin({ name: 'my-app', framework: 'react' }) (rspack), rspfxVite({ ... }) (vite) or rspfxRsbuild({ ... }) (rsbuild).`
     );
   }
-  return { config: resolveConfig(plugin[RSPFX_PLUGIN_OPTIONS]), bundler: found.bundler, configFile: found.file };
+  const userModuleRules = (bundlerConfig as { module?: { rules?: unknown[] } })?.module?.rules;
+  return {
+    config: resolveConfig(plugin[RSPFX_PLUGIN_OPTIONS]),
+    bundler: found.bundler,
+    configFile: found.file,
+    userModuleRules: Array.isArray(userModuleRules) ? userModuleRules : undefined,
+  };
 }
