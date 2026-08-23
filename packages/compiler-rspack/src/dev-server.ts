@@ -70,12 +70,15 @@ function createStaticMiddleware(
 ): (req: unknown, res: any, next: (err?: unknown) => void) => void {
   const root = path.resolve(rootDir);
   return (req, res, next) => {
-    const url = (req as { url?: string }).url;
-    if (!url?.startsWith(urlPrefix)) {
+    // connect strips the mounted prefix from req.url before invoking this
+    // middleware, so match against originalUrl (full path) when present.
+    const { originalUrl, url } = req as { originalUrl?: string; url?: string };
+    const requestUrl = originalUrl ?? url;
+    if (!requestUrl?.startsWith(urlPrefix)) {
       next();
       return;
     }
-    const rawRelative = url.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '';
+    const rawRelative = requestUrl.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '';
     // Iteratively decode to catch double (and triple) encoding:
     // %252e -> %2e -> "." . First decode handles normal %2e, second and
     // subsequent decodes handle %252e, %25252e, etc. Check dot segments

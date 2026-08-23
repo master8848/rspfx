@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -85,6 +86,42 @@ describe('startDevServer', () => {
       expect(fs.existsSync(onDisk)).toBe(true);
     } finally {
       await result.close();
+    }
+  });
+
+  it('serves registered static folders under a nested url prefix', async () => {
+    const staticRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rspfx-static-'));
+    const packageDistDir = path.join(staticRoot, '@microsoft', 'sp-test', 'dist');
+    fs.mkdirSync(packageDistDir, { recursive: true });
+    const bundleContent = "define('t',[],function(){});";
+    fs.writeFileSync(path.join(packageDistDir, 'test-pkg.js'), bundleContent);
+    const secretContent = 'RSPFX_STATIC_TRAVERSAL_SECRET';
+    fs.writeFileSync(path.join(staticRoot, 'secret.txt'), secretContent);
+
+    const result = await startDevServer(makeCtx(), {
+      port: 0,
+      hostname: 'localhost',
+      https: false,
+      hot: true,
+      staticFolders: [{ path: path.join(staticRoot, '@microsoft'), urlPrefix: '/node_modules/@microsoft' }]
+    });
+
+    try {
+      // connect strips the mount prefix from req.url before invoking the
+      // middleware; the middleware must still resolve paths under the prefix.
+      const response = await fetch(`http://localhost:${result.port}/node_modules/@microsoft/sp-test/dist/test-pkg.js`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe(bundleContent);
+
+      // Encoded dot segments must never escape the registered folder.
+      const traversalResponse = await fetch(
+        `http://localhost:${result.port}/node_modules/@microsoft/%2e%2e/%2e%2e/secret.txt`
+      );
+      const traversalBody = await traversalResponse.text();
+      expect(traversalBody).not.toContain(secretContent);
+    } finally {
+      await result.close();
+      fs.rmSync(staticRoot, { recursive: true, force: true });
     }
   });
 });
