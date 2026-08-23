@@ -8,7 +8,6 @@ export default {
       version: '0.0.1',
       framework: 'vanilla',
       spfxVersion: '1.22',
-      language: 'typescript',
       dev: {
         tenantUrl: 'https://contoso.sharepoint.com',
         port: 4321,

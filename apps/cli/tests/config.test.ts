@@ -13,7 +13,6 @@ describe('findRspfxPlugin', () => {
     expect(plugin).toBeDefined();
     const config = resolveConfig(plugin![RSPFX_PLUGIN_OPTIONS]);
     expect(config.framework).toBe('react');
-    expect(config.language).toBe('typescript');
     expect(config.spfxVersion).toBe('1.23');
     expect(config.dev.port).toBe(4321);
     expect(config.dev.https).toBe(true);
@@ -64,7 +63,6 @@ describe('config loading', () => {
     expect(loaded.bundler).toBe('rspack');
     expect(loaded.configFile).toBe('rspack.config.ts');
     expect(loaded.config.framework).toBe('react');
-    expect(loaded.config.language).toBe('typescript');
     expect(loaded.config.spfxVersion).toBe('1.23');
     expect(loaded.config.dev.port).toBe(4321);
     expect(loaded.config.dev.https).toBe(true);

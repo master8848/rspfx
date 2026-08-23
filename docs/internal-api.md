@@ -33,9 +33,9 @@ export interface DevConfig {
   initialPage?: string;          // overrides tenantUrl; supports {tenantdomain} token
 }
 export interface BuildConfig {
-  sourcemap?: boolean;           // default false (prod), true (dev)
-  minify?: boolean;              // default true
-  splitChunks?: boolean;         // default false (single bundle per web part)
+  sourcemap?: boolean;           // @deprecated — set devtool in bundler config; scaffold-only default false
+  minify?: boolean;              // @deprecated — set optimization.minimize / build.minify in bundler config; scaffold-only default true
+  splitChunks?: boolean;         // @deprecated — must remain false for SPFx AMD correctness; scaffold-only default false
   outDir?: string;               // default 'dist'
   releaseDir?: string;           // default 'release'
 }
@@ -49,7 +49,6 @@ export interface RspfxConfig {
   version?: string;              // build-time version for AMD library names + manifests; overrides package.json
   framework: FrameworkId;
   spfxVersion: SpfxTarget;       // default '1.23'
-  language: 'typescript' | 'javascript';
   dev: DevConfig;
   build: BuildConfig;
   deploy?: DeployConfig;
@@ -258,7 +257,7 @@ export interface RspfxPluginOptions extends Partial<Omit<RspfxConfig, 'name'>> {
   projectRoot?: string;            // defaults to process.cwd()
 }
 // options carry: name, version (build-time version used in AMD library names and
-// manifests — overrides package.json), spfxVersion, framework, language,
+// manifests — overrides package.json), spfxVersion, framework,
 // dev (port/https/hostname/workbench/fastRefresh/openBrowser/tenantUrl/initialPage),
 // build (sourcemap/minify/splitChunks/outDir/releaseDir), paths (srcDir/webpartsDir/configDir),
 // deploy; defaults unchanged.
@@ -634,7 +633,7 @@ Hybrid mode (`apps/cli/src/hybrid.ts`, see
 → `{ toolchainMarker } | undefined` (requires `config/config.json` + `gulpfile.js`/`heft.json`/`.yo-rc.json`);
 `loadOfficialConfig(projectRoot)` → synthesized `RspfxConfig` (name/version from
 package.json, `spfxVersion` from the `@microsoft/sp-core-library` dependency,
-framework from dependency scan, language `typescript`); used by `runDev` on
+framework from dependency scan); used by `runDev` on
 `CONFIG_NOT_FOUND`. `loadConfigOrRefuseOfficial(projectRoot)` replaces
 `loadConfig` in `build/package/deploy/analyze` and throws
 `RspfxError('OFFICIAL_TOOLCHAIN_BUILD')` on official projects.

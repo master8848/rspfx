@@ -124,7 +124,7 @@ describe('new', () => {
 
     const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
-    expect(config).toContain("language: 'typescript'");
+    expect(config).not.toContain("language:");
     rmRf(tmp);
   });
 

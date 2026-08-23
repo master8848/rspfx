@@ -203,7 +203,7 @@ export default {
       framework: 'react',
       spfxVersion: '1.22',
       dev: { port: 4321, https: true, hostname: 'localhost', tenantUrl: 'https://contoso.sharepoint.com', openBrowser: false },
-      build: { minify: true, sourcemap: false, outDir: 'dist', releaseDir: 'release' },
+      build: { outDir: 'dist', releaseDir: 'release', sourcemap: false, minify: true, splitChunks: false }, // sourcemap/minify/splitChunks @deprecated — prefer native devtool/minimize; splitChunks must stay false for SPFx AMD
       version: '1.0.0'
     })
   ]
@@ -299,7 +299,7 @@ The `RspfxPlugin` options carry your project settings:
 
 - **Identity:** `name`, `version` (used in AMD ids and manifests), `spfxVersion`, `framework`, `language`
 - **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser` (false, opens workbench once via `packages/dev-runtime/src/browser.ts:3`; reloads stay in same tab per `packages/dev-runtime/src/reload.ts:57`), `dev.fastRefresh`, `dev.workbench`/`initialPage`
-- **Build:** `build.minify` (true), `build.sourcemap` (false), `build.outDir` (dist), `build.releaseDir` (release)
+- **Build:** `build.outDir` (dist), `build.releaseDir` (release), `build.sourcemap` (false, @deprecated — set devtool), `build.minify` (true, @deprecated — set optimization.minimize), `build.splitChunks` (false, @deprecated — must remain false for SPFx AMD)
 - **Layout:** `paths.srcDir`, `paths.webpartsDir` (src/webparts), `paths.extensionsDir` (src/extensions), `paths.librariesDir` (src/libraries), `paths.configDir` (config)
 - **Deploy:** `deploy.appCatalogSiteUrl` (or env var)
 

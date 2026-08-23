@@ -76,7 +76,6 @@ export function loadOfficialConfig(projectRoot: string): RspfxConfig {
       : {}),
     framework: detectFramework(packageJson),
     spfxVersion,
-    language: "typescript",
     dev: {},
     build: {},
   };

@@ -60,7 +60,7 @@ export function resolveServeSettings(
   opts: Pick<DevRuntimeOptions, 'port' | 'tenantDomain' | 'config'>,
   serveJson?: ProjectServeConfigJson
 ): ServeSettings {
-  const config = resolveConfig(opts.config);
+  const config = resolveConfig(opts.config as unknown as Partial<RspfxConfig> & Record<string, unknown>);
   const port = opts.port ?? serveJson?.port ?? config.dev.port ?? 4321;
   const hostname = serveJson?.hostname ?? serveJson?.ipAddress ?? config.dev.hostname ?? 'localhost';
   const https = serveJson?.https ?? config.dev.https ?? true;
@@ -123,7 +123,7 @@ export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig):
 }
 
 export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
-  const config = resolveConfig(opts.config);
+  const config = resolveConfig(opts.config as unknown as Partial<RspfxConfig> & Record<string, unknown>);
   const project = readProject(opts.projectRoot, config.paths, config.version, config);
 
   const settings = resolveServeSettings(opts, project.serveJson);

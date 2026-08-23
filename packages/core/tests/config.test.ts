@@ -46,7 +46,6 @@ describe('resolveConfig', () => {
       name: 'test-webpart',
       framework: 'vanilla',
       spfxVersion: '1.23',
-      language: 'typescript',
       dev: {
         port: 4321,
         https: true,
@@ -76,14 +75,12 @@ describe('resolveConfig', () => {
     const config = resolveConfig({
       name: 'my-app',
       framework: 'react',
-      language: 'javascript',
       spfxVersion: '1.21',
       dev: { port: 9000, https: false, fastRefresh: true },
       build: { sourcemap: true, minify: false }
     });
     expect(config.name).toBe('my-app');
     expect(config.framework).toBe('react');
-    expect(config.language).toBe('javascript');
     expect(config.spfxVersion).toBe('1.21');
     expect(config.dev).toEqual({
       port: 9000,
@@ -157,7 +154,6 @@ describe('defineConfig', () => {
       name: 'identity',
       framework: 'svelte',
       spfxVersion: '1.23',
-      language: 'typescript',
       dev: { port: 4321 },
       build: { minify: true }
     } as const;

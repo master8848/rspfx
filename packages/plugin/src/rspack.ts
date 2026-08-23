@@ -165,7 +165,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
         ...full.output,
         ...(libraryType ? { externalsType: libraryType } : {})
       };
-      options.module = { ...options.module, rules: full.module?.rules };
+      options.module = { ...options.module, rules: [...(options.module?.rules ?? []), ...(full.module?.rules ?? [])] };
       options.optimization = { ...options.optimization, ...full.optimization };
       options.devtool = full.devtool;
       for (const plugin of full.plugins ?? []) {

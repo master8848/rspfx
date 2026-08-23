@@ -92,7 +92,6 @@ describe("loadOfficialConfig", () => {
     expect(config.version).toBe("2.3.4");
     expect(config.spfxVersion).toBe("1.20");
     expect(config.framework).toBe("react");
-    expect(config.language).toBe("typescript");
   });
 
   it("falls back to vanilla without framework dependencies", () => {

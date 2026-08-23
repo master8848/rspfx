@@ -338,8 +338,16 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         outDir: resolved.build.outDir,
         emptyOutDir: overrides.emptyOutDir ?? false,
         cssCodeSplit: false,
-        ...(overrides.minify !== undefined ? { minify: overrides.minify } : {}),
-        ...(overrides.sourcemap !== undefined ? { sourcemap: overrides.sourcemap } : {}),
+        ...(overrides.minify !== undefined
+          ? { minify: overrides.minify }
+          : resolved.build.minify !== undefined
+            ? { minify: resolved.build.minify }
+            : {}),
+        ...(overrides.sourcemap !== undefined
+          ? { sourcemap: overrides.sourcemap }
+          : resolved.build.sourcemap !== undefined
+            ? { sourcemap: resolved.build.sourcemap }
+            : {}),
         rollupOptions: {
           input: { [entry.name]: entry.import },
           external: externals,

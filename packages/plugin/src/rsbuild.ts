@@ -336,7 +336,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         const production = utils.isProd;
         config.optimization = {
           ...config.optimization,
-          ...(production ? {} : { minimize: false }),
+          minimize: production ? (resolved.build.minify ?? true) : false,
           splitChunks: false
         };
         const defineOptions: Record<string, string> = {

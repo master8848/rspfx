@@ -15,8 +15,14 @@ export interface DevConfig {
 }
 
 export interface BuildConfig {
+  /** @deprecated - set `devtool` in your rspack/vite/rsbuild config; this is scaffold-only default. */
   sourcemap?: boolean;
+  /** @deprecated - set `optimization.minimize` / `build.minify` in your rspack/vite/rsbuild config; this is scaffold-only default. */
   minify?: boolean;
+  /**
+   * @deprecated - must remain `false` for SPFx AMD correctness; chunks break the single-bundle contract. Set `optimization.splitChunks` in bundler config if you must override.
+   * This is scaffold-only default.
+   */
   splitChunks?: boolean;
   outDir?: string;
   releaseDir?: string;
@@ -47,7 +53,6 @@ export interface RspfxConfig {
   version?: string;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
-  language: 'typescript' | 'javascript';
   dev: DevConfig;
   build: BuildConfig;
   paths?: PathsConfig;
@@ -95,7 +100,7 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
   };
 }
 
-export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
+export function resolveConfig(config: Partial<RspfxConfig> & Record<string, unknown>): RspfxConfig {
   if (!config.name) {
     throw new Error('"name" is required in the bundler config (rspack.config.ts)');
   }
@@ -112,7 +117,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     ...(config.version !== undefined ? { version: config.version } : {}),
     framework: config.framework ?? 'vanilla',
     spfxVersion: config.spfxVersion ?? SPFX_DEFAULT_TARGET,
-    language: config.language ?? 'typescript',
     dev: {
       port: config.dev?.port ?? configDefaults.dev.port,
       https: config.dev?.https ?? configDefaults.dev.https,

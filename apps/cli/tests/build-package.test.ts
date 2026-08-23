@@ -76,7 +76,6 @@ describe('build', () => {
         "    name: 'hello',",
         "    framework: 'vanilla',",
         "    spfxVersion: '1.22',",
-        "    language: 'typescript',",
         "    paths: { srcDir: 'src', webpartsDir: 'components/widgets', configDir: 'config-custom' },",
         "    dev: { port: 4321, https: true, hostname: 'localhost', workbench: true, openBrowser: false },",
         "    build: { sourcemap: false, minify: true, splitChunks: false, outDir: 'dist', releaseDir: 'release' }",
