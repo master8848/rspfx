@@ -9,6 +9,10 @@ export const DEFAULT_FRAMEWORK: FrameworkId = 'react';
 export const COMPONENT_CHOICES: readonly ComponentType[] = ['webpart', 'applicationcustomizer', 'fieldcustomizer', 'listviewcommandset', 'formcustomizer', 'library'];
 export const DEFAULT_COMPONENT: ComponentType = 'webpart';
 
+export const BUNDLER_CHOICES = ['vite', 'rsbuild', 'rspack'] as const;
+export type BundlerChoice = (typeof BUNDLER_CHOICES)[number];
+export const DEFAULT_BUNDLER: BundlerChoice = 'vite';
+
 export async function promptChoice(
   question: string,
   choices: readonly string[],

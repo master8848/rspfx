@@ -82,7 +82,7 @@ const RSPFX_SCRIPTS = {
 } as const;
 
 export type MigrateFrom = 'auto' | 'heft' | 'gulp';
-export type MigrateBundler = 'rspack' | 'vite' | 'rsbuild';
+export type MigrateBundler = 'vite' | 'rsbuild' | 'rspack';
 
 export interface MigrateOptions {
   from?: MigrateFrom;
@@ -167,9 +167,9 @@ function buildBundlerConfigContent(bundler: MigrateBundler, projectName: string,
 
 export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promise<MigrateResult> {
   const projectRoot = path.resolve(cwd);
-  const bundler: MigrateBundler = opts.bundler ?? 'rspack';
-  if (!['rspack', 'vite', 'rsbuild'].includes(bundler)) {
-    throw new RspfxError('INVALID_OPTION', `Unknown bundler '${bundler}'. Expected one of: rspack, vite, rsbuild`);
+  const bundler: MigrateBundler = opts.bundler ?? 'vite';
+  if (!['vite', 'rsbuild', 'rspack'].includes(bundler)) {
+    throw new RspfxError('INVALID_OPTION', `Unknown bundler '${bundler}'. Expected one of: vite, rsbuild, rspack`);
   }
   if (opts.spfxVersion !== undefined && !isSpfxTarget(opts.spfxVersion)) {
     throw new RspfxError('INVALID_OPTION', `Unknown spfx version '${opts.spfxVersion}'.`);

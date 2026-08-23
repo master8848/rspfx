@@ -95,10 +95,13 @@ function isLibrary(vars: TemplateVars): boolean {
 }
 
 function buildFiles(vars: TemplateVars): TemplateFile[] {
+  const bundler = vars.bundler ?? 'vite';
+  const bundlerFile = bundler === 'vite' ? 'vite.config.ts' : bundler === 'rsbuild' ? 'rsbuild.config.ts' : 'rspack.config.ts';
+  const bundlerContent = bundler === 'vite' ? viteConfig(vars) : bundler === 'rsbuild' ? rsbuildConfig(vars) : rspackConfig(vars);
   const files: TemplateFile[] = [
     { path: 'package.json', content: packageJson(vars) },
     { path: 'tsconfig.json', content: tsconfigJson(vars) },
-    { path: 'rspack.config.ts', content: rspackConfig(vars) },
+    { path: bundlerFile, content: bundlerContent },
     { path: '.gitignore', content: gitignore() },
     { path: '.npmrc', content: npmrc() },
     { path: 'README.md', content: readme(vars) },
@@ -175,6 +178,13 @@ function packageJson(vars: TemplateVars): string {
           '@microsoft/sp-webpart-base': spVersion,
           '@microsoft/sp-property-pane': spVersion
         };
+  const bundler = vars.bundler ?? 'vite';
+  const bundlerDevDeps: Record<string, string> =
+    bundler === 'vite'
+      ? { vite: '^7.0.0' }
+      : bundler === 'rsbuild'
+        ? { '@rsbuild/core': '^2.1.9' }
+        : { '@rspack/cli': '^1.2.0' };
   return JSON.stringify(
     {
       name: vars.packageName,
@@ -197,7 +207,7 @@ function packageJson(vars: TemplateVars): string {
       devDependencies: {
         '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
         '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
-        '@rspack/cli': '^1.2.0',
+        ...bundlerDevDeps,
         typescript: '^5.7.0'
       }
     },
@@ -269,6 +279,86 @@ function rspackConfig(vars: TemplateVars): string {
     '      }',
     '    })',
     '  ]',
+    '};'
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+export function viteConfig(vars: TemplateVars): string {
+  const devLines = [
+    `        port: ${configDefaults.dev.port},`,
+    `        https: ${configDefaults.dev.https},`,
+    `        hostname: '${configDefaults.dev.hostname}',`,
+    `        workbench: ${configDefaults.dev.workbench},`,
+    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
+  ];
+  const lines: string[] = [
+    `import { rspfxVite } from '@mbsks/rspfx-plugin';`,
+    '',
+    'export default {',
+    '  plugins: [',
+    '    rspfxVite({',
+    `      name: '${vars.packageName}',`,
+    `      version: '${vars.packageVersion}',`,
+    `      framework: '${vars.framework}',`,
+    `      spfxVersion: '${vars.spfxVersion}',`,
+    '      dev: {',
+    ...devLines,
+    '      },',
+    '      build: {',
+    `        sourcemap: ${configDefaults.build.sourcemap},`,
+    `        minify: ${configDefaults.build.minify},`,
+    `        outDir: '${configDefaults.build.outDir}',`,
+    `        releaseDir: '${configDefaults.build.releaseDir}'`,
+    '      }',
+    '    })',
+    '  ],',
+    '  // build.cssCodeSplit is false by default via rspfxVite (SPFx requires a single AMD bundle per entry, no separate CSS files)',
+    '  // .module.scss is handled via Vite CSS modules (postcss) and inlined into the JS bundle by the plugin',
+    '};'
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+export function rsbuildConfig(vars: TemplateVars): string {
+  const devLines = [
+    `        port: ${configDefaults.dev.port},`,
+    `        https: ${configDefaults.dev.https},`,
+    `        hostname: '${configDefaults.dev.hostname}',`,
+    `        workbench: ${configDefaults.dev.workbench},`,
+    `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
+  ];
+  const lines: string[] = [
+    `import { rspfxRsbuild } from '@mbsks/rspfx-plugin';`,
+    '',
+    'export default {',
+    '  plugins: [',
+    '    rspfxRsbuild({',
+    `      name: '${vars.packageName}',`,
+    `      version: '${vars.packageVersion}',`,
+    `      framework: '${vars.framework}',`,
+    `      spfxVersion: '${vars.spfxVersion}',`,
+    '      dev: {',
+    ...devLines,
+    '      },',
+    '      build: {',
+    `        sourcemap: ${configDefaults.build.sourcemap},`,
+    `        minify: ${configDefaults.build.minify},`,
+    `        outDir: '${configDefaults.build.outDir}',`,
+    `        releaseDir: '${configDefaults.build.releaseDir}'`,
+    '      }',
+    '    })',
+    '  ],',
+    '  output: {',
+    '    // SPFx requires styles inlined into the JS bundle — no separate CSS emit',
+    '    injectStyles: true',
+    '  },',
+    '  tools: {',
+    '    // handles .module.scss via postcss/css-loader chain',
+    '    postcss: {',
+    '      // use default postcss handling; rspfxRsbuild wires CSS modules (auto:true)',
+    '    }',
+    '  }',
     '};'
   ];
   return `${lines.join('\n')}\n`;

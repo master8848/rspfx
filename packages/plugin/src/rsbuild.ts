@@ -50,6 +50,63 @@ try {
   // Collocated with compiler-rspack; loaders may be hoisted.
 }
 
+function resolveFromProject(request: string, root: string, fallback: string | undefined): string | undefined {
+  try {
+    const requireFromProject = createRequire(path.join(root, 'package.json'));
+    return requireFromProject.resolve(request);
+  } catch {
+    // fall through to fallback
+  }
+  if (fallback) {
+    return fallback;
+  }
+  try {
+    return require.resolve(request);
+  } catch {
+    return undefined;
+  }
+}
+
+export function hasPostcssConfig(root: string): boolean {
+  // Mirror compiler-rspack: detect postcss via fs.existsSync postcss.config.* at root
+  const candidates = [
+    'postcss.config.js',
+    'postcss.config.cjs',
+    'postcss.config.mjs',
+    'postcss.config.ts',
+    'postcss.config.cts',
+    'postcss.config.mts',
+    'postcss.config.json'
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(path.join(root, file))) {
+      return true;
+    }
+  }
+  // Fallback: any postcss.config.* file (covers future extensions)
+  try {
+    const entries = fs.readdirSync(root);
+    return entries.some((f) => f.startsWith('postcss.config.'));
+  } catch {
+    return false;
+  }
+}
+
+function hasSassInstalled(root: string): boolean {
+  try {
+    const requireFromProject = createRequire(path.join(root, 'package.json'));
+    requireFromProject.resolve('sass');
+    return true;
+  } catch {
+    try {
+      require.resolve('sass');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export interface RsbuildRspfxPlugin extends RspfxBundlerPluginLike {
   name: string;
   setup(api: RsbuildPluginAPI): void | Promise<void>;
@@ -261,10 +318,12 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
       });
 
       api.modifyRsbuildConfig((config) => {
+        const userInject = (config.output as any)?.injectStyles;
         config.tools = { ...(config.tools ?? {}), htmlPlugin: false };
         config.output = {
           ...(config.output ?? {}),
           legalComments: 'none',
+          injectStyles: userInject ?? true,
           distPath: {
             ...(typeof config.output?.distPath === 'object' ? config.output.distPath : {}),
             root: resolved.build.outDir
@@ -314,24 +373,68 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         if (Object.keys(localizedAliases).length > 0) {
           config.resolve.alias = { ...(config.resolve.alias ?? {}), ...localizedAliases };
         }
-        if (styleLoaderPath && cssLoaderPath && sassLoaderPath) {
+        const cssEnabled = (resolved.build as any)?.css !== false;
+        if (cssEnabled) {
+          const hasPostcss = hasPostcssConfig(root);
+          const styleLoader = resolveFromProject('style-loader', root, styleLoaderPath);
+          const cssLoader = resolveFromProject('css-loader', root, cssLoaderPath);
+          const sassLoader = resolveFromProject('sass-loader', root, sassLoaderPath);
+          let postcssLoader: string | undefined;
+          if (hasPostcss) {
+            postcssLoader = resolveFromProject('postcss-loader', root, undefined);
+            if (!postcssLoader) {
+              try {
+                postcssLoader = require.resolve('postcss-loader');
+              } catch {
+                postcssLoader = undefined;
+              }
+            }
+          }
+          const hasSass = !!sassLoader && hasSassInstalled(root);
+          if (styleLoader && cssLoader) {
+            config.module = config.module ?? {};
+            const rules: NonNullable<typeof config.module.rules> = [...(config.module.rules ?? [])];
+            type LoaderUse = string | { loader: string; options?: Record<string, unknown> };
+            const cssUse: LoaderUse[] = [
+              styleLoader,
+              {
+                loader: cssLoader,
+                options: {
+                  modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' },
+                  importLoaders: hasPostcss && postcssLoader ? 1 : 0
+                }
+              }
+            ];
+            if (hasPostcss && postcssLoader) {
+              cssUse.push({ loader: postcssLoader });
+            }
+            rules.push({ test: /\.css$/, use: cssUse as unknown as NonNullable<import('@rspack/core').RuleSetRule['use']> });
+            if (hasSass) {
+              const scssUse: LoaderUse[] = [
+                styleLoader,
+                {
+                  loader: cssLoader,
+                  options: {
+                    modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' },
+                    importLoaders: hasPostcss && postcssLoader ? 2 : 1
+                  }
+                }
+              ];
+              if (hasPostcss && postcssLoader) {
+                scssUse.push({ loader: postcssLoader });
+              }
+              scssUse.push({ loader: sassLoader!, options: { api: 'modern' } });
+              rules.push({ test: /\.s[ac]ss$/i, use: scssUse as unknown as NonNullable<import('@rspack/core').RuleSetRule['use']> });
+            }
+            rules.push({ test: /\.html$/, type: 'asset/source' });
+            config.module.rules = rules;
+          } else {
+            config.module = config.module ?? {};
+            config.module.rules = [...(config.module.rules ?? []), { test: /\.html$/, type: 'asset/source' }];
+          }
+        } else {
           config.module = config.module ?? {};
-          config.module.rules = [
-            ...(config.module.rules ?? []),
-            {
-              test: /\.css$/,
-              use: [styleLoaderPath, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
-            },
-            {
-              test: /\.s[ac]ss$/i,
-              use: [
-                styleLoaderPath,
-                { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-                { loader: sassLoaderPath, options: { api: 'modern' } }
-              ]
-            },
-            { test: /\.html$/, type: 'asset/source' }
-          ];
+          config.module.rules = [...(config.module.rules ?? []), { test: /\.html$/, type: 'asset/source' }];
         }
         const production = utils.isProd;
         config.optimization = {

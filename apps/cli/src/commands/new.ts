@@ -7,7 +7,9 @@ import type { FrameworkId, SpfxTarget } from '@mbsks/rspfx-core';
 import { SPFX_DEFAULT_TARGET, SPFX_TARGETS, isSpfxTarget } from '@mbsks/rspfx-core';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import {
+  BUNDLER_CHOICES,
   COMPONENT_CHOICES,
+  DEFAULT_BUNDLER,
   DEFAULT_COMPONENT,
   DEFAULT_FRAMEWORK,
   FRAMEWORK_CHOICES,
@@ -27,6 +29,7 @@ export interface NewOptions {
   language?: string;
   spfxVersion?: string;
   pm?: string;
+  bundler?: string;
   install?: boolean;
   tenant?: string;
   yes?: boolean;
@@ -47,6 +50,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
   let language = opts.language ?? 'ts';
   let spfxVersion = (opts.spfxVersion as SpfxTarget) ?? SPFX_DEFAULT_TARGET;
   let pm = opts.pm ?? 'pnpm';
+  let bundler = (opts.bundler as (typeof BUNDLER_CHOICES)[number]) ?? DEFAULT_BUNDLER;
 
   if (!skipPrompts) {
     if (opts.component === undefined) {
@@ -60,6 +64,9 @@ export async function runNew(opts: NewOptions): Promise<string> {
       if (opts.language === undefined) {
         language = await promptChoice('Language', LANGUAGES, language);
       }
+    }
+    if (opts.bundler === undefined) {
+      bundler = (await promptChoice('Bundler', BUNDLER_CHOICES, bundler)) as (typeof BUNDLER_CHOICES)[number];
     }
     if (opts.spfxVersion === undefined) {
       spfxVersion = (await promptChoice('SPFx version', SPFX_TARGETS, spfxVersion)) as SpfxTarget;
@@ -94,6 +101,9 @@ export async function runNew(opts: NewOptions): Promise<string> {
   if (!(PACKAGE_MANAGERS as readonly string[]).includes(pm)) {
     throw new RspfxError('INVALID_OPTION', `Unknown package manager '${pm}'. Expected one of: ${PACKAGE_MANAGERS.join(', ')}`);
   }
+  if (!(BUNDLER_CHOICES as readonly string[]).includes(bundler)) {
+    throw new RspfxError('INVALID_OPTION', `Unknown bundler '${bundler}'. Expected one of: ${BUNDLER_CHOICES.join(', ')}`);
+  }
 
   const destDir = path.join(cwd, opts.name);
   if (fs.existsSync(destDir) && fs.readdirSync(destDir).length > 0) {
@@ -111,6 +121,7 @@ export async function runNew(opts: NewOptions): Promise<string> {
     framework: framework as FrameworkId,
     spfxVersion: spfxVersion as SpfxTarget,
     language: language === 'js' ? 'javascript' : 'typescript',
+    bundler: bundler as TemplateVars['bundler'],
     ...(opts.tenant !== undefined ? { tenantUrl: opts.tenant } : {}),
     componentId: randomUUID(),
     solutionId: randomUUID(),

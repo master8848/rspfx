@@ -6,20 +6,37 @@ import { pathToFileURL } from 'node:url';
 import { RspfxError } from '@mbsks/rspfx-diagnostics';
 
 function resolveBin(projectRoot: string, packageName: string, errorCode: string, errorMessage: string): string {
+  const tryResolve = (requireFn: NodeRequire): string | undefined => {
+    try {
+      const pkgJsonPath = requireFn.resolve(`${packageName}/package.json`);
+      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as {
+        bin?: string | Record<string, string>;
+      };
+      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin ? Object.values(pkg.bin)[0] : undefined;
+      if (typeof bin !== 'string') {
+        throw new Error(`${packageName} package has no bin entry: ${pkgJsonPath}`);
+      }
+      return path.join(path.dirname(pkgJsonPath), bin);
+    } catch {
+      return undefined;
+    }
+  };
   try {
     const requireFromProject = createRequire(pathToFileURL(path.join(projectRoot, 'package.json')).href);
-    const pkgJsonPath = requireFromProject.resolve(`${packageName}/package.json`);
-    const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as {
-      bin?: string | Record<string, string>;
-    };
-    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin ? Object.values(pkg.bin)[0] : undefined;
-    if (typeof bin !== 'string') {
-      throw new Error(`${packageName} package has no bin entry: ${pkgJsonPath}`);
-    }
-    return path.join(path.dirname(pkgJsonPath), bin);
-  } catch (error) {
-    throw new RspfxError(errorCode, errorMessage, error);
+    const resolved = tryResolve(requireFromProject);
+    if (resolved) return resolved;
+  } catch {
+    // fall through to repo fallback
   }
+  // Fallback to the CLI's own installation (covers temp fixtures without local vite/rsbuild)
+  try {
+    const requireFromCli = createRequire(import.meta.url);
+    const resolved = tryResolve(requireFromCli);
+    if (resolved) return resolved;
+  } catch {
+    // fall through
+  }
+  throw new RspfxError(errorCode, errorMessage);
 }
 
 export function resolveViteBin(projectRoot: string): string {

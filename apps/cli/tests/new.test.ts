@@ -15,6 +15,7 @@ describe('new', () => {
       language: 'ts',
       spfxVersion: '1.23',
       pm: 'pnpm',
+      bundler: 'vite',
       install: false,
       tenant: 'https://contoso.sharepoint.com'
     });
@@ -23,7 +24,7 @@ describe('new', () => {
     for (const file of [
       'package.json',
       'tsconfig.json',
-      'rspack.config.ts',
+      'vite.config.ts',
 '.npmrc',
       '.gitignore',
       'README.md',
@@ -58,7 +59,7 @@ describe('new', () => {
     expect(solutionConfig.solution.features[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(solutionConfig.paths.zippedPackage).toBe('sharepoint/solution/my-app.sppkg');
 
-    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'vite.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
     expect(config).toContain('tenantUrl: "https://contoso.sharepoint.com"');
   });
@@ -75,7 +76,7 @@ describe('new', () => {
     const tmp = makeTmpDir('new-defaults');
     const dest = await runNew({ name: 'def-app', cwd: tmp, yes: true, install: false });
 
-    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'vite.config.ts'), 'utf8');
     expect(config).toContain("framework: 'react'");
     expect(config).not.toContain('fluent');
 
@@ -122,7 +123,7 @@ describe('new', () => {
     expect(packageJson.dependencies?.['@microsoft/decorators']).toBe('1.23.0');
     expect(packageJson.dependencies?.['@microsoft/sp-webpart-base']).toBeUndefined();
 
-    const config = fs.readFileSync(path.join(dest, 'rspack.config.ts'), 'utf8');
+    const config = fs.readFileSync(path.join(dest, 'vite.config.ts'), 'utf8');
     expect(config).toContain("framework: 'vanilla'");
     expect(config).not.toContain("language:");
     rmRf(tmp);

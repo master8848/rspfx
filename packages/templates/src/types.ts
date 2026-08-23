@@ -17,4 +17,5 @@ export interface TemplateVars {
   packageVersion: string;
   /** When false, skip teams/manifest.json scaffold; defaults to true for backward compat. */
   teams?: boolean;
+  bundler?: 'vite' | 'rsbuild' | 'rspack';
 }

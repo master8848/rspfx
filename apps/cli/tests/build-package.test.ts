@@ -11,7 +11,7 @@ const COMPONENT_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
 
 async function makeFixture(): Promise<string> {
   const dir = makeTmpDir('build');
-  await scaffoldProject(baseVars(), dir);
+  await scaffoldProject(baseVars({ bundler: 'rspack' }), dir);
   linkPluginPackage(dir);
   fs.writeFileSync(
     path.join(dir, 'src', 'webparts', 'hello', 'helloWebPart.ts'),

@@ -64,6 +64,7 @@ export function configureProgram(): void {
     .option('--language <ts|js>', 'language')
     .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn>', 'package manager')
+    .option('--bundler <vite|rsbuild|rspack>', 'bundler (default: vite)')
     .option('--no-install', 'skip dependency installation')
     .option('--tenant <url>', 'tenant URL for the dev workbench')
     .option('--yes', 'skip all prompts and use defaults')
@@ -76,6 +77,7 @@ export function configureProgram(): void {
         language: options.language as string | undefined,
         spfxVersion: options.spfxVersion as string | undefined,
         pm: options.pm as string | undefined,
+        bundler: options.bundler as string | undefined,
         install: options.install as boolean | undefined,
         tenant: options.tenant as string | undefined,
         yes: options.yes as boolean | undefined
@@ -163,7 +165,7 @@ export function configureProgram(): void {
     .command('migrate')
     .description('migrate an existing SPFx project (gulp/heft) to rspfx')
     .option('--from <auto|heft|gulp>', 'source toolchain (default: auto)')
-    .option('--bundler <rspack|vite|rsbuild>', 'bundler to scaffold (default: rspack)')
+    .option('--bundler <vite|rsbuild|rspack>', 'bundler to scaffold (default: vite)')
     .option('--spfx-version <version>', 'SPFx target version')
     .option('--dry-run', 'print plan without touching files')
     .option('--revert', 'restore backup from .rspfx/migrate-backup.json')
@@ -173,7 +175,7 @@ export function configureProgram(): void {
       return guard(() =>
         runMigrate(cwd, {
           from: options.from as 'auto' | 'heft' | 'gulp' | undefined,
-          bundler: options.bundler as 'rspack' | 'vite' | 'rsbuild' | undefined,
+          bundler: options.bundler as 'vite' | 'rsbuild' | 'rspack' | undefined,
           spfxVersion: options.spfxVersion as string | undefined,
           dryRun: options.dryRun as boolean | undefined,
           revert: options.revert as boolean | undefined,

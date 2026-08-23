@@ -324,6 +324,13 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       define,
       esbuild: viteContribs?.esbuild,
       plugins: [...createEntryPlugins(entry.name, root), ...(viteContribs?.plugins ?? [])],
+      css: {
+        modules: {
+          localsConvention: 'camelCaseOnly',
+          // scopeBehaviour 'local' is default; explicit to ensure *.module.* always treated as module even with :global blocks
+          scopeBehaviour: 'local' as const
+        }
+      },
       resolve:
         viteContribs?.resolveExtensions && viteContribs.resolveExtensions.length > 0
           ? { extensions: viteContribs.resolveExtensions }

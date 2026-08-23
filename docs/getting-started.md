@@ -59,7 +59,7 @@ Every path above is a default — you can move folders by setting `paths` in the
 
 ### Bundler config is optional
 
-For standard layouts you can omit `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` entirely. The CLI uses your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` and runs Rspack or Vite internally (`pnpm build` / `rspfx build`). If `rspack` or `vite` is installed in the project it is used directly — no extra setup.
+For standard layouts you can omit `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` entirely. The CLI uses your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` and runs Rspack or Vite internally (`pnpm build` / `rspfx build`). If `rspack` or `vite` is installed in the project it is used directly — no extra setup. Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts`) is the recommended default; see [styling.md](styling.md) for CSS/SCSS, CSS Modules, and Tailwind v4.
 
 When you do have a bundler config, your project config lives there:
 

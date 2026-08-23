@@ -22,3 +22,4 @@ export { SpfxLocalizedResourcesPlugin } from './localized-resources.js';
 export { build } from './build.js';
 export { watch } from './watch.js';
 export { startDevServer } from './dev-server.js';
+export { rspfxCssInlineRule, rspfxSassRule } from './helpers/css.js';

@@ -147,6 +147,45 @@ Rsbuild (`rsbuild.config.ts`): `plugins: [rspfxRsbuild({ ... })]`.
 
 Options: `name`, `spfxVersion`, `framework`, `language`, `dev.port`/`tenantUrl`/`openBrowser`/`fastRefresh`, `build.outDir`/`releaseDir`, `paths.srcDir`/`webpartsDir`/`configDir`, `deploy.appCatalogSiteUrl` (`apps/cli/src/commands/deploy.ts:16`, `docs/commands.md#environment-variables`).
 
+## Styling — CSS Modules, global CSS, Tailwind
+
+Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts:340`) is the recommended bundler for styling; Rsbuild and Rspack also work (see `docs/styling.md`). All CSS is inlined into the JS bundle (`style-loader` / `output.injectStyles: true` / `build.cssCodeSplit: false`); never use `type: "css"` or `CssExtractRspackPlugin` — the `.sppkg` has no external CSS.
+
+SCSS/CSS Modules (auto): `*.module.css` and `*.module.scss` hash class names via `css-loader` `modules: { auto: true }` (`packages/compiler-rspack/src/config.ts:183`). Plain `*.css`/`*.scss` stays global. Install `sass` (`pnpm add -D sass`) for SCSS.
+
+Vite — CSS Modules (recommended):
+
+```ts
+// src/webparts/hello/components/Hello.module.scss
+.hello { color: #0078d4; }
+```
+```ts
+// src/webparts/hello/components/Hello.tsx
+import styles from './Hello.module.scss';
+export const Hello = () => <div className={styles.hello}>Hello</div>;
+```
+
+Vite — global CSS (including Tailwind entry):
+
+```ts
+// src/app.css
+@import "tailwindcss";
+```
+```ts
+import './app.css';
+```
+
+Vite — Tailwind v4 via `postcss.config.mjs` (no custom patch):
+
+```js
+// postcss.config.mjs
+export default { plugins: { '@tailwindcss/postcss': {} } };
+```
+
+Install `pnpm add -D tailwindcss @tailwindcss/postcss postcss`, add `postcss.config.mjs` above, add `src/app.css` with `@import "tailwindcss"`, and import `src/app.css` from the web part. Rsbuild uses `tools.postcss` `postcssOptions.plugins` + `output.injectStyles: true` (`packages/plugin/src/rsbuild.ts:319`); Rspack uses `module.rules` with `style-loader` + `css-loader` `modules: { auto: true }` + `sass-loader` `api: "modern"` (`packages/compiler-rspack/src/config.ts:183`).
+
+CSS inlining is the default (`packages/compiler-rspack/src/config.ts:182` `styleLoaderPath`, `packages/plugin/src/vite.ts:340` `cssCodeSplit: false`). Disable only with `build.css: false` in `rspfxVite`/`rspfxRsbuild`/`RspfxPlugin` options, then provide your own rules and keep inlining. Helpers `rspfxCssInlineRule()`/`rspfxSassRule()` from `@mbsks/rspfx-plugin` return the shared inline rules; PostCSS is file-based (`postcss.config.js|.cjs|.mjs` detection) — never add `TailwindPostCSSPatch`. Full reference: `docs/styling.md`.
+
 ## Query SharePoint lists — prefer PnPjs
 
 Use `@pnp/sp` (PnPjs) over raw `fetch`/`SPHttpClient` for `select`/`filter`/`expand`/`batch`/`paging`/`caching`; it handles digest, OData, and batching.

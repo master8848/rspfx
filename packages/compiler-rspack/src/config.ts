@@ -12,10 +12,6 @@ import type { FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
 
 const require = createRequire(import.meta.url);
 
-const styleLoaderPath = require.resolve('style-loader');
-const cssLoaderPath = require.resolve('css-loader');
-const sassLoaderPath = require.resolve('sass-loader');
-
 const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
   '@rspack/plugin-preact-refresh': fileURLToPath(new URL('./stubs/preact-refresh.js', import.meta.url)),
@@ -37,6 +33,35 @@ const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss',
 
 /** Build-time aliases shared by the compiler config and the native rspack resolve. */
 export { BASE_EXTENSIONS };
+
+const POSTCSS_CONFIG_FILES = [
+  'postcss.config.js',
+  'postcss.config.cjs',
+  'postcss.config.mjs',
+  'postcss.config.ts',
+  'postcss.config.cts',
+  'postcss.config.mts'
+];
+
+function tryResolve(name: string, projectRoot: string): string | undefined {
+  try {
+    const req = createRequire(path.join(projectRoot, 'package.json'));
+    return req.resolve(name);
+  } catch {}
+  try {
+    return require.resolve(name);
+  } catch {}
+  return undefined;
+}
+
+function hasPostcssConfigFile(projectRoot: string): boolean {
+  for (const f of POSTCSS_CONFIG_FILES) {
+    try {
+      if (fs.existsSync(path.join(projectRoot, f))) return true;
+    } catch {}
+  }
+  return false;
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -171,35 +196,49 @@ export async function createRspackConfig(ctx: CompileContext): Promise<unknown> 
     options: { jsc: swcJsc }
   });
 
-  // CSS handling: in SPFx production bundles CSS is inlined via style-loader (sppkg has no external css).
-  // When RSPFX_EXTRACT_CSS=1 is set, production extracts CSS via CssExtractRspackPlugin for apps that can host *.css.
-  const useCssExtract =
-    ctx.production &&
-    (process.env.RSPFX_EXTRACT_CSS === '1' || process.env.RSPFX_EXTRACT_CSS === 'true') &&
-    typeof (rspack as unknown as { CssExtractRspackPlugin?: unknown }).CssExtractRspackPlugin === 'function';
-  const cssExtractLoader = useCssExtract
-    ? (rspack as unknown as { CssExtractRspackPlugin: { loader: string } }).CssExtractRspackPlugin.loader
-    : styleLoaderPath;
-  rules.push({
-    test: /\.css$/,
-    use: [cssExtractLoader, { loader: cssLoaderPath, options: { modules: { auto: true } } }]
-  });
-  rules.push({
-    test: /\.s[ac]ss$/i,
-    use: [
-      cssExtractLoader,
-      { loader: cssLoaderPath, options: { modules: { auto: true }, importLoaders: 1 } },
-      { loader: sassLoaderPath, options: { api: 'modern' } }
-    ]
-  });
-  if (useCssExtract) {
-    const CssExtractPlugin = (rspack as unknown as { CssExtractRspackPlugin: new (opts: unknown) => unknown })
-      .CssExtractRspackPlugin;
-    plugins.push(
-      new CssExtractPlugin({ filename: '[name].css', chunkFilename: 'chunk.[name].css' }) as unknown as NonNullable<
-        Configuration['plugins']
-      >[number]
-    );
+  // CSS handling: always inline via style-loader (never type:"css" or CssExtractRspackPlugin).
+  const cssEnabled = (ctx.build as unknown as Record<string, unknown>)?.css !== false;
+  const scssEnabled = (ctx.build as unknown as Record<string, unknown>)?.scss !== false;
+
+  let styleLoaderPath: string | undefined = tryResolve('style-loader', ctx.projectRoot);
+  let cssLoaderPath: string | undefined = tryResolve('css-loader', ctx.projectRoot);
+  const postcssLoaderPath: string | undefined = tryResolve('postcss-loader', ctx.projectRoot);
+  const postcssPath: string | undefined = tryResolve('postcss', ctx.projectRoot);
+  const hasPostcss = hasPostcssConfigFile(ctx.projectRoot);
+  const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;
+
+  if (cssEnabled && styleLoaderPath && cssLoaderPath) {
+    const cssUse: unknown[] = [
+      styleLoaderPath,
+      {
+        loader: cssLoaderPath,
+        options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' } }
+      }
+    ];
+    if (postcssAvailable && postcssLoaderPath) {
+      (cssUse as unknown[]).push({ loader: postcssLoaderPath });
+    }
+    rules.push({ test: /\.css$/, use: cssUse as RuleSetRule['use'] });
+  }
+
+  const sassPath: string | undefined = tryResolve('sass', ctx.projectRoot);
+  let sassLoaderPath: string | undefined = tryResolve('sass-loader', ctx.projectRoot);
+  const hasSass = !!sassPath && !!sassLoaderPath;
+
+  if (scssEnabled && hasSass && styleLoaderPath && cssLoaderPath && sassLoaderPath) {
+    const importLoaders = (postcssAvailable ? 1 : 0) + 1;
+    const scssUse: unknown[] = [
+      styleLoaderPath,
+      {
+        loader: cssLoaderPath,
+        options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }, importLoaders }
+      }
+    ];
+    if (postcssAvailable && postcssLoaderPath) {
+      (scssUse as unknown[]).push({ loader: postcssLoaderPath });
+    }
+    (scssUse as unknown[]).push({ loader: sassLoaderPath, options: { api: 'modern' } });
+    rules.push({ test: /\.s[ac]ss$/i, use: scssUse as RuleSetRule['use'] });
   }
 
   rules.push({ test: /\.html$/, type: 'asset/source' });

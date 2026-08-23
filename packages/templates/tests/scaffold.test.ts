@@ -59,7 +59,7 @@ describe('scaffoldProject', () => {
     const written = await scaffoldProject(vanillaVars, path.join(tmpRoot, 'vanilla-again'));
     const expectedPaths = [
       'package.json',
-      'rspack.config.ts',
+      'vite.config.ts',
       'tsconfig.json',
 '.npmrc',
       '.gitignore',
@@ -111,7 +111,7 @@ describe('scaffoldProject', () => {
     const dir = path.join(tmpRoot, 'tenant');
     scaffoldProject(vars, dir);
 
-    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    const config = fs.readFileSync(path.join(dir, 'vite.config.ts'), 'utf-8');
     expect(config).toContain('    openBrowser: false,');
     expect(config).toContain('    tenantUrl: "https://contoso.sharepoint.com"');
     expect(config).not.toContain('fluent');
@@ -140,14 +140,15 @@ describe('scaffoldProject', () => {
     expect(entry).toContain("import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base'");
     expect(entry).toContain("import HelloWorld from './components/HelloWorld'");
 
-    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
-    expect(config).toContain("import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';");
-    expect(config).toContain('resolve: rspfxResolve(),');
+    const config = fs.readFileSync(path.join(dir, 'vite.config.ts'), 'utf-8');
+    expect(config).toContain("import { rspfxVite } from '@mbsks/rspfx-plugin';");
+    expect(config).toContain('rspfxVite({');
     expect(config).toContain("name: '@contoso/hello'");
     expect(config).toContain("version: '0.0.1'");
     expect(config).toContain("framework: 'react'");
     expect(config).not.toContain('fluent');
     expect(config).toContain('port: 4321');
+    expect(config).toContain('cssCodeSplit');
 
     const tsconfig = readJson(dir, 'tsconfig.json');
     const compilerOptions = (tsconfig['compilerOptions'] as Record<string, unknown>);
@@ -251,6 +252,51 @@ describe('scaffoldProject', () => {
     expect(written.length).toBeGreaterThanOrEqual(15);
     const manifest = readJson(dir, 'src/webparts/hello-world/hello-world.manifest.json');
     expect(manifest['componentType']).toBe('WebPart');
+  });
+
+  it('defaults to vite with cssCodeSplit comment and vite devDependency', () => {
+    const pkg = readJson(vanillaDir, 'package.json');
+    const devDeps = pkg['devDependencies'] as Record<string, string>;
+    expect(devDeps['vite']).toBeDefined();
+    expect(devDeps['@rspack/cli']).toBeUndefined();
+    expect(devDeps['@rsbuild/core']).toBeUndefined();
+    expect(fs.existsSync(path.join(vanillaDir, 'vite.config.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(vanillaDir, 'rspack.config.ts'))).toBe(false);
+    const config = fs.readFileSync(path.join(vanillaDir, 'vite.config.ts'), 'utf-8');
+    expect(config).toContain('rspfxVite');
+    expect(config).toContain('cssCodeSplit');
+    expect(config).toContain('.module.scss');
+    // vite handles .module.scss via css modules (comment)
+  });
+
+  it('scaffolds rspack.config.ts when bundler is rspack', () => {
+    const vars = makeVars({ bundler: 'rspack' });
+    const dir = path.join(tmpRoot, 'rspack-choice');
+    scaffoldProject(vars, dir);
+    expect(fs.existsSync(path.join(dir, 'rspack.config.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
+    const config = fs.readFileSync(path.join(dir, 'rspack.config.ts'), 'utf-8');
+    expect(config).toContain('RspfxPlugin');
+    const pkg = readJson(dir, 'package.json');
+    const devDeps = pkg['devDependencies'] as Record<string, string>;
+    expect(devDeps['@rspack/cli']).toBeDefined();
+    expect(devDeps['vite']).toBeUndefined();
+  });
+
+  it('scaffolds rsbuild.config.ts with injectStyles and postcss when bundler is rsbuild', () => {
+    const vars = makeVars({ bundler: 'rsbuild' });
+    const dir = path.join(tmpRoot, 'rsbuild-choice');
+    scaffoldProject(vars, dir);
+    expect(fs.existsSync(path.join(dir, 'rsbuild.config.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'vite.config.ts'))).toBe(false);
+    const config = fs.readFileSync(path.join(dir, 'rsbuild.config.ts'), 'utf-8');
+    expect(config).toContain('rspfxRsbuild');
+    expect(config).toContain('injectStyles: true');
+    expect(config).toContain('postcss');
+    const pkg = readJson(dir, 'package.json');
+    const devDeps = pkg['devDependencies'] as Record<string, string>;
+    expect(devDeps['@rsbuild/core']).toBeDefined();
+    expect(devDeps['vite']).toBeUndefined();
   });
 });
 
