@@ -100,7 +100,7 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
   };
 }
 
-export function resolveConfig(config: Partial<RspfxConfig> & Record<string, unknown>): RspfxConfig {
+export function resolveConfig(config: RspfxConfig | (Partial<RspfxConfig> & Record<string, unknown>)): RspfxConfig {
   if (!config.name) {
     throw new Error('"name" is required in the bundler config (rspack.config.ts)');
   }
