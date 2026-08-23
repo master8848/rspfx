@@ -2,25 +2,26 @@
 
 External frameworks extend rspfx without modifying the CLI or built-in packages.
 
-See [frameworks](frameworks.md) for built-in frameworks, [internal-api](internal-api.md) for package surfaces, [commands](commands.md) for CLI flags, [architecture](architecture.md) for the pipeline.
+See [frameworks](frameworks.md) for built-in frameworks, [internal-api](internal-api.md) for package surfaces, [architecture](architecture.md) for the pipeline, [commands](commands.md) for CLI flags.
 
 ## Contract
 
-Each framework consists of two parts: a `FrameworkPreset` that contributes compiler configuration and a `BaseWebPart` subclass that mounts into the DOM.
+A framework provides two parts that the pipeline consumes separately:
 
-`FrameworkPreset` is defined in `packages/plugin-api/src/types.ts:29` and imported from `@mbsks/rspfx-plugin-api`.
+| Part | Import | Fact home |
+|---|---|---|
+| `FrameworkPreset` | `import type { FrameworkPreset } from '@mbsks/rspfx-plugin-api'` | `packages/plugin-api/src/types.ts:29` |
+| `BaseWebPart` subclass | `import { BaseWebPart } from '@mbsks/rspfx-core/webpart'` | `packages/core/src/base-web-part.ts:10` |
 
-`BaseWebPart` is defined in `packages/core/src/base-web-part.ts` and imported from `@mbsks/rspfx-core/webpart`.
+`FrameworkId` is the open string union defined in [internal-api](internal-api.md) (`packages/core/src/config.ts:4`); custom ids use the `(string & {})` branch as `FrameworkPreset<string>`.
 
-`FrameworkId` is defined in `packages/core/src/config.ts:4` as `'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {})`; custom frameworks use the `(string & {})` open branch.
+The preset contributes compiler configuration (rules, swc, plugins, resolve, define); the web part subclass mounts at runtime via `renderInto` / `disposeFrom` / `getComponentProps`.
 
-The preset configures the compiler (rules, swc, plugins, resolve, define); the web part class mounts the framework at runtime via `renderInto`/`disposeFrom`/`getComponentProps`.
+Builtin packages `packages/framework-<name>` split the contract into two entry points (preset at `@mbsks/rspfx-framework-<fw>`, web part class at `@mbsks/rspfx-framework-<fw>/webpart`); external frameworks may use the same split or colocate exports behind separate import paths.
 
-Builtin presets and web part classes live in `packages/framework-<name>` with two entry points: index (`@mbsks/rspfx-framework-<fw>`, Node-safe preset only) and `/webpart` (`@mbsks/rspfx-framework-<fw>/webpart`, browser-only web part class); external presets follow the same split or colocate both exports behind separate imports.
+## Preset
 
-## Define a preset
-
-Create `src/framework/my-preset.ts` (or any project-owned path) exporting a `FrameworkPreset` with `name: 'my-framework'`:
+Define `src/framework/my-preset.ts` exporting a preset with a custom `name`:
 
 ```ts
 import type { FrameworkPreset } from '@mbsks/rspfx-plugin-api';
@@ -29,48 +30,33 @@ export const myPreset: FrameworkPreset<'my-framework'> = {
   name: 'my-framework',
   contributions({ fastRefresh }) {
     return {
-      rules: [
-        {
-          test: /\.tsx?$/,
-          use: { loader: 'builtin:swc-loader', options: { jsc: { parser: { syntax: 'typescript', jsx: true }, transform: { react: { runtime: 'automatic' } } } } }
-        }
-      ],
+      rules: [{ test: /\.tsx?$/, use: { loader: 'builtin:swc-loader', options: { jsc: { parser: { syntax: 'typescript', jsx: true } } } } }],
       swc: { jsc: { transform: { react: { runtime: 'automatic' } } } },
-      plugins: fastRefresh ? [] : [],
       resolve: { extensions: ['.ts', '.tsx', '.js'] }
     };
   },
   vite({ fastRefresh }) {
-    return {
-      plugins: [],
-      esbuild: { jsx: 'automatic' },
-      resolveExtensions: ['.ts', '.tsx'],
-      define: {}
-    };
+    return { plugins: [], esbuild: { jsx: 'automatic' } };
   },
   rsbuild({ fastRefresh }) {
-    return {
-      rules: [],
-      plugins: [],
-      resolve: { extensions: ['.ts', '.tsx'] }
-    };
+    return { rules: [], plugins: [], resolve: { extensions: ['.ts', '.tsx'] } };
   }
 };
 ```
 
-`contributions({ fastRefresh })` returns `FrameworkRspackContributions` (`packages/plugin-api/src/types.ts:3`): `rules`, `plugins`, `resolve`, `swc`, `define`, `moduleTest`.
+| Method | Return type | Required | Fallback |
+|---|---|---|---|
+| `contributions({ fastRefresh })` | `FrameworkRspackContributions` (`packages/plugin-api/src/types.ts:3`) | yes | — |
+| `vite({ fastRefresh })` | `FrameworkViteContributions` (`packages/plugin-api/src/types.ts:12`) | no | `rspfxVite` (`packages/plugin/src/vite.ts:299`) warns and runs without Vite contributions |
+| `rsbuild({ fastRefresh })` | `FrameworkRsbuildContributions` (`packages/plugin-api/src/types.ts:21`) | no | `rspfxRsbuild` (`packages/plugin/src/rsbuild.ts:354`) falls back to `contributions()` minus `swc` |
 
-`vite({ fastRefresh })` is optional and returns `FrameworkViteContributions` (`packages/plugin-api/src/types.ts:12`): `plugins`, `esbuild`, `resolveExtensions`, `define`; when absent, `rspfxVite` in `packages/plugin/src/vite.ts` warns and runs without Vite contributions.
+`fastRefresh` reflects `dev.fastRefresh` or `RSPFX_FAST_REFRESH=1` / `rspfx dev --refresh` and is merged by `@mbsks/rspfx-compiler-rspack`, `rspfxVite`, and `rspfxRsbuild`.
 
-`rsbuild({ fastRefresh })` is optional and returns `FrameworkRsbuildContributions` (`packages/plugin-api/src/types.ts:21`): `rules`, `plugins`, `resolve`, `define`; when absent, `rspfxRsbuild` in `packages/plugin/src/rsbuild.ts:360` falls back to `contributions()` minus the `swc` block.
+Bare loader strings in `rules[].use` that are not `builtin:` are resolved against the framework module via `resolveContributionLoaders` (`packages/dev-runtime/src/project.ts:759`).
 
-Contributions are merged by `@mbsks/rspfx-compiler-rspack` (Rspack) and by the Vite/Rsbuild plugins; `fastRefresh` reflects `dev.fastRefresh` or `RSPFX_FAST_REFRESH=1` / `rspfx dev --refresh`.
+## Web part class
 
-Loader strings in `rules[].use` that are not `builtin:` are resolved against the framework package's own `node_modules` via `resolveContributionLoaders` in `packages/dev-runtime/src/project.ts:759`.
-
-## Define a web part
-
-Create the browser-side base class extending `BaseWebPart` from `@mbsks/rspfx-core/webpart`:
+Define a browser-only base class extending `BaseWebPart`:
 
 ```ts
 import { BaseWebPart } from '@mbsks/rspfx-core/webpart';
@@ -81,69 +67,63 @@ const roots = new WeakMap<HTMLElement, Root>();
 
 export abstract class MyWebPart<TProps extends Record<string, unknown>> extends BaseWebPart<TProps> {
   protected abstract renderComponent(props: TProps): ReactElement;
-
   protected renderInto(root: HTMLElement): void {
     const r = roots.get(root) ?? createRoot(root);
     roots.set(root, r);
     r.render(this.renderComponent(this.getComponentProps()));
   }
-
-  protected disposeFrom(root: HTMLElement): void {
-    const r = roots.get(root);
-    if (r) {
-      r.unmount();
-      roots.delete(root);
-    }
-  }
-
-  protected getComponentProps(): TProps {
-    return this.properties;
-  }
+  protected disposeFrom(root: HTMLElement): void { roots.get(root)?.unmount(); roots.delete(root); }
+  protected getComponentProps(): TProps { return this.properties; }
 }
 ```
 
-`BaseWebPart` (`packages/core/src/base-web-part.ts:10`) declares three abstract hooks: `getComponentProps(): TProps`, `renderInto(root: HTMLElement): void`, `disposeFrom(root: HTMLElement): void`; `render()` delegates to `renderInto(this.domElement)` and `onDispose()` delegates to `disposeFrom(this.domElement)`.
+| Hook | Contract |
+|---|---|
+| `getComponentProps(): TProps` | Derive props from `this.properties` |
+| `renderInto(root: HTMLElement)` | Mount into `root` (`this.domElement`) |
+| `disposeFrom(root: HTMLElement)` | Tear down effects and listeners |
 
-Per-root `WeakMap` bookkeeping follows the builtin pattern; dispose-then-recreate applies to Solid/Vue/Svelte-style frameworks while React/Preact re-render in place (see [frameworks](frameworks.md#mount-semantics)).
+`BaseWebPart.render()` calls `renderInto(this.domElement)`; `onDispose()` calls `disposeFrom(this.domElement)`.
 
-The web part class must not be imported from the Node-safe preset entry; keep it in a browser-only import path (e.g., `src/framework/my-webpart.ts` or a separate package's `/webpart` subpath) that project web parts import directly.
+Per-root `WeakMap` follows the builtin pattern; dispose-then-recreate applies to Solid/Vue/Svelte-style frameworks while React/Preact re-render in place (see [frameworks](frameworks.md#mount-semantics)).
 
-## Register in project
+Keep the web part class in a browser-only path (e.g., `src/framework/my-webpart.ts` or a separate package `/webpart` subpath) and do not import it from the Node-safe preset entry.
 
-Register the preset via the plugin registry in `rspack.config.ts`, which the CLI loads via `jiti` in `apps/cli/src/config.ts:69`:
+## Registration
+
+Register the preset in the bundler config that `jiti` loads (`apps/cli/src/config.ts:69`):
 
 ```ts
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 import { definePlugin, registerPlugin } from '@mbsks/rspfx-plugin-api';
 import { myPreset } from './src/framework/my-preset.js';
 
-registerPlugin(definePlugin({
-  name: 'my-framework-ext',
-  frameworkPreset: myPreset
-}));
+registerPlugin(definePlugin({ name: 'my-framework-ext', frameworkPreset: myPreset }));
 
 export default {
-  plugins: [
-    new RspfxPlugin({
-      name: 'my-app',
-      framework: 'my-framework' as const,
-      spfxVersion: '1.23'
-    })
-  ]
+  plugins: [new RspfxPlugin({ name: 'my-app', framework: 'my-framework' as const, spfxVersion: '1.23' })]
 };
 ```
 
-`definePlugin` and `registerPlugin` are exported from `@mbsks/rspfx-plugin-api` (`packages/plugin-api/src/registry.ts:5`); `registerPlugin` stores the extension in an in-memory registry read by `getPlugins()` during build and dev.
+| API | Package | File |
+|---|---|---|
+| `definePlugin`, `registerPlugin`, `getPlugins` | `@mbsks/rspfx-plugin-api` | `packages/plugin-api/src/registry.ts:5` |
 
-`registerPlugin` must execute at the top level of the bundler config before the `RspfxPlugin` import resolves the framework; the config is executed as user code via `jiti` and the registration runs synchronously on import.
+`registerPlugin` writes to an in-memory registry read by `getPlugins()` during build and dev.
 
-`framework` in `RspfxConfig` (`packages/core/src/config.ts:54`) accepts any string via the `FrameworkId` open branch; cast the custom id with `as const` to satisfy the literal type.
+`registerPlugin` must execute at the top level before `RspfxPlugin` resolves the framework; the config runs synchronously via `jiti`.
 
-No CLI change is required; the project opts in by registering the plugin locally.
+`RspfxConfig.framework` (`packages/core/src/config.ts:54`) accepts any string; use `as const` for the custom literal.
 
-## Vite and Rsbuild variants
+No CLI change is required.
 
-Replace `RspfxPlugin` with the corresponding bundler plugin; the registration call is identical:
+## Bundler variants
+
+| Config | Plugin | Preset method |
+|---|---|---|
+| `rspack.config.ts` | `RspfxPlugin` (`@mbsks/rspfx-plugin`) | `contributions()` |
+| `vite.config.ts` | `rspfxVite` (`@mbsks/rspfx-plugin`) | `vite()` then `resolveContributionLoaders` |
+| `rsbuild.config.ts` | `rspfxRsbuild` (`@mbsks/rspfx-plugin`) | `rsbuild()` then `resolveContributionLoaders` |
 
 ```ts
 // vite.config.ts
@@ -164,32 +144,23 @@ registerPlugin(definePlugin({ name: 'my-framework-ext', frameworkPreset: myPrese
 export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework: 'my-framework' as const })] });
 ```
 
-`rspfxVite` merges `preset.vite({ fastRefresh })` into the Vite config (`packages/plugin/src/vite.ts:299`); `rspfxRsbuild` merges `preset.rsbuild({ fastRefresh })` in `modifyRspackConfig` (`packages/plugin/src/rsbuild.ts:354`) and rewrites bare loader strings via `resolveContributionLoaders` (`packages/dev-runtime/src/project.ts:759`) against `FrameworkPresetModule.moduleUrl`.
+## Resolution flow
 
-When `vite()` or `rsbuild()` is absent, the plugins fall back as described above; no additional wiring is needed in the project config.
+`loadFrameworkPreset` (`packages/dev-runtime/src/project.ts:737`) resolves in order: `createRequire(projectRoot/package.json)` for `@mbsks/rspfx-framework-<id>` (records `__rspfxModuleUrl` for loader resolution), then in-memory registry from `registerPlugin`, then a no-op preset with a warning.
 
-## Build and dev flow
+`resolveContributionLoaders` (`packages/dev-runtime/src/project.ts:759`) rewrites `rules[].use` loader and Babel preset/plugin strings via `createRequire(frameworkModuleUrl).resolve`; `builtin:swc-loader` is unchanged.
 
-`loadFrameworkPreset` in `packages/dev-runtime/src/project.ts:737` resolves `@mbsks/rspfx-framework-<id>` first via `createRequire(projectRoot/package.json)` and, when found, records `__rspfxModuleUrl` for loader resolution; when the package is not installed it falls back to the in-memory registry populated by `registerPlugin`.
+## Scaffolding and limits
 
-If neither source provides a preset, `loadFrameworkPreset` returns a no-op preset (`contributions: () => ({})`) and logs a warning; the build runs without framework contributions.
+- `packages/templates` and `rspfx new` remain builtin-only.
 
-`resolveContributionLoaders` in `packages/dev-runtime/src/project.ts:759` rewrites `rules[].use` loader strings and Babel `presets`/`plugins` entries via `createRequire(frameworkModuleUrl).resolve`; `builtin:swc-loader` strings are left unchanged.
+- To use a custom framework in a new project: `rspfx new my-app --framework vanilla --yes`, add `src/framework/my-preset.ts` and `src/framework/my-webpart.ts`, register the preset in the bundler config, update `src/webparts/<name>/<name>WebPart.ts` to extend `MyWebPart`.
 
-Both paths apply `fastRefresh` consistently: `rspfx dev --refresh` or `dev.fastRefresh` sets `RSPFX_FAST_REFRESH=1` and the preset receives `{ fastRefresh: true }`.
+- Custom ids share the open `FrameworkId` branch; no validation beyond string identity.
 
-## Scaffolding
+- `rspfx new --help`, `rspfx doctor`, and CLI prompts cover builtin ids only; `rspfx doctor` reports the framework package as missing when the preset comes from the registry, but the build succeeds via the registry fallback.
 
-`packages/templates` and `rspfx new` remain builtin-only; no external template registration exists.
+- `resolveContributionLoaders` rewrites only `rules[].use` and Babel strings; `swc`, `define`, and `resolve` are merged without path rewriting.
 
-To use a custom framework in a new project, scaffold a vanilla project and replace the web part class and compiler preset: run `rspfx new my-app --framework vanilla --yes`, then add `src/framework/my-preset.ts` and `src/framework/my-webpart.ts`, register the preset in the bundler config, and update the web part under `src/webparts/<name>/<name>WebPart.ts` to extend `MyWebPart` instead of `BaseWebPart`.
+- Fast refresh requires the preset to return refresh plugins/loaders for the active bundler; `RefreshRuntime` (`packages/dev-runtime`) is framework-agnostic.
 
-## Limits
-
-Custom framework ids share the open `FrameworkId` branch; no validation beyond string identity is performed.
-
-Templates, CLI prompts, and `rspfx doctor` framework checks cover builtin ids only; external frameworks are not listed by `rspfx new --help` and `rspfx doctor` reports the framework package as missing when the preset comes from the registry (the build still succeeds via the registry fallback).
-
-`resolveContributionLoaders` only rewrites `rules[].use` loader and Babel plugin/preset strings; other contribution fields (`swc`, `define`, `resolve`) are merged without path rewriting.
-
-Fast refresh is available only when the preset's `contributions`/`vite`/`rsbuild` return the appropriate refresh plugins/loaders for the active bundler; the runtime `RefreshRuntime` in `packages/dev-runtime` is framework-agnostic and requires no preset change.
