@@ -13,6 +13,14 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 ### Added
 - Per-version changelog rule and tag linkage (this file) — `CHANGELOG.md` now requires one `## [X.Y.Z]` per release and links each section to `vX.Y.Z` and the npm dist-tag.
 
+### Fixed
+- Fixed `rspfx build` now delegates to `rspack build` so `rspack.config.ts` `module.rules` are honored.
+- Fixed CSS `importLoaders` for `.css` `@import` — `1` when PostCSS is present, `0` when not (`packages/compiler-rspack/src/config.ts:212`).
+- Fixed `postcss.config.json` detection — now checked alongside `js`/`cjs`/`mjs`/`ts`/`cts`/`mts` (`packages/compiler-rspack/src/config.ts:37`).
+- Fixed styling docs `camelCaseOnly` → `asIs` to match `packages/plugin/src/vite.ts:330` and `packages/compiler-rspack/src/helpers/css.ts:58`.
+- Fixed bundler choice docs — Rspack is manual `module.rules`, Vite is default, ranking is Vite > Rsbuild > Rspack per `skills/rspfx/SKILL.md`.
+- Fixed Tailwind `content` note — `content` not `purge` for v3 (`docs/styling.md:87`).
+
 > Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
 
 ## [0.0.13] - 2026-08-23

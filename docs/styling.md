@@ -10,32 +10,31 @@ Use `style-loader` in `packages/compiler-rspack/src/config.ts:182`, `output.inje
 
 ## Default handling
 
-`packages/compiler-rspack/src/config.ts:183` registers `test: /\.css$/` with `style-loader` + `css-loader` `modules: { auto: true }` and `test: /\.s[ac]ss$/i` with `style-loader` + `css-loader` `modules: { auto: true }, importLoaders: 1` + `sass-loader` `api: "modern"`. `packages/plugin/src/vite.ts:340` sets `build.cssCodeSplit: false` and relies on Vite's native CSS pipeline. `packages/plugin/src/rsbuild.ts:319` registers the same `style-loader` + `css-loader` + `sass-loader` rules inside `modifyRspackConfig` and `packages/plugin/src/rspack.ts` inherits the compiler rules via `createRspackConfig`.
+`packages/compiler-rspack/src/config.ts:212` registers `test: /\.css$/` with `style-loader` + `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }` `importLoaders: hasPostcss && postcssLoader ? 1 : 0` and `test: /\.s[ac]ss$/i` with `style-loader` + `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }, importLoaders: (postcss ? 1 : 0) + 1` + `sass-loader` `api: "modern"`. `packages/plugin/src/vite.ts:340` sets `build.cssCodeSplit: false` and `css.modules: { localsConvention: 'asIs', scopeBehaviour: 'local' }` (`packages/plugin/src/vite.ts:330`). `packages/plugin/src/rsbuild.ts:398` registers the same `style-loader` + `css-loader` + `sass-loader` rules inside `modifyRspackConfig` and `packages/plugin/src/rspack.ts` inherits the compiler rules via `createRspackConfig`.
 
-All three paths handle `.css`, `.scss`, `.sass`, and `*.module.*` without user config. Enable PostCSS by adding `postcss.config.js` or `postcss.config.mjs` at the project root; Vite and Rsbuild auto-detect it, and `packages/compiler-rspack/src/config.ts` applies `postcss-loader` when the config file exists. Enable SCSS by installing `sass` (`pnpm add -D sass`); `sass-loader` resolves against the project `node_modules` and is skipped when `sass` is absent. CSS Modules activate automatically for `*.module.css` and `*.module.scss` via `modules: { auto: true }`; plain `.css`/`.scss` stay global.
+All three paths handle `.css`, `.scss`, `.sass`, and `*.module.*` without user config. Enable PostCSS by adding `postcss.config.js`, `postcss.config.cjs`, `postcss.config.mjs`, `postcss.config.ts`, `postcss.config.cts`, `postcss.config.mts`, or `postcss.config.json` at the project root; Vite and Rsbuild auto-detect `postcss.config.*`, and `packages/compiler-rspack/src/config.ts:37` plus `packages/compiler-rspack/src/helpers/css.ts:8` plus `packages/plugin/src/rsbuild.ts:70` apply `postcss-loader` only when the config file exists (`importLoaders` is `1` for CSS / `2` for SCSS when present, otherwise `0`/`1`). Enable SCSS by installing `sass` (`pnpm add -D sass`); `sass-loader` resolves against the project `node_modules` and is skipped when `sass` is absent. CSS Modules activate automatically for `*.module.css` and `*.module.scss` via `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }`; plain `.css`/`.scss` stay global.
+
+Scope behaviour: `packages/plugin/src/vite.ts:330` sets `css.modules.scopeBehaviour: 'local'` explicitly with `localsConvention: 'asIs'`; `packages/compiler-rspack/src/config.ts:218` and `packages/compiler-rspack/src/helpers/css.ts:58` and `packages/plugin/src/rsbuild.ts:403` use `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }` without explicit `mode` — `css-loader` defaults to `mode: 'local'` when `auto` matches, so `*.module.*` is local and plain files are global; `:global{}` inside a module leaks to the global scope, so use it only intentionally.
 
 ## Bundler choice
 
-Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts`) is the recommended default and the most stable path for styling. Rsbuild (`rsbuild.config.ts` with `rspfxRsbuild` from `packages/plugin/src/rsbuild.ts`) is the second pick and matches Rspack semantics with less config. Rspack (`rspack.config.ts` with `RspfxPlugin` from `packages/plugin/src/rspack.ts`) requires the longest webpack-like `module.rules` block and is retained for cases that need full Rspack control.
+Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts:340`) is the recommended default and the most stable path for styling. Rsbuild (`rsbuild.config.ts` with `rspfxRsbuild` from `packages/plugin/src/rsbuild.ts:319`) is the second pick and matches Rspack semantics with less config. Rspack (`rspack.config.ts` with `RspfxPlugin` from `packages/plugin/src/rspack.ts`) requires manual webpack-like `module.rules` and is retained only when full Rspack control is needed.
 
-Select the bundler at scaffold or migrate time with `rspfx new --bundler vite|rsbuild|rspack` or `rspfx migrate --bundler vite|rsbuild|rspack` (`apps/cli/src/commands/new.ts`, `apps/cli/src/commands/migrate.ts`). All three produce identical `dist/*.js` + `release/manifests/*.manifest.json` + `sharepoint/solution/*.sppkg` outputs.
+Ranking is Vite > Rsbuild > Rspack per `skills/rspfx/SKILL.md`; switch with `rspfx new --bundler vite|rsbuild|rspack` or `rspfx migrate --bundler vite` (`apps/cli/src/commands/new.ts`, `apps/cli/src/commands/migrate.ts`). All three produce identical `dist/*.js` + `release/manifests/*.manifest.json` + `sharepoint/solution/*.sppkg` outputs.
 
 ## Per-bundler customization
 
 User-owned styling config lives in the bundler file; the rspfx plugins do not overwrite user `css`/`tools` keys.
 
-Rspack (`rspack.config.ts`): add `module.rules` entries. The defaults in `packages/compiler-rspack/src/config.ts:183` are the reference; override by pushing a rule before `createRspackConfig` merges framework contributions. Use `style-loader` + `css-loader` + `sass-loader` + optional `postcss-loader` with `modules: { auto: true }`.
+Rspack (`rspack.config.ts`): add `module.rules` entries. The defaults in `packages/compiler-rspack/src/config.ts:212` and `packages/compiler-rspack/src/helpers/css.ts:38` are the reference; prefer helpers `rspfxCssInlineRule()`/`rspfxSassRule()` from `@mbsks/rspfx-compiler-rspack/helpers/css.js` over hand-written `style-loader` + `css-loader` + `sass-loader` + `postcss-loader` rules, and set `build: { css: false }` in `RspfxPlugin` options when taking full ownership via `packages/compiler-rspack/src/helpers/css.ts:38`.
 
 ```ts
 // rspack.config.ts
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+import { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack/helpers/css.js';
 export default {
   plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react' })],
-  module: {
-    rules: [
-      { test: /\.css$/, use: ['style-loader', { loader: 'css-loader', options: { modules: { auto: true } } }] }
-    ]
-  }
+  module: { rules: [rspfxCssInlineRule(), rspfxSassRule(), { test: /\.png$/, type: 'asset/resource' }] }
 };
 ```
 
@@ -63,7 +62,7 @@ import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
 export default defineConfig({
   plugins: [rspfxVite({ name: 'my-app', framework: 'react' })],
-  css: { modules: { localsConvention: 'camelCaseOnly' } }
+  css: { modules: { localsConvention: 'asIs' } }
 });
 ```
 
@@ -83,11 +82,13 @@ export default { plugins: { '@tailwindcss/postcss': {} } };
 @import "tailwindcss";
 ```
 
-Import `src/app.css` from any web part entry or component (`src/webparts/<name>/<name>WebPart.ts` or `src/webparts/<name>/components/<Name>.tsx`). Vite loads `postcss.config.mjs` natively. Rsbuild loads it via `tools.postcss`. Rspack loads it via `postcss-loader` when the config file exists. Do not add a `TailwindPostCSSPatch` or custom loader; the standard PostCSS detection handles Tailwind v4.
+Import `src/app.css` from any web part entry or component (`src/webparts/<name>/<name>WebPart.ts` or `src/webparts/<name>/components/<Name>.tsx`). Vite and Rsbuild auto-detect `postcss.config.*` natively (`tools.postcss` for Rsbuild), and Rspack enables `postcss-loader` only when the config file exists (`packages/compiler-rspack/src/config.ts:37`, `packages/compiler-rspack/src/helpers/css.ts:8`, `packages/plugin/src/rsbuild.ts:70`); `postcss.config.json` plus `postcss.config.ts`/`cts`/`mts` are also supported alongside `postcss.config.js`/`cjs`/`mjs`. Do not add a `TailwindPostCSSPatch` or custom loader; the standard PostCSS detection handles Tailwind v4.
+
+Tailwind v3 requires `content: ["./src/**/*.{js,ts,jsx,tsx,scss,css}"]` in `tailwind.config.js`; `purge: []` triggers a Tailwind 3.4 deprecation warning — use `content` instead.
 
 ## SCSS modules vs normal CSS vs global
 
-Files ending in `*.module.css` and `*.module.scss` are CSS Modules: `css-loader` `modules: { auto: true }` hashes class names and the import returns a mapping.
+Files ending in `*.module.css` and `*.module.scss` are CSS Modules: `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }` (implicit `mode: 'local'`) hashes class names and the import returns a mapping.
 
 ```ts
 // src/webparts/hello/components/Hello.module.scss
@@ -101,7 +102,7 @@ export const Hello = () => <div className={styles.hello}>Hello</div>;
 
 Files named `*.css` and `*.scss` without `.module.` are global: selectors apply document-wide and the import has no mapping export. Use for resets, Tailwind entry (`src/app.css`), or third-party CSS.
 
-SCSS requires `sass` (`pnpm add -D sass`); `sass-loader` `api: "modern"` in `packages/compiler-rspack/src/config.ts:192` and `packages/plugin/src/rsbuild.ts:327` compiles `@mixin`, `@include`, `@import`, and `@use`. Install `sass` when any `.scss` or `.sass` file exists; plain `.css` projects do not need it.
+SCSS requires `sass` (`pnpm add -D sass`); `sass-loader` `api: "modern"` in `packages/compiler-rspack/src/config.ts:245` and `packages/compiler-rspack/src/helpers/css.ts:95` and `packages/plugin/src/rsbuild.ts:426` compiles `@mixin`, `@include`, `@import`, and `@use`. Install `sass` when any `.scss` or `.sass` file exists; plain `.css` projects do not need it.
 
 ## Opt-out and fully custom CSS
 
@@ -117,7 +118,7 @@ When `build.css: false`, no `style-loader`/`css-loader`/`sass-loader` rules are 
 
 ## Future-proofing
 
-Import the shared helpers from `@mbsks/rspfx-plugin` when they are available: `rspfxCssInlineRule()` and `rspfxSassRule()` return the `style-loader` + `css-loader` (`modules: { auto: true }`) and SCSS (`+ sass-loader` `api: "modern"`) rule objects used by `packages/compiler-rspack/src/config.ts:183`; prefer them over hand-written rules to track future loader changes.
+Import the shared helpers from `@mbsks/rspfx-plugin` when they are available: `rspfxCssInlineRule()` and `rspfxSassRule()` from `packages/compiler-rspack/src/helpers/css.ts:38` return the `style-loader` + `css-loader` (`modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }`, implicit `mode: 'local'`) and SCSS (`+ sass-loader` `api: "modern"`) rule objects used by `packages/compiler-rspack/src/config.ts:212`; prefer them over hand-written rules to track future loader changes.
 
-PostCSS detection is file-based: presence of `postcss.config.js`, `postcss.config.cjs`, or `postcss.config.mjs` at the project root enables the transform for all bundlers; absence disables it with no stub. No `TailwindPostCSSPatch` or framework-specific Tailwind wiring is ever needed; Tailwind v4 is a standard PostCSS plugin via `@tailwindcss/postcss` as shown above.
+PostCSS detection is file-based: presence of `postcss.config.js`, `postcss.config.cjs`, `postcss.config.mjs`, `postcss.config.ts`, `postcss.config.cts`, `postcss.config.mts`, or `postcss.config.json` at the project root enables the transform for all bundlers (`packages/compiler-rspack/src/config.ts:37`, `packages/compiler-rspack/src/helpers/css.ts:8`, `packages/plugin/src/rsbuild.ts:70`); absence disables it with no stub. No `TailwindPostCSSPatch` or framework-specific Tailwind wiring is ever needed; Tailwind v4 is a standard PostCSS plugin via `@tailwindcss/postcss` as shown above.
 
