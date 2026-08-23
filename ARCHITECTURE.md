@@ -129,15 +129,13 @@ Rules:
 | `fluent-adapter` | optional | framework-react | Fluent UI web part boilerplate, theme sync | `FluentWebPart` |
 | `sharepoint-runtime` | runtime | core | shims/bridges for sp-* npm packages, framework→SPFx glue | helpers |
 | `templates` | scaffolding | — | project templates (per framework, per language) | template files |
-| `cli` | app | everything above | `new/dev/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
+| `cli` | app | everything above | `new/migrate/dev/build/package/deploy/doctor/analyze/clean`, prompts | `rspfx` binary |
 
-Note: real `@microsoft/sp-*` packages **are published on npm**. Projects depend on them directly (version pinned to SPFx target); the toolchain externalizes them and emits `"type": "component"` dependency entries into manifests so SharePoint resolves its own built-in copies. `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.
+Note: `@microsoft/sp-*` packages are externalized and handled internally. Most web parts need no manual `sp-*` install — the toolchain emits `"type": "component"` dependency entries with ids/versions from `node_modules` when present, otherwise `reference/sp-component-ids.json`, so SharePoint resolves its built-in copies. Install a `sp-*` runtime only if your code imports it (e.g. `@microsoft/sp-http`). `sharepoint-runtime` stays thin (types/bridges) and may be dropped if unused.
 
-**Config flow:** the CLI loads the user's `rspack.config.ts` (or `vite.config.ts`)
-via jiti, scans the `plugins` array for `RSPFX_PLUGIN_MARKER`, and reads the
-plugin's `options` — the single project config (name, framework, dev, build,
-paths, deploy). No config or no plugin → CLI error with guidance.
-`rspfx.config.ts` is removed; there is no legacy support.
+**Config flow:** the CLI prefers an explicit bundler config when present — `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` loaded via `jiti`, scanning `plugins` for `RSPFX_PLUGIN_MARKER` and reading `options` (name, framework, dev, build, paths, deploy). When no config is found it synthesizes the same shape from `config/config.json` + `config/package-solution.json` + `package.json` + `src/*/*.manifest.json` (zero-config; Rspack or Vite runs internally). `rspfx migrate` persists that synthesis to a bundler file and backs up to `.rspfx/migrate-backup.json` for `--revert`. `rspfx.config.ts` is removed; there is no legacy support.
+
+**Same manifest:** `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` drive both the official toolchain and RSPFX (see `docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx` for switching and revert via `rspfx migrate --revert` or `git restore`).
 
 ---
 
@@ -225,16 +223,16 @@ Phase 9  Benchmarks + full test suite + docs
 
 ## 7. Compatibility concerns (non-negotiables)
 
-1. **`sp-*` never bundled in production output.** Always `externals` + `"type": "component"` manifest entries with the exact id/version from the targeted SPFx version's node_modules.
+1. **`sp-*` never bundled in production output.** Always `externals` + `"type": "component"` manifest entries with ids/versions from `node_modules` when present, otherwise `reference/sp-component-ids.json` — no manual install required for externalization itself.
 2. **Output naming identical to official**: `<entry>.js` (e.g. `my-webpart.js`), matching `loaderConfig.scriptResources.<entryModuleId>.path`.
-3. **The generated project layout mirrors official SPFx conventions** — a bundler config hosting the `RspfxPlugin` (`src/webparts/*/`, `config/`, `sharepoint/`) so `rspfx new` output is boring and familiar.
+3. **The project layout mirrors official SPFx conventions** — `src/webparts/*/`, `config/`, `sharepoint/` plus an optional bundler config (`rspack.config.ts` / `vite.config.ts`) synthesized from the same manifests when absent, so zero-config and `rspfx new` output are both boring and familiar.
 4. **The `.sppkg` must install via app catalog → site collection → workbench**, byte-valid zip (CRC/ZIP64 correctness — Python `zipfile`-compatible, readable by SharePoint's extraction).
 5. **Manifest schema fields preserved**: `preconfiguredEntries`, `properties`, `safeWithCustomScriptDisabled`, `componentType`, `manifestVersion: 2`, `loaderConfig.scriptResources` dependency types (`component`/`path`/`localizedPath`).
 6. **Dev must work like official serve**: workbench is primary; `localhost:4321/temp/manifests.js` URL shape; auto-opened browser; rebuild notifications; HTTPS with trusted self-signed cert.
 7. **Extensions** (`ApplicationCustomizer`, `ListViewCommandSet`) are out of scope until web part path is solid — but manifest generator must not preclude them (same loaderConfig machinery).
 8. **Node 20+, pnpm/npm/yarn** all first-class; CI matrix on all three.
 9. **Zero framework deps in core**; Fluent/Tailwind/SCSS strictly opt-in via config.
-10. **No webpack/Heft/gulp strings anywhere in runtime or build output** — fully replaceable `node_modules` (only `@microsoft/sp-*` runtime deps allowed in generated projects, exactly as official SPFx does).
+10. **No webpack/Heft/gulp strings anywhere in runtime or build output** — fully replaceable `node_modules` (`@microsoft/sp-*` handled internally; install only if your code imports that runtime).
 
 ---
 

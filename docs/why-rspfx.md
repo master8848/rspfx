@@ -2,19 +2,18 @@
 
 The official SharePoint Framework toolchain is a chain of four disconnected generations of tooling bolted together: gulp (task runner) orchestrating Heft (build system) driving webpack (bundler) through a config overlay (`sp-build-core-webpack`, `rush-stack-compiler-…`) — plus a maze of JSON config files.
 
-RSPFX replaces all of it with one modern bundler and one plugin.
+RSPFX replaces all of it with one modern bundler and zero required config files.
 
-## One file instead of five
+## Zero config for standard layouts
 
-Official SPFx projects need `gulpfile.js`, `tsconfig.json` (with Heft
-extends), `config/config.json`, `config/serve.json`,
-`config/write-manifests.json`, `config/package-solution.json` and a
-`.yo-rc.json` — and the build behavior is spread across all of them.
+Official SPFx projects need `gulpfile.js`, `tsconfig.json` (with Heft extends), `config/config.json`, `config/serve.json`, `config/write-manifests.json`, `config/package-solution.json` and a `.yo-rc.json` — and the build behavior is spread across all of them.
 
-RSPFX: one plugin in your bundler config:
+RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `pnpm build` synthesize the same options and run Rspack or Vite internally. If `rspack` or `vite` is installed they just work.
+
+When you want explicit control, one optional plugin in your bundler config is enough:
 
 ```ts
-// rspack.config.ts  (or vite.config.ts with rspfxVite)
+// rspack.config.ts (or vite.config.ts with rspfxVite) — optional
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
 export default {
@@ -37,9 +36,9 @@ export default {
 };
 ```
 
-Everything else is auto-discovered: web part bundles from
-`src/webparts/*/`, externals, localized resources, debug manifests,
-`.sppkg` assembly.
+Everything else is auto-discovered: web part bundles from `src/webparts/*/`, externals, localized resources, debug manifests, `.sppkg` assembly. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx) for the shared-manifest guarantee and revert via `rspfx migrate --revert`.
+
+> **Tip:** You do not need to install `@microsoft/sp-*` for most web parts. The toolchain externalizes them and emits `"type": "component"` entries so SharePoint resolves its built-in copies. Install `sp-*` only if your code imports that runtime.
 
 ## Any modern bundler — not just webpack
 
@@ -50,8 +49,7 @@ Everything else is auto-discovered: web part bundles from
 | **Rsbuild** (Rspack-based build tool) | `rsbuild.config.ts` + `rspfxRsbuild` | ✅ build + dev (workbench) |
 | **Turbopack** | — | ❌ not possible today — Turbopack has no webpack plugin API and no standalone CLI outside Next.js; tracked in `docs/roadmap.md` |
 
-The official toolchain is hardwired to webpack 5. If you want Vite or Rspack,
-you can't have SPFx.
+The official toolchain is hardwired to webpack 5. If you want Vite or Rspack, you can't have SPFx.
 
 ## Every UI framework — not just React
 
@@ -61,56 +59,45 @@ you can't have SPFx.
 | Vanilla TS | ✅ | ✅ |
 | Solid / Preact / Vue / Svelte | ❌ | ✅ |
 
-Official SPFx templates ship React only; the other frameworks are left to
-community loaders fighting webpack config. RSPFX has first-class framework
-presets (`@mbsks/rspfx-framework-*`) that contribute their own loaders,
-refresh runtimes, and web part base classes (`VueWebPart`, `SolidWebPart`, …).
+Official SPFx templates ship React only; the other frameworks are left to community loaders fighting webpack config. RSPFX has first-class framework presets (`@mbsks/rspfx-framework-*`) that contribute their own loaders, refresh runtimes, and web part base classes (`VueWebPart`, `SolidWebPart`, …).
 
 ## Faster by construction
 
-- **Rspack is Rust-based** — 5–10× faster cold builds than webpack 5, with
-  persistent caching between dev runs (`.rspack-cache`).
-- **No task-runner hop**: gulp → Heft → webpack is three process
-  generations; RSPFX is `rspfx` → Rspack/Vite directly.
-- **TS/SWX**: TypeScript compiles through SWC (native), not
-  `ts-loader`-style per-file transpiles.
-- **Dev loop**: in-process dev server, `writeToDisk` bundles, regenerated
-  `manifests.js`, fast refresh where the framework supports it.
+- **Rspack is Rust-based** — 5–10× faster cold builds than webpack 5, with persistent caching between dev runs (`.rspack-cache`).
+- **No task-runner hop**: gulp → Heft → webpack is three process generations; RSPFX is `rspfx` → Rspack/Vite directly.
+- **TS/SWX**: TypeScript compiles through SWC (native), not `ts-loader`-style per-file transpiles.
+- **Dev loop**: in-process dev server, `writeToDisk` bundles, regenerated `manifests.js`, fast refresh where the framework supports it.
 
-See [docs/performance.md](performance.md) for benchmark methodology.
+See [performance.md](performance.md) for benchmark methodology.
 
 ## Modern by default
 
-- **ESM-only packages** (official SPFx toolchain is CommonJS-era; Heft is
-  deprecated by Microsoft itself)
-- **Bring your own CSS tooling** — Tailwind (v2/v3/v4), UnoCSS, or anything else, configured directly in the bundler config
-- **Node ≥ 20**, no gulpfile, no Heft, no webpack configs anywhere in your
-  project
-- `rspfx doctor` validates node/ports/dependencies instead of cryptic
-  gulp stack traces
+- **ESM-only packages** (official SPFx toolchain is CommonJS-era; Heft is deprecated by Microsoft itself)
+- **Bring your own CSS tooling** — Tailwind (v2/v3/v4), UnoCSS, or anything else, configured directly in the bundler config when you have one, or via the synthesized defaults
+- **Node ≥ 20**, no gulpfile, no Heft, no webpack configs needed in your project
+- `rspfx doctor` validates node/ports/dependencies instead of cryptic gulp stack traces
+- `rspfx migrate` automates the switch with `--dry-run` preview and `--revert` restore to `.rspfx/migrate-backup.json` (see [commands.md#rspfx-migrate](commands.md#rspfx-migrate))
 
 ## Still 100% SPFx-compatible
 
 None of this breaks SharePoint:
 
-- Byte-compatible AMD bundles (`define('<componentId>_<version>', …)`) with
-  the official public-path semantics
-- Same `config/config.json` bundle/externals/localized-resource contracts
-- Debug manifests served at `/temp/manifests.js` for the real SharePoint
-  workbench
-- `.sppkg` packages validated against the same zip layout the app catalog
-  expects, and deployable via `rspfx deploy` or manual upload
+- Byte-compatible AMD bundles (`define('<componentId>_<version>', …)`) with the official public-path semantics
+- Same `config/config.json` bundle/externals/localized-resource contracts — shared between Heft/Gulp and RSPFX
+- Debug manifests served at `/temp/manifests.js` for the real SharePoint workbench
+- `.sppkg` packages validated against the same zip layout the app catalog expects, and deployable via `rspfx deploy` or manual upload
 
 ## Feature parity where it matters
 
 | Capability | Official toolchain | RSPFX |
 |---|---|---|
-| Workbench dev server (`:4321` HTTPS) | gulp serve | `rspfx dev` |
+| Workbench dev server (`:4321` HTTPS) | gulp serve | `rspfx dev` (zero-config — synthesizes from manifests) |
 | Web part + app manifests | Heft plugin | auto-generated |
 | Localized resources | Heft | built-in (per-locale bundles) |
-| `.sppkg` packaging | gulp bundle + package-solution | `rspfx package` |
+| `.sppkg` packaging | gulp bundle + package-solution | `rspfx package` (or `pnpm build` zero-config) |
 | App catalog deploy | manual / CI scripts | `rspfx deploy` (token) |
 | Property pane, Teams hosts, full-page | runtime, unaffected | runtime, unaffected |
 | Fast refresh | — | `rspfx dev --refresh` (react/preact/vue/svelte/solid; vanilla reloads) |
 | Bundle analysis | webpack-bundle-analyzer setup | `rspfx analyze` |
 | One-command project creation | `yo @microsoft/sharepoint` | `rspfx new` |
+| Migrate existing project | manual edits | `rspfx migrate --dry-run` → `rspfx migrate` → `pnpm install` |
