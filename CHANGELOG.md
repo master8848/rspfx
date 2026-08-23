@@ -6,33 +6,229 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Se
 
 Each version corresponds to an annotated git tag `vX.Y.Z` and an npm dist-tag (see [Publishing and tagging](#publishing-and-tagging) below). The single source of truth for history is this file — do not duplicate version history in `docs/` reference pages (see `docs/AGENTS.md`).
 
+Archive policy: this file keeps the full human-readable history from `0.0.1` through the current `Unreleased` until `1.0.0`; on `1.0.0` the pre-`1.0` history will be frozen to `CHANGELOG_ARCHIVE.md` and git history remains the canonical archive — all entries below stay one line, human-readable, with exact package/file/flag references.
+
 ## [Unreleased]
 
 ### Added
-- Per-version changelog rule and tag linkage (this file).
+- Per-version changelog rule and tag linkage (this file) — `CHANGELOG.md` now requires one `## [X.Y.Z]` per release and links each section to `vX.Y.Z` and the npm dist-tag.
+
+> Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
 
 ## [0.0.13] - 2026-08-23
 
-- `fix(plugin/vite):` use `asIs` localsConvention to match rspack css modules
-- `feat:` vite as default bundler, robust styling defaults (scss/modules/postcss tailwind)
-- `docs:` RSPFX-only frameworks, PnPjs for lists, dual-toolchain interchange
-- `feat(core,plugin-api,dev-runtime):` custom frameworks via plugin registry (see `.agents/notes/implemented/feature/`)
-- `fix:` architecture splits and perf polish, test debt, fluent-adapter peer fixes
+Human-readable summary of `4bd4ceb..5410ef7` plus the 9 post-bump commits that ship as `0.0.13` (package version `0.0.13` at `5410ef7`; commits `0b4725a..20c23eb` are included here and `Unreleased` is reset after).
+
+### Added
+- Custom framework registry — register any framework via `packages/core` + `packages/plugin-api` + `packages/dev-runtime` without forking core (`0b4725a`, `.agents/notes/implemented/feature/2026-08-23-custom-framework-extensibility.md`).
+- `rspfx migrate` command (`apps/cli`) with `--dry-run`, `--revert`, and `--bundler vite|rspack|rsbuild` to convert Heft/Gulp projects to RSPFX (`6d2a6f7`).
+- Vite as default bundler — new projects scaffold `vite.config.ts` via `packages/plugin` vite preset; rspack/rsbuild remain selectable (`b05775b`).
+- Robust styling defaults — SCSS, CSS Modules, PostCSS, and Tailwind wired in `packages/plugin` with zero-config and future-proof helpers (`b05775b`).
+
+### Changed
+- Docs: RSPFX-only framework matrix — supported frameworks are first-class in `README.md` and `skills/`; non-RSPFX wrappers removed (`d6035e6`).
+- Docs: PnPjs guidance for SharePoint lists replaces generic fetch examples (`d6035e6`).
+- Docs: Dual-toolchain interchange explained — same `config.json` + `serve.json` works in Heft/Gulp and RSPFX (`d6035e6`).
+- Docs: Human-friendly zero-config and same-manifest guide — `README.md` emphasizes no config needed, manifest parity (`b3836bc`).
+
+### Fixed
+- Share same manifest between Heft/Gulp and RSPFX — `packages/dev-runtime` + `apps/cli` read one `config.json` source (`1b7fb98`).
+- Vite CSS Modules `localsConvention` set to `asIs` to match rspack output (was `camelCaseOnly`) — `packages/plugin/src/vite.ts:127` (`127986a`).
+- Agent Note and reference compliance for custom-framework docs (`b6de572`).
 
 > Git tag: `v0.0.13` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.0.13` (single version, `scripts/publish.mjs`).
 
 ## [0.0.12] - 2026-08-23
 
-- Initial publishable baseline for `0.0.12` (see `git log 4bd4ceb..5410ef7`).
+Covers `3fb8c26..4bd4ceb` — 22 changes between the `0.0.11` and `0.0.12` bumps; `4bd4ceb` is the bump commit.
+
+### Added
+- Hybrid dev mode (`apps/cli` `rspfx dev`) — auto-detects Heft/Gulp vs RSPFX projects and runs the correct pipeline (`adc7f41`, `.agents/notes/implemented/feature/2026-08-23-hybrid-dev-mode.md`).
+- FormCustomizer and Library scaffolding + packaging coverage (`0784b37`).
+- Extension close-out and Library component support — `packages/templates` + `packages/sppkg-builder` + `packages/manifest-generator` (`ff7d573`, `6bdf864`).
+
+### Changed
+- Language flag is scaffold-only — generators emit starter code, runtime no longer branches on `language` (`d04fdcd`).
+- Fluent flag is scaffold-only — `fluent-adapter` stays standalone, no core flag (`5972866`).
+- Deduped shared helpers and single-source drift risks across `packages/*` (`75337d5`).
+- Docs: mono-version note — all publishable packages share one version (`8a65704`).
+
+### Fixed
+- `resolveConfig` now accepts `RspfxConfig` union (`packages/core/src/versions.ts:0b110c6`).
+- Browser opens once on `rspfx dev` start and Load Debug Scripts dialog is documented (`35737d2`, `.agents/notes/implemented/fix/2026-08-23-browser-open-once-only.md`).
+- Browser-safe `./platform` subpath for platform-only externals (`packages/core/src/platform`, `7a46654`).
+- Dev-server static middleware matches mounted prefix via `originalUrl` (`packages/dev-server`, `d39fd18`).
+- Core stub import adds `.js` extension for `typecheck` (`ba2aafc`).
+- Architecture splits and perf polish — smaller bundles, faster dev-server (`3ba587f`).
+- Test debt — stub canonicalization and fidelity (`9a639c8`).
+- `fluent-adapter` peer and `context-default` strict null fixes (`4724d49`).
+- Docs conflicts and low hygiene cleanup (`20c9152`).
+- Error codes normalized, CLI prints code, Biome wired (`1b3ea`, `biome.json`).
+- Fabricated README Usage sections rewritten (`7853d99`).
+- Vite parity: space-free `tmpdir` for builds, default context test fix (`b0ab4df`).
+- `sppkg` `Library_` validation and traversal hardening (`5f3d8a3`, `.agents/notes/implemented/fix/2026-08-22-extension-library-tenant-verified.md`).
+- Broken scripts fixed, `.gitignore` cleans `lib`, draft banner removed, playground purged (`ed98963`).
+- Stray root config and rspack cache ignored (`3480800`).
+- Custom `extensions`/`libraries` paths honored in dev; `FormCustomizer` added (`6bdf864`).
 
 > Git tag: `v0.0.12` · npm dist-tag: `latest`.
+
+## [0.0.11] - 2026-08-22
+
+Covers `850f473..3fb8c26` — packaging and manifest hardening that lands as `0.0.11`.
+
+### Fixed
+- `sppkg` builder locked to official Heft parity with regression test (`850f473`, `.agents/notes/implemented/fix/2026-08-22-sppkg-official-heft-parity.md`).
+- `sppkg` output aligned with official Heft `solution.sppkg` layout (`b701eeb`).
+- OPC relationships reverted to SharePoint-valid layout (`f6b48fb`).
+- `CultureName` `LocalizedString` emitted and OPC rels validation fixed (`8ac504f`, `.agents/notes/implemented/fix/2026-08-21-sppkg-localizedstring-culturename.md`).
+- Empty `DeveloperProperties` omitted to pass `AppManifest` validation (`0e5794c`).
+- `ProductID` braced and `Content-Types` MIME types fixed for SharePoint validation (`996c4ef`, `.agents/notes/implemented/fix/2026-08-21-sppkg-productid-and-content-types.md`).
+
+### Added
+- Docs: mono-version `0.0.11` noted for all publishable packages (`8a65704`).
+
+> Git tag: `v0.0.11` · npm dist-tag: `latest`.
+
+## [0.0.10] - 2026-08-21
+
+Covers `65df8ff..996c4ef` and `d19a9e4..53bc50e` — Teams/Outlook and config hardening before `0.0.11`.
+
+### Added
+- Default favicon, Teams/Outlook manifest with icons and multi-webpart docs (`6aa9ddf`, `.agents/notes/implemented/feature/2026-08-19-favicon-teams-multi-webpart.md`).
+- `serve.json` env-var interpolation and auto-create for missing configs (`53bc50e`).
+- Docs: project structure, manifest naming, and deployment guide (`d19a9e4`).
+
+### Fixed
+- Teams/Outlook manifest now correctly enables `teams.enabled` with icons (`65df8ff`).
+- Teams auto-create gated on `teams.enabled` flag (`ff4bda6`).
+- XSS/CORS/certs hardening, cert SAN fix, `dev-server` CORS, and `deploy` hardening (`f86b2c3`, `a5bf274`, `.agents/notes/implemented/fix/2026-08-19-harden-xss-cors-certs.md`, `.agents/notes/implemented/security/2026-08-19-security-audit-spfx-spa.md`).
+- Broken relative links fixed and cert trust warning added (`a93d79e`).
+
+### Changed
+- Docs deduped, roadblocks and real-tenant docs added (`a5bf274`).
+
+> Git tag: `v0.0.10` (rolled into `0.0.11` bump; no separate npm tag).
+
+## [0.0.9] - 2026-08-04
+
+Covers `bed37f9..0d490c6` — extensions, bundler parity, and standards.
+
+### Added
+- SPFx Extensions end-to-end — Application Customizer, Field Customizer, ListView CommandSet discovered and emitted (`fd1eba5`, `b43de9f`, `cd3d0c6`).
+- SharePoint runtime extension mounting and locale switching in local preview (`51c9c85`).
+- Teams assets and localized `resx` metadata packaged into `sppkg` (`cd3d0c6`).
+- Vite/Rsbuild framework presets + parity suite — M8 bundler parity (`bed37f9`, PR #4).
+- Benchmark harness comparing Heft/Gulp vs RSPFX (`cece838`).
+- Solid fast refresh via `solid-refresh/babel` with stub fallback (`601531c`, PR #3).
+
+### Fixed
+- Platform-only modules externalized in local preview (`a699e3d`).
+- Mock API handle made async to match `dev-server` route handler (`bbe6880`).
+
+### Changed
+- Bundler wording `Turbopack → Rspack/Rsbuild` and roadmap updated (`38adf56`).
+- Docs: extensions, Teams/Outlook, multi-locale, and dev-preview documented (`42d1184`, `4eb8f5a`).
+
+> Git tag: include in `0.0.11` lineage; PRs #4 and #5 merged `b23ecfb`.
+
+## [0.0.8] - 2026-08-03
+
+Covers `da5b615..bcf18d4` — local preview mode (SPFx client emulation without SharePoint tenant).
+
+### Added
+- Local preview mode — `packages/sharepoint-runtime` + `packages/dev-runtime` emulates Workbench, `WebPartContext`, `serviceScope`, `httpClient` (`da5b615`, PR #2).
+- `rsbuild` dev parity with vite — manifests, auto-reload, unminified (`0819f27`).
+- Opt-in browser opening, unminified dev builds, Workbench auto-reload (`9c275c3`).
+- Docs: local preview replaces playground — `docs/commands.md`, `docs/internal-api.md`, `docs/architecture.md` (`65ae096`).
+
+### Fixed
+- `WebPartContext` params parity and build-breaking types (`ac5b77e`).
+- `dev-runtime`/`cli`/`templates` tests aligned to OData v4 and post-playground reality (`d114f8d`).
+- `rspfx dev --mode local` warns on vite/rsbuild projects (`b9c7c30`).
+
+> Git tag: PR #2 `855acc5`.
+
+## [0.0.7] - 2026-08-02
+
+Covers `f84cf49..dda45d5` and `2299346..f836de1` — plugin foundation and publishing pipeline.
+
+### Added
+- Plugin-based project config — `rspack.config.ts` / `vite.config.ts` with `spfx()` (`644476e`, `729dd68`).
+- Bundler-agnostic plugin foundation — one `spfx()` entry for all bundlers (`101829d`, `729dd68`).
+- Native pipelines — `vite`, `rspack`, `rsbuild` presets with `rspfxResolve` (`dc720ba`).
+- Shared `assembleRelease` pipeline and `release`/`dev` hooks (`dc720ba`).
+- Localized string resources, `publicPath` capture, configurable project paths (`ef35747`).
+- Examples: `examples/solid` Todo with SharePoint list creation, plus standardized copy-paste configs and `why-rspfx` (`958028c`, `f836de1`).
+
+### Changed
+- Self-mounting web part classes replace framework adapters (`2299346`).
+- Single bundler spawn and read-back; docs show native commands (`bcf18d4`).
+
+### Fixed
+- Publishing pipeline `scripts/publish.mjs` added with resume detection and verification (`27a58ec`, `e45665a`, `77a7b2b`, `1cfb34e`, `725a8ea`, `3c2f11a`).
+- `pnpm publish` piped stdin to avoid interactive prompts (`3c2f11a`).
+- `apps/cli` entry guard uses `realpath` for npm-installed bin (`c485f26`).
+- Scaffolded deps pinned to release version; `.npmrc` with `legacy-peer-deps` for `sp-*` exact peers (`88c122f`, `a1f85a1`).
+
+> Git tag: `v0.0.6` at `f84cf49` · npm dist-tag: `latest`.
+
+## [0.0.6] - 2026-08-02
+
+- Bump all publishable packages to `0.0.6` (`f84cf49`) — plugin-config merge `dda45d5` (PR #1).
+
+> Git tag: `v0.0.6`.
+
+## [0.0.5] - 2026-08-02
+
+- Bump to `0.0.5` (`65b8b86`) — adds `rspfx-cli` to scaffolded deps (`88c122f`).
+
+> Git tag: `v0.0.5`.
+
+## [0.0.4] - 2026-08-02
+
+- Bump to `0.0.4` (`0c97aba`) — fixes npm bin guard (`c485f26`), read-after-write lag in publish verification (`77a7b2b`).
+
+> Git tag: `v0.0.4`.
+
+## [0.0.3] - 2026-08-02
+
+- Bump to `0.0.3` (`e45665a`) — publish pipeline resume/retry logic, TDZ fix, stdin pipe, E409 backoff.
+
+> Git tag: `v0.0.3`.
+
+## [0.0.1] - 2026-08-02
+
+Initial public line — rebrand `@rspfx → @mbsks`, workspace and examples setup (`87d4ae3`, `acd162d`, `61d77f6`, `d25896b`, `ecc70cf`, `abdf472`).
+
+### Added
+- Monorepo skeleton with `packages/*`, `apps/cli`, `apps/playground`, `examples/*` (`d25896b`, `61d77f6`).
+- `rspfx` CLI — `new`/`build`/`dev`/`package`/`deploy`/`playground`/`doctor`/`analyze`/`clean` (`abdf472`).
+- Framework web part classes — `react`, `preact`, `vue`, `svelte`, `solid`, `vanilla` (`f1f60f2`–`0bab54b`).
+- Compiler `rspack` with framework import stubs, AMD per-entry library names, externals table (`fix(compiler-rspack)` series).
+- `dev-runtime` serve mode, `sharepoint-runtime` mock context, `manifest-generator`, `sppkg-builder` (`da5b615` lineage).
+- Benchmark harness `bench/bench.mjs` (`4cb6f48`).
+- Docs: `docs/architecture.md`, `docs/commands.md`, `docs/frameworks.md`, `docs/compatibility.md`, `docs/fast-refresh.md`, `docs/migration.md`, `docs/roadmap.md` (`ecc70cf`).
+- Normalized `repository` URLs to `git+` and uniform `@mbsks/rspfx-*` naming (`d2848d2`, `acd162d`).
+
+> Git tag: `v0.0.1` · npm scope `@mbsks`.
 
 ## Publishing and tagging
 
 - **Git tag:** `vX.Y.Z` annotated tag created by `scripts/publish.mjs` on every successful publish. Message body references `CHANGELOG.md#X-Y-Z`. Push with `git push --follow-tags` or `git push origin vX.Y.Z`.
 - **npm dist-tag:** published via `pnpm publish --tag <dist-tag>` (default `latest`; prereleases default to `next`; override with `node scripts/publish.mjs --tag <dist-tag>`). All 19 publishable packages share the same version and tag in one run.
-- **CHANGELOG.md:** one `## [X.Y.Z] - YYYY-MM-DD` section per version. Link the tag in the section footer. `Unreleased` tracks work since the last tag.
+- **CHANGELOG.md:** one `## [X.Y.Z] - YYYY-MM-DD` section per version. Link the tag in the section footer. `Unreleased` tracks work since the last tag. On `v1.0.0`, freeze pre-`1.0` entries to `CHANGELOG_ARCHIVE.md`.
 
 [Unreleased]: https://github.com/master8848/rspfx/compare/v0.0.13...HEAD
 [0.0.13]: https://github.com/master8848/rspfx/compare/v0.0.12...v0.0.13
-[0.0.12]: https://github.com/master8848/rspfx/releases/tag/v0.0.12
+[0.0.12]: https://github.com/master8848/rspfx/compare/v0.0.11...v0.0.12
+[0.0.11]: https://github.com/master8848/rspfx/compare/v0.0.10...v0.0.11
+[0.0.10]: https://github.com/master8848/rspfx/compare/v0.0.9...v0.0.10
+[0.0.9]: https://github.com/master8848/rspfx/compare/v0.0.8...v0.0.9
+[0.0.8]: https://github.com/master8848/rspfx/compare/v0.0.7...v0.0.8
+[0.0.7]: https://github.com/master8848/rspfx/compare/v0.0.6...v0.0.7
+[0.0.6]: https://github.com/master8848/rspfx/releases/tag/v0.0.6
+[0.0.5]: https://github.com/master8848/rspfx/releases/tag/v0.0.5
+[0.0.4]: https://github.com/master8848/rspfx/releases/tag/v0.0.4
+[0.0.3]: https://github.com/master8848/rspfx/releases/tag/v0.0.3
+[0.0.1]: https://github.com/master8848/rspfx/releases/tag/v0.0.1
