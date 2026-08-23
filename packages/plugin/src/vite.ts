@@ -16,7 +16,6 @@ import {
   scriptUrlCaptureLine,
   scriptUrlPublicPathExpression
 } from '@mbsks/rspfx-compiler-rspack';
-import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
@@ -35,6 +34,7 @@ import {
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
+import { collectExternals } from './shared.js';
 
 const logger = createLogger('rspfx');
 
@@ -565,26 +565,6 @@ function selectEntry(
     );
   }
   return entry;
-}
-
-/**
- * Libraries are scanned via generateComponentManifests (manifest-generator/src/component-manifests.ts)
- * — no extra handling needed here. This covers SP deps via manifest scanning, plus
- * project externals (including library aliases when a web part imports a library) and
- * localized resource names.
- */
-function collectExternals(
-  root: string,
-  projectExternals: string[],
-  localizedResources: { name: string }[]
-): string[] {
-  return [
-    ...new Set([
-      ...findSpDependencies(root).keys(),
-      ...projectExternals,
-      ...localizedResources.map((resource) => resource.name)
-    ])
-  ];
 }
 
 async function withEnv(entry: BundleEntry, fn: () => Promise<void>): Promise<void> {

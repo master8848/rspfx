@@ -247,6 +247,15 @@ const framework = (pkg.dependencies?.react ?? pkg.devDependencies?.react) ? 'rea
 const hasScss = fs.existsSync(path.join(srcDir, 'webparts')) &&
   fs.readdirSync(path.join(srcDir, 'webparts'), { recursive: true }).some((f) => f.endsWith('.scss'));
 const styling = hasScss || pkg.dependencies?.sass ? 'scss' : 'css';
+let defaultSpfxVersion = '1.23';
+try {
+  const versionsPath = path.join(new URL('.', import.meta.url).pathname, '../packages/core/src/versions.ts');
+  const content = fs.readFileSync(versionsPath, 'utf8');
+  const match = content.match(/SPFX_DEFAULT_TARGET:\s*SpfxTarget\s*=\s*'([^']+)'/);
+  if (match?.[1]) defaultSpfxVersion = match[1];
+} catch {
+  // fallback to 1.23
+}
 
 const configContent = `import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 
@@ -256,7 +265,7 @@ export default {
     new RspfxPlugin({
       name: '${projectName}',
       framework: '${framework}',
-      spfxVersion: '1.22',
+      spfxVersion: '${defaultSpfxVersion}',
       styling: '${styling}',
       dev: {
         // https://{tenantdomain}/... is taken from config/serve.json initialPage

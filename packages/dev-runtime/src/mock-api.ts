@@ -436,15 +436,7 @@ export function createMockSharePointApi(opts: MockApiOptions): {
         } else {
           list.items[index] = { ...existing, ...body } as MockListItem;
         }
-        res.statusCode = 204;
-        res.setHeader('Vary', 'Origin');
-        if (originHeader) {
-          const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
-          if (originValue && isAllowedOrigin(originValue)) {
-            res.setHeader('Access-Control-Allow-Origin', originValue);
-          }
-        }
-        res.end();
+        sendNoContent(res, originHeader);
         return;
       }
       if (method === 'DELETE') {
@@ -452,15 +444,7 @@ export function createMockSharePointApi(opts: MockApiOptions): {
           list.items.splice(index, 1);
           list.ItemCount = list.items.length;
         }
-        res.statusCode = 204;
-        res.setHeader('Vary', 'Origin');
-        if (originHeader) {
-          const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
-          if (originValue && isAllowedOrigin(originValue)) {
-            res.setHeader('Access-Control-Allow-Origin', originValue);
-          }
-        }
-        res.end();
+        sendNoContent(res, originHeader);
         return;
       }
       respondError(res, 400, 'System.NotSupportedException', `Method ${method} is not supported by the local preview mock.`, originHeader);
@@ -532,6 +516,18 @@ export function createMockSharePointApi(opts: MockApiOptions): {
     path: '/_api',
     handle: (req: unknown, res: unknown) => handle(req, res as MockApiResponse)
   };
+}
+
+function sendNoContent(res: MockApiResponse, originHeader: string | string[] | undefined): void {
+  res.statusCode = 204;
+  res.setHeader('Vary', 'Origin');
+  if (originHeader) {
+    const originValue = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+    if (originValue && isAllowedOrigin(originValue)) {
+      res.setHeader('Access-Control-Allow-Origin', originValue);
+    }
+  }
+  res.end();
 }
 
 async function readRequestBody(req: unknown): Promise<Record<string, unknown>> {

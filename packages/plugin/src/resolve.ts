@@ -1,31 +1,6 @@
-import path from 'node:path';
-import fs from 'node:fs';
-import {
-  BASE_EXTENSIONS,
-  BUILD_TIME_ALIASES,
-  SOLID_REFRESH_STUB
-} from '@mbsks/rspfx-compiler-rspack';
+import { canResolveFromProject } from '@mbsks/rspfx-core';
+import { BASE_EXTENSIONS, BUILD_TIME_ALIASES, SOLID_REFRESH_STUB } from '@mbsks/rspfx-compiler-rspack';
 import { readProject } from '@mbsks/rspfx-dev-runtime';
-
-/**
- * Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path.
- */
-function canResolveFromProject(projectRoot: string, specifier: string): boolean {
-  const packageName = specifier.startsWith('@')
-    ? specifier.split('/').slice(0, 2).join('/')
-    : specifier.split('/')[0]!;
-  let dir = projectRoot;
-  for (;;) {
-    if (fs.existsSync(path.join(dir, 'node_modules', packageName))) {
-      return true;
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) {
-      return false;
-    }
-    dir = parent;
-  }
-}
 
 /**
  * The standard rspfx `resolve` block for the native rspack path

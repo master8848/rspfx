@@ -3,10 +3,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { deflateSync } from 'node:zlib';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import {
   resolvePathDefaults,
+  solidPng,
   type BuildConfig,
   type FrameworkId,
   type PathsConfig,
@@ -68,56 +68,29 @@ function toPascal(name: string): string {
     .join('');
 }
 
-// Keep in sync with packages/templates/src/png.ts
-function crc32(buf: Buffer): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) {
-    crc ^= buf.readUInt8(i);
-    for (let bit = 0; bit < 8; bit++) {
-      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+const solidPngBuffer = solidPng;
+
+function shortNameFromPackageJson(projectRoot: string): string {
+  let packageName = 'my-solution';
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
+    if (pkg.name) {
+      packageName = pkg.name;
     }
+  } catch {
+    // ignore
   }
-  return (crc ^ 0xffffffff) >>> 0;
+  return packageName.replace(/^@[^/]+\//, '');
 }
 
-// Keep in sync with packages/templates/src/png.ts
-function chunk(type: string, data: Buffer): Buffer {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length);
-  const typeBuf = Buffer.from(type, 'ascii');
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])));
-  return Buffer.concat([length, typeBuf, data, crc]);
-}
-
-// Keep in sync with packages/templates/src/png.ts
-function solidPngBuffer(
-  width: number,
-  height: number,
-  rgb: [number, number, number]
-): Buffer {
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  ihdr[10] = 0;
-  ihdr[11] = 0;
-  ihdr[12] = 0;
-  const row = Buffer.alloc(1 + width * 3);
-  for (let x = 0; x < width; x++) {
-    row[1 + x * 3] = rgb[0];
-    row[2 + x * 3] = rgb[1];
-    row[3 + x * 3] = rgb[2];
+function warnIfBrokenJson(filePath: string, projectRoot: string, label: string): void {
+  try {
+    JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    createLogger('rspfx').warn(
+      `Config broken, not overwriting: ${label} - ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  const raw = Buffer.concat(Array.from({ length: height }, () => row));
-  return Buffer.concat([
-    signature,
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0))
-  ]);
 }
 
 function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>): string | undefined {
@@ -199,13 +172,7 @@ export function ensureProjectConfigs(
     fs.writeFileSync(servePath, content);
     logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, servePath)}`);
   } else {
-    try {
-      JSON.parse(fs.readFileSync(servePath, 'utf8'));
-    } catch (error) {
-      logger.warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, servePath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    warnIfBrokenJson(servePath, projectRoot, path.relative(projectRoot, servePath));
   }
 
   // config/write-manifests.json
@@ -223,29 +190,14 @@ export function ensureProjectConfigs(
     fs.writeFileSync(writeManifestsPath, content);
     logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, writeManifestsPath)}`);
   } else {
-    try {
-      JSON.parse(fs.readFileSync(writeManifestsPath, 'utf8'));
-    } catch (error) {
-      logger.warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, writeManifestsPath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    warnIfBrokenJson(writeManifestsPath, projectRoot, path.relative(projectRoot, writeManifestsPath));
   }
 
   // config/package-solution.json
   const packageSolutionPath = path.join(configDir, 'package-solution.json');
   if (!fs.existsSync(packageSolutionPath)) {
     fs.mkdirSync(path.dirname(packageSolutionPath), { recursive: true });
-    let packageName = 'my-solution';
-    try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
-      if (pkg.name) {
-        packageName = pkg.name;
-      }
-    } catch {
-      // ignore
-    }
-    const shortName = packageName.replace(/^@[^/]+\//, '');
+    const shortName = shortNameFromPackageJson(projectRoot);
     const solutionId = randomUUID();
     const featureId = randomUUID();
     const pascal = toPascal(shortName);
@@ -290,13 +242,7 @@ export function ensureProjectConfigs(
     fs.writeFileSync(packageSolutionPath, content);
     logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, packageSolutionPath)}`);
   } else {
-    try {
-      JSON.parse(fs.readFileSync(packageSolutionPath, 'utf8'));
-    } catch (error) {
-      logger.warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, packageSolutionPath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    warnIfBrokenJson(packageSolutionPath, projectRoot, path.relative(projectRoot, packageSolutionPath));
   }
 
   // config/config.json
@@ -327,13 +273,7 @@ export function ensureProjectConfigs(
     fs.writeFileSync(configJsonPathEns, content);
     logger.warn(`Config missing, auto-created: ${path.relative(projectRoot, configJsonPathEns)}`);
   } else {
-    try {
-      JSON.parse(fs.readFileSync(configJsonPathEns, 'utf8'));
-    } catch (error) {
-      logger.warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, configJsonPathEns)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    warnIfBrokenJson(configJsonPathEns, projectRoot, path.relative(projectRoot, configJsonPathEns));
   }
 
   // teams/manifest.json and icons — only when teams integration is enabled
@@ -363,16 +303,7 @@ export function ensureProjectConfigs(
         logger.warn(`No web part manifest found to infer componentId for teams manifest, generated new id: ${teamsComponentId}`);
       }
       fs.mkdirSync(teamsDir, { recursive: true });
-      let packageName = 'my-solution';
-      try {
-        const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
-        if (pkg.name) {
-          packageName = pkg.name;
-        }
-      } catch {
-        // ignore
-      }
-      const shortName = packageName.replace(/^@[^/]+\//, '');
+      const shortName = shortNameFromPackageJson(projectRoot);
       const tabUrl = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=${teamsComponentId}%26forceLocale={locale}`;
       const content = JSON.stringify(
         {

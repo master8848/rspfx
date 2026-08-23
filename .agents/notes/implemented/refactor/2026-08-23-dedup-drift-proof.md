@@ -1,0 +1,15 @@
+# Agent Note: Dedup shared helpers and single-source drift risks
+
+Status: implemented
+
+## Context
+
+jscpd reported 28 clones / 583 lines (3.96%) including PNG encoder duplicated between `packages/dev-runtime/src/project.ts:72` and `packages/templates/src/png.ts:4`, CORS allowlist duplicated between `packages/compiler-rspack/src/dev-server.ts:29` and `packages/dev-runtime/src/cors.ts:1`, `PLATFORM_ONLY_PREFIXES` duplicated between `packages/compiler-rspack/src/config.ts:35` and `packages/sharepoint-runtime/src/platform-modules.ts:28`, `canResolveFromProject` duplicated between `packages/compiler-rspack/src/config.ts:36` and `packages/plugin/src/resolve.ts:13`, self-clones in `packages/sppkg-builder/src/lcid.ts:75`, `packages/framework-solid/src/index.ts:9`, `packages/dev-runtime/src/mock-api.ts:430`, `packages/dev-runtime/src/project.ts:314`, and adapter drift between `packages/plugin/src/rsbuild.ts:99` and `packages/plugin/src/vite.ts:425` plus `apps/cli/src/rsbuild.ts:8` and `apps/cli/src/vite.ts:8`; docs `SpfxTarget` unions in `docs/internal-api.md:23` and `skills/rspfx/SKILL.md:45` and `apps/cli/README.md:40` and `scripts/migrate-to-rspfx.mjs:259` drifted from `packages/core/src/versions.ts:12`.
+
+## Decision
+
+Single-source pure helpers in `packages/core/src/` (`platform.ts`, `cors.ts`, `png.ts`, `package-resolve.ts`) and re-export from dependents (`packages/sharepoint-runtime/src/platform-modules.ts:1`, `packages/dev-runtime/src/cors.ts:1`, `packages/templates/src/png.ts:1`, `packages/compiler-rspack/src/dev-server.ts:4`, `packages/compiler-rspack/src/config.ts:13`, `packages/plugin/src/resolve.ts:1`); dedup self-clones via `formatCulture` helper in `packages/sppkg-builder/src/lcid.ts:87`, `solidBabelRule` in `packages/framework-solid/src/index.ts:7`, `sendNoContent` in `packages/dev-runtime/src/mock-api.ts:527`, `shortNameFromPackageJson` and `warnIfBrokenJson` in `packages/dev-runtime/src/project.ts:64`; extract shared bundler helpers to `packages/plugin/src/shared.ts:1` (`amdName`, `computeUniqueName`, `collectExternals`, `writeStatsJson`) and `apps/cli/src/bundler-bin.ts:1` (`resolveBin`, `runBundlerBuild`, `spawnBundlerDev`); make `scripts/migrate-to-rspfx.mjs:259` read `SPFX_DEFAULT_TARGET` from `packages/core/src/versions.ts:21` at runtime; add drift guard `packages/core/tests/versions-doc-sync.test.ts:1` asserting docs, skill, readme, and migrate script match `SPFX_TARGETS`.
+
+## Consequences
+
+`pnpm build` succeeds for all 18 publishable packages and `pnpm test` passes 418/418 (was 408/414 before guard); `packages/core` stays zero-dependency (only `node:fs`, `node:path`, `node:zlib` builtins); `packages/compiler-rspack`, `packages/dev-runtime`, `packages/templates`, `packages/plugin`, `apps/cli` now import single-source helpers so future changes to `isAllowedOrigin`, `isPlatformOnlyModule`, `solidPng`, `canResolveFromProject`, `collectExternals`, and `SpfxTarget` propagate without manual sync; `pnpm --filter @mbsks/rspfx-cli build` remains green; reference placeholders `reference/extensions/README.md:1` and `reference/library/README.md:1` document harvest expectations.

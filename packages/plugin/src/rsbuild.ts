@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -31,11 +30,11 @@ import {
   resolveContributionLoaders,
   type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
-import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspfx-plugin-api';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
+import { amdName, collectExternals, computeUniqueName, writeStatsJson } from './shared.js';
 
 const logger = createLogger('rspfx');
 
@@ -387,51 +386,4 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
   };
 }
 
-function amdName(entry: BundleEntry): string {
-  return `${entry.componentIds[0]}_${entry.version}`;
-}
 
-function writeStatsJson(root: string, moduleCounts: Record<string, number>): void {
-  const file = path.join(root, '.rspfx', 'stats.json');
-  let existing: Record<string, number> = {};
-  if (fs.existsSync(file)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as {
-        moduleCounts?: Record<string, number>;
-      };
-      existing = parsed.moduleCounts ?? {};
-    } catch {
-      existing = {};
-    }
-  }
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ moduleCounts: { ...existing, ...moduleCounts } }));
-}
-
-function computeUniqueName(entries: BundleEntry[]): string {
-  if (entries.length === 1) {
-    return amdName(entries[0]!);
-  }
-  const joined = entries.map(amdName).join('');
-  return createHash('md5').update(joined).digest('hex');
-}
-
-/**
- * Libraries are scanned via generateComponentManifests (manifest-generator/src/component-manifests.ts)
- * — no extra handling needed here. This covers SP deps via manifest scanning, plus
- * project externals (including library aliases when a web part imports a library) and
- * localized resource names.
- */
-function collectExternals(
-  root: string,
-  projectExternals: string[],
-  localizedResources: LocalizedResource[]
-): string[] {
-  return [
-    ...new Set([
-      ...findSpDependencies(root).keys(),
-      ...projectExternals,
-      ...localizedResources.map((resource) => resource.name)
-    ])
-  ];
-}

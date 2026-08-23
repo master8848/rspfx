@@ -12,6 +12,10 @@ export { SPFX_DEFAULT_TARGET, SPFX_TARGETS, SPFX_VERSIONS, isSpfxTarget, spfxNpm
 export type { SpfxReleaseStatus, SpfxTarget, SpfxToolchain, SpfxVersionInfo } from './versions.js';
 export { RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS } from './marker.js';
 export type { RspfxBundlerPluginLike } from './marker.js';
+export { PLATFORM_ONLY_PREFIXES, isPlatformOnlyModule } from './platform.js';
+export { isAllowedOrigin } from './cors.js';
+export { solidPng } from './png.js';
+export { canResolveFromProject, clearCanResolveCache } from './package-resolve.js';
 export { EnvironmentType, PropertyPaneFieldType } from './environment.js';
 export { Version } from './version.js';
 export type { ISpfxTheme, ThemeProvider, WebPartContextLike } from './context.js';

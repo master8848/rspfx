@@ -24,23 +24,7 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
-/**
- * DRIFT RISK: Keep in sync with `packages/sharepoint-runtime/src/platform-modules.ts`.
- * Only the `-1p`/`-legacy-1p` first-party MSAL builds are platform-only;
- * the public `@azure/msal-browser` must NOT be externalized. The exact-prefix
- * check `request === prefix || request.startsWith(prefix + '/')` prevents
- * over-matching. See platform-modules.ts for full rationale and
- * completeness note vs `reference/sp-component-ids.json`.
- */
-const PLATFORM_ONLY_PREFIXES: readonly string[] = [
-  '@msinternal',
-  '@azure/msal-browser-1p',
-  '@azure/msal-browser-legacy-1p'
-];
-
-function isPlatformOnlyModule(request: string): boolean {
-  return PLATFORM_ONLY_PREFIXES.some((prefix) => request === prefix || request.startsWith(prefix + '/'));
-}
+import { canResolveFromProject, isPlatformOnlyModule } from '@mbsks/rspfx-core';
 
 function platformOnlyExternal(data: { request?: string }): string | undefined {
   return typeof data.request === 'string' && isPlatformOnlyModule(data.request) ? `amd ${data.request}` : undefined;
@@ -48,32 +32,6 @@ function platformOnlyExternal(data: { request?: string }): string | undefined {
 
 /** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
 export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
-
-const canResolveCache = new Map<string, boolean>();
-
-function canResolveFromProject(projectRoot: string, specifier: string): boolean {
-  const key = `${projectRoot}:${specifier}`;
-  const cached = canResolveCache.get(key);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const packageName = specifier.startsWith('@')
-    ? specifier.split('/').slice(0, 2).join('/')
-    : specifier.split('/')[0]!;
-  let dir = projectRoot;
-  for (;;) {
-    if (fs.existsSync(path.join(dir, 'node_modules', packageName))) {
-      canResolveCache.set(key, true);
-      return true;
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) {
-      canResolveCache.set(key, false);
-      return false;
-    }
-    dir = parent;
-  }
-}
 
 const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss', '.css', '.sass'];
 

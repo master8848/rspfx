@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { rspack, type Compiler, type Configuration } from '@rspack/core';
 import { RspackDevServer, type Configuration as DevServerConfiguration } from '@rspack/dev-server';
+import { isAllowedOrigin } from '@mbsks/rspfx-core';
 import type { CompileContext, DevServerOptions, StartDevServerResult } from './types.js';
 import { createRspackConfig } from './config.js';
 
@@ -24,23 +25,6 @@ const CONTENT_TYPES: Record<string, string> = {
 function contentTypeFor(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   return CONTENT_TYPES[ext] ?? 'application/octet-stream';
-}
-
-function isAllowedOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin);
-    const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    return (
-      h === 'localhost' ||
-      h === '127.0.0.1' ||
-      h === '::1' ||
-      h.endsWith('.sharepoint.com') ||
-      h.endsWith('.sharepoint-df.com') ||
-      h.endsWith('.sharepoint.cn')
-    );
-  } catch {
-    return false;
-  }
 }
 
 function corsMiddleware(req: unknown, res: any, next: (err?: unknown) => void): void {
