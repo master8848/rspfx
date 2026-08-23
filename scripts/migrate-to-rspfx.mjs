@@ -36,6 +36,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+console.warn('[deprecated] scripts/migrate-to-rspfx.mjs is deprecated — use `rspfx migrate` instead. This wrapper will be removed in a future release.');
+
 const projectRoot = process.argv[2];
 if (!projectRoot) {
   console.error('usage: node scripts/migrate-to-rspfx.mjs <project-dir>');

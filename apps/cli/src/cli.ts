@@ -13,6 +13,7 @@ import { runDeploy } from './commands/deploy.js';
 import { runAnalyze } from './commands/analyze.js';
 import { runDoctor } from './commands/doctor.js';
 import { runClean } from './commands/clean.js';
+import { runMigrate } from './commands/migrate.js';
 
 const logger = createLogger('rspfx');
 const cwd = process.cwd();
@@ -156,6 +157,30 @@ export function configureProgram(): void {
     .description('remove build output (dist, release, temp, .rspfx, caches, solution package)')
     .action(() => {
       return guard(() => runClean(cwd));
+    });
+
+  program
+    .command('migrate')
+    .description('migrate an existing SPFx project (gulp/heft) to rspfx')
+    .option('--from <auto|heft|gulp>', 'source toolchain (default: auto)')
+    .option('--bundler <rspack|vite|rsbuild>', 'bundler to scaffold (default: rspack)')
+    .option('--spfx-version <version>', 'SPFx target version')
+    .option('--dry-run', 'print plan without touching files')
+    .option('--revert', 'restore backup from .rspfx/migrate-backup.json')
+    .option('--force', 'overwrite existing bundler config without prompt')
+    .option('--yes', 'skip confirmation prompts')
+    .action((options: Record<string, unknown>) => {
+      return guard(() =>
+        runMigrate(cwd, {
+          from: options.from as 'auto' | 'heft' | 'gulp' | undefined,
+          bundler: options.bundler as 'rspack' | 'vite' | 'rsbuild' | undefined,
+          spfxVersion: options.spfxVersion as string | undefined,
+          dryRun: options.dryRun as boolean | undefined,
+          revert: options.revert as boolean | undefined,
+          force: options.force as boolean | undefined,
+          yes: options.yes as boolean | undefined
+        })
+      );
     });
 }
 
