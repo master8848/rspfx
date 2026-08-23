@@ -1,1 +1,4 @@
-export { PLATFORM_ONLY_PREFIXES, isPlatformOnlyModule } from '@mbsks/rspfx-core';
+export {
+  PLATFORM_ONLY_PREFIXES,
+  isPlatformOnlyModule,
+} from "@mbsks/rspfx-core/platform";

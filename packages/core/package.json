@@ -15,6 +15,11 @@
       "types": "./dist/base-web-part.d.ts",
       "import": "./dist/base-web-part.js",
       "default": "./dist/base-web-part.js"
+    },
+    "./platform": {
+      "types": "./dist/platform.d.ts",
+      "import": "./dist/platform.js",
+      "default": "./dist/platform.js"
     }
   },
   "files": [
