@@ -44,7 +44,7 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
   const releaseManifestsDir = path.join(releaseDir, 'manifests');
   const releaseAssetsDir = path.join(releaseDir, 'assets');
 
-  const cdnBasePath = readCdnBasePath(opts.projectRoot);
+  const cdnBasePath = readCdnBasePath(opts.projectRoot, config.paths?.configDir);
   const entryModuleIds: Record<string, string> = {};
   project.webParts.bundles.forEach((bundle, index) => {
     entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
@@ -110,10 +110,10 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
   };
 }
 
-function readCdnBasePath(cwd: string): string[] {
+function readCdnBasePath(cwd: string, configDir = 'config'): string[] {
   try {
     const raw = JSON.parse(
-      fs.readFileSync(path.join(cwd, 'config', 'write-manifests.json'), 'utf8')
+      fs.readFileSync(path.join(cwd, configDir, 'write-manifests.json'), 'utf8')
     ) as { cdnBasePath?: unknown };
     if (typeof raw.cdnBasePath === 'string' && raw.cdnBasePath.trim()) {
       let base = raw.cdnBasePath.trim();

@@ -336,7 +336,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
         logger.success(`Dev server restarted at ${origin}.`);
         // Intentionally no browser re-open here — once-only guarantee.
         // Changes that landed while restarting must not be missed.
-        const current = fingerprintDependencyScope(opts.projectRoot);
+        const current = fingerprintDependencyScope(opts.projectRoot, config.paths?.configDir);
         if (current !== fingerprint) {
           pendingFingerprint = current;
         }
@@ -351,10 +351,15 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     }
   };
 
-  const watcher = watchDependencyScope(opts.projectRoot, (fingerprint) => {
-    pendingFingerprint = fingerprint;
-    void drainRestarts();
-  });
+  const watcher = watchDependencyScope(
+    opts.projectRoot,
+    (fingerprint) => {
+      pendingFingerprint = fingerprint;
+      void drainRestarts();
+    },
+    undefined,
+    config.paths?.configDir,
+  );
 
   return {
     url: origin,

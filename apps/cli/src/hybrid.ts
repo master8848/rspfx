@@ -44,6 +44,9 @@ interface OfficialPackageJson {
 export function detectOfficialProject(
   projectRoot: string,
 ): OfficialProjectInfo | undefined {
+  // Note: hardcoded "config" path is intentional here — this probes for the
+  // official SPFx project marker (config/config.json) before any rspfx config
+  // exists. Once rspfx is scaffolded, detection is unnecessary.
   if (!fs.existsSync(path.join(projectRoot, "config", "config.json"))) {
     return undefined;
   }

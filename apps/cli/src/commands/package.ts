@@ -28,9 +28,10 @@ export async function runPackage(
   invokeBeforePackage(cwd, releaseDir);
   const teamsDir = path.join(cwd, "teams");
   const sharepointDir = path.join(cwd, "sharepoint");
+  const configDir = config.paths?.configDir ?? "config";
   const result = await buildPackage({
     projectRoot: cwd,
-    solutionConfigPath: "config/package-solution.json",
+    solutionConfigPath: path.join(configDir, "package-solution.json"),
     manifestsDir: path.join(releaseDir, "manifests"),
     assetsDir: path.join(releaseDir, "assets"),
     outDir: undefined,

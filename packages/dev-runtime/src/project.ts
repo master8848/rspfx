@@ -553,6 +553,52 @@ function readExternals(projectRoot: string, configJson: ProjectConfigJson | unde
   return [...externals];
 }
 
+function resolveEntrypoint(projectRoot: string, raw: string): string | undefined {
+  const normalized = raw.startsWith('./') || raw.startsWith('../') || path.isAbsolute(raw) ? raw : `./${raw}`;
+  const candidate = path.resolve(projectRoot, normalized);
+  if (fs.existsSync(candidate)) return candidate;
+  // Tolerate Heft convention ./lib/... -> ./src/... with .js -> .ts/.tsx fallback
+  const withoutDot = raw.replace(/^\.\//, '').replace(/^\//, '');
+  if (withoutDot.startsWith('lib/')) {
+    const srcRel = `src/${withoutDot.slice('lib/'.length)}`;
+    const base = srcRel.replace(/\.(js|ts|tsx)$/, '');
+    for (const ext of ['.ts', '.tsx', '.js']) {
+      const abs = path.resolve(projectRoot, base + ext);
+      if (fs.existsSync(abs)) return abs;
+    }
+    const absSrc = path.resolve(projectRoot, srcRel);
+    if (fs.existsSync(absSrc)) return absSrc;
+  }
+  // Generic .js -> .ts/.tsx fallback (also handles src/ without ./ prefix)
+  if (raw.endsWith('.js')) {
+    const base = normalized.replace(/\.js$/, '');
+    for (const ext of ['.ts', '.tsx']) {
+      const abs = path.resolve(projectRoot, base + ext);
+      if (fs.existsSync(abs)) return abs;
+    }
+  }
+  return undefined;
+}
+
+function resolveManifest(projectRoot: string, raw: string): string | undefined {
+  const normalized = raw.startsWith('./') || raw.startsWith('../') || path.isAbsolute(raw) ? raw : `./${raw}`;
+  const candidate = path.resolve(projectRoot, normalized);
+  if (fs.existsSync(candidate)) return candidate;
+  const withoutDot = raw.replace(/^\.\//, '').replace(/^\//, '');
+  if (withoutDot.startsWith('lib/')) {
+    let srcRel = `src/${withoutDot.slice('lib/'.length)}`;
+    // Heft manifests may reference .js; real file is .json
+    if (srcRel.endsWith('.js')) srcRel = srcRel.replace(/\.js$/, '.json');
+    const abs = path.resolve(projectRoot, srcRel);
+    if (fs.existsSync(abs)) return abs;
+  }
+  if (raw.endsWith('.js')) {
+    const abs = path.resolve(projectRoot, normalized.replace(/\.js$/, '.json'));
+    if (fs.existsSync(abs)) return abs;
+  }
+  return undefined;
+}
+
 export function discoverWebParts(
   projectRoot: string,
   configJson: ProjectConfigJson | undefined,
@@ -565,13 +611,13 @@ export function discoverWebParts(
   if (configJson?.bundles) {
     for (const [bundleName, entry] of Object.entries(configJson.bundles)) {
       for (const component of entry.components) {
-        const entrypoint = path.resolve(projectRoot, component.entrypoint);
-        const manifestPath = path.resolve(projectRoot, component.manifest);
-        if (!fs.existsSync(entrypoint)) {
-          throw new Error(`Bundle "${bundleName}" entrypoint not found: ${entrypoint}`);
+        const entrypoint = resolveEntrypoint(projectRoot, component.entrypoint);
+        if (!entrypoint) {
+          throw new Error(`Bundle "${bundleName}" entrypoint not found: ${path.resolve(projectRoot, component.entrypoint)}`);
         }
-        if (!fs.existsSync(manifestPath)) {
-          throw new Error(`Bundle "${bundleName}" manifest not found: ${manifestPath}`);
+        const manifestPath = resolveManifest(projectRoot, component.manifest);
+        if (!manifestPath) {
+          throw new Error(`Bundle "${bundleName}" manifest not found: ${path.resolve(projectRoot, component.manifest)}`);
         }
         bundleMap.push({ bundleName, entrypoint, manifestPath });
       }

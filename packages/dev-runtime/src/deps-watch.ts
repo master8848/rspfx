@@ -18,7 +18,7 @@ export interface DependencyScopeWatcher {
  * compared to a single rebuild. A mismatch means the running compiler's
  * externals are stale and a restart is required.
  */
-export function fingerprintDependencyScope(projectRoot: string): string {
+export function fingerprintDependencyScope(projectRoot: string, configDir = 'config'): string {
   const parts: string[] = [];
   const microsoftDir = path.join(projectRoot, 'node_modules', '@microsoft');
   let entries: fs.Dirent[];
@@ -39,7 +39,7 @@ export function fingerprintDependencyScope(projectRoot: string): string {
     }
   }
   try {
-    const configStat = fs.statSync(path.join(projectRoot, 'config', 'config.json'));
+    const configStat = fs.statSync(path.join(projectRoot, configDir, 'config.json'));
     parts.push(`config.json@${configStat.mtimeMs.toFixed(3)}`);
   } catch {
     parts.push(`config.json@${MISSING}`);
@@ -61,9 +61,10 @@ export function fingerprintDependencyScope(projectRoot: string): string {
 export function watchDependencyScope(
   projectRoot: string,
   onChange: (fingerprint: string) => void,
-  intervalMs = 1000
+  intervalMs = 1000,
+  configDir = 'config'
 ): DependencyScopeWatcher {
-  let fingerprint = fingerprintDependencyScope(projectRoot);
+  let fingerprint = fingerprintDependencyScope(projectRoot, configDir);
   let stopped = false;
 
   // Try native watcher; fall back to polling on failure (optional peer).
@@ -74,7 +75,7 @@ export function watchDependencyScope(
     if (stopped) {
       return;
     }
-    const current = fingerprintDependencyScope(projectRoot);
+    const current = fingerprintDependencyScope(projectRoot, configDir);
     if (current !== fingerprint) {
       fingerprint = current;
       onChange(current);
@@ -94,7 +95,7 @@ export function watchDependencyScope(
     if (watcher && typeof watcher.subscribe === 'function') {
       const watchDirs = [
         path.join(projectRoot, 'node_modules', '@microsoft'),
-        path.join(projectRoot, 'config')
+        path.join(projectRoot, configDir)
       ].filter((dir) => {
         try {
           return fs.statSync(dir).isDirectory();
