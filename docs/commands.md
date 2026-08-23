@@ -14,10 +14,9 @@ Scaffold a new SPFx project (web part or extension) and install dependencies.
 
 | Flag | Description |
 |---|---|
-| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` (default `webpart`). Extensions and libraries scaffold as vanilla TypeScript only — `--framework` / `--language` / `--fluent` are rejected for them |
+| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` (default `webpart`). Extensions and libraries scaffold as vanilla TypeScript only — `--framework` / `--language` are rejected for them |
 | `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` (web parts only) |
 | `--language <lang>` | `ts` (typescript) \| `js` (javascript) (web parts only) |
-| `--fluent` | Enable the Fluent UI adapter (React only) |
 | `--spfx-version <v>` | see [docs/compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13` |
 | `--pm <pm>` | `pnpm` \| `npm` \| `yarn` (dependency install) |
 | `--no-install` | Skip dependency installation |
@@ -30,7 +29,7 @@ folder with the Teams app manifest plus the 192x192/32x32 PNG icons.
 ```sh
 rspfx new my-app
 rspfx new my-app --framework vue --yes
-rspfx new my-app --framework react --fluent --spfx-version 1.20 --no-install
+rspfx new my-app --framework react --spfx-version 1.20 --no-install
 rspfx new my-extension --component applicationcustomizer --yes
 rspfx new my-commands --component listviewcommandset --no-install
 ```
@@ -298,7 +297,7 @@ path — the Rsbuild dev flow is workbench-only for now.
 
 The `RspfxPlugin` options carry your project settings:
 
-- **Identity:** `name`, `version` (used in AMD ids and manifests), `spfxVersion`, `framework`, `fluent`, `language`
+- **Identity:** `name`, `version` (used in AMD ids and manifests), `spfxVersion`, `framework`, `language`
 - **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser` (false, opens workbench once via `packages/dev-runtime/src/browser.ts:3`; reloads stay in same tab per `packages/dev-runtime/src/reload.ts:57`), `dev.fastRefresh`, `dev.workbench`/`initialPage`
 - **Build:** `build.minify` (true), `build.sourcemap` (false), `build.outDir` (dist), `build.releaseDir` (release)
 - **Layout:** `paths.srcDir`, `paths.webpartsDir` (src/webparts), `paths.extensionsDir` (src/extensions), `paths.librariesDir` (src/libraries), `paths.configDir` (config)

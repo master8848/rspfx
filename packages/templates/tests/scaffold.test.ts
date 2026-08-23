@@ -19,7 +19,6 @@ function makeVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     componentType: 'webpart',
     framework: 'vanilla',
     spfxVersion: '1.23',
-    fluent: false,
     language: 'typescript',
     componentId: '11111111-1111-4111-8111-111111111111',
     solutionId: '22222222-2222-4222-8222-222222222222',
@@ -126,8 +125,8 @@ describe('scaffoldProject', () => {
     expect(manifest['id']).toBe(vanillaVars.componentId);
   });
 
-  it('scaffolds a react fluent project', () => {
-    const vars = makeVars({ framework: 'react', fluent: true });
+  it('scaffolds a react project', () => {
+    const vars = makeVars({ framework: 'react' });
     const dir = path.join(tmpRoot, 'react');
     scaffoldProject(vars, dir);
 
@@ -147,7 +146,7 @@ describe('scaffoldProject', () => {
     expect(config).toContain("name: '@contoso/hello'");
     expect(config).toContain("version: '0.0.1'");
     expect(config).toContain("framework: 'react'");
-    expect(config).toContain('fluent: true');
+    expect(config).not.toContain('fluent');
     expect(config).toContain('port: 4321');
 
     const tsconfig = readJson(dir, 'tsconfig.json');

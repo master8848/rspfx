@@ -13,7 +13,6 @@ describe('new', () => {
       component: 'webpart',
       framework: 'vanilla',
       language: 'ts',
-      fluent: false,
       spfxVersion: '1.23',
       pm: 'pnpm',
       install: false,
@@ -159,7 +158,7 @@ describe('new', () => {
     rmRf(tmp);
   });
 
-  it('rejects framework/language/fluent flags for extensions', async () => {
+  it('rejects framework/language flags for extensions', async () => {
     const tmp = makeTmpDir('new-ext-flags');
     await expect(
       runNew({ name: 'bad', cwd: tmp, component: 'fieldcustomizer', framework: 'react', install: false, yes: true })
@@ -167,9 +166,6 @@ describe('new', () => {
     await expect(
       runNew({ name: 'bad2', cwd: tmp, component: 'applicationcustomizer', language: 'js', install: false, yes: true })
     ).rejects.toThrow(/--language is not supported/);
-    await expect(
-      runNew({ name: 'bad3', cwd: tmp, component: 'applicationcustomizer', fluent: true, install: false, yes: true })
-    ).rejects.toThrow(/--fluent is not supported/);
     rmRf(tmp);
   });
 });

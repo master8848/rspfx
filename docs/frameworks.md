@@ -102,14 +102,14 @@ Nothing in the build, packaging, or dev pipeline changes.
 
 ## Fluent UI adapter
 
-`@mbsks/rspfx-fluent-adapter` is **optional** (enable with `fluent: true` in
-the plugin options in `rspack.config.ts`) and **React-only**:
+`@mbsks/rspfx-fluent-adapter` is a standalone optional package (**React-only**, not enabled via scaffold flags):
 
 - `FluentWebPart<TProps, TState> extends ReactWebPart` — full web part with Fluent
   UI boilerplate.
 - `onThemeChanged()` syncs the SharePoint theme (`context.themeProvider` /
   `ThemeProvider.addChangeListener`) into a Fluent `ThemeProvider`, so web parts
   track the tenant theme live.
+- Install it explicitly (`pnpm add @mbsks/rspfx-fluent-adapter @fluentui/react`) and extend `FluentWebPart` in your web part class.
 
 Notes: bundle React per web part (official SPFx behavior — do not externalize it);
 be aware of React version skew in tenants running an older React on the page.

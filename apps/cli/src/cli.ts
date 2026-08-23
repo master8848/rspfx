@@ -58,10 +58,9 @@ export function configureProgram(): void {
     .command('new')
     .description('scaffold a new SPFx project (web part, extension, or library)')
     .argument('<name>', 'project name')
-    .option('--component <webpart|applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer|library>', 'component type (default: webpart); extensions/libraries scaffold as vanilla TypeScript and reject --framework/--language/--fluent')
+    .option('--component <webpart|applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer|library>', 'component type (default: webpart); extensions/libraries scaffold as vanilla TypeScript and reject --framework/--language')
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
-    .option('--fluent', 'enable Fluent UI')
     .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn>', 'package manager')
     .option('--no-install', 'skip dependency installation')
@@ -74,7 +73,6 @@ export function configureProgram(): void {
         component: options.component as string | undefined,
         framework: options.framework as string | undefined,
         language: options.language as string | undefined,
-        fluent: options.fluent as boolean | undefined,
         spfxVersion: options.spfxVersion as string | undefined,
         pm: options.pm as string | undefined,
         install: options.install as boolean | undefined,

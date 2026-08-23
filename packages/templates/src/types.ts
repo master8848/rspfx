@@ -8,7 +8,6 @@ export interface TemplateVars {
   componentType: ComponentType;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
-  fluent: boolean;
   language: 'typescript' | 'javascript';
   tenantUrl?: string;
   componentId: string;

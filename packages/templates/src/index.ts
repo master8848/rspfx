@@ -256,7 +256,6 @@ function rspackConfig(vars: TemplateVars): string {
     `      version: '${vars.packageVersion}',`,
     `      framework: '${vars.framework}',`,
     `      spfxVersion: '${vars.spfxVersion}',`,
-    ...(vars.fluent ? [`      fluent: ${vars.fluent},`] : []),
     `      language: '${vars.language}',`,
     '      dev: {',
     ...devLines,

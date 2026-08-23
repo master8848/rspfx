@@ -25,7 +25,6 @@ Non-interactive (useful for CI):
 rspfx new my-app \
   --framework react \
   --language ts \
-  --fluent \
   --spfx-version 1.22 \
   --pm pnpm \
   --yes

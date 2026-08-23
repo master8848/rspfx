@@ -23,7 +23,6 @@ export function baseVars(overrides: Partial<TemplateVars> = {}): TemplateVars {
     componentType: 'webpart',
     framework: 'vanilla',
     spfxVersion: '1.23',
-    fluent: false,
     language: 'typescript',
     componentId: 'aaaaaaaa-0000-0000-0000-000000000001',
     solutionId: 'bbbbbbbb-0000-0000-0000-000000000002',

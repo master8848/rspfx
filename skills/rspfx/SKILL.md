@@ -27,13 +27,13 @@ Upgrade: `npm i -g @mbsks/rspfx-cli@latest` pulls matching peer packages via `wo
 ## 2. Scaffold a project
 
 ```sh
-rspfx new my-app    # interactive: framework, language, Fluent, SPFx version, pm, component type
+rspfx new my-app    # interactive: framework, language, SPFx version, pm, component type
 ```
 
 Non-interactive (CI-safe):
 
 ```sh
-rspfx new my-app --framework react --language ts --fluent --spfx-version 1.22 --pm pnpm --yes
+rspfx new my-app --framework react --language ts --spfx-version 1.22 --pm pnpm --yes
 rspfx new my-ext --component applicationcustomizer --yes  # fieldcustomizer | listviewcommandset (vanilla, TS)
 ```
 
@@ -41,7 +41,6 @@ rspfx new my-ext --component applicationcustomizer --yes  # fieldcustomizer | li
 |---|---|
 | `--framework` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` |
 | `--language` | `ts` \| `js` |
-| `--fluent` | Fluent UI adapter (React only) |
 | `--spfx-version` | `1.20` \| `1.21` \| `1.22` \| `1.23` (default 1.23, see `docs/compatibility.md#spfx-version-matrix`) |
 | `--pm` | `pnpm` \| `npm` \| `yarn` |
 | `--component` | `webpart` (default) \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` |

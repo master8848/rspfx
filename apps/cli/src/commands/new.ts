@@ -11,8 +11,7 @@ import {
   DEFAULT_COMPONENT,
   DEFAULT_FRAMEWORK,
   FRAMEWORK_CHOICES,
-  promptChoice,
-  promptConfirm
+  promptChoice
 } from '../prompts.js';
 
 const logger = createLogger('rspfx');
@@ -26,7 +25,6 @@ export interface NewOptions {
   component?: string;
   framework?: string;
   language?: string;
-  fluent?: boolean;
   spfxVersion?: string;
   pm?: string;
   install?: boolean;
@@ -47,7 +45,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
   let component = (opts.component as ComponentType) ?? DEFAULT_COMPONENT;
   let framework = (opts.framework as FrameworkId) ?? DEFAULT_FRAMEWORK;
   let language = opts.language ?? 'ts';
-  let fluent = opts.fluent ?? false;
   let spfxVersion = (opts.spfxVersion as SpfxTarget) ?? SPFX_DEFAULT_TARGET;
   let pm = opts.pm ?? 'pnpm';
 
@@ -62,9 +59,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
       }
       if (opts.language === undefined) {
         language = await promptChoice('Language', LANGUAGES, language);
-      }
-      if (opts.fluent === undefined) {
-        fluent = await promptConfirm('Enable Fluent UI?', false);
       }
     }
     if (opts.spfxVersion === undefined) {
@@ -85,12 +79,8 @@ export async function runNew(opts: NewOptions): Promise<string> {
     if (opts.language !== undefined) {
       throw new RspfxError('INVALID_OPTION', `--language is not supported for ${component} components; extensions scaffold as TypeScript`);
     }
-    if (opts.fluent !== undefined) {
-      throw new RspfxError('INVALID_OPTION', `--fluent is not supported for ${component} components; extensions are vanilla only`);
-    }
     framework = 'vanilla';
     language = 'ts';
-    fluent = false;
   }
   if (!FRAMEWORK_CHOICES.includes(framework as FrameworkId)) {
     throw new RspfxError('INVALID_OPTION', `Unknown framework '${framework}'. Expected one of: ${FRAMEWORK_CHOICES.join(', ')}`);
@@ -120,7 +110,6 @@ export async function runNew(opts: NewOptions): Promise<string> {
     componentType: component,
     framework: framework as FrameworkId,
     spfxVersion: spfxVersion as SpfxTarget,
-    fluent,
     language: language === 'js' ? 'javascript' : 'typescript',
     ...(opts.tenant !== undefined ? { tenantUrl: opts.tenant } : {}),
     componentId: randomUUID(),

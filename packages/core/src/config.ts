@@ -47,8 +47,6 @@ export interface RspfxConfig {
   version?: string;
   framework: FrameworkId;
   spfxVersion: SpfxTarget;
-  /** Enable the Fluent UI web part base class; default false. */
-  fluent?: boolean;
   language: 'typescript' | 'javascript';
   dev: DevConfig;
   build: BuildConfig;
@@ -114,7 +112,6 @@ export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig {
     ...(config.version !== undefined ? { version: config.version } : {}),
     framework: config.framework ?? 'vanilla',
     spfxVersion: config.spfxVersion ?? SPFX_DEFAULT_TARGET,
-    fluent: config.fluent ?? false,
     language: config.language ?? 'typescript',
     dev: {
       port: config.dev?.port ?? configDefaults.dev.port,

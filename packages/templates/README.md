@@ -23,7 +23,6 @@ const vars: TemplateVars = {
   componentType: 'webpart',
   framework: 'react',
   spfxVersion: '1.23',
-  fluent: false,
   language: 'typescript',
   componentId: '00000000-0000-0000-0000-000000000000',
   solutionId: '00000000-0000-0000-0000-000000000001',
@@ -38,7 +37,7 @@ await scaffoldProject(vars, 'my-app');
 ## API
 
 - `scaffoldProject(vars, destDir)` — generate a complete SPFx project (`vars: TemplateVars, destDir: string`)
-- `TemplateVars` — scaffold options (`name, namePascal, nameCamel, componentType, framework, spfxVersion, fluent, language, componentId, solutionId, featureId, packageName, packageVersion, tenantUrl?, teams?`)
+- `TemplateVars` — scaffold options (`name, namePascal, nameCamel, componentType, framework, spfxVersion, language, componentId, solutionId, featureId, packageName, packageVersion, tenantUrl?, teams?`)
 
 ## Links
 
