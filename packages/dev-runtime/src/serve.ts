@@ -288,7 +288,13 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const workbenchUrl = local ? undefined : buildWorkbenchUrl({ ...settings, https, scheme, origin }, config);
   const openTarget = workbenchUrl ?? (local ? `${origin}/` : undefined);
 
-  if (openTarget && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
+  // Browser open is once-only: initial dev server start only.
+  // Never re-open on HMR, rebuild, or dependency-scope restart. `drainRestarts`
+  // intentionally does NOT call `openBrowser`. `browserOpened` guards against
+  // double-open if the server restarts or the `listening` event fires more than once.
+  let browserOpened = false;
+  if (!browserOpened && openTarget && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
+    browserOpened = true;
     openBrowser(openTarget);
   }
 
@@ -328,6 +334,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
           return;
         }
         logger.success(`Dev server restarted at ${origin}.`);
+        // Intentionally no browser re-open here — once-only guarantee.
         // Changes that landed while restarting must not be missed.
         const current = fingerprintDependencyScope(opts.projectRoot);
         if (current !== fingerprint) {

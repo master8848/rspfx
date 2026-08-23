@@ -7,6 +7,6 @@ export function runViteBuild(projectRoot: string): void {
   runBundlerBuild(projectRoot, resolveViteBin(projectRoot), 'VITE_BUILD_FAILED', 'vite');
 }
 
-export function spawnViteDev(projectRoot: string, opts: { fastRefresh?: boolean } = {}): ChildProcess {
+export function spawnViteDev(projectRoot: string, opts: { fastRefresh?: boolean; openBrowser?: boolean } = {}): ChildProcess {
   return spawnBundlerDev(projectRoot, resolveViteBin(projectRoot), [], opts);
 }

@@ -495,10 +495,23 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         reload.handle(_req, res as ConnectResponse);
       });
 
+      // Browser open is once-only on initial dev server start — never on HMR/rebuild.
+      // Uses `httpServer.once('listening')` (not `on`) and `browserOpened` guard.
+      // Respects CLI `--browser` via `RSPFX_OPEN_BROWSER` env (set by `rspfx dev`),
+      // falling back to `config.dev.openBrowser`. Rebuild hooks (`rebuildAll`/
+      // `scheduleRebuild`) intentionally do NOT open the browser.
+      let browserOpened = false;
       devServer.httpServer?.once('listening', () => {
         originRef.value = updateOriginWithActualPort(settings, devServer);
         const workbenchUrl = buildWorkbenchUrl({ ...settings, origin: originRef.value }, resolved);
-        if (workbenchUrl && (resolved.dev.openBrowser ?? false)) {
+        const shouldOpenBrowser =
+          process.env.RSPFX_OPEN_BROWSER === '1'
+            ? true
+            : process.env.RSPFX_OPEN_BROWSER === '0'
+              ? false
+              : (resolved.dev.openBrowser ?? false);
+        if (!browserOpened && workbenchUrl && shouldOpenBrowser) {
+          browserOpened = true;
           openBrowser(workbenchUrl);
           logger.info(`Workbench: ${workbenchUrl}`);
         }

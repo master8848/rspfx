@@ -123,18 +123,33 @@ Trust it so the SharePoint workbench can fetch `https://localhost:4321` without 
 
 - **macOS:** open Keychain Access → *System* → import the cert from `~/.rspfx/certs` → set to *Always Trust*, or: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.rspfx/certs/<cert>` (the exact filename is printed by the CLI).
 - **Windows:** `certutil -addstore Root <cert>` (or via `certlm.msc` → Trusted Root Certification Authorities → Import).
+- **Chrome 142+:** when `https://*.sharepoint.com` fetches `https://localhost:4321` Chrome prompts Local Network Access — click Allow; if blocked, allow `localhost` at `chrome://settings/content/insecureContent` or the Local Network Access prompt (see `packages/dev-runtime/src/serve.ts:121` for the `https://localhost:4321/temp/manifests.js` origin).
 
 `rspfx doctor` verifies the rest of the dev environment (config, port, dependencies) — cert trust itself is the browser's job.
 
+### Load debug scripts dialog
+
+SharePoint shows Load debug scripts once per browser session and stores the allowance in `sessionStorage` key `spfx-debug` on the workbench origin.
+
+After you click Load debug scripts, the reload client in `packages/dev-runtime/src/reload.ts:57` uses `window.location.reload()` in the same tab so the `sessionStorage` allowance persists across rebuilds; the dialog does not reappear until the tab is closed or the session is cleared.
+
+To clear the allowance, append `?reset=true` to the workbench URL (`.../workbench.aspx?reset=true`) or close the tab and reopen the workbench URL from `packages/dev-runtime/src/serve.ts:121` (`debugManifestsFile=https://localhost:4321/temp/manifests.js`).
+
+The `debugManifestsFile` URL is stable with no `?t=` cache-bust; `?t=` is appended only to bundle URLs via `bundleUrlSuffix` in `packages/dev-runtime/src/serve.ts:197`, `packages/plugin/src/vite.ts:438` and `packages/plugin/src/rsbuild.ts:110`.
+
+If the dialog reappears on every reload, the cause is outside rspfx: a new tab per reload (`window.open` instead of reload), an untrusted self-signed cert in `~/.rspfx/certs`, or a blocked Local Network Access permission in Chrome 142+ (allow `https://localhost:4321` when prompted).
+
+`rspfx dev --browser` and `dev.openBrowser: true` in `packages/core/src/config.ts:12` open the workbench once via `packages/dev-runtime/src/browser.ts:3`; subsequent rebuilds reload the same tab, so the dialog is not repeated for that reason.
+
 ### Editing
 
-Save a source file → incremental rebuild → the reload client embedded in `/temp/manifests.js` detects the new build and reloads the workbench page automatically, so you never have to press F5.
+Save a source file → incremental rebuild → the reload client embedded in `/temp/manifests.js` (`packages/dev-runtime/src/reload.ts:45`) detects the new build and calls `window.location.reload()` in the same tab, so you never have to press F5 and the `sessionStorage` debug allowance is kept (see [Load debug scripts dialog](#load-debug-scripts-dialog)).
 
 The dev build is unminified with readable module names and full source maps; only `rspfx build` optimizes and minifies.
 
 `rspfx dev --refresh` upgrades to state-preserving fast refresh where the framework supports it (see [fast-refresh.md](fast-refresh.md)).
 
-To stop: `Ctrl+C`. The browser is never auto-opened unless you pass `rspfx dev --browser` or set `dev.openBrowser: true` in the config.
+To stop: `Ctrl+C`. The browser is never auto-opened unless you pass `rspfx dev --browser` or set `dev.openBrowser: true` in `packages/core/src/config.ts:12`; when enabled the workbench is opened once (`packages/dev-runtime/src/browser.ts:3`), later rebuilds reload the same tab.
 
 ## 4. Build, package, deploy
 

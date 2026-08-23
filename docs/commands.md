@@ -39,7 +39,9 @@ rspfx new my-commands --component listviewcommandset --no-install
 
 Start the dev environment: Rspack dev server + manifest server on `:4321` (HTTPS with a self-signed cert in workbench mode; plain HTTP in local preview mode).
 
-Dev output is unminified with readable module names and source maps; rebuilds auto-reload the page (client embedded in `/temp/manifests.js`).
+Dev output is unminified with readable module names and source maps; rebuilds auto-reload the page (client embedded in `/temp/manifests.js` via `window.location.reload()` in `packages/dev-runtime/src/reload.ts:57`).
+
+SharePoint workbench shows Load debug scripts once per browser session (`sessionStorage` key `spfx-debug` on the workbench origin); rebuilds reload the same tab so the dialog does not reappear — see [getting-started.md#load-debug-scripts-dialog](getting-started.md#load-debug-scripts-dialog) for cert trust, Chrome 142+ Local Network Access, `?reset=true` reset, and the stable `debugManifestsFile` URL (`packages/dev-runtime/src/serve.ts:121`).
 
 Officially scaffolded SPFx projects (gulp/Heft, no rspfx config) run in hybrid mode: `rspfx dev` synthesizes its config from `config/config.json`, `config/serve.json`, and `package.json` — see [hybrid-dev.md](hybrid-dev.md).
 
@@ -64,8 +66,7 @@ no SharePoint tenant needed:
   URL to switch the emulated CultureInfo (LCID, RTL flag, language name) and
   load the matching `dist/<name>_<locale>.js` string modules, falling back to
   `en-us` when the exact locale file is missing.
-- File saves trigger a rebuild followed by an automatic `location.reload()`
-  (the reload client polls `/__rspfx_hot.json`).
+- File saves trigger a rebuild followed by an automatic `location.reload()` in the same tab (the reload client in `packages/dev-runtime/src/reload.ts:57` polls `/__rspfx_hot.json`).
 - Served over HTTP — no self-signed cert required.
 
 A mock SharePoint REST API is served at `/_api` (OData v4 JSON-light: flat
@@ -298,7 +299,7 @@ path — the Rsbuild dev flow is workbench-only for now.
 The `RspfxPlugin` options carry your project settings:
 
 - **Identity:** `name`, `version` (used in AMD ids and manifests), `spfxVersion`, `framework`, `fluent`, `language`
-- **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser`, `dev.fastRefresh`, `dev.workbench`/`initialPage`
+- **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser` (false, opens workbench once via `packages/dev-runtime/src/browser.ts:3`; reloads stay in same tab per `packages/dev-runtime/src/reload.ts:57`), `dev.fastRefresh`, `dev.workbench`/`initialPage`
 - **Build:** `build.minify` (true), `build.sourcemap` (false), `build.outDir` (dist), `build.releaseDir` (release)
 - **Layout:** `paths.srcDir`, `paths.webpartsDir` (src/webparts), `paths.extensionsDir` (src/extensions), `paths.librariesDir` (src/libraries), `paths.configDir` (config)
 - **Deploy:** `deploy.appCatalogSiteUrl` (or env var)

@@ -160,6 +160,12 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
 
       let isDevServer = false;
 
+      // Browser open is once-only on initial dev server start — never on HMR/rebuild.
+      // Uses `onAfterStartDevServer` only (not `onAfterDevCompile`) and `browserOpened` guard.
+      // Respects CLI `--browser` via `RSPFX_OPEN_BROWSER` env (set by `rspfx dev`),
+      // falling back to `config.dev.openBrowser`. `onAfterDevCompile`/`regenerateAndTick`
+      // intentionally do NOT open the browser.
+      let browserOpened = false;
       api.onAfterStartDevServer(({ port }) => {
         isDevServer = true;
         originRef.value = `${settings.scheme}://${settings.hostname}:${port}`;
@@ -169,7 +175,14 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           );
         });
         const workbenchUrl = buildWorkbenchUrl({ ...settings, origin: originRef.value }, resolved);
-        if (workbenchUrl && resolved.dev.openBrowser) {
+        const shouldOpenBrowser =
+          process.env.RSPFX_OPEN_BROWSER === '1'
+            ? true
+            : process.env.RSPFX_OPEN_BROWSER === '0'
+              ? false
+              : (resolved.dev.openBrowser ?? false);
+        if (!browserOpened && workbenchUrl && shouldOpenBrowser) {
+          browserOpened = true;
           openBrowser(workbenchUrl);
           logger.info(`Workbench: ${workbenchUrl}`);
         }

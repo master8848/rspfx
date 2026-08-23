@@ -55,7 +55,7 @@ export function spawnBundlerDev(
   projectRoot: string,
   bin: string,
   args: string[],
-  opts: { fastRefresh?: boolean } = {}
+  opts: { fastRefresh?: boolean; openBrowser?: boolean } = {}
 ): ChildProcess {
   return spawn(process.execPath, [bin, ...args], {
     cwd: projectRoot,
@@ -63,7 +63,8 @@ export function spawnBundlerDev(
     env: {
       ...process.env,
       NODE_ENV: 'development',
-      ...(opts.fastRefresh ? { RSPFX_FAST_REFRESH: '1' } : {})
+      ...(opts.fastRefresh ? { RSPFX_FAST_REFRESH: '1' } : {}),
+      ...(opts.openBrowser !== undefined ? { RSPFX_OPEN_BROWSER: opts.openBrowser ? '1' : '0' } : {})
     }
   });
 }

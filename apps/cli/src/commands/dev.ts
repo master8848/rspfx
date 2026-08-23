@@ -74,8 +74,8 @@ export async function runDev(
     const fastRefresh = opts.refresh ?? config.dev.fastRefresh ?? false;
     const child =
       bundler === "vite"
-        ? spawnViteDev(cwd, { fastRefresh })
-        : spawnRsbuildDev(cwd, { fastRefresh });
+        ? spawnViteDev(cwd, { fastRefresh, openBrowser: opts.browser })
+        : spawnRsbuildDev(cwd, { fastRefresh, openBrowser: opts.browser });
 
     logger.info(
       `Manifest server running at ${settings.origin}/temp/manifests.js`,
