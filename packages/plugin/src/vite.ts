@@ -326,8 +326,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       plugins: [...createEntryPlugins(entry.name, root), ...(viteContribs?.plugins ?? [])],
       css: {
         modules: {
-          localsConvention: 'camelCaseOnly',
-          // scopeBehaviour 'local' is default; explicit to ensure *.module.* always treated as module even with :global blocks
+          localsConvention: 'asIs',
           scopeBehaviour: 'local' as const
         }
       },
