@@ -26,7 +26,7 @@ export interface FrameworkRsbuildContributions {
   define?: Record<string, string>;
 }
 
-export interface FrameworkPreset<F extends FrameworkId = FrameworkId> {
+export interface FrameworkPreset<F extends string = FrameworkId> {
   name: F;
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
   /**
@@ -43,7 +43,7 @@ export interface FrameworkPreset<F extends FrameworkId = FrameworkId> {
   rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions;
 }
 
-/** Discriminated union of framework presets keyed by `name` for exhaustive narrowing. */
+/** Discriminated union of framework presets keyed by `name` for exhaustive narrowing. Custom frameworks use `FrameworkPreset<string>`. */
 export type FrameworkPresetUnion =
   | FrameworkPreset<'react'>
   | FrameworkPreset<'vue'>

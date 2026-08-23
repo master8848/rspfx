@@ -1,7 +1,7 @@
 import { SPFX_DEFAULT_TARGET } from './versions.js';
 import type { SpfxTarget } from './versions.js';
 
-export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
+export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {});
 
 export interface DevConfig {
   port?: number;

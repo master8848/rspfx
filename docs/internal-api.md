@@ -19,7 +19,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 `packages/core/src/index.ts` exports:
 
 ```ts
-export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
+export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {});
 export type SpfxTarget = '1.20' | '1.21' | '1.22' | '1.23';
 
 export interface DevConfig {
@@ -133,8 +133,8 @@ export interface FrameworkRsbuildContributions {  // webpack/rspack-shaped, minu
   resolve?: { alias?: Record<string, string>; extensions?: string[] };
   define?: Record<string, string>;
 }
-export interface FrameworkPreset {
-  name: import('@mbsks/rspfx-core').FrameworkId;
+export interface FrameworkPreset<F extends string = import('@mbsks/rspfx-core').FrameworkId> {
+  name: F; // custom frameworks use FrameworkPreset<string> — FrameworkId is 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {})
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
   vite?(opts: { fastRefresh: boolean }): FrameworkViteContributions;       // optional — absent = no Vite support; rspfxVite warns loudly
   rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions; // optional — rspfxRsbuild falls back to contributions() when absent

@@ -54,8 +54,8 @@ decorators, importMeta). Each framework preset contributes its own swc options,
 rules, and plugins via `FrameworkPreset.contributions({ fastRefresh })`:
 
 ```ts
-interface FrameworkPreset {
-  name: FrameworkId;
+interface FrameworkPreset<F extends string = FrameworkId> {
+  name: F; // F is FrameworkId | (string & {}) — custom frameworks use FrameworkPreset<string> / name: string
   contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
 }
 ```

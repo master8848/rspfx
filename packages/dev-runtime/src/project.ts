@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import {
   resolvePathDefaults,
   solidPng,
@@ -738,6 +739,13 @@ export async function loadFrameworkPreset(
   framework: FrameworkId,
   projectRoot?: string
 ): Promise<FrameworkPresetModule> {
+  const plugin = getPlugins().find((p) => p.frameworkPreset?.name === framework);
+  if (plugin?.frameworkPreset) {
+    return {
+      preset: plugin.frameworkPreset as unknown as FrameworkPresetModule['preset'],
+      moduleUrl: ''
+    };
+  }
   const mod = (await importFramework(framework, projectRoot)) as
     | { preset?: { contributions(opts: { fastRefresh: boolean }): unknown }; __rspfxModuleUrl?: string }
     | undefined;
