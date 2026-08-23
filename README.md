@@ -148,6 +148,7 @@ It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
 | Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |
 | Roadmap | [docs/roadmap.md](docs/roadmap.md) |
+| Contributing & changelog | [CONTRIBUTING.md](CONTRIBUTING.md) (publishing, tags, changelog rule), [CHANGELOG.md](CHANGELOG.md) |
 
 ## Status & roadmap
 

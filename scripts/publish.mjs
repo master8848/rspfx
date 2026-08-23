@@ -13,7 +13,9 @@
  *
  * Usage:
  *   node scripts/publish.mjs [--dry-run] [--version 0.2.0] [--patch|--minor|--major]
- *                            [--skip-checks] [--otp <code>] [--no-commit]
+ *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-commit]
+ *   npm dist-tag defaults to "latest" (prereleases default to "next"); git tag vX.Y.Z is created on success.
+ *   Changelog: update CHANGELOG.md with ## [X.Y.Z] - YYYY-MM-DD before publishing (see CONTRIBUTING.md#changelog-rule).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,6 +30,7 @@ const SKIP_CHECKS = args.includes('--skip-checks');
 const NO_COMMIT = args.includes('--no-commit');
 const versionFlag = flagValue('--version');
 const bumpKind = args.includes('--major') ? 'major' : args.includes('--minor') ? 'minor' : 'patch';
+const explicitNpmTag = flagValue('--tag');
 // OTP: prefer env var to avoid leaking via `ps` (argv is visible). `--otp` is
 // still accepted for backwards compat but users should set RSPFX_NPM_OTP.
 // We also check npm_config_otp / NPM_OTP for interop.
@@ -183,15 +186,41 @@ const currentVersion = [...versions][0];
 const liveAtCurrent = [...set.values()].filter((pkg) => isPublished(pkg.name, currentVersion)).length;
 const resumed = liveAtCurrent > 0 && liveAtCurrent < set.size;
 const targetVersion = versionFlag ?? (resumed ? currentVersion : bumpVersion(currentVersion, bumpKind));
+const npmTag = explicitNpmTag ?? (targetVersion.includes('-') ? 'next' : 'latest');
 
 console.log(`Publishing ${set.size} packages (${DRY_RUN ? 'DRY RUN — nothing will be published' : 'LIVE'})`);
-console.log(`  current: ${currentVersion} → target: ${targetVersion}${resumed ? ' (resume — version already on the registry)' : ''}\n`);
-console.log([...set.values()].map((p) => `  • ${p.name}@${targetVersion}`).sort().join('\n'));
+console.log(`  current: ${currentVersion} → target: ${targetVersion} (npm tag: ${npmTag})${resumed ? ' (resume — version already on the registry)' : ''}\n`);
+console.log([...set.values()].map((p) => `  • ${p.name}@${targetVersion} --tag ${npmTag}`).sort().join('\n'));
 console.log('');
 console.log('  Excluded (private/example): examples/*, apps/playground\n');
+console.log(`  Changelog: CHANGELOG.md ## [${targetVersion}] + git tag v${targetVersion}\n`);
 
 if (DRY_RUN) {
-  console.log('Dry run complete. Nothing was changed or published.');
+  console.log('Dry run complete. Nothing was changed or published.\n');
+  // AI agents work primarily in this repo — remind to update the per-version changelog.
+  console.log('┌─ AI AGENT REMINDER ──────────────────────────────────────────────');
+  console.log(`│ This was a dry run for v${targetVersion} (npm tag: ${npmTag}).`);
+  console.log('│ Before the next real publish, AI agents (and humans) must:');
+  console.log(`│   1. Add/update CHANGELOG.md ## [${targetVersion}] - YYYY-MM-DD`);
+  console.log('│      with Added/Changed/Fixed sections for this version.');
+  console.log(`│   2. Ensure the entry links to git tag v${targetVersion} and npm dist-tag ${npmTag}.`);
+  console.log('│   3. Commit the changelog alongside the version bump (scripts/publish.mjs does the bump+commit).');
+  console.log('│ See CONTRIBUTING.md#publishing-and-tagging and CHANGELOG.md.');
+  console.log('└────────────────────────────────────────────────────────────────');
+  // Changelog gate (advisory on dry-run): warn if entry is missing.
+  const changelogPath = path.join(ROOT, 'CHANGELOG.md');
+  if (fs.existsSync(changelogPath)) {
+    const changelog = fs.readFileSync(changelogPath, 'utf8');
+    if (!changelog.includes(`## [${targetVersion}]`) && !changelog.includes(`## [Unreleased]`)) {
+      console.log(`\n⚠ CHANGELOG.md has no entry for ## [${targetVersion}] (nor Unreleased to promote) — add it before publishing.`);
+    } else if (!changelog.includes(`## [${targetVersion}]`)) {
+      console.log(`\n⚠ CHANGELOG.md has no ## [${targetVersion}] section yet — promote Unreleased or add the new section before publishing.`);
+    } else {
+      console.log(`\n✓ CHANGELOG.md already contains ## [${targetVersion}].`);
+    }
+  } else {
+    console.log('\n⚠ CHANGELOG.md not found — create it per CONTRIBUTING.md#changelog-rule.');
+  }
   process.exit(0);
 }
 
@@ -206,6 +235,21 @@ if (!SKIP_CHECKS) {
   run('pnpm', ['--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
   run('pnpm', ['test'], { cwd: ROOT });
   console.log('');
+}
+
+// Changelog gate (live run, advisory): warn if CHANGELOG.md lacks the target version.
+{
+  const changelogPath = path.join(ROOT, 'CHANGELOG.md');
+  if (fs.existsSync(changelogPath)) {
+    const changelog = fs.readFileSync(changelogPath, 'utf8');
+    if (!changelog.includes(`## [${targetVersion}]`)) {
+      console.log(`\n⚠ CHANGELOG.md has no ## [${targetVersion}] — add it before publishing (see CONTRIBUTING.md#changelog-rule). Continuing anyway.\n`);
+    } else {
+      console.log(`\n✓ CHANGELOG.md contains ## [${targetVersion}]\n`);
+    }
+  } else {
+    console.log('\n⚠ CHANGELOG.md not found — create it per CONTRIBUTING.md#changelog-rule. Continuing anyway.\n');
+  }
 }
 
 // ─── 2. version bump (all publishable packages + root) ───────────────────────
@@ -239,8 +283,8 @@ for (const name of order) {
     published.push(name);
     continue;
   }
-  console.log(`  → ${name}@${targetVersion}`);
-  const publishArgs = ['publish', '--no-git-checks', '--access', 'public'];
+  console.log(`  → ${name}@${targetVersion} (tag: ${npmTag})`);
+  const publishArgs = ['publish', '--no-git-checks', '--access', 'public', '--tag', npmTag];
   // OTP via env (npm_config_otp) to avoid `ps` argv visibility and log leakage.
   // We intentionally do NOT add --otp to publishArgs; pnpm/npm reads npm_config_otp.
   const publishEnv = otp
@@ -295,7 +339,7 @@ if (failed.length > 0) {
   process.exit(1);
 }
 
-// ─── 4. commit the bump ──────────────────────────────────────────────────────
+// ─── 4. commit the bump + tag ────────────────────────────────────────────────
 if (!NO_COMMIT) {
   run('git', ['add', ...changedFiles], { cwd: ROOT });
   const staged = execSync('git diff --cached --name-only', { cwd: ROOT }).toString().trim();
@@ -305,6 +349,27 @@ if (!NO_COMMIT) {
   } else {
     console.log('\nVersion bump already committed — skipping commit.');
   }
+  // Create annotated git tag vX.Y.Z linked to CHANGELOG.md section.
+  const tagName = `v${targetVersion}`;
+  const tagExists = (() => {
+    try {
+      execSync(`git rev-parse -q --verify refs/tags/${tagName}`, { cwd: ROOT, stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  if (!tagExists) {
+    const tagMessage = `${tagName}\n\nSee CHANGELOG.md ## [${targetVersion}] — npm dist-tag: ${npmTag}`;
+    const tagResult = spawnSync('git', ['tag', '-a', tagName, '-m', tagMessage], { cwd: ROOT, stdio: 'inherit' });
+    if (tagResult.status === 0) {
+      console.log(`Created annotated git tag ${tagName} (npm tag: ${npmTag}). Push with: git push --follow-tags`);
+    } else {
+      console.error(`Failed to create git tag ${tagName} (exit ${tagResult.status})`);
+    }
+  } else {
+    console.log(`Git tag ${tagName} already exists — skipping tag creation.`);
+  }
 }
 
-console.log(`\n✓ Published ${published.length}/${set.size} packages at v${targetVersion}.`);
+console.log(`\n✓ Published ${published.length}/${set.size} packages at v${targetVersion} (tag: ${npmTag}).`);
