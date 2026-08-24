@@ -1,5 +1,19 @@
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { localeToCultureName } from './lcid.js';
+
+let native: {
+  serializeXml?: (n: unknown, p: boolean) => string;
+  buildRelsXml?: (r: unknown, p: boolean) => string;
+  buildContentTypesXml?: (e: string[], p: boolean) => string;
+  buildFeatureXml?: (f: unknown, p: boolean) => string;
+  buildElementsXml?: (n: string, m: unknown, p: boolean) => string;
+  buildAppManifestXml?: (o: unknown) => string;
+} | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-sppkg/index.node');
+} catch {}
 
 export interface XmlAttributes {
   [name: string]: string;
@@ -46,6 +60,9 @@ export function escapeXmlAttribute(value: string): string {
 }
 
 export function serializeXml(node: XmlNode, pretty: boolean, indentLevel: number = 0): string {
+  if (native?.serializeXml && indentLevel === 0) {
+    try { return native.serializeXml(node, pretty); } catch {}
+  }
   const singleQuoted = new Set(node.singleQuotedAttrs ?? []);
   const attributePart = node.attrs
     ? Object.entries(node.attrs)
@@ -78,6 +95,7 @@ export function serializeXml(node: XmlNode, pretty: boolean, indentLevel: number
 }
 
 export function buildRelsXml(relationships: Relationship[], pretty: boolean): string {
+  if (native?.buildRelsXml) { try { return native.buildRelsXml(relationships, pretty); } catch {} }
   const children: XmlNode[] = relationships.map((relationship, index) => ({
     name: 'Relationship',
     attrs: { Id: `rId${index + 1}`, Type: relationship.type, Target: relationship.target }
@@ -126,6 +144,7 @@ const DEFAULT_CONTENT_TYPES_ORDERED: [string, string][] = [
 ];
 
 export function buildContentTypesXml(extensions: string[], pretty: boolean): string {
+  if (native?.buildContentTypesXml) { try { return native.buildContentTypesXml(extensions, pretty); } catch {} }
   const defaultSet = new Set(DEFAULT_CONTENT_TYPES_ORDERED.map(([ext]) => ext));
   const extra = [...new Set(extensions.map((e) => e.toLowerCase()))]
     .filter((ext) => !defaultSet.has(ext) && ext !== 'xml' && ext !== 'rels')
@@ -154,6 +173,7 @@ export interface FeatureXmlInfo {
 }
 
 export function buildFeatureXml(feature: FeatureXmlInfo, pretty: boolean): string {
+  if (native?.buildFeatureXml) { try { return native.buildFeatureXml(feature, pretty); } catch {} }
   const root: XmlNode = {
     name: 'Feature',
     attrs: {
@@ -183,6 +203,7 @@ export function buildElementsXml(
   manifest: { id: string; componentType?: string; extensionType?: string },
   pretty: boolean
 ): string {
+  if (native?.buildElementsXml) { try { return native.buildElementsXml(name, manifest, pretty); } catch {} }
   const componentType = manifest.componentType ?? 'WebPart';
   const attrs: XmlAttributes = {
     Name: name,
@@ -242,6 +263,7 @@ export interface AppManifestOptions {
 const DEVELOPER_PROPERTY_NAMES: string[] = ['name', 'websiteUrl', 'privacyUrl', 'termsOfUseUrl', 'mpnId'];
 
 export function buildAppManifestXml(options: AppManifestOptions): string {
+  if (native?.buildAppManifestXml) { try { return native.buildAppManifestXml(options); } catch {} }
   const rawProductId = options.productId.trim();
   const productId = rawProductId;
   const attrs: XmlAttributes = {
