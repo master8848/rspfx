@@ -1,0 +1,18 @@
+[package]
+name = "rspfx-sppkg"
+version = "0.1.0"
+edition = "2021"
+description = "Rust-accelerated sppkg builder (zip/xml/resx/lcid/glob) with JS fallback"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zip = { workspace = true }
+flate2 = { workspace = true }
+quick-xml = { workspace = true }
+walkdir = { workspace = true }
+rayon = { workspace = true }
+memchr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
