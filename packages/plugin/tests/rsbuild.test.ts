@@ -114,7 +114,7 @@ describe('rspfxRsbuild', () => {
     const hooks = captureHooks(plugin);
 
     const rsbuildConfig: Record<string, unknown> = { html: true, tools: {}, output: {}, source: {} };
-    await hooks.modifyRsbuildConfig?.(rsbuildConfig as never, {} as never);
+    await hooks.modifyRsbuildConfig?.(rsbuildConfig as never);
     expect((rsbuildConfig.tools as Record<string, unknown>).htmlPlugin).toBe(false);
     expect((rsbuildConfig.output as Record<string, unknown>).distPath).toMatchObject({ root: 'dist' });
     const entry = ((rsbuildConfig.source as Record<string, unknown>).entry as Record<string, unknown>).hello as {
