@@ -45,6 +45,8 @@ export interface DeployConfig {
   appCatalogSiteUrl?: string;    // e.g. https://contoso.sharepoint.com/sites/appcatalog
 }
 
+export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
+export type FrameworkId = FrameworkIdCore | (string & { __custom?: never });
 export interface RspfxConfig {
   name: string;                  // project name (npm name)
   version?: string;              // build-time version for AMD library names + manifests; overrides package.json
@@ -52,10 +54,16 @@ export interface RspfxConfig {
   spfxVersion: SpfxTarget;       // default '1.23'
   dev: DevConfig;
   build: BuildConfig;
+  paths?: PathsConfig;
   deploy?: DeployConfig;
+  teams?: boolean | TeamsConfig;
 }
-export function defineConfig(config: RspfxConfig): RspfxConfig;
-export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig; // fills defaults
+export const RspfxConfigSchema: unknown; // strictObject — rejects unknown keys
+export type Issue = { path: (string|number)[]; message: string; code: string };
+export function defineConfig<const T extends RspfxConfig>(config: T): T;
+export function parseRSPFXConfig(raw: unknown): Result<RspfxConfig, Issue[]>;
+export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]>;
+export function resolveConfig(config: Partial<RspfxConfig>): RspfxConfig; // fills defaults — throws RspfxError(CONFIG_VALIDATION_FAILED) on Issue[]
 export const RSPFX_PLUGIN_MARKER: symbol;  // Symbol.for('@mbsks/rspfx/bundler-plugin'); stamped on bundler plugin instances
 export interface RspfxBundlerPluginLike {  // structural contract for RspfxPlugin / rspfxVite
   options: RspfxConfig;
@@ -689,7 +697,9 @@ Bin `rspfx`. Commands (commander):
 
 Config loading: `jiti` import of `rspack.config.ts` (or `vite.config.ts`, or
 `rsbuild.config.ts`), find the plugin by `RSPFX_PLUGIN_MARKER`, read `.options`
-→ `resolveConfig`. Guidance error when no config or no plugin is found.
+→ `tryResolveConfig` → `Result<RspfxConfig, Issue[]>`. Guidance error when no config or no plugin is found.
+
+`LoadedProject` is `loadConfig(projectRoot)` → `{ config: RspfxConfig, bundler: BundlerId, configFile: string, plugin: RspfxBundlerPluginLike, bundlerConfig: unknown, rspfx: RspfxInstance, userModuleRules?: readonly unknown[] }`.
 Hybrid mode (`apps/cli/src/hybrid.ts`, see
 [docs/hybrid-dev.md](hybrid-dev.md)): `detectOfficialProject(projectRoot)`
 → `{ toolchainMarker } | undefined` (requires `config/config.json` + `gulpfile.js`/`heft.json`/`.yo-rc.json`);

@@ -91,11 +91,13 @@ Node-only framework plugin modules (`@rspack/plugin-react-refresh`, `@rspack/plu
              rspfx CLI (composition root)
 ```
 
-Rules: `core` has zero dependencies; `compiler-rspack` knows nothing about SharePoint; `manifest-server` + `dev-runtime` exist only in dev; the CLI composes everything.
+Rules: `core` has zero dependencies except `valibot` for config schema; `compiler-rspack` knows nothing about SharePoint; `manifest-server` + `dev-runtime` exist only in dev; the CLI composes everything.
 
 ## Config flow
 
 The CLI prefers an explicit bundler config when present — `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` loaded via `jiti`, scanning `plugins` for `RSPFX_PLUGIN_MARKER` and reading `options` (name, framework, `spfxVersion`, dev, build, paths, deploy). When no config is found it synthesizes the same shape from `config/config.json` + `config/package-solution.json` + `package.json` + `src/*/*.manifest.json` (see [hybrid-dev.md](hybrid-dev.md) and [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx)). `rspfx migrate` persists that synthesized config to a bundler file and backs up to `.rspfx/migrate-backup.json` for `--revert`.
+
+File save validates `RspfxConfig` via `tryResolveConfig` before kernel cache version is computed.
 
 ## Dev-mode flow
 

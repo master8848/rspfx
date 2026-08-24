@@ -38,6 +38,7 @@ Migrate an existing Heft/Gulp SPFx project to RSPFX, or revert it. This is the o
 
 | Flag | Description |
 |---|---|
+| `--to <version>` | Target version (`0.1` default) |
 | `--dry-run` | Preview changes without writing files |
 | `--bundler <id>` | Bundler to scaffold: `rspack` (default) \| `vite` \| `rsbuild` |
 | `--revert` | Restore files from `.rspfx/migrate-backup.json` |
@@ -168,8 +169,13 @@ rspfx analyze
 
 Environment/config/port/dependency checks: Node ≥ 20, project manifests resolvable, framework package resolvable, `sp-*` externals handled internally, web part bundles discovered, the configured dev port (`dev.port`) free, `build.outDir` writable. Exit code **1** on failures.
 
+| Flag | Description |
+|---|---|
+| `--fix` | Fix missing configs and certificates, then re-validate via `tryResolveConfig` |
+
 ```sh
 rspfx doctor
+rspfx doctor --fix
 ```
 
 ## `rspfx clean`
