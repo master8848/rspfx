@@ -1,3 +1,5 @@
+pub mod localized;
+
 pub const SPFX_PUBLIC_PATH_SENTINEL: &str = "__RSPFX_SPFX_PUBLIC_PATH__";
 
 pub fn hello() -> String {
