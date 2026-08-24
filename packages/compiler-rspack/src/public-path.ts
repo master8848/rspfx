@@ -1,4 +1,5 @@
 import { rspack, type Compiler } from '@rspack/core';
+import { createRequire } from 'node:module';
 import type { BundleEntry } from './types.js';
 
 export const SPFX_PUBLIC_PATH_SENTINEL = '__RSPFX_SPFX_PUBLIC_PATH__';
@@ -76,7 +77,7 @@ export function scriptUrlPublicPathExpression(entryName: string): string {
  *   2. the `__RSPFX_SPFX_PUBLIC_PATH__` sentinel (used as `output.publicPath`)
  *      replaced with an expression that reads that global at factory time
  */
-export class SpfxPublicPathPlugin {
+class SpfxPublicPathPluginJs {
   private readonly entries: BundleEntry[];
 
   constructor(opts: SpfxPublicPathOptions) {
@@ -115,3 +116,12 @@ export class SpfxPublicPathPlugin {
     });
   }
 }
+
+let RustPlugin: typeof SpfxPublicPathPluginJs | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  const mod = req('../../crates/rspfx-rspack-plugin/index.node');
+  if (mod?.SpfxPublicPathPlugin) RustPlugin = mod.SpfxPublicPathPlugin;
+} catch {}
+
+export const SpfxPublicPathPlugin: typeof SpfxPublicPathPluginJs = RustPlugin ?? SpfxPublicPathPluginJs;
