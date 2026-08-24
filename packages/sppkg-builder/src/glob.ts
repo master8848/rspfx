@@ -1,7 +1,17 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+
+let native: { globToRegExp?: (p: string) => string; globFiles?: (d: string, p: string[]) => Promise<string[]> } | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-sppkg/index.node');
+} catch {}
 
 export function globToRegExp(pattern: string): RegExp {
+  if (native?.globToRegExp) {
+    try { return new RegExp(native.globToRegExp(pattern)); } catch {}
+  }
   let source = '^';
   for (let index = 0; index < pattern.length; index++) {
     const char = pattern[index] ?? '';
@@ -30,6 +40,9 @@ export function globToRegExp(pattern: string): RegExp {
 }
 
 export async function globFiles(dir: string, patterns: string[]): Promise<string[]> {
+  if (native?.globFiles) {
+    try { return await native.globFiles(dir, patterns); } catch {}
+  }
   const regexes = patterns.map(globToRegExp);
   const matches: string[] = [];
   await walk(path.resolve(dir), '', regexes, matches);
