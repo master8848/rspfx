@@ -1,7 +1,18 @@
+import { createRequire } from 'node:module';
+
+let native: { generateManifestsJs?: (m: unknown[], meta?: unknown) => string } | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-manifest/index.node');
+} catch {}
+
 export async function generateManifestsJs(
   manifests: unknown[],
   metadata?: unknown
 ): Promise<string> {
+  if (native?.generateManifestsJs) {
+    try { return native.generateManifestsJs(manifests, metadata); } catch {}
+  }
   const manifestsJson = JSON.stringify(manifests);
   const metadataJson = metadata === undefined ? 'undefined' : JSON.stringify(metadata);
   return `(() => {
