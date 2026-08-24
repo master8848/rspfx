@@ -337,6 +337,12 @@ function printParseable(coldStartMs, recompileMs, buildMs) {
 
 async function main() {
   console.log(`RSPFX benchmark\n  node ${process.version} — ${process.platform} ${process.arch}\n  project: ${projectDir}\n`);
+  // Optional native timing: cargo bench -p rspfx-sppkg --bench package when Rust package bench exists (local only, no CI)
+  try {
+    if (fs.existsSync(path.join(ROOT, 'crates', 'rspfx-sppkg', 'benches', 'package.rs'))) {
+      console.log('native bench available: run cargo bench -p rspfx-sppkg --bench package for ZIP timings');
+    }
+  } catch {}
   const { coldStartMs, recompileMs } = await measureColdStartAndRecompile(projectDir);
   console.log(`cold start: ${Math.round(coldStartMs)} ms`);
   console.log(`recompiles: ${recompileMs.map((m) => `${Math.round(m)} ms`).join(', ')}`);
