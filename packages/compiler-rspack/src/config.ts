@@ -9,6 +9,7 @@ import { RspfxError } from './errors.js';
 import { SpfxLocalizedResourcesPlugin } from './localized-resources.js';
 import { SpfxPublicPathPlugin, SPFX_PUBLIC_PATH_SENTINEL } from './public-path.js';
 import type { FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
+import { rspfxCssInlineRule, rspfxSassRule } from './helpers/css.js';
 
 const require = createRequire(import.meta.url);
 
@@ -87,6 +88,16 @@ function computeUniqueName(ctx: CompileContext): string {
     .map((entry) => `${entry.componentIds[0]!}_${entry.version}`)
     .join('');
   return createHash('md5').update(joined).digest('hex');
+}
+
+export interface CacheVersionInput {
+  framework: string;
+  version?: string;
+  build: Pick<CompileContext['build'], 'sourcemap' | 'minify' | 'splitChunks' | 'outDir'>;
+}
+
+export function cacheVersionHash(input: CacheVersionInput): string {
+  return createHash('md5').update(JSON.stringify(input)).digest('hex').slice(0, 8);
 }
 
 export async function createRspackConfig(ctx: CompileContext, userModuleRules?: unknown[]): Promise<unknown> {
@@ -198,55 +209,12 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
     options: { jsc: swcJsc }
   });
 
-  // CSS handling: always inline via style-loader (never type:"css" or CssExtractRspackPlugin).
+  // CSS handling: inline via helpers (deduped from helpers/css.ts)
   const cssEnabled = (ctx.build as unknown as Record<string, unknown>)?.css !== false;
   const scssEnabled = (ctx.build as unknown as Record<string, unknown>)?.scss !== false;
 
-  let styleLoaderPath: string | undefined = tryResolve('style-loader', ctx.projectRoot);
-  let cssLoaderPath: string | undefined = tryResolve('css-loader', ctx.projectRoot);
-  const postcssLoaderPath: string | undefined = tryResolve('postcss-loader', ctx.projectRoot);
-  const postcssPath: string | undefined = tryResolve('postcss', ctx.projectRoot);
-  const hasPostcss = hasPostcssConfigFile(ctx.projectRoot);
-  const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;
-
-  if (cssEnabled && styleLoaderPath && cssLoaderPath) {
-    // css-loader: modules.auto => implicit mode: 'local' (see vite.ts:330 explicit scopeBehaviour: 'local'); :global{} leaks
-    const cssUse: unknown[] = [
-      styleLoaderPath,
-      {
-        loader: cssLoaderPath,
-        options: {
-          modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' },
-          importLoaders: hasPostcss && postcssLoaderPath ? 1 : 0
-        }
-      }
-    ];
-    if (postcssAvailable && postcssLoaderPath) {
-      (cssUse as unknown[]).push({ loader: postcssLoaderPath });
-    }
-    rules.push({ test: /\.css$/, use: cssUse as RuleSetRule['use'] });
-  }
-
-  const sassPath: string | undefined = tryResolve('sass', ctx.projectRoot);
-  let sassLoaderPath: string | undefined = tryResolve('sass-loader', ctx.projectRoot);
-  const hasSass = !!sassPath && !!sassLoaderPath;
-
-  if (scssEnabled && hasSass && styleLoaderPath && cssLoaderPath && sassLoaderPath) {
-    const importLoaders = (postcssAvailable ? 1 : 0) + 1;
-    // same implicit mode: 'local' as above; exportLocalsConvention: 'asIs' preserves original class names
-    const scssUse: unknown[] = [
-      styleLoaderPath,
-      {
-        loader: cssLoaderPath,
-        options: { modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }, importLoaders }
-      }
-    ];
-    if (postcssAvailable && postcssLoaderPath) {
-      (scssUse as unknown[]).push({ loader: postcssLoaderPath });
-    }
-    (scssUse as unknown[]).push({ loader: sassLoaderPath, options: { api: 'modern' } });
-    rules.push({ test: /\.s[ac]ss$/i, use: scssUse as RuleSetRule['use'] });
-  }
+  if (cssEnabled) rules.push(rspfxCssInlineRule(ctx.projectRoot));
+  if (scssEnabled) rules.push(rspfxSassRule(ctx.projectRoot));
 
   rules.push({ test: /\.html$/, type: 'asset/source' });
 
@@ -276,6 +244,8 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
       path: path.join(ctx.projectRoot, outDir),
       filename: '[name].js',
       chunkFilename: 'chunk.[name].js',
+      assetModuleFilename: 'assets/[hash][ext][query]',
+      uniqueName: computeUniqueName(ctx),
       library: { type: 'amd' },
       chunkLoadingGlobal: `webpackJsonp_${computeUniqueName(ctx)}`,
       crossOriginLoading: 'anonymous',
@@ -300,17 +270,30 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
       ...(splitChunks ? { splitChunks: { chunks: 'all' } } : {})
     },
     devtool,
-    experiments: useCache
-      ? {
-          cache: {
+    experiments: {
+      cache: useCache
+        ? {
             type: 'persistent',
+            version: cacheVersionHash({
+              framework: ctx.framework,
+              version: (ctx as unknown as { version?: string }).version,
+              build: ctx.build
+            }),
+            buildDependencies: {
+              config: [
+                path.join(ctx.projectRoot, 'rspack.config.ts'),
+                path.join(ctx.projectRoot, 'vite.config.ts'),
+                path.join(ctx.projectRoot, 'rsbuild.config.ts')
+              ]
+            },
             storage: {
               type: 'filesystem',
               directory: path.join(ctx.projectRoot, '.rspack-cache')
             }
           }
-        }
-      : undefined
+        : undefined,
+      lazyCompilation: ctx.serveMode ? { entries: false, imports: true } : undefined
+    } as unknown as Configuration['experiments']
   };
 
   return config;
