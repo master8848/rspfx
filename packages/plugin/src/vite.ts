@@ -2,6 +2,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import * as fspEsm from 'node:fs/promises';
 import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createRequire } from 'node:module';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import {
@@ -38,6 +39,8 @@ import type { RspfxPluginOptions } from './types.js';
 import { collectExternals } from './shared.js';
 
 const logger = createLogger('rspfx');
+
+const viteAls = new AsyncLocalStorage<BundleEntry>();
 
 // Eager patch for Vite's loadAndTransform which does `fsp.readFile(file)` where
 // `file` may be "/Volumes/New%20Volume/..." when the workspace path contains a
@@ -281,12 +284,17 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     (process.env[VITE_ENV.mode] as 'development' | 'production' | undefined) ??
     (command === 'serve' ? 'development' : 'production');
 
-  const createConfig = async (overrides: ViteBuildOverrides = {}): Promise<Record<string, unknown>> => {
+  const createConfig = async (overrides: ViteBuildOverrides = {}, entryOverride?: BundleEntry): Promise<Record<string, unknown>> => {
     const project = readProject(root, resolved.paths, resolved.version, resolved);
     const settings = resolveServeSettings({ config: resolved }, project.serveJson);
     const mode = effectiveMode();
-    const entry = selectEntry(project.webParts.entries, process.env[VITE_ENV.entry]);
-    const amdId = process.env[VITE_ENV.amdId] ?? `${entry.componentIds[0]}_${entry.version}`;
+    const alsEntry = viteAls.getStore();
+    const entry = entryOverride ?? (alsEntry ? alsEntry : selectEntry(project.webParts.entries, process.env[VITE_ENV.entry]));
+    const amdId = entryOverride
+      ? `${entryOverride.componentIds[0]}_${entryOverride.version}`
+      : alsEntry
+        ? `${alsEntry.componentIds[0]}_${alsEntry.version}`
+        : (process.env[VITE_ENV.amdId] ?? `${entry.componentIds[0]}_${entry.version}`);
     const externals = collectExternals(root, project.externals, project.localizedResources);
 
     const certs =
@@ -335,6 +343,10 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         viteContribs?.resolveExtensions && viteContribs.resolveExtensions.length > 0
           ? { extensions: viteContribs.resolveExtensions }
           : undefined,
+      optimizeDeps: {
+        cacheDir: path.join(root, '.vite'),
+        include: ['react', 'react-dom']
+      },
       server: {
         host: settings.hostname,
         port: settings.port,
@@ -364,7 +376,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
             amd: { id: amdId },
             entryFileNames: '[name].js',
             chunkFileNames: 'chunk.[name].js',
-            assetFileNames: 'assets/[name][extname]',
+            assetFileNames: 'assets/[hash][ext][query]',
             exports: 'named'
           }
         }
@@ -373,6 +385,8 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
   };
 
   const currentEntryName = (): string => {
+    const alsEntry = viteAls.getStore();
+    if (alsEntry) return alsEntry.name;
     const project = readProject(root, resolved.paths, resolved.version, resolved);
     return process.env[VITE_ENV.entry] ?? project.webParts.entries[0]!.name;
   };
@@ -461,13 +475,15 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
 
       const rebuildAll = async (): Promise<void> => {
         const vite = await importViteFrom(root);
-        for (const [index, entry] of project.webParts.entries.entries()) {
-          await withEnv(entry, async () => {
-            await (vite as unknown as ViteBuildApi).build({
-              ...(await createConfig({ minify: false, sourcemap: true, emptyOutDir: index === 0 }))
-            });
-          });
-        }
+        await Promise.all(
+          project.webParts.entries.map((entry, index) =>
+            viteAls.run(entry, async () => {
+              await (vite as unknown as ViteBuildApi).build({
+                ...(await createConfig({ minify: false, sourcemap: true, emptyOutDir: index === 0 }, entry))
+              });
+            })
+          )
+        );
         await regenerator.regenerate();
         reload.tick();
       };
@@ -546,13 +562,15 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       }
       const project = readProject(root, resolved.paths, resolved.version, resolved);
       const vite = await importViteFrom(root);
-      for (const entry of project.webParts.entries.slice(1)) {
-        await withEnv(entry, async () => {
-          await (vite as unknown as ViteBuildApi).build({
-            ...(await createConfig())
-          });
-        });
-      }
+      await Promise.all(
+        project.webParts.entries.slice(1).map((entry) =>
+          viteAls.run(entry, async () => {
+            await (vite as unknown as ViteBuildApi).build({
+              ...(await createConfig({}, entry))
+            });
+          })
+        )
+      );
       await assembleRelease({
         projectRoot: root,
         config: resolved,
