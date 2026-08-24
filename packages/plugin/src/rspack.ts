@@ -6,19 +6,10 @@ import {
   type RspfxBundlerPluginLike,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
-import {
-  createRspackConfig,
-  type LocalizedResource
-} from '@mbsks/rspfx-compiler-rspack';
+import { createRspackConfig, type LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
-import {
-  readProject,
-  loadFrameworkPreset,
-  resolveContributionLoaders,
-  createCompileContext,
-  assembleRelease,
-  type ReadProjectResult
-} from '@mbsks/rspfx-dev-runtime';
+import { readProject, assembleRelease, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
+import { createKernel, type Kernel } from './kernel.js';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxPluginOptions } from './types.js';
@@ -58,6 +49,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   private project: ReadProjectResult | undefined;
   private outputFiles: string[] = [];
   private configured = false;
+  private kernel: Kernel | undefined;
   readonly [RSPFX_PLUGIN_MARKER]: true = true;
 
   get [RSPFX_PLUGIN_OPTIONS](): RspfxConfig {
@@ -93,16 +85,24 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
     if (options.externalsType === undefined) {
       options.externalsType = 'amd';
     }
+    const kernel = createKernel({
+      root: this.projectRoot,
+      config: this._options,
+      project,
+      fastRefresh: false,
+      mode: compiler.options.mode === 'production' ? 'build' : 'dev'
+    });
+    this.kernel = kernel;
     options.entry = Object.fromEntries(
       project.webParts.entries.map((entry) => [
         entry.name,
         {
           import: [entry.import],
-          library: { type: 'amd', name: `${entry.componentIds[0]!}_${entry.version}` }
+          library: { type: 'amd', name: kernel.amdName(entry) }
         }
       ])
     );
-    options.externals = this.collectExternals(project);
+    options.externals = kernel.externals;
 
     compiler.hooks.beforeRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
     compiler.hooks.watchRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
@@ -128,7 +128,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
         projectRoot: this.projectRoot,
         config: this._options,
         project: this.project,
-        externals: this.collectExternals(this.project),
+        externals: this.kernel?.externals ?? this.collectExternals(this.project),
         outputFiles: this.outputFiles,
         production
       });
@@ -141,27 +141,30 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
     }
     this.configured = true;
     try {
-      const frameworkPreset = await loadFrameworkPreset(this._options.framework, this.projectRoot);
-      const contributions = resolveContributionLoaders(
+      const kernel =
+        this.kernel ??
+        createKernel({
+          root: this.projectRoot,
+          config: this._options,
+          project: this.project!,
+          fastRefresh: false,
+          mode: compiler.options.mode === 'production' ? 'build' : 'dev'
+        });
+      this.kernel = kernel;
+      const frameworkPreset = await kernel.loadPreset();
+      const contributions = kernel.resolveContributionLoaders(
         ((frameworkPreset.preset.rspack
-          ? frameworkPreset.preset.rspack({ fastRefresh: false })
-          : frameworkPreset.preset.contributions?.({ fastRefresh: false })) ?? {}) as Record<string, unknown>,
+          ? (frameworkPreset.preset.rspack as (o: { fastRefresh: boolean }) => Record<string, unknown>)({ fastRefresh: false })
+          : (frameworkPreset.preset as unknown as { contributions?: (o: { fastRefresh: boolean }) => Record<string, unknown> }).contributions?.({
+              fastRefresh: false
+            })) ?? {}) as Record<string, unknown>,
         frameworkPreset.moduleUrl
       );
 
       const production = compiler.options.mode === 'production';
-      let ctx = createCompileContext({
-        projectRoot: this.projectRoot,
-        config: this._options,
-        entries: this.project!.webParts.entries,
-        externals: [...findSpDependencies(this.projectRoot).keys(), ...this.project!.externals],
-        localizedAliases: this.project!.localizedAliases,
-        localizedResources: this.project!.localizedResources,
-        fastRefresh: false,
-        production,
-        serveMode: false,
-        build: { ...this._options.build }
-      });
+      const userModuleRules = (this._options as unknown as { bundlerConfig?: { module?: { rules?: unknown[] } } })
+        .bundlerConfig?.module?.rules as unknown[] | undefined;
+      let ctx = kernel.createCompileContext({ production, serveMode: false, userModuleRules });
       // HookBus: beforeCompile may mutate the compile context
       {
         const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'beforeCompile' }) });
@@ -171,7 +174,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
       }
       ctx.swcContributions = [contributions as Record<string, unknown>];
 
-      const full = (await createRspackConfig(ctx)) as Configuration;
+      const full = (await createRspackConfig(ctx, userModuleRules)) as Configuration;
       const libraryType =
         full.output?.library && typeof full.output.library === 'object' && 'type' in full.output.library
           ? String(full.output.library.type)
@@ -182,6 +185,14 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
         ...full.output,
         ...(libraryType ? { externalsType: libraryType } : {})
       };
+      options.resolve = {
+        ...options.resolve,
+        ...full.resolve,
+        alias: { ...options.resolve?.alias, ...full.resolve?.alias }
+      } as Configuration['resolve'];
+      if (full.resolve?.extensions) {
+        options.resolve!.extensions = [...(options.resolve?.extensions ?? []), ...full.resolve.extensions];
+      }
       options.module = { ...options.module, rules: [...(options.module?.rules ?? []), ...(full.module?.rules ?? [])] };
       options.optimization = { ...options.optimization, ...full.optimization };
       options.devtool = full.devtool;
