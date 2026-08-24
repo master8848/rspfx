@@ -228,7 +228,7 @@ async function measureColdStartAndRecompile(project) {
   try {
     const port = String(20000 + Math.floor(Math.random() * 20000));
     const start = performance.now();
-    const { child, out } = spawnCli(['dev', '--no-browser', '--port', port], project);
+    const { child, out } = spawnCli(['dev', '--port', port], project);
     server = child;
 
     const readyAt = await waitForText(out, child, 'Manifest server running', COLD_TIMEOUT_MS, 'cold start');
