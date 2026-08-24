@@ -16,7 +16,8 @@ const require = createRequire(import.meta.url);
 const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
   '@rspack/plugin-preact-refresh': fileURLToPath(new URL('./stubs/preact-refresh.js', import.meta.url)),
-  'vue-loader': fileURLToPath(new URL('./stubs/vue-loader.js', import.meta.url))
+  'vue-loader': fileURLToPath(new URL('./stubs/vue-loader.js', import.meta.url)),
+  'svelte-loader': fileURLToPath(new URL('./stubs/svelte-loader.js', import.meta.url))
 };
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
@@ -146,9 +147,11 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
   const rules: RuleSetRule[] = [...userRules];
   const plugins: Configuration['plugins'] = [];
   // BUILD_TIME_ALIASES are tiny stubs (react-refresh, preact-refresh, vue-loader);
-  // injecting all three is cheap (3 map entries) and avoids per-framework branching
-  // in resolve; kept unconditional for correctness — see docs/building-packages.md#sizing--performance.
+  // svelte-loader is gated — only stub when not installed, warn not throw.
   const alias: Record<string, string> = { ...BUILD_TIME_ALIASES, ...(ctx.aliases ?? {}) };
+  if (canResolveFromProject(ctx.projectRoot, 'svelte-loader')) {
+    delete alias['svelte-loader'];
+  }
   if (ctx.framework === 'solid' && ctx.fastRefresh && !canResolveFromProject(ctx.projectRoot, 'solid-refresh')) {
     alias['solid-refresh'] = SOLID_REFRESH_STUB;
   }
