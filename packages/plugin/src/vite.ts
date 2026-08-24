@@ -29,6 +29,7 @@ import {
   assembleRelease,
   openBrowser,
   loadFrameworkPreset,
+  decodeIfEncoded,
   type ServeSettings
 } from '@mbsks/rspfx-dev-runtime';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
@@ -616,30 +617,6 @@ async function withEnv(entry: BundleEntry, fn: () => Promise<void>): Promise<voi
       process.env[VITE_ENV.amdId] = previousAmdId;
     }
   }
-}
-
-function decodeIfEncoded(p: string): string {
-  // Vite's dev server stores urls with %20 when the filesystem path contains a space
-  // (pathToFileURL encodes it). The subsequent fsp.readFile then fails because it
-  // tries to read a literal "%20" path. Decode it up-front and also handle the case
-  // where the path is already a file:// URL.
-  if (p.startsWith('file://')) {
-    try {
-      return fileURLToPath(p);
-    } catch {
-      // fall through to decodeURIComponent
-    }
-  }
-  if (p.includes('%20') || p.includes('%25')) {
-    try {
-      const decoded = decodeURIComponent(p);
-      // decodeURIComponent will turn %2520 -> %20, so loop until stable
-      return decoded.includes('%') ? decodeURIComponent(decoded) : decoded;
-    } catch {
-      return p;
-    }
-  }
-  return p;
 }
 
 async function importViteFrom(root: string): Promise<unknown> {
