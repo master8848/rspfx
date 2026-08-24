@@ -777,7 +777,10 @@ export function createCompileContext(opts: {
 }
 
 export interface FrameworkPresetModule {
-  preset: { contributions(opts: { fastRefresh: boolean }): Record<string, unknown> };
+  preset: {
+    rspack?(opts: { fastRefresh: boolean }): Record<string, unknown>;
+    contributions?(opts: { fastRefresh: boolean }): Record<string, unknown>;
+  };
   moduleUrl: string;
 }
 

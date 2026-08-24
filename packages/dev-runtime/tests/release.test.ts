@@ -11,7 +11,9 @@ function makeConfig(overrides: Partial<RspfxConfig> = {}): RspfxConfig {
   return resolveConfig({
     name: 'release-proj',
     framework: 'vanilla',
-    language: 'typescript',
+    spfxVersion: '1.23',
+    dev: {},
+    build: {},
     ...overrides
   });
 }

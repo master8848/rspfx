@@ -1,13 +1,26 @@
-export { configDefaults, defineConfig, resolveConfig, resolvePathDefaults } from './config.js';
+export { configDefaults, defineConfig, resolveConfig, resolvePathDefaults, tryResolveConfig } from './config.js';
 export type {
   BuildConfig,
   DeployConfig,
   DevConfig,
   FrameworkId,
+  FrameworkIdCore,
+  Issue,
   PathsConfig,
+  Result,
   RspfxConfig,
   TeamsConfig
 } from './config.js';
+export type { ComponentId, CultureName, Lcid, PlatformPrefix, ZipPath } from './newtypes.js';
+export {
+  LCID_TO_CULTURE,
+  Locale,
+  localeToCultureName,
+  parseComponentId,
+  parseZipPath,
+  unsafeComponentId,
+  unsafeZipPath
+} from './newtypes.js';
 export { SPFX_DEFAULT_TARGET, SPFX_TARGETS, SPFX_VERSIONS, isSpfxTarget, spfxNpmVersion } from './versions.js';
 export type { SpfxReleaseStatus, SpfxTarget, SpfxToolchain, SpfxVersionInfo } from './versions.js';
 export { RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS } from './marker.js';

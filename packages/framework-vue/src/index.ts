@@ -1,10 +1,10 @@
-import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import vuePlugin from '@vitejs/plugin-vue';
 import { VueLoaderPlugin } from 'vue-loader';
 
-export const preset: FrameworkPreset = {
-  name: 'vue',
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
+export const preset = {
+  name: 'vue' as const,
+  rspack(_opts: { fastRefresh: boolean }): RspackContribs {
     return {
       rules: [{ test: /\.vue$/, use: 'vue-loader' }],
       plugins: [new VueLoaderPlugin()],
@@ -18,6 +18,10 @@ export const preset: FrameworkPreset = {
     };
   },
   rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {
-    return this.contributions(opts);
+    return this.rspack(opts);
+  },
+  /** @deprecated use rspack() */
+  contributions(opts: { fastRefresh: boolean }): RspackContribs {
+    return this.rspack(opts);
   }
-};
+} satisfies FrameworkPreset<'vue'>;

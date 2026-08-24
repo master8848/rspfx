@@ -135,7 +135,9 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
     try {
       const frameworkPreset = await loadFrameworkPreset(this._options.framework, this.projectRoot);
       const contributions = resolveContributionLoaders(
-        frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<string, unknown>,
+        ((frameworkPreset.preset.rspack
+          ? frameworkPreset.preset.rspack({ fastRefresh: false })
+          : frameworkPreset.preset.contributions?.({ fastRefresh: false })) ?? {}) as Record<string, unknown>,
         frameworkPreset.moduleUrl
       );
 

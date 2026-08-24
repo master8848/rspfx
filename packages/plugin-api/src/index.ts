@@ -1,10 +1,31 @@
 export type {
+  BeforeCompile,
+  BeforePackage,
   CompilerHooks,
+  ComponentManifest,
+  CompileContext,
+  DevHooks,
+  FrameworkId,
+  FrameworkIdCore,
   FrameworkPreset,
+  FrameworkPresetFor,
+  FrameworkPresetUnion,
+  FrameworkRegistry,
+  FrameworkIdFromRegistry,
   FrameworkRspackContributions,
   FrameworkRsbuildContributions,
   FrameworkViteContributions,
+  HookPhase,
+  HookResult,
   PackageHooks,
-  RspfxExtension
+  ReleaseHooks,
+  RspackContribs,
+  RsbuildContribs,
+  ViteContribs,
+  RspfxExtension,
+  Stats
 } from './types.js';
-export { definePlugin, getPlugins, registerPlugin } from './registry.js';
+export { composeHooks } from './types.js';
+export { definePlugin, getPlugins, registerPlugin, __clearRegistryForTests } from './registry.js';
+export { createRSPFX } from './instance.js';
+export type { HookBus, RspfxInstance } from './instance.js';

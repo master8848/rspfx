@@ -17,12 +17,16 @@
  * matching `@msinternalfoo` or `@azure/msal-browser` (public msal-browser is
  * on npm and must NOT be externalized).
  */
-export const PLATFORM_ONLY_PREFIXES: readonly string[] = [
-  '@msinternal',
-  '@azure/msal-browser-1p',
-  '@azure/msal-browser-legacy-1p'
+import type { PlatformPrefix } from './newtypes.js';
+
+export const PLATFORM_ONLY_PREFIXES: readonly PlatformPrefix[] = [
+  '@msinternal' as PlatformPrefix,
+  '@azure/msal-browser-1p' as PlatformPrefix,
+  '@azure/msal-browser-legacy-1p' as PlatformPrefix
 ];
 
-export function isPlatformOnlyModule(request: string): boolean {
-  return PLATFORM_ONLY_PREFIXES.some((prefix) => request === prefix || request.startsWith(`${prefix}/`));
+export function isPlatformOnlyModule(request: string | PlatformPrefix): boolean {
+  return (PLATFORM_ONLY_PREFIXES as readonly string[]).some(
+    (prefix) => request === prefix || request.startsWith(`${prefix}/`)
+  );
 }

@@ -212,10 +212,9 @@ async function runDirectBuild(
 
   const frameworkPreset = await loadFrameworkPreset(config.framework, cwd);
   const contributions = resolveContributionLoaders(
-    frameworkPreset.preset.contributions({ fastRefresh: false }) as Record<
-      string,
-      unknown
-    >,
+    ((frameworkPreset.preset.rspack
+      ? frameworkPreset.preset.rspack({ fastRefresh: false })
+      : frameworkPreset.preset.contributions?.({ fastRefresh: false })) ?? {}) as Record<string, unknown>,
     frameworkPreset.moduleUrl,
   );
 

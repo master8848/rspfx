@@ -1,4 +1,4 @@
-import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import { createRequire } from 'node:module';
 import prefresh from '@prefresh/vite';
 import PreactRefreshRspackPlugin from '@rspack/plugin-preact-refresh';
@@ -12,10 +12,10 @@ function resolveOrFallback(spec: string): string {
   }
 }
 
-export const preset: FrameworkPreset = {
-  name: 'preact',
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
-    const getRefreshPlugins = (): unknown[] => {
+export const preset = {
+  name: 'preact' as const,
+  rspack(opts: { fastRefresh: boolean }): RspackContribs {
+    const getRefreshPlugins = (): Array<Record<string, unknown> & { apply?: unknown }> => {
       if (!opts.fastRefresh) return [];
       try {
         require.resolve('preact');
@@ -23,7 +23,7 @@ export const preset: FrameworkPreset = {
         return [];
       }
       try {
-        return [new PreactRefreshRspackPlugin({})];
+        return [new PreactRefreshRspackPlugin({}) as unknown as Record<string, unknown> & { apply?: unknown }];
       } catch {
         return [];
       }
@@ -41,7 +41,7 @@ export const preset: FrameworkPreset = {
           }
         }
       },
-      plugins: getRefreshPlugins() as never[],
+      plugins: getRefreshPlugins(),
     };
   },
   vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
@@ -79,11 +79,15 @@ export const preset: FrameworkPreset = {
           return [];
         }
         try {
-          return [new PreactRefreshRspackPlugin({})];
+          return [new PreactRefreshRspackPlugin({}) as unknown as Record<string, unknown> & { apply?: unknown }];
         } catch {
           return [];
         }
       })()
     };
+  },
+  /** @deprecated use rspack() */
+  contributions(opts: { fastRefresh: boolean }): RspackContribs {
+    return this.rspack(opts);
   }
-};
+} satisfies FrameworkPreset<'preact'>;

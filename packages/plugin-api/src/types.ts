@@ -1,49 +1,69 @@
-import type { FrameworkId } from '@mbsks/rspfx-core';
+import type { RspfxConfig } from '@mbsks/rspfx-core';
 
-export interface FrameworkRspackContributions {
-  rules?: unknown[];
-  plugins?: unknown[];
+export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+
+// Framework IDs - branded via core but redefined here for augmentation
+export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'preact' | 'vue' | 'svelte';
+export type FrameworkId = FrameworkIdCore | (string & { __custom?: never });
+
+// Module augmentation point for custom frameworks
+export interface FrameworkRegistry {}
+
+export type FrameworkIdFromRegistry = keyof FrameworkRegistry extends never
+  ? FrameworkId
+  : keyof FrameworkRegistry & FrameworkId;
+
+// Minimal RuleSetRule type without importing @rspack/core (keep build light)
+export type RuleSetRule = {
+  test?: RegExp;
+  use?: unknown;
+  loader?: string;
+  options?: Record<string, unknown>;
+  exclude?: RegExp;
+  type?: string;
+  [key: string]: unknown;
+};
+
+export interface RspackContribs {
+  rules?: RuleSetRule[];
+  plugins?: Array<unknown>;
   resolve?: { alias?: Record<string, string>; extensions?: string[] };
   swc?: { jsc?: Record<string, unknown> };
   define?: Record<string, string>;
   moduleTest?: { test?: RegExp; type?: string };
 }
 
+// Keep old name as alias for backward compat
+export type FrameworkRspackContributions = RspackContribs;
+
 export interface FrameworkViteContributions {
-  /** Vite plugins (e.g. `@vitejs/plugin-react`, `@vitejs/plugin-vue`). */
-  plugins?: unknown[];
-  /** esbuild transform options (e.g. `{ jsx: 'automatic' }`). */
+  plugins?: Array<unknown>;
   esbuild?: Record<string, unknown>;
   resolveExtensions?: string[];
   define?: Record<string, string>;
 }
+export type ViteContribs = FrameworkViteContributions;
 
 export interface FrameworkRsbuildContributions {
-  /** webpack/rspack-shaped rules (loaders are rewritten to absolute paths via the framework module). */
-  rules?: unknown[];
-  plugins?: unknown[];
+  rules?: RuleSetRule[];
+  plugins?: Array<unknown>;
   resolve?: { alias?: Record<string, string>; extensions?: string[] };
   define?: Record<string, string>;
 }
+export type RsbuildContribs = FrameworkRsbuildContributions;
+export type ViteContribsAlias = FrameworkViteContributions;
+export type RsbuildContribsAlias = FrameworkRsbuildContributions;
 
-export interface FrameworkPreset<F extends string = FrameworkId> {
-  name: F;
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
-  /**
-   * Vite-shaped contributions (plugins/esbuild). Absent when the framework has
-   * no Vite support — the Vite plugin then falls back with a loud warning.
-   */
+export interface FrameworkPreset<T extends FrameworkId = FrameworkId> {
+  readonly name: T;
+  rspack(opts: { fastRefresh: boolean }): RspackContribs;
   vite?(opts: { fastRefresh: boolean }): FrameworkViteContributions;
-  /**
-   * Rsbuild-shaped contributions. Rsbuild's core is Rspack, so this is the
-   * webpack-shaped surface minus the swc `jsc` block (Rsbuild owns its SWC
-   * pipeline); fast-refresh frameworks that need a JS transform use
-   * babel-loader-based rules here.
-   */
   rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions;
+  /** @deprecated use rspack() */
+  contributions?: (opts: { fastRefresh: boolean }) => RspackContribs;
 }
 
-/** Discriminated union of framework presets keyed by `name` for exhaustive narrowing. Custom frameworks use `FrameworkPreset<string>`. */
+/** Discriminated union of framework presets keyed by `name` for exhaustive narrowing. */
 export type FrameworkPresetUnion =
   | FrameworkPreset<'react'>
   | FrameworkPreset<'vue'>
@@ -55,35 +75,84 @@ export type FrameworkPresetUnion =
 /** Generic helper to type a preset for a specific framework. */
 export type FrameworkPresetFor<F extends FrameworkId> = FrameworkPreset<F>;
 
+// Hook types with Result
+export type HookResult<T> = Result<T, Error>;
+
+export interface CompileContext {
+  projectRoot: string;
+  config: RspfxConfig;
+  entries: Array<Record<string, unknown>>;
+  externals: string[];
+  localizedAliases: Record<string, string>;
+  fastRefresh: boolean;
+  production: boolean;
+}
+
+export interface Stats {
+  hasErrors(): boolean;
+  hasWarnings(): boolean;
+  toString(opts?: unknown): string;
+  [key: string]: unknown;
+}
+
+export type BeforeCompile = (ctx: CompileContext) => HookResult<CompileContext> | void;
+export type BeforePackage = (ctx: {
+  readonly manifests: readonly ComponentManifest[];
+  files: Map<string, Uint8Array>;
+}) => Map<string, Uint8Array> | HookResult<Map<string, Uint8Array>> | void;
+
+export interface ComponentManifest {
+  id: string;
+  version: string;
+  alias?: string;
+  [key: string]: unknown;
+}
+
+export type HookPhase = 'beforeCompile' | 'afterStats' | 'beforePackage' | 'afterPackage';
+
 export interface CompilerHooks {
-  beforeCompile?(config: unknown): unknown;
-  afterStats?(stats: unknown): void;
+  beforeCompile?: BeforeCompile;
+  afterStats?: (stats: Stats) => void;
 }
 
 export interface ReleaseHooks {
-  /** Fired before component manifests are generated for a build. */
   beforeGenerate?(ctx: { production: boolean; webParts: unknown }): void;
-  /** Fired after component manifests are generated and written to the release dir. */
-  afterGenerate?(ctx: { manifests: unknown[]; releaseDir: string }): void;
+  afterGenerate?(ctx: { manifests: Array<Record<string, unknown>>; releaseDir: string }): void;
 }
 
 export interface DevHooks {
-  /** Fired before the dev server starts. */
   beforeStart?(ctx: { mode: 'local' | 'sharepoint'; port?: number }): void;
-  /** Fired once the dev server is listening. */
   afterStart?(ctx: { url: string }): void;
 }
 
 export interface PackageHooks {
-  beforePackage?(ctx: { manifests: unknown[]; files: { path: string; content: Uint8Array }[] }): void;
-  afterPackage?(ctx: { sppkgPath: string }): void;
+  beforePackage?: BeforePackage;
+  afterPackage?: (ctx: { sppkgPath: string }) => void;
 }
 
 export interface RspfxExtension {
-  name: string;
-  frameworkPreset?: FrameworkPreset;
-  compilerHooks?: CompilerHooks;
-  releaseHooks?: ReleaseHooks;
-  devHooks?: DevHooks;
-  packageHooks?: PackageHooks;
+  readonly name: string;
+  readonly frameworkPreset?: FrameworkPreset;
+  readonly compilerHooks?: CompilerHooks;
+  readonly releaseHooks?: ReleaseHooks;
+  readonly devHooks?: DevHooks;
+  readonly packageHooks?: PackageHooks;
+  readonly onError?: (err: Error, phase: HookPhase) => 'throw' | 'continue';
+}
+
+export function composeHooks(...hs: BeforeCompile[]): BeforeCompile {
+  return (ctx: CompileContext) => {
+    let current = ctx;
+    for (const h of hs) {
+      const res = h(current);
+      if (res !== undefined && typeof res === 'object' && 'ok' in (res as Record<string, unknown>)) {
+        if (!(res as { ok: boolean }).ok) return res;
+        current = (res as { ok: true; value: CompileContext }).value;
+      } else if (res !== undefined && typeof res === 'object') {
+        current = res as unknown as CompileContext;
+      }
+    }
+    if (current !== ctx) return { ok: true, value: current } as HookResult<CompileContext>;
+    return undefined;
+  };
 }

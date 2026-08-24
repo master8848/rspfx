@@ -1,10 +1,10 @@
-import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import { createRequire } from 'node:module';
 import solidPlugin from 'vite-plugin-solid';
 
 const require = createRequire(import.meta.url);
 
-function solidBabelRule(fastRefresh: boolean): FrameworkRspackContributions['rules'] {
+function solidBabelRule(fastRefresh: boolean): RspackContribs['rules'] {
   return [
     {
       test: /\.(t|j)sx?$/,
@@ -23,10 +23,10 @@ function solidBabelRule(fastRefresh: boolean): FrameworkRspackContributions['rul
   ];
 }
 
-export const preset: FrameworkPreset = {
-  name: 'solid',
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
-    return { rules: solidBabelRule(opts.fastRefresh) as unknown as FrameworkRspackContributions['rules'] };
+export const preset = {
+  name: 'solid' as const,
+  rspack(opts: { fastRefresh: boolean }): RspackContribs {
+    return { rules: solidBabelRule(opts.fastRefresh) };
   },
   vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
     return {
@@ -35,6 +35,10 @@ export const preset: FrameworkPreset = {
     };
   },
   rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {
-    return { rules: solidBabelRule(opts.fastRefresh) as unknown as FrameworkRsbuildContributions['rules'] };
+    return { rules: solidBabelRule(opts.fastRefresh) };
+  },
+  /** @deprecated use rspack() */
+  contributions(opts: { fastRefresh: boolean }): RspackContribs {
+    return this.rspack(opts);
   }
-};
+} satisfies FrameworkPreset<'solid'>;

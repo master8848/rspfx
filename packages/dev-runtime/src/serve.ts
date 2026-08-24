@@ -146,9 +146,9 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const reload = createReloadController();
   const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
   const contributions = resolveContributionLoaders(
-    frameworkPreset.preset.contributions({
-      fastRefresh
-    }) as Record<string, unknown>,
+    ((frameworkPreset.preset.rspack
+      ? frameworkPreset.preset.rspack({ fastRefresh })
+      : frameworkPreset.preset.contributions?.({ fastRefresh })) ?? {}) as Record<string, unknown>,
     frameworkPreset.moduleUrl
   );
 

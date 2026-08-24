@@ -1,10 +1,10 @@
-import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import ReactRefreshRspackPlugin from '@rspack/plugin-react-refresh';
 import reactPlugin from '@vitejs/plugin-react';
 
-export const preset: FrameworkPreset = {
-  name: 'react',
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
+export const preset = {
+  name: 'react' as const,
+  rspack(opts: { fastRefresh: boolean }): RspackContribs {
     return {
       swc: {
         jsc: {
@@ -46,5 +46,9 @@ export const preset: FrameworkPreset = {
       ],
       plugins: opts.fastRefresh ? [new ReactRefreshRspackPlugin()] : []
     };
+  },
+  /** @deprecated use rspack() */
+  contributions(opts: { fastRefresh: boolean }): RspackContribs {
+    return this.rspack(opts);
   }
-};
+} satisfies FrameworkPreset<'react'>;

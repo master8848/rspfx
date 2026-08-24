@@ -460,9 +460,9 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           !utils.isProd &&
           (process.env['RSPFX_FAST_REFRESH'] === '1' || (resolved.dev.fastRefresh ?? false));
         const contribs = resolveContributionLoaders(
-          (preset.rsbuild
+          ((preset.rsbuild
             ? preset.rsbuild({ fastRefresh })
-            : preset.contributions({ fastRefresh })) as unknown as Record<string, unknown>,
+            : preset.contributions?.({ fastRefresh })) ?? {}) as unknown as Record<string, unknown>,
           frameworkModule.moduleUrl
         ) as unknown as FrameworkRsbuildContributions;
         if (contribs.rules) {

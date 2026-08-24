@@ -1,9 +1,9 @@
-import type { FrameworkPreset, FrameworkRspackContributions, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
+import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import { svelte as sveltePlugin } from '@sveltejs/vite-plugin-svelte';
 
-export const preset: FrameworkPreset = {
-  name: 'svelte',
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions {
+export const preset = {
+  name: 'svelte' as const,
+  rspack(opts: { fastRefresh: boolean }): RspackContribs {
     return {
       rules: [
         {
@@ -42,5 +42,9 @@ export const preset: FrameworkPreset = {
       ],
       resolve: { extensions: ['.svelte'] }
     };
+  },
+  /** @deprecated use rspack() */
+  contributions(opts: { fastRefresh: boolean }): RspackContribs {
+    return this.rspack(opts);
   }
-};
+} satisfies FrameworkPreset<'svelte'>;

@@ -1,7 +1,8 @@
 import { SPFX_DEFAULT_TARGET } from './versions.js';
 import type { SpfxTarget } from './versions.js';
 
-export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {});
+export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
+export type FrameworkId = FrameworkIdCore | (string & { __custom?: never });
 
 export interface DevConfig {
   port?: number;
@@ -61,8 +62,36 @@ export interface RspfxConfig {
   teams?: boolean | TeamsConfig;
 }
 
-export function defineConfig(config: RspfxConfig): RspfxConfig {
+export function defineConfig<const T extends RspfxConfig>(config: T): T {
   return config;
+}
+
+export type Issue = { path: (string | number)[]; message: string; code: string };
+export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+
+export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
+  const issues: Issue[] = [];
+  if (typeof raw !== 'object' || raw === null) {
+    return { ok: false, error: [{ path: [], message: 'config must be an object', code: 'INVALID_PACKAGE_CONFIG' }] };
+  }
+  const cfg = raw as Partial<RspfxConfig> & Record<string, unknown>;
+  const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams']);
+  for (const k of Object.keys(cfg)) {
+    if (!knownKeys.has(k)) {
+      issues.push({ path: [k], message: `unknown key "${k}"`, code: 'INVALID_OPTION' });
+    }
+  }
+  if (!cfg.name || typeof cfg.name !== 'string') {
+    issues.push({ path: ['name'], message: '"name" is required', code: 'INVALID_PACKAGE_CONFIG' });
+  }
+  if (issues.length > 0) return { ok: false, error: issues };
+  try {
+    const resolved = resolveConfig(cfg as RspfxConfig);
+    return { ok: true, value: resolved };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: [{ path: [], message: msg, code: 'INVALID_PACKAGE_CONFIG' }] };
+  }
 }
 
 export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { paths: Required<PathsConfig> } = {
@@ -100,7 +129,8 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
   };
 }
 
-export function resolveConfig(config: RspfxConfig | (Partial<RspfxConfig> & Record<string, unknown>)): RspfxConfig {
+/** @deprecated use tryResolveConfig — this wrapper throws on validation error */
+export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): RspfxConfig {
   if (!config.name) {
     throw new Error('"name" is required in the bundler config (rspack.config.ts)');
   }

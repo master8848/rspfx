@@ -22,7 +22,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*"
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*"
   },
   "description": "RSPFX plugin API: FrameworkPreset, extension hooks",
   "repository": {

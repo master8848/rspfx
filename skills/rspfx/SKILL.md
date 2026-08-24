@@ -7,7 +7,7 @@ description: Build SharePoint Framework (SPFx) web parts with RSPFX (community, 
 
 RSPFX builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp, using `Vite` (default) — covers almost everything. `Rsbuild` only if user insists. `Rspack` only in very niche cases (rarely needed).
 
-Supports SPFx `1.20`–`1.23` (default `1.23`, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
+Supports SPFx `1.20`, `1.21`, `1.22`, `1.23` (default 1.23, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
 
 > Not Microsoft-supported. Need support/Angular/`<1.20`/on-prem → use Heft (bottom).
 
