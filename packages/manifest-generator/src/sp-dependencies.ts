@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { SP_COMPONENT_IDS } from './data/component-ids.js';
+
+let native: { findSpDependencies?: (root: string) => Map<string, SpDependency> } | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-manifest/index.node');
+} catch {}
 
 export interface SpDependency {
   id: string;
@@ -34,6 +41,9 @@ function findDistManifest(pkgDir: string): string | undefined {
 }
 
 export function findSpDependencies(projectRoot: string): Map<string, SpDependency> {
+  if (native?.findSpDependencies) {
+    try { return native.findSpDependencies(projectRoot); } catch {}
+  }
   const dependencies = new Map<string, SpDependency>();
   const microsoftDir = path.join(projectRoot, 'node_modules', '@microsoft');
   let entries: fs.Dirent[];
