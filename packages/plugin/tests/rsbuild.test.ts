@@ -107,14 +107,14 @@ describe('rspfxRsbuild', () => {
     expect(options.build.outDir).toBe('dist');
   });
 
-  it('injects the SPFx pipeline into the rsbuild and rspack configs', () => {
+  it('injects the SPFx pipeline into the rsbuild and rspack configs', async () => {
     const dir = makeTmpDir('rsbuild');
     writeFixtureProject(dir);
     const plugin = rspfxRsbuild({ name: 'rsbuild-proj', projectRoot: dir });
     const hooks = captureHooks(plugin);
 
     const rsbuildConfig: Record<string, unknown> = { html: true, tools: {}, output: {}, source: {} };
-    hooks.modifyRsbuildConfig?.(rsbuildConfig);
+    await hooks.modifyRsbuildConfig?.(rsbuildConfig as never, {} as never);
     expect((rsbuildConfig.tools as Record<string, unknown>).htmlPlugin).toBe(false);
     expect((rsbuildConfig.output as Record<string, unknown>).distPath).toMatchObject({ root: 'dist' });
     const entry = ((rsbuildConfig.source as Record<string, unknown>).entry as Record<string, unknown>).hello as {
@@ -125,13 +125,18 @@ describe('rspfxRsbuild', () => {
     expect(entry.library).toMatchObject({ type: 'amd', name: 'aaaaaaaa-0000-0000-0000-000000000001_1.2.3' });
 
     const config: Record<string, unknown> = { entry: {}, externals: undefined, output: {}, resolve: {}, plugins: [] };
-    hooks.modifyRspackConfig?.(config, { isProd: true });
+    await hooks.modifyRspackConfig?.(config as never, { isProd: true } as never);
     const rspackEntry = (config.entry as Record<string, unknown>).hello as {
       import: string;
       library: { type: string; name: string };
     };
     expect(rspackEntry.library).toMatchObject({ type: 'amd', name: 'aaaaaaaa-0000-0000-0000-000000000001_1.2.3' });
-    expect(config.externals).toEqual(['@microsoft/sp-lodash-subset', 'HelloStrings']);
+    expect(config.externals).toEqual(expect.arrayContaining(['@microsoft/sp-lodash-subset', 'HelloStrings']));
+    const externals = config.externals as unknown[];
+    expect(typeof externals[2]).toBe('function');
+    expect((externals[2] as (d: { request?: string }) => string | undefined)({ request: '@msinternal/sp-test' })).toBe(
+      'amd @msinternal/sp-test'
+    );
     const output = config.output as Record<string, unknown>;
     expect(output.filename).toBe('[name].js');
     expect(output.chunkFilename).toBe('chunk.[name].js');
@@ -146,13 +151,13 @@ describe('rspfxRsbuild', () => {
     rmRf(dir);
   });
 
-  it('keeps dev builds unminified', () => {
+  it('keeps dev builds unminified', async () => {
     const dir = makeTmpDir('rsbuild-minify');
     writeFixtureProject(dir);
     const plugin = rspfxRsbuild({ name: 'rsbuild-proj', projectRoot: dir });
     const hooks = captureHooks(plugin);
     const config: Record<string, unknown> = { entry: {}, output: {}, resolve: {}, plugins: [] };
-    hooks.modifyRspackConfig?.(config, { isProd: false });
+    await hooks.modifyRspackConfig?.(config as never, { isProd: false } as never);
     expect(config.optimization).toMatchObject({ minimize: false });
     rmRf(dir);
   });

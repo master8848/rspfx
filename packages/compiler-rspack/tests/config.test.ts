@@ -166,13 +166,19 @@ describe('createRspackConfig', () => {
 
   it('enables filesystem cache in serve mode under .rspack-cache', async () => {
     const serve = await getConfig(makeCtx({ serveMode: true }));
-    expect(serve.experiments?.cache).toEqual({
+    expect(serve.experiments?.cache).toMatchObject({
       type: 'persistent',
       storage: { type: 'filesystem', directory: '/tmp/proj/.rspack-cache' }
     });
+    expect(typeof (serve.experiments?.cache as { version?: string })?.version).toBe('string');
+    expect((serve.experiments?.cache as { buildDependencies?: unknown })?.buildDependencies).toEqual({
+      config: ['/tmp/proj/rspack.config.ts', '/tmp/proj/vite.config.ts', '/tmp/proj/rsbuild.config.ts']
+    });
+    expect(serve.experiments?.lazyCompilation).toEqual({ entries: false, imports: true });
 
     const notServe = await getConfig(makeCtx());
     expect(notServe.experiments?.cache).toBeUndefined();
+    expect(notServe.experiments?.lazyCompilation).toBeUndefined();
   });
 
   it('adds plain css/scss rules', async () => {
