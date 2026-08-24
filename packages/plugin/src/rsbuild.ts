@@ -344,16 +344,6 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           ...((config as unknown as Record<string, unknown>).performance as Record<string, unknown> ?? {}),
           hints: 'warning'
         };
-        const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain ?? settings.hostname);
-        if (settings.https && mode === 'sharepoint') {
-          try {
-            const certs = await ensureCertificates(path.join(os.homedir(), '.rspfx/certs'), settings.hostname);
-            (config as unknown as Record<string, unknown>).server = {
-              ...((config as unknown as Record<string, unknown>).server as Record<string, unknown> ?? {}),
-              https: { key: certs.key, cert: certs.cert }
-            };
-          } catch {}
-        }
         const project = read();
         if (!project) {
           return;
@@ -367,6 +357,16 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
             ])
           )
         };
+        const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain ?? settings.hostname);
+        if (settings.https && mode === 'sharepoint') {
+          try {
+            const certs = await ensureCertificates(path.join(os.homedir(), '.rspfx/certs'), settings.hostname);
+            (config as unknown as Record<string, unknown>).server = {
+              ...((config as unknown as Record<string, unknown>).server as Record<string, unknown> ?? {}),
+              https: { key: certs.key, cert: certs.cert }
+            };
+          } catch {}
+        }
       });
 
       let frameworkPresetPromise: ReturnType<typeof loadFrameworkPreset> | undefined;
