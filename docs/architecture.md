@@ -6,6 +6,8 @@ See [ARCHITECTURE.md](../ARCHITECTURE.md) for the full plan; this page is the qu
 
 RSPFX is a complete SPFx-compatible build toolchain powered by **Rspack**, replacing Heft + webpack + gulp. The CLI is the only package that composes everything else; no dependency cycles. Bundler config (`rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts`) is optional — when absent the CLI synthesizes the same options from `config/config.json` + `package.json` and runs Rspack or Vite internally.
 
+Optional native acceleration lives in `crates/*` (`rspfx-sppkg`, `rspfx-manifest`, `rspfx-rspack-plugin`) — Rust crates with JS fallback; no native binary required to build or test.
+
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              rspfx CLI                                 │
