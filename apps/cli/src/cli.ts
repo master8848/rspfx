@@ -264,6 +264,7 @@ export function configureProgram(): void {
   program
     .command('migrate')
     .description('migrate an existing SPFx project (gulp/heft) to rspfx')
+    .option('--to <version>', 'target version (default: 0.1)')
     .option('--from <auto|heft|gulp>', 'source toolchain (default: auto)')
     .option('--bundler <vite|rsbuild|rspack>', 'bundler to scaffold (default: vite)')
     .option('--spfx-version <version>', 'SPFx target version')
@@ -274,6 +275,7 @@ export function configureProgram(): void {
     .action((options: Record<string, unknown>) => {
       return guard(() =>
         runMigrate(cwd, {
+          to: options.to as string | undefined,
           from: options.from as 'auto' | 'heft' | 'gulp' | undefined,
           bundler: options.bundler as 'vite' | 'rsbuild' | 'rspack' | undefined,
           spfxVersion: options.spfxVersion as string | undefined,

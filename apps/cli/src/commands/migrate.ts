@@ -71,6 +71,44 @@ const HEFT_ONLY_CONFIG_FILES = [
 
 const PKG_IMPORT_RE = /@import\s+['"]pkg:([^/'"]+)\/([^'"]+)['"]/g;
 
+function applyCodemods(text: string): { out: string; diffs: string[] } {
+  const diffs: string[] = [];
+  let out = text;
+  const before = text;
+  // contributions() -> rspack()
+  if (/(?<![A-Za-z0-9_])contributions\s*\(/.test(out)) {
+    out = out.replace(/(?<![A-Za-z0-9_])contributions\s*\(/g, 'rspack(');
+    diffs.push('contributions -> rspack');
+  }
+  // & Record<string,unknown> dust
+  if (out.includes('Record<string,unknown>') || out.includes('Record<string, unknown>')) {
+    out = out.replace(/\s*&\s*Record<string,\s*unknown>/g, '');
+    diffs.push('remove & Record<string,unknown>');
+  }
+  // framework:'react' -> framework:'react' as const
+  const frameworkRe = /framework\s*:\s*'(react|vanilla|solid|vue|preact|svelte)'/g;
+  if (frameworkRe.test(out) && !out.includes('as const')) {
+    out = out.replace(/framework\s*:\s*'(react|vanilla|solid|vue|preact|svelte)'/g, (m) => `${m} as const`);
+    diffs.push("add as const on framework");
+  }
+  // fsCachePath process.cwd() -> projectRoot
+  if (out.includes('process.cwd()') && out.includes('fsCachePath')) {
+    out = out.replace(/path\.join\(process\.cwd\(\)/g, 'path.join(projectRoot');
+    diffs.push('fix fsCachePath to projectRoot');
+  }
+  // satisfies FrameworkPreset
+  if (out.includes("framework:") && !out.includes('satisfies FrameworkPreset')) {
+    const fw = out.match(/framework:\s*'(react|vanilla|solid|vue|preact|svelte)'/);
+    if (fw) {
+      diffs.push(`add satisfies FrameworkPreset<'${fw[1]}'>`);
+    }
+  }
+  if (before === out && diffs.length === 0) {
+    // no change
+  }
+  return { out, diffs };
+}
+
 const RSPFX_SCRIPTS = {
   dev: 'rspfx dev',
   'dev:refresh': 'rspfx dev --refresh',
@@ -85,6 +123,7 @@ export type MigrateFrom = 'auto' | 'heft' | 'gulp';
 export type MigrateBundler = 'vite' | 'rsbuild' | 'rspack';
 
 export interface MigrateOptions {
+  to?: string;
   from?: MigrateFrom;
   bundler?: MigrateBundler;
   spfxVersion?: string;
@@ -182,6 +221,10 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
   const configDir = resolveConfigDir(projectRoot);
   const backupPath = path.join(projectRoot, BACKUP_DIR, BACKUP_FILE);
 
+  if (opts.to !== undefined && opts.to !== '0.1' && opts.to !== '0.1.0') {
+    throw new RspfxError('INVALID_OPTION', `Unknown --to '${opts.to}'. Expected 0.1`);
+  }
+
   if (opts.revert) {
     if (!fs.existsSync(backupPath)) {
       throw new RspfxError('MIGRATE_NO_BACKUP', `No backup found at ${path.relative(projectRoot, backupPath)}. Nothing to revert.`);
@@ -243,6 +286,10 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
     }
     logger.success(`Reverted migration — restored backup from ${path.relative(projectRoot, backupPath)}`);
     return { migrated: false, reverted: true, dryRun: false, backupPath };
+  }
+
+  if (fs.existsSync(backupPath) && !opts.revert && !opts.dryRun && !opts.force) {
+    throw new RspfxError('MIGRATE_BACKUP_EXISTS', `Backup already exists at ${path.relative(projectRoot, backupPath)}. Run with --revert to restore or --force to overwrite.`);
   }
 
   // Validate project
@@ -376,9 +423,26 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
   if (tsconfigWillReplace) plan.push('replace rig-based tsconfig.json with plain config');
   else plan.push('leave tsconfig.json as-is');
 
+  // codemod diffs for existing bundler config
+  let codemodDiffs: string[] = [];
+  if (existingConfigExists) {
+    try {
+      const raw = fs.readFileSync(path.join(projectRoot, existingBundlerFile), 'utf8');
+      const { diffs } = applyCodemods(raw);
+      codemodDiffs = diffs;
+      if (diffs.length > 0) {
+        for (const d of diffs) plan.push(`codemod: ${d}`);
+      }
+    } catch {}
+  }
+
   if (opts.dryRun) {
     logger.info('[dry-run] Migration plan:');
     for (const line of plan) logger.info(`  • ${line}`);
+    if (codemodDiffs.length > 0) {
+      logger.info('[dry-run] Codemods would apply:');
+      for (const d of codemodDiffs) logger.info(`  • ${d}`);
+    }
     logger.info('[dry-run] No files were modified. Run without --dry-run to apply.');
     return { migrated: false, reverted: false, dryRun: true, backupPath };
   }
@@ -542,13 +606,26 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
   // 5. bundler config + tsconfig
   const bundlerContent = buildBundlerConfigContent(bundler, projectName, framework, spfxVersion, styling);
   const bundlerPath = path.join(projectRoot, existingBundlerFile);
-  if (!fs.existsSync(bundlerPath) || opts.force) {
+  if (!existingConfigExists) {
     fs.writeFileSync(bundlerPath, bundlerContent);
     logger.info(`✓ wrote ${existingBundlerFile} with ${bundler} plugin (framework: ${framework}, styling: ${styling})`);
-  } else if (existingConfigExists) {
-    // Should not happen because we prompted, but if user said yes, overwrite
-    fs.writeFileSync(bundlerPath, bundlerContent);
-    logger.info(`✓ overwrote ${existingBundlerFile}`);
+  } else {
+    try {
+      const original = fs.readFileSync(bundlerPath, 'utf8');
+      const { out, diffs } = applyCodemods(original);
+      if (diffs.length > 0) {
+        fs.writeFileSync(bundlerPath, out);
+        logger.info(`✓ codemod ${existingBundlerFile}: ${diffs.join(', ')}`);
+      } else if (opts.force) {
+        fs.writeFileSync(bundlerPath, bundlerContent);
+        logger.info(`✓ overwrote ${existingBundlerFile}`);
+      }
+    } catch {
+      if (opts.force) {
+        fs.writeFileSync(bundlerPath, bundlerContent);
+        logger.info(`✓ overwrote ${existingBundlerFile}`);
+      }
+    }
   }
 
   if (tsconfigWillReplace) {
