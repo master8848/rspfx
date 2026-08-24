@@ -15,6 +15,11 @@
       "types": "./dist/webpart.d.ts",
       "import": "./dist/webpart.js",
       "default": "./dist/webpart.js"
+    },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js",
+      "default": "./dist/headless.js"
     }
   },
   "files": [
@@ -29,6 +34,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "@vitejs/plugin-vue": "^5.2.0",
     "@vue/compiler-sfc": "^3.5.13",
     "vue-loader": "^17.4.2"

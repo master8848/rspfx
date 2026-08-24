@@ -1,35 +1,13 @@
-import { BaseWebPart } from '@mbsks/rspfx-core/webpart';
-import type { ComponentConstructorOptions, SvelteComponentTyped } from 'svelte';
+import { HeadlessWebPart } from '@mbsks/rspfx-webpart-base';
+import { createSvelteAdapter, type SvelteWebPartComponent } from './headless.js';
 
-export interface SvelteWebPartComponent<TProps extends Record<string, unknown>> {
-  component: new (options: ComponentConstructorOptions<TProps>) => SvelteComponentTyped<TProps>;
-  props: TProps;
-}
+export type { SvelteWebPartComponent } from './headless.js';
 
-const instances = new WeakMap<HTMLElement, SvelteComponentTyped<Record<string, unknown>>>();
-
-export abstract class SvelteWebPart<TProps extends Record<string, unknown>, TState = unknown>
-  extends BaseWebPart<TProps> {
+/** @deprecated use createSvelteAdapter from @mbsks/rspfx-framework-svelte/headless + defineWebPart */
+export abstract class SvelteWebPart<TProps extends Record<string, unknown> = Record<string, unknown>, TState = unknown> extends HeadlessWebPart<TProps> {
   protected abstract renderComponent(props: TProps): SvelteWebPartComponent<TProps>;
 
-  protected renderInto(root: HTMLElement): void {
-    const previous = instances.get(root);
-    if (previous) {
-      previous.$destroy();
-    }
-    const { component, props } = this.renderComponent(this.getComponentProps());
-    instances.set(root, new component({ target: root, props }));
-  }
-
-  protected disposeFrom(root: HTMLElement): void {
-    const instance = instances.get(root);
-    if (instance) {
-      instance.$destroy();
-      instances.delete(root);
-    }
-  }
-
-  protected getComponentProps(): TProps {
-    return this.properties;
+  protected createAdapter() {
+    return createSvelteAdapter<TProps>((p) => this.renderComponent(p));
   }
 }

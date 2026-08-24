@@ -16,6 +16,11 @@
       "import": "./dist/base-web-part.js",
       "default": "./dist/base-web-part.js"
     },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js",
+      "default": "./dist/headless.js"
+    },
     "./platform": {
       "types": "./dist/platform.d.ts",
       "import": "./dist/platform.js",
@@ -31,13 +36,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "peerDependencies": {
-    "@microsoft/sp-core-library": "*",
-    "@microsoft/sp-webpart-base": "*"
-  },
   "devDependencies": {
-    "@microsoft/sp-core-library": "1.23.2",
-    "@microsoft/sp-webpart-base": "1.23.2"
+    "@mbsks/rspfx-webpart-base": "workspace:*"
   },
   "description": "Zero-dependency core for RSPFX: SPFx types, base web part, config, environment",
   "repository": {

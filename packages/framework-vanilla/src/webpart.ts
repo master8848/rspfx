@@ -1,18 +1,11 @@
-import { BaseWebPart } from '@mbsks/rspfx-core/webpart';
+import { HeadlessWebPart } from '@mbsks/rspfx-webpart-base';
+import { createVanillaAdapter } from './headless.js';
 
-export abstract class VanillaWebPart<TProps extends Record<string, unknown>, TState = unknown>
-  extends BaseWebPart<TProps> {
+/** @deprecated use createVanillaAdapter from @mbsks/rspfx-framework-vanilla/headless + defineWebPart */
+export abstract class VanillaWebPart<TProps extends Record<string, unknown> = Record<string, unknown>> extends HeadlessWebPart<TProps> {
   protected abstract renderComponent(props: TProps): HTMLElement | string;
 
-  protected renderInto(root: HTMLElement): void {
-    root.replaceChildren(this.renderComponent(this.getComponentProps()));
-  }
-
-  protected disposeFrom(root: HTMLElement): void {
-    root.replaceChildren();
-  }
-
-  protected getComponentProps(): TProps {
-    return this.properties;
+  protected createAdapter() {
+    return createVanillaAdapter<TProps>((p) => this.renderComponent(p));
   }
 }

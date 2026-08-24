@@ -21,6 +21,8 @@
     "baseUrl": ".",
     "paths": {
       "@mbsks/rspfx-core": ["packages/core/src/index.ts"],
+      "@mbsks/rspfx-core/headless": ["packages/core/src/headless.ts"],
+      "@mbsks/rspfx-core/webpart": ["packages/core/src/base-web-part.ts"],
       "@mbsks/rspfx-plugin-api": ["packages/plugin-api/src/index.ts"],
       "@mbsks/rspfx-diagnostics": ["packages/diagnostics/src/index.ts"],
       "@mbsks/rspfx-compiler-rspack": ["packages/compiler-rspack/src/index.ts"],
@@ -37,7 +39,8 @@
       "@mbsks/rspfx-framework-svelte": ["packages/framework-svelte/src/index.ts"],
       "@mbsks/rspfx-sharepoint-runtime": ["packages/sharepoint-runtime/src/index.ts"],
       "@mbsks/rspfx-fluent-adapter": ["packages/fluent-adapter/src/index.ts"],
-      "@mbsks/rspfx-templates": ["packages/templates/src/index.ts"]
+      "@mbsks/rspfx-templates": ["packages/templates/src/index.ts"],
+      "@mbsks/rspfx-webpart-base": ["packages/webpart-base/src/index.ts"]
     }
   }
 }

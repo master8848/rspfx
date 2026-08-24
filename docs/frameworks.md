@@ -7,44 +7,64 @@ the DOM in the browser). The core is framework-agnostic; nothing in
 `@mbsks/rspfx-core`, `compiler-rspack`, or the packaging pipeline knows about any
 particular framework.
 
+## Headless adapter contract
+
+`HeadlessAdapter<TProps>` (from `@mbsks/rspfx-core/headless`) decouples rendering from the SPFx lifecycle:
+
+```ts
+interface HeadlessAdapter<TProps extends Record<string, unknown>> {
+  readonly mount: (root: HTMLElement, props: TProps) => void;
+  readonly update: (root: HTMLElement, props: TProps) => void;
+  readonly unmount: (root: HTMLElement) => void;
+}
+```
+
+Each framework exports a pure factory `createXAdapter` returning this contract. Adapters are testable off-DOM:
+
+```ts
+import { createVanillaAdapter } from '@mbsks/rspfx-framework-vanilla/headless';
+const adapter = createVanillaAdapter<{ name: string }>((props) => props.name);
+adapter.mount(root, { name: 'a' });
+adapter.update(root, { name: 'b' });
+adapter.unmount(root);
+```
+
+SPFx lifecycle is owned by `@mbsks/rspfx-webpart-base`:
+
+```ts
+import { HeadlessWebPart, defineWebPart } from '@mbsks/rspfx-webpart-base';
+import { createReactAdapter } from '@mbsks/rspfx-framework-react/headless';
+export default defineWebPart<{ name: string }>({
+  adapterFactory: () => createReactAdapter((props) => <Hello {...props} />),
+});
+```
+
 ## Mount semantics
 
-`BaseWebPart<TProps>` (from `@mbsks/rspfx-core/webpart`) declares the mount
-contract as three abstract hooks:
+Adapters implement mount/update/unmount per framework:
 
-| Hook | Purpose |
-|---|---|
-| `getComponentProps()` | Derive props from `this.properties` |
-| `renderInto(root)` | Mount the framework root component into `root` (the web part's `domElement`) |
-| `disposeFrom(root)` | Tear down; dispose effects, remove listeners |
+| Adapter | mount | update | unmount |
+|---|---|---|---|
+| `createReactAdapter` | `createRoot(root).render(vnode)` | `root.render(vnode)` | `root.unmount()` |
+| `createPreactAdapter` | `render(vnode, root)` | `render(vnode, root)` | `render(null, root)` |
+| `createVueAdapter` | `createApp(comp).mount(root)` | unmount + create + mount | `app.unmount()` |
+| `createSvelteAdapter` | `new Component({ target: root, props })` | `$destroy` + recreate | `$destroy()` |
+| `createSolidAdapter` | `render(() => comp, root)` | dispose + recreate | dispose |
+| `createVanillaAdapter` | `replaceChildren(node)` | `replaceChildren(node)` | `replaceChildren()` |
 
-The framework package mounts **itself**: each `<Cap>WebPart` implements the hooks
-with its own canonical API (`createRoot().render()`, `render(vnode, root)`,
-`createApp().mount()`, `new Component()`, ...). No `unknown` component crosses a
-generic boundary.
-
-`BaseWebPart.render()` mounts via `renderInto(this.domElement)`; `onDispose()`
-calls `disposeFrom(this.domElement)` first. SPFx calls `render()` again on
-property-pane changes; re-render is handled per framework:
-
-- React / Preact — re-render in place (same root, new props).
-- Solid / Vue / Svelte — dispose-then-recreate (per-root WeakMap bookkeeping).
-- Vanilla — `root.replaceChildren(component)`; the component is
-  `HTMLElement | string`.
+`HeadlessWebPart.render()` calls `adapter.mount(this.domElement, this.getComponentProps())`; `onDispose()` calls `adapter.unmount`. Property-pane updates flow via `adapter.update`.
 
 ## Package layout
 
-Each `@mbsks/rspfx-framework-<fw>` package is split into two entry points:
+Each `@mbsks/rspfx-framework-<fw>` package is split into three entry points:
 
-- **Index** (`@mbsks/rspfx-framework-<fw>`) — `preset` only. Node-safe (the CLI
-  imports it to collect compiler contributions); never imports
-  `@mbsks/rspfx-core/webpart`.
-- **`/webpart` subpath** (`@mbsks/rspfx-framework-<fw>/webpart`) — the `<Cap>WebPart`
-  base class (browser side). Svelte also exports `SvelteWebPartComponent`
-  there.
+- **Index** (`@mbsks/rspfx-framework-<fw>`) — `preset` only. Node-safe (the CLI imports it to collect compiler contributions); never imports `@mbsks/rspfx-webpart-base`.
+- **`/headless` subpath** (`@mbsks/rspfx-framework-<fw>/headless`) — the `createXAdapter` factory (browser, no SPFx dependency). Testable with `jsdom`.
+- **`/webpart` subpath** (`@mbsks/rspfx-framework-<fw>/webpart`) — thin `HeadlessWebPart` shim (`extends HeadlessWebPart` + `createAdapter()` delegates to `createXAdapter`). Kept for one major as `@deprecated`.
 
 ```ts
-import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart';
+import { createReactAdapter } from '@mbsks/rspfx-framework-react/headless';
+import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart'; // shim, deprecated
 ```
 
 ## JSX and compiler configuration

@@ -32,3 +32,4 @@ export { canResolveFromProject, clearCanResolveCache } from './package-resolve.j
 export { EnvironmentType, PropertyPaneFieldType } from './environment.js';
 export { Version } from './version.js';
 export type { ISpfxTheme, ThemeProvider, WebPartContextLike } from './context.js';
+export type { HeadlessAdapter, HeadlessContext, HeadlessWebPartOptions, PropsSelector } from './headless.js';

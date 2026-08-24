@@ -1,5 +1,5 @@
 {
-  "name": "@mbsks/rspfx-fluent-adapter",
+  "name": "@mbsks/rspfx-webpart-base",
   "version": "0.0.13",
   "private": false,
   "type": "module",
@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./define": {
+      "types": "./dist/define.d.ts",
+      "import": "./dist/define.js",
+      "default": "./dist/define.js"
     }
   },
   "files": [
@@ -21,27 +26,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-framework-react": "workspace:*",
-    "@mbsks/rspfx-webpart-base": "workspace:*"
-  },
   "peerDependencies": {
-    "@fluentui/react": "^8.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@fluentui/react": {
-      "optional": true
-    }
+    "@microsoft/sp-webpart-base": "^1.20.0 || ^1.21.0 || ^1.22.0 || ^1.23.0"
   },
   "devDependencies": {
-    "@fluentui/react": "8.122.7",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@mbsks/rspfx-core": "workspace:*",
+    "@microsoft/sp-webpart-base": "1.23.2",
+    "@microsoft/sp-core-library": "1.23.2"
   },
-  "description": "RSPFX Fluent UI web part base (React)",
+  "description": "RSPFX web part base: HeadlessWebPart and defineWebPart over @microsoft/sp-webpart-base",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

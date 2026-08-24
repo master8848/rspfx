@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import type { HeadlessAdapter } from '@mbsks/rspfx-core/headless';
 
 /**
  * Local preview page: the Vite-style entry served at `/` by `rspfx dev` in
@@ -183,6 +184,15 @@ export function readLocalPageComponents(
     });
   }
   return components;
+}
+
+export function renderHeadlessPreview<TProps extends Record<string, unknown>>(
+  root: HTMLElement,
+  adapter: HeadlessAdapter<TProps>,
+  props: TProps,
+): () => void {
+  adapter.mount(root, props);
+  return () => adapter.unmount(root);
 }
 
 function escapeHtml(value: string): string {

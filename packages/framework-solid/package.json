@@ -15,6 +15,11 @@
       "types": "./dist/webpart.d.ts",
       "import": "./dist/webpart.js",
       "default": "./dist/webpart.js"
+    },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js",
+      "default": "./dist/headless.js"
     }
   },
   "files": [
@@ -31,6 +36,7 @@
     "@babel/preset-typescript": "^7.26.0",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "babel-loader": "^9.2.1",
     "babel-preset-solid": "^1.9.4",
     "solid-refresh": "^0.7.8",

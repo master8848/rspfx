@@ -95,20 +95,46 @@ export interface WebPartContextLike {   // minimal surface used by web parts/tem
   [key: string]: unknown;
 }
 
-// Base web part (extends real @microsoft/sp-webpart-base BaseClientSideWebPart when available)
-export abstract class BaseWebPart<TProps extends Record<string, unknown> = Record<string, unknown>> {
-  // Provided by @microsoft/sp-webpart-base at runtime; declared here as dependency contract
-  protected abstract getComponentProps(): TProps;           // props derived from this.properties
-  protected abstract renderInto(root: HTMLElement): void;   // mount the framework root component into root
-  protected abstract disposeFrom(root: HTMLElement): void;  // tear down; dispose effects, remove listeners
-  public render(): void;                                    // mounts via renderInto(this.domElement)
-  protected onDispose(): void;                              // disposeFrom(this.domElement) then super
+export interface HeadlessAdapter<TProps extends Record<string, unknown>> {
+  readonly mount: (root: HTMLElement, props: TProps) => void;
+  readonly update: (root: HTMLElement, props: TProps) => void;
+  readonly unmount: (root: HTMLElement) => void;
 }
+export interface HeadlessContext {
+  readonly domElement: HTMLElement;
+  readonly theme: ISpfxTheme | undefined;
+  readonly themeProvider?: ThemeProvider;
+  readonly environment: EnvironmentType;
+  readonly cultureName: string;
+  readonly manifestId?: string;
+}
+export type PropsSelector<TProps, TRaw = Record<string, unknown>> = (raw: TRaw, ctx: HeadlessContext) => TProps;
 ```
 
-`BaseWebPart` lives in `src/base-web-part.ts`, exported via the
-`@mbsks/rspfx-core/webpart` subpath (browser side); the index never imports the
-web part runtime.
+`HeadlessAdapter` lives in `src/headless.ts`, exported via `@mbsks/rspfx-core/headless` (zero-deps).
+
+## @mbsks/rspfx-webpart-base (depends on core + @microsoft/sp-webpart-base)
+
+```ts
+export abstract class HeadlessWebPart<TProps extends Record<string, unknown> = Record<string, unknown>> extends BaseClientSideWebPart<TProps> {
+  protected abstract createAdapter(): HeadlessAdapter<TProps>;
+  protected getComponentProps(): TProps;           // default: this.properties as TProps
+  public override render(): void;                   // adapter.mount(this.domElement, getComponentProps())
+  protected override onDispose(): void;             // adapter.unmount + super
+  protected updateProps(next: TProps): void;        // adapter.update
+}
+export function defineWebPart<const TProps extends Record<string, unknown>>(opts: {
+  readonly adapterFactory: (host: { domElement: HTMLElement }) => HeadlessAdapter<TProps>;
+  readonly selector?: PropsSelector<TProps>;
+  readonly propertiesSchema?: (raw: unknown) => TProps;
+  readonly displayName?: string;
+  readonly getPropertyPaneConfiguration?: () => unknown;
+}): new () => HeadlessWebPart<TProps>;
+/** @deprecated alias for HeadlessWebPart — use @mbsks/rspfx-webpart-base */
+export const BaseWebPart = HeadlessWebPart;
+```
+
+Compat shim at `@mbsks/rspfx-core/webpart` re-exports `HeadlessWebPart as BaseWebPart` with a one-time `console.warn('deprecated: use @mbsks/rspfx-webpart-base')`.
 
 ## @mbsks/rspfx-plugin-api (depends on core only)
 
@@ -478,53 +504,51 @@ in `mode: 'local'`; not re-exported from the package index):
 - `src/local-page.ts` — `buildLocalPageHtml(opts: LocalPageOptions): string`: static HTML served at `/` — injects discovered web part list into `window.__RSPFX_COMPONENTS__`, loads `/dist/local-runtime.js`, appends reload client script. `readLocalPageComponents(bundles, packageVersion): LocalPageComponent[]` derives `{ id, alias, bundleName, amdId, preconfiguredEntries }` from manifests.
 - `src/mock-api.ts` — `createMockSharePointApi(opts: { projectRoot: string; origin: () => string })` returns `{ path: '/_api', handle(req, res) }`: mock SharePoint REST API (OData v4 JSON-light, `/_api/web`, `/site`, `/lists`, item CRUD via `X-HTTP-Method`, `POST /contextinfo`, 404/400 envelopes). Store seeded from `createDefaultMockStore()` and optionally overridden by `local/data.json`.
 
-## @mbsks/rspfx-framework-* (depends on core, plugin-api; peer: framework libs)
+## @mbsks/rspfx-framework-* (depends on core, plugin-api, webpart-base; peer: framework libs)
 
-Each package `@mbsks/rspfx-framework-react|solid|preact|vue|svelte|vanilla` exposes two
-entry points:
+Each package `@mbsks/rspfx-framework-react|solid|preact|vue|svelte|vanilla` exposes three entry points:
 
-- Index (`@mbsks/rspfx-framework-<fw>`) — Node-safe; exports only the preset,
-  never imports `@mbsks/rspfx-core/webpart`:
+- Index (`@mbsks/rspfx-framework-<fw>`) — Node-safe; exports only the preset, never imports `@mbsks/rspfx-webpart-base`:
 
 ```ts
 export const preset: FrameworkPreset;       // name = '<framework>'
 ```
 
-- Subpath (`@mbsks/rspfx-framework-<fw>/webpart`) — the web part base class
-  (browser side):
+- Subpath (`@mbsks/rspfx-framework-<fw>/headless`) — pure adapter factory, no SPFx dependency:
+
+```ts
+import { createReactAdapter } from '@mbsks/rspfx-framework-react/headless';
+export function createReactAdapter<TProps>(renderComponent: (props: TProps) => ReactNode): HeadlessAdapter<TProps>;
+import { createSolidAdapter } from '@mbsks/rspfx-framework-solid/headless';
+export function createSolidAdapter<TProps>(renderComponent: (props: TProps) => JSX.Element): HeadlessAdapter<TProps>;
+import { createVanillaAdapter } from '@mbsks/rspfx-framework-vanilla/headless';
+export function createVanillaAdapter<TProps>(render: (props: TProps) => HTMLElement | string): HeadlessAdapter<TProps>;
+import { createVueAdapter } from '@mbsks/rspfx-framework-vue/headless';
+export function createVueAdapter<TProps>(factory: (props: TProps) => Component): HeadlessAdapter<TProps>;
+import { createPreactAdapter } from '@mbsks/rspfx-framework-preact/headless';
+export function createPreactAdapter<TProps>(renderComponent: (props: TProps) => ComponentChild): HeadlessAdapter<TProps>;
+import { createSvelteAdapter } from '@mbsks/rspfx-framework-svelte/headless';
+export function createSvelteAdapter<TProps>(factory: (props: TProps) => SvelteWebPartComponent<TProps>): HeadlessAdapter<TProps>;
+```
+
+- Subpath (`@mbsks/rspfx-framework-<fw>/webpart`) — thin `HeadlessWebPart` shim (deprecated, kept for one major):
 
 ```ts
 import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart';
-export abstract class <Cap>WebPart<TProps, TState> extends BaseWebPart<TProps> { ... } // e.g. ReactWebPart
+export abstract class <Cap>WebPart<TProps, TState> extends HeadlessWebPart<TProps> {
+  protected abstract renderComponent(props: TProps): unknown;
+  protected createAdapter(): HeadlessAdapter<TProps>; // delegates to createXAdapter
+}
 ```
 
-- Svelte's `/webpart` subpath also exports
-  `type SvelteWebPartComponent<TProps extends Record<string, unknown>>` — the
-  `{ component, props }` shape the web part class mounts.
-- `framework-vanilla`: `VanillaWebPart.renderInto` replaces children — the
-  component is an `HTMLElement | string`; no refresh.
-- React: react ^18, react-dom ^18 (peers); `ReactWebPart.renderInto` mounts via
-  `createRoot(root).render(...)` (root cached in a WeakMap); re-render re-renders
-  in place with new props; fast refresh: `@rspack/plugin-react-refresh`
-  contribution when fastRefresh; vite: `@vitejs/plugin-react` (esbuild
-  `jsx: 'automatic'`); rsbuild: babel-loader + `react-refresh/babel`.
-- Solid: `SolidWebPart.renderInto` uses `render(() => component, root)` from
-  solid-js/web, with a disposers WeakMap — dispose-then-recreate on re-render;
-  refresh: babel-loader + babel-preset-solid (dev mode) + `solid-refresh/babel`
-  (bundler `rspack-esm`) when fastRefresh; vite: `vite-plugin-solid`; rsbuild:
-  the solid babel rules.
-- Preact: `PreactWebPart.renderInto` uses `render(vnode, root)` from preact;
-  `disposeFrom` renders `null`; refresh: `@rspack/plugin-preact-refresh`;
-  vite: `@prefresh/vite`; rsbuild: babel-loader + `@prefresh/babel-plugin`.
-- Vue: `VueWebPart.renderInto` uses `createApp(Component).mount(root)` with an
-  apps WeakMap — unmount-then-create on re-render; refresh: vue-loader HMR (peer
-  @vue/compiler-sfc; contribution: vue-loader rule); vite: `@vitejs/plugin-vue`;
-  rsbuild: the vue-loader rule (same as rspack).
-- Svelte: `SvelteWebPart.renderInto` does `new Component({ target: root, props })`
-  with an instances WeakMap — `$destroy()` then recreate on re-render; refresh:
-  svelte-loader `hotReload` (svelte-hmr); vite: `@sveltejs/vite-plugin-svelte`;
-  rsbuild: the svelte-loader rule.
-- Each preset's `contributions` must return compiler rules/plugins/swc for JSX/refresh — compilers merge them; the optional `vite()`/`rsbuild()` methods return the bundler-shaped equivalents (see plugin-api above).
+- Svelte's `/headless` also exports `SvelteWebPartComponent<TProps>` — the `{ component, props }` shape.
+- `framework-vanilla`: `createVanillaAdapter` `mount` uses `replaceChildren`; no refresh.
+- React: `createReactAdapter` caches `Root` in `WeakMap<HTMLElement,Root>`; re-render via `root.render`; fast refresh contributors unchanged.
+- Solid: `createSolidAdapter` uses `render(() => comp, root)` with per-adapter `WeakMap<HTMLElement,()=>void>`; refresh unchanged.
+- Preact: `createPreactAdapter` uses `render(vnode, root)` / `render(null, root)`.
+- Vue: `createVueAdapter` uses `createApp(...).mount` with `WeakMap<HTMLElement,App>`.
+- Svelte: `createSvelteAdapter` does `new Component({ target: root, props })` with `WeakMap<HTMLElement,SvelteComponentTyped>`; checks `$destroy` existence for Svelte 4/5 compat.
+- Each preset's `contributions` unchanged; `vite()`/`rsbuild()` methods unchanged.
 
 ## @mbsks/rspfx-sharepoint-runtime (depends on core; peer @microsoft/sp-*)
 
@@ -568,12 +592,13 @@ per component: `createLocalWebPartContext` → `_internalInitialize(context,
 false, DisplayMode.Read)` → `_internalDeserialize({ properties, dataVersion })`
 → await `onInit()` → `render()`.
 
-## @mbsks/rspfx-fluent-adapter (depends on core, framework-react; peer @fluentui/react)
+## @mbsks/rspfx-fluent-adapter (depends on core, framework-react, webpart-base; peer @fluentui/react)
 
 ```ts
-export class FluentWebPart<TProps, TState> extends ReactWebPart<TProps, TState> {
+export class FluentWebPart<TProps, TState> extends HeadlessWebPart<TProps> {
   protected onThemeChanged(): void;   // syncs context.themeProvider → Fluent ThemeProvider
 }
+export function createFluentAdapter<TProps>(render: (props: TProps, theme: ITheme) => ReactNode, getThemeProvider?: () => ThemeProvider, getTheme?: () => ITheme): HeadlessAdapter<TProps>;
 ```
 
 ## @mbsks/rspfx-templates (depends on core)

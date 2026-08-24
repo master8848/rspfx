@@ -15,6 +15,11 @@
       "types": "./dist/webpart.d.ts",
       "import": "./dist/webpart.js",
       "default": "./dist/webpart.js"
+    },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js",
+      "default": "./dist/headless.js"
     }
   },
   "files": [
@@ -29,6 +34,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^3.1.0",
     "svelte-hmr": "^0.16.0",
     "svelte-loader": "^3.2.4"

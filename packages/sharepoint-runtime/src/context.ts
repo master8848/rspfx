@@ -1,4 +1,7 @@
 import type { WebPartContextLike } from '@mbsks/rspfx-core';
+import { EnvironmentType } from '@mbsks/rspfx-core';
+import type { HeadlessContext } from '@mbsks/rspfx-core/headless';
+import type { CultureName } from '@mbsks/rspfx-core';
 import { createMockThemeProvider, type LocalThemeProvider } from './theme.js';
 import { createMockMSGraphClientFactory, createMockAadHttpClientFactory } from './http.js';
 import { resolveLocale, type ResolvedLocale } from './locales.js';
@@ -202,6 +205,27 @@ export async function createLocalWebPartContext(
   // the scope chain, so the parent must be finished before the framework finishes the child.
   parentScope.finish?.();
   return withOverrides(context as unknown as WebPartContextLike, overrides);
+}
+
+export function createHeadlessContext(
+  spContext: WebPartContextLike & { domElement?: HTMLElement },
+  root: HTMLElement,
+): HeadlessContext {
+  const domElement = (spContext.domElement as unknown as HTMLElement) ?? root;
+  const themeProvider = (spContext as unknown as { themeProvider?: import('@mbsks/rspfx-core').ThemeProvider }).themeProvider;
+  const theme = themeProvider?.getTheme();
+  const environment = (spContext.environment as { type: EnvironmentType })?.type ?? EnvironmentType.Local;
+  const culture = (
+    (spContext as unknown as { pageContext?: { cultureInfo?: { currentCultureName?: string } } }).pageContext
+      ?.cultureInfo?.currentCultureName ?? 'en-US'
+  ) as CultureName;
+  return {
+    domElement,
+    theme,
+    themeProvider,
+    environment,
+    cultureName: culture,
+  };
 }
 
 function withOverrides(context: WebPartContextLike, overrides: Record<string, unknown>): WebPartContextLike {

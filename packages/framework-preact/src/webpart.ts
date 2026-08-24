@@ -1,19 +1,12 @@
-import { BaseWebPart } from '@mbsks/rspfx-core/webpart';
-import { render, type ComponentChild } from 'preact';
+import { HeadlessWebPart } from '@mbsks/rspfx-webpart-base';
+import { createPreactAdapter } from './headless.js';
+import type { ComponentChild } from 'preact';
 
-export abstract class PreactWebPart<TProps extends Record<string, unknown>, TState = unknown>
-  extends BaseWebPart<TProps> {
+/** @deprecated use createPreactAdapter from @mbsks/rspfx-framework-preact/headless + defineWebPart */
+export abstract class PreactWebPart<TProps extends Record<string, unknown> = Record<string, unknown>, TState = unknown> extends HeadlessWebPart<TProps> {
   protected abstract renderComponent(props: TProps): ComponentChild;
 
-  protected renderInto(root: HTMLElement): void {
-    render(this.renderComponent(this.getComponentProps()), root);
-  }
-
-  protected disposeFrom(root: HTMLElement): void {
-    render(null, root);
-  }
-
-  protected getComponentProps(): TProps {
-    return this.properties;
+  protected createAdapter() {
+    return createPreactAdapter<TProps>((p) => this.renderComponent(p));
   }
 }
