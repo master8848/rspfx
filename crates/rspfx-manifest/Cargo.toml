@@ -1,0 +1,15 @@
+[package]
+name = "rspfx-manifest"
+version = "0.1.0"
+edition = "2021"
+description = "Rust-accelerated manifest generator with JS fallback"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+walkdir = { workspace = true }
+rayon = { workspace = true }
+tokio = { workspace = true }
