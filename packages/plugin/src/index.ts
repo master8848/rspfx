@@ -1,4 +1,6 @@
 export { RspfxPlugin } from './rspack.js';
+export { createKernel } from './kernel.js';
+export type { Kernel, KernelOpts } from './kernel.js';
 export { rspfxVite, VITE_ENV } from './vite.js';
 export type { ViteRspfxPlugin } from './vite.js';
 export { rspfxRsbuild } from './rsbuild.js';

@@ -10,7 +10,8 @@ export type {
   WatchHandle
 } from './types.js';
 export { RspfxError } from './errors.js';
-export { createRspackConfig, BASE_EXTENSIONS, BUILD_TIME_ALIASES, SOLID_REFRESH_STUB } from './config.js';
+export { createRspackConfig, cacheVersionHash, BASE_EXTENSIONS, BUILD_TIME_ALIASES, SOLID_REFRESH_STUB } from './config.js';
+export type { CacheVersionInput } from './config.js';
 export { spfx, type SpfxPluginOptions } from './plugin.js';
 export {
   SpfxPublicPathPlugin,
