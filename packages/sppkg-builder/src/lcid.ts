@@ -1,3 +1,11 @@
+import { createRequire } from 'node:module';
+
+let native: { localeToLcid?: (l: string) => number; lcidToCultureName?: (n: number) => string; localeToCultureName?: (l: string) => string } | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-sppkg/index.node');
+} catch {}
+
 const LOCALE_TO_LCID: Record<string, number> = {
   'af-za': 1078,
   'ar-sa': 1025,
@@ -58,6 +66,9 @@ const LOCALE_TO_LCID: Record<string, number> = {
 };
 
 export function localeToLcid(locale: string): number {
+  if (native?.localeToLcid) {
+    try { return native.localeToLcid(locale); } catch {}
+  }
   const normalized = locale.toLowerCase();
   // Normalize underscores to hyphens (all occurrences) before lookup. Fallback to 1033 (en-us) on unknown.
   const hyphenated = normalized.replace(/_/g, '-');
@@ -81,6 +92,9 @@ function formatCulture(culture: string): string {
 }
 
 export function lcidToCultureName(lcid: number): string {
+  if (native?.lcidToCultureName) {
+    try { return native.lcidToCultureName(lcid); } catch {}
+  }
   const culture = LCID_TO_CULTURE[lcid];
   if (culture) {
     return formatCulture(culture);
@@ -89,6 +103,9 @@ export function lcidToCultureName(lcid: number): string {
 }
 
 export function localeToCultureName(locale: string): string {
+  if (native?.localeToCultureName) {
+    try { return native.localeToCultureName(locale); } catch {}
+  }
   if (locale === 'default') {
     return 'default';
   }
