@@ -123,6 +123,8 @@ Workbench-first is true only in sharepoint mode: `localhost:4321` serves bundles
 
 ## Production flow
 
+Pipeline `src/ → compiler-rspack → dist/ → manifest-generator → sppkg-builder → solution.sppkg` — current behavior only.
+
 ```
 src/ → compiler-rspack → dist/ (bundles + assets)
      → manifest-generator → release/manifests + release/assets
