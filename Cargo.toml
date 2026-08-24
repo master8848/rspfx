@@ -9,6 +9,7 @@ quick-xml = "0.36"
 walkdir = "2.5"
 rayon = "1.10"
 memchr = "2.7"
+regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.40", features = ["fs", "rt-multi-thread", "macros"] }
