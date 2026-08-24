@@ -71,7 +71,7 @@ async function guard(action: () => Promise<unknown>): Promise<void> {
           case RspfxErrorCode.VITE_NO_ENTRY:
             break;
           default: {
-            const _exhaustive: never = sub.code;
+            const _exhaustive: never = sub.code as never;
             void _exhaustive;
           }
         }
@@ -116,7 +116,7 @@ async function guard(action: () => Promise<unknown>): Promise<void> {
         case RspfxErrorCode.VITE_NO_ENTRY:
           break;
         default: {
-          const _exhaustive: never = (error as RspfxError).code;
+          const _exhaustive: never = (error as RspfxError).code as never;
           void _exhaustive;
         }
       }
