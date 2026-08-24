@@ -146,6 +146,10 @@ function isTeamsEnabled(rspfxConfig?: RspfxConfig): boolean {
   return false;
 }
 
+/**
+ * @deprecated use explicit CLI command; readProject no longer calls this
+ * Ensure project configs exists — writes config/*.json files if missing.
+ */
 export function ensureProjectConfigs(
   projectRoot: string,
   paths?: PathsConfig,
@@ -384,6 +388,7 @@ export function ensureProjectConfigs(
   }
 }
 
+/** @deprecated use explicit CLI command; readProject no longer calls this */
 export function readProject(
   projectRoot: string,
   paths?: PathsConfig,
@@ -392,7 +397,6 @@ export function readProject(
 ): ReadProjectResult {
   const resolvedPaths = resolvePathDefaults(paths);
   loadDotEnv(projectRoot);
-  ensureProjectConfigs(projectRoot, resolvedPaths, rspfxConfig);
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
   if (fs.existsSync(packageJsonPath)) {
@@ -456,6 +460,20 @@ export function readProject(
     localizedAliases: readLocalizedAliases(projectRoot, configJson, resolvedPaths.srcDir),
     localizedResources: readLocalizedResources(projectRoot, configJson, resolvedPaths.srcDir)
   };
+}
+
+export const readProjectPure = readProject;
+
+/** @deprecated use readProject + ensureProjectConfigs explicitly */
+export function readProjectWithEnsure(
+  projectRoot: string,
+  paths?: PathsConfig,
+  versionOverride?: string,
+  rspfxConfig?: RspfxConfig
+): ReadProjectResult {
+  const resolvedPaths = resolvePathDefaults(paths);
+  ensureProjectConfigs(projectRoot, resolvedPaths, rspfxConfig);
+  return readProject(projectRoot, paths, versionOverride, rspfxConfig);
 }
 
 /**
