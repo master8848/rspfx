@@ -1,4 +1,4 @@
-import { SPFX_DEFAULT_TARGET } from './versions.js';
+import { SPFX_DEFAULT_TARGET, SPFX_TARGETS } from './versions.js';
 import type { SpfxTarget } from './versions.js';
 
 export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
@@ -69,20 +69,58 @@ export function defineConfig<const T extends RspfxConfig>(config: T): T {
 export type Issue = { path: (string | number)[]; message: string; code: string };
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 
+export function parseRSPFXConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
+  return tryResolveConfig(raw);
+}
+
+export const RspfxConfigSchema: unknown = {
+  _id: 'RspfxConfig',
+  _strict: true,
+  _validate: tryResolveConfig
+};
+
 export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
   const issues: Issue[] = [];
   if (typeof raw !== 'object' || raw === null) {
-    return { ok: false, error: [{ path: [], message: 'config must be an object', code: 'INVALID_PACKAGE_CONFIG' }] };
+    return { ok: false, error: [{ path: [], message: 'config must be an object', code: 'CONFIG_VALIDATION_FAILED' }] };
   }
-  const cfg = raw as Partial<RspfxConfig> & Record<string, unknown>;
+  const record = raw as Record<string, unknown>;
+  const cfg = record as Partial<RspfxConfig>;
   const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams']);
-  for (const k of Object.keys(cfg)) {
+  for (const k of Object.keys(record)) {
     if (!knownKeys.has(k)) {
-      issues.push({ path: [k], message: `unknown key "${k}"`, code: 'INVALID_OPTION' });
+      issues.push({ path: [k], message: `unknown key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
     }
   }
-  if (!cfg.name || typeof cfg.name !== 'string') {
-    issues.push({ path: ['name'], message: '"name" is required', code: 'INVALID_PACKAGE_CONFIG' });
+  if (!cfg.name || typeof cfg.name !== 'string' || cfg.name.trim().length === 0) {
+    issues.push({ path: ['name'], message: '"name" is required', code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.framework !== undefined && (typeof cfg.framework !== 'string' || cfg.framework.length === 0)) {
+    issues.push({ path: ['framework'], message: 'framework must be a non-empty string', code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.spfxVersion !== undefined && !(SPFX_TARGETS as readonly string[]).includes(cfg.spfxVersion as string)) {
+    issues.push({ path: ['spfxVersion'], message: `spfxVersion must be one of ${SPFX_TARGETS.join(', ')}`, code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.version !== undefined && typeof cfg.version === 'string' && !/^\d+\.\d+\.\d+/.test(cfg.version)) {
+    issues.push({ path: ['version'], message: 'version must be semver', code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.dev !== undefined) {
+    const dev = cfg.dev as Record<string, unknown>;
+    if (dev.port !== undefined) {
+      const port = dev.port as number;
+      if (typeof port !== 'number' || !Number.isInteger(port) || port < 1024 || port > 65535) {
+        issues.push({ path: ['dev', 'port'], message: 'dev.port must be integer 1024-65535', code: 'CONFIG_VALIDATION_FAILED' });
+      }
+    }
+  }
+  if (cfg.teams !== undefined && typeof cfg.teams === 'object' && cfg.teams !== null) {
+    const teams = cfg.teams as Record<string, unknown>;
+    const knownTeamsKeys = new Set(['enabled']);
+    for (const k of Object.keys(teams)) {
+      if (!knownTeamsKeys.has(k)) {
+        issues.push({ path: ['teams', k], message: `unknown teams key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
+      }
+    }
   }
   if (issues.length > 0) return { ok: false, error: issues };
   try {
@@ -90,7 +128,7 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
     return { ok: true, value: resolved };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: [{ path: [], message: msg, code: 'INVALID_PACKAGE_CONFIG' }] };
+    return { ok: false, error: [{ path: [], message: msg, code: 'CONFIG_VALIDATION_FAILED' }] };
   }
 }
 
@@ -132,7 +170,9 @@ export function resolvePathDefaults(paths?: PathsConfig): Required<PathsConfig> 
 /** @deprecated use tryResolveConfig — this wrapper throws on validation error */
 export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): RspfxConfig {
   if (!config.name) {
-    throw new Error('"name" is required in the bundler config (rspack.config.ts)');
+    const err = new Error('"name" is required in the bundler config (rspack.config.ts)');
+    (err as unknown as Record<string, unknown>).code = 'CONFIG_VALIDATION_FAILED';
+    throw err;
   }
   let teams: TeamsConfig | undefined;
   if (config.teams !== undefined) {

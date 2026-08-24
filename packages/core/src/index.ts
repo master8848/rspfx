@@ -1,4 +1,4 @@
-export { configDefaults, defineConfig, resolveConfig, resolvePathDefaults, tryResolveConfig } from './config.js';
+export { configDefaults, defineConfig, parseRSPFXConfig, resolveConfig, resolvePathDefaults, RspfxConfigSchema, tryResolveConfig } from './config.js';
 export type {
   BuildConfig,
   DeployConfig,
