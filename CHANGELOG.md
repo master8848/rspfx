@@ -10,18 +10,49 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 ## [Unreleased]
 
+> Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
+
+## [0.1.0] - 2026-08-24
+
+Breaking release `0.0.13 → 0.1.0` — consumers on `^0.0.13` get peer conflict; run `npx rspfx migrate --to 0.1 --dry-run` then `npx rspfx migrate --to 0.1` and `npx rspfx doctor --fix` to codemod.
+
+### Breaking Changes
+- `FrameworkPreset` field `contributions` renamed to `rspack` — `FrameworkPreset<T extends FrameworkId> { rspack(opts)=>FrameworkRspackContributions }` in `packages/plugin-api/src/index.ts` — codemod via `rspfx migrate --to 0.1`.
+- `RspfxErrorCode` is now branded string union — `RspfxError.code` is `RspfxErrorCode` not `string` in `packages/diagnostics/src/codes.ts`.
+- `defineConfig` preserves literal `framework` — `defineConfig<const T extends RspfxConfig>(config: T): T` in `packages/core/src/config.ts` — add `as const` or `satisfies FrameworkPreset<'react'>`.
+- `resolveConfig` rejects unknown keys — `strictObject` dust throws `RspfxError(CONFIG_VALIDATION_FAILED)` with `Issue.path` in `packages/core/src/config.ts:32` — handle via `tryResolveConfig`.
+- `createRSPFX` instance replaces globals — `registerPlugin`/`getPlugins` removed, use `rspfx = createRSPFX()` and `rspfx.hooks` in `apps/cli/src/config.ts` and `packages/plugin-api/src/instance.ts`.
+- `readProject` is pure — no longer auto-writes `config/serve.json` etc; run `rspfx doctor --fix` via `ensureProjectConfigs` in `packages/dev-runtime/src/project.ts`.
+- Kernel cache versioned — `cacheVersionHash` busts `filesystem` cache on config change in `packages/compiler-rspack/src/kernel.ts`.
+- Config schema `strictObject` — unknown keys rejected at `parseRSPFXConfig` in `packages/core/src/config.ts` (Phase 8).
+
 ### Added
-- Per-version changelog rule and tag linkage (this file) — `CHANGELOG.md` now requires one `## [X.Y.Z]` per release and links each section to `vX.Y.Z` and the npm dist-tag.
+- Per-version changelog rule and tag linkage — `CHANGELOG.md` now requires one `## [X.Y.Z]` per release linked to `vX.Y.Z` and npm dist-tag `latest`/`next`.
+- Typed `HookBus` and `RspfxExtension` hooks — `beforeCompile`, `afterStats`, `beforeGenerate`, `afterGenerate`, `beforeStart`, `afterStart`, `beforePackage`, `afterPackage` with `HookResult<T>` in `packages/plugin-api/src/hooks.ts`.
+- Structured diagnostics — `LogLevel`, `Logger.child/isLevelEnabled/trace`, `RspfxError`, `AggregateRspfxError`, `formatError`, `formatBytes` in `packages/diagnostics/src`.
+- Headless adapter split — `HeadlessWebPart` in `@mbsks/rspfx-webpart-base`, `createXAdapter` per framework in `@mbsks/rspfx-framework-*/headless` with `HeadlessAdapter`/`PropsSelector` in `packages/core/src/headless.ts`.
+- Dev store and state machine — `createStore` in `packages/dev-runtime/src/store.ts`, explicit dev machine in `packages/dev-runtime/src/machine.ts`, path/route/devtools extraction.
+- Bundler kernel with `filesystem` cache, `lazyCompilation`, asset filenames, CSS dedup in `packages/compiler-rspack/src/kernel.ts`.
+- Vite `AsyncLocalStorage` parallel builds and `optimizeDeps` cache isolation in `packages/plugin/src/vite.ts`.
+- Rsbuild dev parity — `modifyRspackConfig` entries/externals/output/chunkLoadingGlobal/publicPath plugins, `RsbuildRspfxPlugin` in `packages/plugin/src/rsbuild.ts`.
+- Rust crates with JS fallback — `crates/rspfx-sppkg`, `crates/rspfx-manifest`, `crates/rspfx-rspack-plugin` with `try { require('.../index.node') } catch {}` fallback.
+- `rspfx migrate --to 0.1` codemod — `--dry-run`, `--revert`, `--bundler vite|rspack|rsbuild`, `.rspfx/migrate-backup.json` backup in `apps/cli/src/commands/migrate.ts`.
+- `rspfx doctor --fix` — recreates missing configs via `ensureProjectConfigs` and reports `Issue.path` in `apps/cli/src/commands/doctor.ts`.
+- `defineConfig` `as const` wrapper in `packages/templates/src/index.ts` and `svelte.config.js` generation.
 
 ### Fixed
-- Fixed `rspfx build` now delegates to `rspack build` so `rspack.config.ts` `module.rules` are honored.
-- Fixed CSS `importLoaders` for `.css` `@import` — `1` when PostCSS is present, `0` when not (`packages/compiler-rspack/src/config.ts:212`).
-- Fixed `postcss.config.json` detection — now checked alongside `js`/`cjs`/`mjs`/`ts`/`cts`/`mts` (`packages/compiler-rspack/src/config.ts:37`).
-- Fixed styling docs `camelCaseOnly` → `asIs` to match `packages/plugin/src/vite.ts:330` and `packages/compiler-rspack/src/helpers/css.ts:58`.
-- Fixed bundler choice docs — Rspack is manual `module.rules`, Vite is default, ranking is Vite > Rsbuild > Rspack per `skills/rspfx/SKILL.md`.
-- Fixed Tailwind `content` note — `content` not `purge` for v3 (`docs/styling.md:87`).
+- `rspfx build` now delegates to `rspack build` so `rspack.config.ts` `module.rules` are honored (`1689392`).
+- CSS `importLoaders` for `.css` `@import` — `1` when PostCSS present, `0` when not (`packages/compiler-rspack/src/config.ts:212`).
+- `postcss.config.json` detection — checked alongside `js`/`cjs`/`mjs`/`ts`/`cts`/`mts` (`packages/compiler-rspack/src/config.ts:37`).
+- Styling docs `camelCaseOnly` → `asIs` to match `packages/plugin/src/vite.ts:330` and `packages/compiler-rspack/src/helpers/css.ts:58`.
+- Bundler choice docs — Rspack manual `module.rules`, Vite default, ranking Vite > Rsbuild > Rspack per `skills/rspfx/SKILL.md`.
+- Tailwind `content` note — `content` not `purge` for v3 (`docs/styling.md:87`).
+- Rspack resolve `rspack.ts:143` — plugin-injected resolve forwarding via kernel `resolveContributionLoaders`.
+- Rsbuild certs and DefinePlugin order — `rsbuild.ts:292` cert handling and `rsbuild.ts:486` `DefinePlugin` ordering.
+- `platformOnlyExternal` handling — externalization via `packages/core/src/platform.ts` in rspack/vite/rsbuild.
+- Rsbuild `modifyRsbuildConfig` arity and CLI `--to`/`--revert` handling (`632d336`, `85e6e24`).
 
-> Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
+> Git tag: `v0.1.0` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.1.0` (single version, `scripts/publish.mjs`). Compare `v0.0.13...v0.1.0`.
 
 ## [0.0.13] - 2026-08-23
 
@@ -227,7 +258,8 @@ Initial public line — rebrand `@rspfx → @mbsks`, workspace and examples setu
 - **npm dist-tag:** published via `pnpm publish --tag <dist-tag>` (default `latest`; prereleases default to `next`; override with `node scripts/publish.mjs --tag <dist-tag>`). All 19 publishable packages share the same version and tag in one run.
 - **CHANGELOG.md:** one `## [X.Y.Z] - YYYY-MM-DD` section per version. Link the tag in the section footer. `Unreleased` tracks work since the last tag. On `v1.0.0`, freeze pre-`1.0` entries to `CHANGELOG_ARCHIVE.md`.
 
-[Unreleased]: https://github.com/master8848/rspfx/compare/v0.0.13...HEAD
+[Unreleased]: https://github.com/master8848/rspfx/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/master8848/rspfx/compare/v0.0.13...v0.1.0
 [0.0.13]: https://github.com/master8848/rspfx/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/master8848/rspfx/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/master8848/rspfx/compare/v0.0.10...v0.0.11
