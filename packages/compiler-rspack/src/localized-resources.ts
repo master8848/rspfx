@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { rspack, type Compiler } from '@rspack/core';
+import { createRequire } from 'node:module';
 import type { LocalizedResource } from './types.js';
 
 /**
@@ -9,7 +10,7 @@ import type { LocalizedResource } from './types.js';
  * AMD loc files (`define([], ...)`) from the project's loc folders, matching
  * the official SPFx layout: `<resourceName>_<locale>.js`.
  */
-export class SpfxLocalizedResourcesPlugin {
+class SpfxLocalizedResourcesPluginJs {
   private readonly resources: LocalizedResource[];
 
   constructor(resources: LocalizedResource[] | undefined) {
@@ -43,3 +44,12 @@ export class SpfxLocalizedResourcesPlugin {
     });
   }
 }
+
+let RustPlugin: typeof SpfxLocalizedResourcesPluginJs | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  const mod = req('../../crates/rspfx-rspack-plugin/index.node');
+  if (mod?.SpfxLocalizedResourcesPlugin) RustPlugin = mod.SpfxLocalizedResourcesPlugin;
+} catch {}
+
+export const SpfxLocalizedResourcesPlugin: typeof SpfxLocalizedResourcesPluginJs = RustPlugin ?? SpfxLocalizedResourcesPluginJs;
