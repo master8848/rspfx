@@ -9,6 +9,9 @@ export function linkPluginPackage(dir: string): void {
   fs.mkdirSync(nmDir, { recursive: true });
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   fs.symlinkSync(path.join(repoRoot, 'packages', 'plugin'), path.join(nmDir, 'rspfx-plugin'), 'dir');
+  try { fs.symlinkSync(path.join(repoRoot, 'packages', 'core'), path.join(nmDir, 'rspfx-core'), 'dir'); } catch {}
+  try { fs.symlinkSync(path.join(repoRoot, 'packages', 'diagnostics'), path.join(nmDir, 'rspfx-diagnostics'), 'dir'); } catch {}
+  try { fs.symlinkSync(path.join(repoRoot, 'packages', 'plugin-api'), path.join(nmDir, 'rspfx-plugin-api'), 'dir'); } catch {}
 }
 
 export function makeTmpDir(prefix: string): string {
