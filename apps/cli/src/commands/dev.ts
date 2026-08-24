@@ -8,7 +8,7 @@ import {
   resolveServeSettings,
   startServe,
 } from "@mbsks/rspfx-dev-runtime";
-import { RspfxError, createLogger } from "@mbsks/rspfx-diagnostics";
+import { RspfxError, RspfxErrorCode, createLogger } from "@mbsks/rspfx-diagnostics";
 import { type BundlerId, loadConfig } from "../config.js";
 import { detectOfficialProject, loadOfficialConfig } from "../hybrid.js";
 import { spawnRsbuildDev } from "../rsbuild.js";
@@ -43,16 +43,19 @@ export async function runDev(
 ): Promise<DevRuntimeHandle> {
   let config: RspfxConfig;
   let bundler: BundlerId = "rspack";
+  let loadedRspfx: unknown;
   try {
     const loaded = await loadConfig(cwd);
     config = loaded.config;
     bundler = loaded.bundler;
+    loadedRspfx = loaded.rspfx;
+    void loadedRspfx;
   } catch (error) {
     // Hybrid mode: an official SPFx project (gulp/heft) has no rspfx bundler
     // config — synthesize one so `rspfx dev` works while production stays on
     // the official toolchain. See docs/hybrid-dev.md.
     const official =
-      error instanceof RspfxError && error.code === "CONFIG_NOT_FOUND"
+      error instanceof RspfxError && (error as unknown as { code: string }).code === RspfxErrorCode.CONFIG_NOT_FOUND
         ? detectOfficialProject(cwd)
         : undefined;
     if (!official) {
