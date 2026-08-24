@@ -1,5 +1,17 @@
 import { writeFile, readFile } from 'node:fs/promises';
-import { unzipSync, zipSync } from 'fflate';
+import { createRequire } from 'node:module';
+
+let native:
+  | {
+      buildPackage?: (entries: { name: string; buffer: Uint8Array }[], opts: { level: number }) => Buffer;
+      readZipEntries?: (zipPath: string) => Promise<Map<string, Buffer>>;
+      validateSppkg?: (zipPath: string) => Promise<{ ok: boolean; errors: string[] }>;
+    }
+  | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-sppkg/index.node');
+} catch {}
 
 export interface ZipFileEntry {
   name: string;
@@ -12,6 +24,14 @@ export interface SppkgValidationResult {
 }
 
 export async function writeZip(outputPath: string, entries: ZipFileEntry[]): Promise<void> {
+  if (native?.buildPackage) {
+    try {
+      const buf = native.buildPackage(entries, { level: 9 });
+      await writeFile(outputPath, buf);
+      return;
+    } catch {}
+  }
+  const { zipSync } = await import('fflate');
   const record: Record<string, Uint8Array> = {};
   for (const entry of entries) {
     if (entry.name in record) {
@@ -23,15 +43,23 @@ export async function writeZip(outputPath: string, entries: ZipFileEntry[]): Pro
 }
 
 export async function readZipEntries(zipPath: string): Promise<Map<string, Buffer>> {
+  if (native?.readZipEntries) {
+    try { return await native.readZipEntries(zipPath); } catch {}
+  }
+  const { unzipSync } = await import('fflate');
   const files = unzipSync(await readFile(zipPath));
   const result = new Map<string, Buffer>();
   for (const [name, data] of Object.entries(files)) {
-    result.set(name, Buffer.from(data));
+    result.set(name, Buffer.from(data as Uint8Array));
   }
   return result;
 }
 
 export async function validateSppkg(zipPath: string): Promise<SppkgValidationResult> {
+  if (native?.validateSppkg) {
+    try { return await native.validateSppkg(zipPath); } catch {}
+  }
+  const { unzipSync } = await import('fflate');
   const errors: string[] = [];
   let files: Record<string, Uint8Array>;
   try {
