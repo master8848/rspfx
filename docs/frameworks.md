@@ -48,8 +48,8 @@ Adapters implement mount/update/unmount per framework:
 | `createReactAdapter` | `createRoot(root).render(vnode)` | `root.render(vnode)` | `root.unmount()` |
 | `createPreactAdapter` | `render(vnode, root)` | `render(vnode, root)` | `render(null, root)` |
 | `createVueAdapter` | `createApp(comp).mount(root)` | unmount + create + mount | `app.unmount()` |
-| `createSvelteAdapter` | `new Component({ target: root, props })` | `$destroy` + recreate | `$destroy()` |
-| `createSolidAdapter` | `render(() => comp, root)` | dispose + recreate | dispose |
+| `createSvelteAdapter` | `new Component({ target: root, props })` / `mount(component, {target, props})` (Svelte 5) | `$set(props)` preserve, fallback to recreate | `$destroy()` / `unmount()` |
+| `createSolidAdapter` | `render(() => comp, root)` inside `createRoot` + `createSignal` | `setProps` signal preserve | dispose |
 | `createVanillaAdapter` | `replaceChildren(node)` | `replaceChildren(node)` | `replaceChildren()` |
 
 `HeadlessWebPart.render()` calls `adapter.mount(this.domElement, this.getComponentProps())`; `onDispose()` calls `adapter.unmount`. Property-pane updates flow via `adapter.update`.

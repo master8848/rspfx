@@ -34,8 +34,8 @@ save → Rspack incremental rebuild → onEmit → manifest regeneration → web
 | React | `@rspack/plugin-react-refresh` (added by the preset when `fastRefresh`) | Component state preserved; hooks/effects replayed |
 | Preact | `@rspack/plugin-preact-refresh` | Same model as React — state-preserving re-render |
 | Vue | `vue-loader` HMR (peer `@vue/compiler-sfc`) | Component tree patched in place; state kept |
-| Svelte | `svelte-loader` `hotReload` (`svelte-hmr`) | Component instance re-created with preserved state |
-| Solid | `solid-refresh` (babel plugin `solid-refresh/babel` with `bundler: 'rspack-esm'` + the runtime it injects) | Component signals preserved; patched via the module registry (`hot.data`-based patch or decline → reload) |
+| Svelte | `svelte-loader` `hotReload` (`svelte-hmr`) + `mount`/`unmount` (Svelte 5) | Component instance preserved via `$set`, Svelte 5 via `mount`/`unmount` |
+| Solid | `solid-refresh` (babel plugin `solid-refresh/babel` with `bundler: 'rspack-esm'` + the runtime it injects, `cacheDirectory:true`) | Component signals preserved; patched via the module registry (`hot.data`-based patch or decline → reload) |
 | Vanilla | none | Full reload |
 
 Per-framework failure → full reload (automatic). The workbench never sits blank.
