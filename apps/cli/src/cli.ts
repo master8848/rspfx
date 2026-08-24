@@ -247,9 +247,10 @@ export function configureProgram(): void {
   program
     .command('doctor')
     .description('run environment and project checks')
-    .action(() => {
+    .option('--fix', 'fix issues when possible')
+    .action((options: Record<string, unknown>) => {
       return guard(async () => {
-        const result = await runDoctor(cwd);
+        const result = await runDoctor(cwd, { fix: options.fix as boolean | undefined });
         process.exitCode = result.ok ? 0 : 1;
       });
     });

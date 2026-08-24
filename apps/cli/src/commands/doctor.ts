@@ -3,9 +3,10 @@ import path from 'node:path';
 import net from 'node:net';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { createLogger } from '@mbsks/rspfx-diagnostics';
-import { SPFX_DEFAULT_TARGET } from '@mbsks/rspfx-core';
-import { readProject } from '@mbsks/rspfx-dev-runtime';
+import { createLogger, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
+import { SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
+import { ensureProjectConfigs, readProject } from '@mbsks/rspfx-dev-runtime';
+import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { loadConfig, type LoadedProject } from '../config.js';
 import { resolveViteBin } from '../vite.js';
 import { resolveRsbuildBin } from '../rsbuild.js';
@@ -24,7 +25,17 @@ export interface DoctorResult {
   checks: DoctorCheck[];
 }
 
-export async function runDoctor(cwd: string): Promise<DoctorResult> {
+export async function runDoctor(cwd: string, opts?: { fix?: boolean }): Promise<DoctorResult> {
+  if (opts?.fix) {
+    try {
+      ensureProjectConfigs(cwd);
+      logger.info('✓ ensured project configs');
+    } catch {}
+    try {
+      await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'));
+      logger.info('✓ ensured certificates');
+    } catch {}
+  }
   const checks: DoctorCheck[] = [];
 
   checks.push(checkNodeVersion());
@@ -43,11 +54,30 @@ export async function runDoctor(cwd: string): Promise<DoctorResult> {
       detail: `${loaded.config.framework} / SPFx ${loaded.config.spfxVersion} / ${loaded.bundler}`
     });
   } catch (error) {
+    let detail = error instanceof Error ? error.message : String(error);
+    if (error instanceof RspfxError && (error as unknown as { code: string }).code === RspfxErrorCode.CONFIG_VALIDATION_FAILED) {
+      const issues = (error.cause as unknown as { path?: (string|number)[]; message?: string }[] | undefined);
+      if (Array.isArray(issues) && issues.length > 0) {
+        detail = issues.map((i) => `${(i.path ?? []).join('.')}: ${i.message ?? String(i)} (${RspfxErrorCode.CONFIG_VALIDATION_FAILED})`).join('\n');
+      }
+    }
     checks.push({
       name: 'project config loads (rspack.config.ts / vite.config.ts / rsbuild.config.ts)',
       ok: false,
-      detail: error instanceof Error ? error.message : String(error)
+      detail
     });
+    if (opts?.fix) {
+      try {
+        ensureProjectConfigs(cwd);
+        const retry = await loadConfig(cwd);
+        checks[checks.length - 1] = {
+          name: 'project config loads (rspack.config.ts / vite.config.ts / rsbuild.config.ts)',
+          ok: true,
+          detail: `${retry.config.framework} / SPFx ${retry.config.spfxVersion} / ${retry.bundler} (fixed)`
+        };
+        loaded = retry;
+      } catch {}
+    }
   }
 
   const config = loaded?.config;
