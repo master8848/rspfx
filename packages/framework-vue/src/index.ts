@@ -6,7 +6,7 @@ export const preset = {
   name: 'vue' as const,
   rspack(_opts: { fastRefresh: boolean }): RspackContribs {
     return {
-      rules: [{ test: /\.vue$/, use: 'vue-loader' }],
+      rules: [{ test: /\.vue$/, use: 'vue-loader', exclude: /node_modules\/(?!my-lib)/ }],
       plugins: [new VueLoaderPlugin()],
       resolve: { extensions: ['.vue'] }
     };

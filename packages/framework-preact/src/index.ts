@@ -55,7 +55,7 @@ export const preset = {
       rules: [
         {
           test: /\.(t|j)sx?$/,
-          exclude: /node_modules/,
+          exclude: /node_modules\/(?!my-lib)/,
           use: {
             loader: 'babel-loader',
             options: {
