@@ -60,6 +60,8 @@ async function guard(action: () => Promise<unknown>): Promise<void> {
           case RspfxErrorCode.NO_MANIFESTS_FOUND:
           case RspfxErrorCode.PACKAGE_VALIDATION:
           case RspfxErrorCode.PLUGIN_NOT_FOUND:
+          case RspfxErrorCode.CONFIG_VALIDATION_FAILED:
+          case RspfxErrorCode.MIGRATE_BACKUP_EXISTS:
           case RspfxErrorCode.RSBUILD_BUILD_FAILED:
           case RspfxErrorCode.RSBUILD_NOT_FOUND:
           case RspfxErrorCode.SPPKG_TRAVERSAL:
@@ -86,6 +88,8 @@ async function guard(action: () => Promise<unknown>): Promise<void> {
         case RspfxErrorCode.COMPILE_FAILED:
         case RspfxErrorCode.COMPILE_NO_ENTRIES:
         case RspfxErrorCode.CONFIG_NOT_FOUND:
+        case RspfxErrorCode.CONFIG_VALIDATION_FAILED:
+        case RspfxErrorCode.MIGRATE_BACKUP_EXISTS:
         case RspfxErrorCode.DEPLOY_FAILED:
         case RspfxErrorCode.DEPLOY_INVALID_URL:
         case RspfxErrorCode.DEPLOY_TIMEOUT:
