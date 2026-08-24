@@ -37,6 +37,7 @@ export interface LocalPageOptions {
   origin: string;
   components: LocalPageComponent[];
   reloadClientScript: string;
+  devtoolsScript?: string;
 }
 
 export function buildLocalPageHtml(opts: LocalPageOptions): string {
@@ -141,6 +142,7 @@ ${librariesSection}
   window.__RSPFX_COMPONENTS__ = ${componentsJson};
   try { Object.defineProperty(window, '__RSPFX_COMPONENTS__', { value: window.__RSPFX_COMPONENTS__, writable: false, configurable: false }); } catch {}
 </script>
+${opts.devtoolsScript ?? ''}
 <script src="${safeOrigin}/dist/local-runtime.js"></script>
 <script>${opts.reloadClientScript}</script>
 </body>

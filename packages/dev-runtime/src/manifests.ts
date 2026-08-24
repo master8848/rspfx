@@ -5,6 +5,7 @@ import {
 } from '@mbsks/rspfx-manifest-generator';
 import type { BundleEntry, LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
 import type { RefreshRuntime } from './refresh.js';
+import type { DevStore } from './store.js';
 
 export interface ManifestRegeneratorOptions {
   projectRoot: string;
@@ -24,6 +25,7 @@ export interface ManifestRegeneratorOptions {
   entryModuleIds: Record<string, string>;
   refreshRuntime?: RefreshRuntime;
   bundleUrlSuffix?: () => string;
+  store?: DevStore;
 }
 
 export interface ManifestRegenerator {
