@@ -1,9 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { RspfxError } from './errors.js';
 import { SP_COMPONENT_IDS } from './data/component-ids.js';
 import { findSpDependencies } from './sp-dependencies.js';
 import type { ComponentManifest, ManifestContext } from './types.js';
+
+let native:
+  | { scanComponentsDir?: (opts: unknown) => Promise<ComponentManifest[]>; generateComponentManifests?: (ctx: ManifestContext) => Promise<ComponentManifest[]> }
+  | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-manifest/index.node');
+} catch {}
 
 function stripPreReleaseVersion(version: string): string {
   const index = version.indexOf('-');
@@ -41,6 +50,22 @@ function findNonSpExternalManifest(
 }
 
 export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
+  if (native?.generateComponentManifests) {
+    try { return await native.generateComponentManifests(ctx); } catch {}
+  }
+  if (native?.scanComponentsDir) {
+    try {
+      const res = await native.scanComponentsDir({
+        projectRoot: ctx.projectRoot,
+        webpartsDir: ctx.webpartsDir ?? 'src/webparts',
+        extensionsDir: ctx.extensionsDir ?? 'src/extensions',
+        librariesDir: ctx.librariesDir ?? 'src/libraries',
+        packageVersion: ctx.packageVersion,
+        production: ctx.production,
+      } as unknown);
+      if (Array.isArray(res)) return res as ComponentManifest[];
+    } catch {}
+  }
   const spDependencies = findSpDependencies(ctx.projectRoot);
   const manifests: ComponentManifest[] = [];
   const webpartsDir = ctx.webpartsDir?.trim() ? ctx.webpartsDir : 'src/webparts';
