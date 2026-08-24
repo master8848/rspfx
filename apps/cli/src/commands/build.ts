@@ -13,7 +13,6 @@ import {
 import { createLogger, RspfxError } from "@mbsks/rspfx-diagnostics";
 import { findSpDependencies } from "@mbsks/rspfx-manifest-generator";
 import type { ComponentManifest } from "@mbsks/rspfx-manifest-generator";
-import { getPlugins } from "@mbsks/rspfx-plugin-api";
 import { loadConfig } from "../config.js";
 import { loadConfigOrRefuseOfficial } from "../hybrid.js";
 import { runRsbuildBuild } from "../rsbuild.js";
@@ -189,7 +188,7 @@ async function runDelegatedBuild(
     // assembleRelease is handled by RspfxPlugin's done hook on production build
     return { stats: undefined, outputFiles };
   } catch (error) {
-    if (error instanceof RspfxError && error.code === "RSPACK_NOT_FOUND") {
+    if (error instanceof RspfxError && (error as unknown as { code: string }).code === "RSPACK_NOT_FOUND") {
       // Fallback to direct in-process build when bin not available
       logger.warn(
         "Rspack CLI not found, falling back to in-process build (install @rspack/cli for delegation)",
@@ -205,7 +204,7 @@ async function runDirectBuild(
   cwd: string,
   config: RspfxConfig,
   opts: BuildOptions,
-  loaded: { userModuleRules?: unknown[] },
+  loaded: { userModuleRules?: unknown[]; rspfx?: { plugins: readonly unknown[] } },
 ): Promise<{ stats: unknown; outputFiles: string[] }> {
   const project = readProject(cwd, config.paths, config.version, config);
   const externals = collectExternals(cwd, project);
@@ -239,14 +238,14 @@ async function runDirectBuild(
   }
   ctx.swcContributions = [contributions as Record<string, unknown>];
 
-  for (const plugin of getPlugins()) {
-    plugin.compilerHooks?.beforeCompile?.(ctx);
+  for (const plugin of ((loaded as { rspfx?: { plugins: readonly { compilerHooks?: { beforeCompile?: (c: unknown) => unknown; afterStats?: (s: unknown) => unknown } }[] } }).rspfx?.plugins ?? [])) {
+    (plugin as unknown as { compilerHooks?: { beforeCompile?: (c: unknown) => unknown } }).compilerHooks?.beforeCompile?.(ctx as unknown);
   }
 
   const result = await build(ctx, loaded.userModuleRules);
 
-  for (const plugin of getPlugins()) {
-    plugin.compilerHooks?.afterStats?.(result.stats);
+  for (const plugin of ((loaded as { rspfx?: { plugins: readonly { compilerHooks?: { afterStats?: (s: unknown) => unknown } }[] } }).rspfx?.plugins ?? [])) {
+    (plugin as unknown as { compilerHooks?: { afterStats?: (s: unknown) => unknown } }).compilerHooks?.afterStats?.(result.stats as unknown);
   }
 
   await assembleRelease({
