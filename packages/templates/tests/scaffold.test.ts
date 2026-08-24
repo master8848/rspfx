@@ -142,10 +142,10 @@ describe('scaffoldProject', () => {
 
     const config = fs.readFileSync(path.join(dir, 'vite.config.ts'), 'utf-8');
     expect(config).toContain("import { rspfxVite } from '@mbsks/rspfx-plugin';");
-    expect(config).toContain('rspfxVite({');
+    expect(config).toContain('rspfxVite(defineConfig({');
     expect(config).toContain("name: '@contoso/hello'");
     expect(config).toContain("version: '0.0.1'");
-    expect(config).toContain("framework: 'react'");
+    expect(config).toContain("framework: 'react' as const");
     expect(config).not.toContain('fluent');
     expect(config).toContain('port: 4321');
     expect(config).toContain('cssCodeSplit');
