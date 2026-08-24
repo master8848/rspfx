@@ -1,3 +1,11 @@
+import { createRequire } from 'node:module';
+
+let native: { parseResx?: (c: string) => Record<string, string> } | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  native = req('../../crates/rspfx-sppkg/index.node');
+} catch {}
+
 const RESX_DATA_ENTRY = /<data\s+name="([^"]+)"[^>]*>\s*<value>([\s\S]*?)<\/value>/g;
 
 const XML_ENTITIES: Record<string, string> = {
@@ -9,6 +17,9 @@ const XML_ENTITIES: Record<string, string> = {
 };
 
 export function parseResx(content: string): Record<string, string> {
+  if (native?.parseResx) {
+    try { return native.parseResx(content); } catch {}
+  }
   const values: Record<string, string> = {};
   let match: RegExpExecArray | null;
   const regex = new RegExp(RESX_DATA_ENTRY.source, 'g');
