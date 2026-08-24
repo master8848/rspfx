@@ -6,6 +6,7 @@ import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
+import type { Logger } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { createRefreshRuntime } from './refresh.js';
@@ -17,6 +18,9 @@ import { createReloadController } from './reload.js';
 import { createMockSharePointApi } from './mock-api.js';
 import { buildLocalPageHtml, readLocalPageComponents } from './local-page.js';
 import { isPlatformOnlyModule } from '@mbsks/rspfx-sharepoint-runtime/platform-modules';
+import { createStore } from './store.js';
+import { createDevMachine } from './machine.js';
+import { getDevtoolsScript } from './devtools.js';
 
 const require = createRequire(import.meta.url);
 
@@ -31,6 +35,7 @@ export interface DevRuntimeOptions {
   tenantDomain?: string;
   /** 'local' → local preview page at `/` (no SharePoint); 'sharepoint' → workbench. */
   mode?: ServeMode;
+  devtools?: boolean;
 }
 
 export interface DevRuntimeHandle {
@@ -50,13 +55,8 @@ export interface ServeSettings {
   initialPage: string | undefined;
 }
 
-const logger = createLogger('rspfx');
+const defaultLogger = createLogger('rspfx');
 
-/**
- * Resolves the dev server settings (port/hostname/https/tenant) from CLI
- * overrides → legacy config/serve.json → plugin options (`dev` section) →
- * built-in defaults. Shared by the Rspack dev server and the Vite plugin.
- */
 export function resolveServeSettings(
   opts: Pick<DevRuntimeOptions, 'port' | 'tenantDomain' | 'config'>,
   serveJson?: ProjectServeConfigJson
@@ -80,11 +80,6 @@ export function resolveServeSettings(
   };
 }
 
-/**
- * Resolves the serve mode: an explicit `--mode` wins; otherwise the presence
- * of a tenant domain (flag/env/config) selects the SharePoint workbench, and
- * everything else gets the local preview.
- */
 export function resolveServeMode(
   opts: Pick<DevRuntimeOptions, 'mode' | 'config'>,
   tenantDomain: string | undefined
@@ -95,11 +90,6 @@ export function resolveServeMode(
   return tenantDomain ? 'sharepoint' : 'local';
 }
 
-/**
- * Builds the workbench URL with `debug=true&noredir=true&debugManifestsFile=…`.
- * Returns `undefined` when no tenant domain is available (SPFx workbench needs
- * one); warns in that case. Shared by the Rspack dev server and the Vite plugin.
- */
 export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig): string | undefined {
   if (!(config.dev.workbench ?? true)) {
     return undefined;
@@ -109,7 +99,7 @@ export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig):
     (settings.tenantDomain ? `https://${settings.tenantDomain}/_layouts/15/workbench.aspx` : undefined);
   if (!page || page.includes('{tenantdomain}')) {
     if (page) {
-      logger.warn(
+      defaultLogger.warn(
         'No tenant domain configured. Set dev.tenantUrl in the rspfx plugin options, ' +
           'pass --tenant, or set the SPFX_SERVE_TENANT_DOMAIN environment variable.'
       );
@@ -123,13 +113,16 @@ export function buildWorkbenchUrl(settings: ServeSettings, config: RspfxConfig):
   return url.toString();
 }
 
-export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHandle> {
+export async function startServe(
+  opts: DevRuntimeOptions,
+  deps?: { logger?: Logger; createStore?: typeof createStore; createMachine?: typeof createDevMachine }
+): Promise<DevRuntimeHandle> {
+  const logger = deps?.logger ?? defaultLogger;
   const config = resolveConfig(opts.config as unknown as Partial<RspfxConfig> & Record<string, unknown>);
   const project = readProject(opts.projectRoot, config.paths, config.version, config);
 
   const settings = resolveServeSettings(opts, project.serveJson);
   const mode = resolveServeMode(opts, settings.tenantDomain);
-  // HookBus: beforeStart
   {
     const bus = createHookBus(getPlugins(), { logger: logger.child({ service: 'dev', phase: 'beforeStart' }) });
     const result = await bus.emitBeforeStart({ mode, port: settings.port });
@@ -140,17 +133,29 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
   const scheme = https ? 'https' : 'http';
   const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
   if (https && settings.hostname) {
-    // Validate custom hostname before it reaches cert generation / SAN allowlist.
-    // validateCustomHostname is the same allowlist used inside manifest-server
-    // (localhost/127.0.0.1/::1 + single DNS/IP validated via ^[a-z0-9.-]+$,
-    // rejects .. ; & " ' space : and .sharepoint suffix).
     validateCustomHostname(settings.hostname);
   }
   const certs = https ? await ensureCertificates(certsDir, settings.hostname) : undefined;
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
-  const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework) : undefined;
+  const devtools = opts.devtools ?? process.env.RSPFX_DEVTOOLS === '1' ? true : false;
+
+  const store = (deps?.createStore ?? createStore)({
+    mode,
+    origin: `${scheme}://${settings.hostname}:${settings.port}`,
+    tick: 0,
+    status: 'idle',
+    fastRefresh,
+    framework: config.framework,
+    devtools
+  });
+
   const reload = createReloadController();
+  reload.subscribe((tick) => {
+    store.set({ tick });
+  });
+
+  const refreshRuntime = fastRefresh ? createRefreshRuntime(config.framework, { store }) : undefined;
   const frameworkPreset = await loadFrameworkPreset(config.framework, opts.projectRoot);
   const contributions = resolveContributionLoaders(
     ((frameworkPreset.preset.rspack
@@ -159,7 +164,6 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     frameworkPreset.moduleUrl
   );
 
-  let origin = `${scheme}://${settings.hostname}:${settings.port}`;
   let server: StartDevServerResult | undefined;
   let closing = false;
 
@@ -191,7 +195,7 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     const regenerator = createManifestRegenerator({
       projectRoot: opts.projectRoot,
       production: false,
-      origin: () => origin,
+      origin: () => store.get().origin,
       packageVersion: currentProject.webParts.packageVersion,
       entries: currentProject.webParts.entries,
       externals: ctx.externals.filter((external): external is string => typeof external === 'string'),
@@ -206,8 +210,10 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     await regenerator.regenerate();
 
     const mockApi = local
-      ? createMockSharePointApi({ projectRoot: opts.projectRoot, origin: () => origin })
+      ? createMockSharePointApi({ projectRoot: opts.projectRoot, origin: () => store.get().origin })
       : undefined;
+
+    const devtoolsScript = getDevtoolsScript(store, regenerator, config.version ?? '0.0.0');
 
     const routes: NonNullable<Parameters<typeof startDevServer>[1]['routes']> = [
       {
@@ -216,7 +222,11 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
           const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
           response.setHeader('Content-Type', 'application/javascript');
           response.setHeader('Cache-Control', 'no-store');
-          response.end(regenerator.manifestsJs + reload.clientScript);
+          let extra = '';
+          if (devtools) {
+            extra = `\n/* __RSPFX_DEVTOOLS__ ${store.get().tick} */\n`;
+          }
+          response.end(regenerator.manifestsJs + extra + reload.clientScript);
         }
       },
       {
@@ -227,12 +237,26 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     if (mockApi) {
       routes.push({ path: mockApi.path, handler: mockApi.handle });
     }
+    if (devtools) {
+      const { handler } = (() => {
+        const dummy = getDevtoolsScript(store);
+        void dummy;
+        return { handler: (req: unknown, res: unknown) => {
+          const response = res as { setHeader(k: string, v: string): void; end(b: string): void };
+          response.setHeader('Content-Type', 'application/json');
+          response.setHeader('Cache-Control', 'no-store');
+          response.end(JSON.stringify({ tick: store.get().tick, origin: store.get().origin, status: store.get().status }));
+        }};
+      })();
+      routes.push({ path: '/_rspfx/devtools.json', handler });
+    }
     if (local) {
       const pageHtml = buildLocalPageHtml({
         projectName: config.name,
-        origin,
+        origin: store.get().origin,
         components: readLocalPageComponents(currentProject.webParts.bundles, currentProject.webParts.packageVersion),
-        reloadClientScript: reload.clientScript
+        reloadClientScript: reload.clientScript,
+        devtoolsScript
       });
       routes.push({
         path: '/',
@@ -274,12 +298,21 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
         ]
       }
     );
-    origin = `${scheme}://${settings.hostname}:${nextServer.port}`;
+    const nextOrigin = `${scheme}://${settings.hostname}:${nextServer.port}`;
+    store.set({ origin: nextOrigin, status: 'running' });
 
     nextServer.onEmit(() => {
       void regenerator
         .regenerate()
-        .then(() => reload.tick())
+        .then(() => {
+          const shouldSuppress = fastRefresh && config.framework !== 'vanilla' && refreshRuntime?.preserved;
+          if (!shouldSuppress) {
+            reload.tick();
+          } else {
+            // still bump store tick without reload for HMR
+            store.update((s) => ({ tick: s.tick + 1 }));
+          }
+        })
         .catch((error) => {
           logger.error(`Failed to regenerate manifests: ${error instanceof Error ? error.message : String(error)}`);
         });
@@ -290,102 +323,130 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     return nextServer;
   };
 
+  store.set({ status: 'starting' });
   const initialServer = await startOnce();
 
-  const workbenchUrl = local ? undefined : buildWorkbenchUrl({ ...settings, https, scheme, origin }, config);
-  const openTarget = workbenchUrl ?? (local ? `${origin}/` : undefined);
+  const workbenchUrl = local ? undefined : buildWorkbenchUrl({ ...settings, https, scheme, origin: store.get().origin }, config);
+  const openTarget = workbenchUrl ?? (local ? `${store.get().origin}/` : undefined);
 
-  // Browser open is once-only: initial dev server start only.
-  // Never re-open on HMR, rebuild, or dependency-scope restart. `drainRestarts`
-  // intentionally does NOT call `openBrowser`. `browserOpened` guards against
-  // double-open if the server restarts or the `listening` event fires more than once.
   let browserOpened = false;
   if (!browserOpened && openTarget && (opts.noBrowser ?? !(config.dev.openBrowser ?? false)) === false) {
     browserOpened = true;
     openBrowser(openTarget);
   }
 
-  // HookBus: afterStart
   {
     const bus = createHookBus(getPlugins(), { logger: logger.child({ service: 'dev', phase: 'afterStart' }) });
-    await bus.emitAfterStart({ url: origin });
+    await bus.emitAfterStart({ url: store.get().origin });
   }
-  logger.trace('ws reload setup', { origin });
+  logger.trace('ws reload setup', { origin: store.get().origin });
 
   if (local) {
-    logger.success(`Local preview running at ${origin}/ — no SharePoint needed.`);
+    logger.success(`Local preview running at ${store.get().origin}/ — no SharePoint needed.`);
     if (settings.tenantDomain) {
       logger.info(
         `Pass --mode sharepoint (or remove dev.tenantUrl) to debug in the SharePoint workbench instead.`
       );
     }
   } else {
-    logger.success(`Manifest server running at ${origin}/temp/manifests.js`);
+    logger.success(`Manifest server running at ${store.get().origin}/temp/manifests.js`);
     if (workbenchUrl) {
       logger.info(`Workbench: ${workbenchUrl}`);
     }
   }
 
-  let restarting = false;
-  let pendingFingerprint: string | undefined;
-  const drainRestarts = async (): Promise<void> => {
-    if (restarting || closing) {
-      return;
-    }
-    while (pendingFingerprint !== undefined && server) {
-      restarting = true;
-      const fingerprint = pendingFingerprint;
-      pendingFingerprint = undefined;
-      const port = server.port;
-      logger.info('Dependency scope changed — restarting dev server with updated externals.');
-      try {
-        await server.close();
-        server = undefined;
-        const nextServer = await startOnce(port);
-        if (closing) {
-          await nextServer.close();
+  let machine: ReturnType<typeof createDevMachine> | undefined;
+  // lightweight state machine for dependency scope restarts
+  {
+    const createMachine = deps?.createMachine ?? createDevMachine;
+    // We create machine that handles restart logic internally but also expose for close
+    // For serve, we implement restart via manual handler to keep server reference
+
+    // simple inline machine alternative: use createDevMachine but override startOnce to include server close logic
+    const machineFingerprintOf = (): string => fingerprintDependencyScope(opts.projectRoot, config.paths?.configDir);
+    let restarting = false;
+    let pendingFingerprint: string | undefined;
+
+    const drainRestarts = async (): Promise<void> => {
+      if (restarting || closing) return;
+      while (pendingFingerprint !== undefined && server) {
+        restarting = true;
+        const fingerprint = pendingFingerprint;
+        pendingFingerprint = undefined;
+        store.set({ status: 'restarting', fingerprint });
+        const port = server.port;
+        logger.info('Dependency scope changed — restarting dev server with updated externals.');
+        try {
+          await server.close();
           server = undefined;
-          return;
+          const nextServer = await startOnce(port);
+          if (closing) {
+            await nextServer.close();
+            server = undefined;
+            store.set({ status: 'closed' });
+            restarting = false;
+            return;
+          }
+          logger.success(`Dev server restarted at ${store.get().origin}.`);
+          const current = machineFingerprintOf();
+          if (current !== fingerprint) {
+            pendingFingerprint = current;
+          } else {
+            store.set({ status: 'running' });
+          }
+        } catch (error) {
+          logger.error(
+            `Failed to restart dev server: ${error instanceof Error ? error.message : String(error)}. ` +
+              'It will retry on the next dependency change.'
+          );
+        } finally {
+          restarting = false;
         }
-        logger.success(`Dev server restarted at ${origin}.`);
-        // Intentionally no browser re-open here — once-only guarantee.
-        // Changes that landed while restarting must not be missed.
-        const current = fingerprintDependencyScope(opts.projectRoot, config.paths?.configDir);
-        if (current !== fingerprint) {
-          pendingFingerprint = current;
-        }
-      } catch (error) {
-        logger.error(
-          `Failed to restart dev server: ${error instanceof Error ? error.message : String(error)}. ` +
-            'It will retry on the next dependency change.'
-        );
-      } finally {
-        restarting = false;
       }
-    }
-  };
+      if (pendingFingerprint === undefined && !closing) {
+        store.set({ status: 'running' });
+      }
+    };
 
-  const watcher = watchDependencyScope(
-    opts.projectRoot,
-    (fingerprint) => {
-      pendingFingerprint = fingerprint;
-      void drainRestarts();
-    },
-    undefined,
-    config.paths?.configDir,
-  );
+    machine = createMachine(store, {
+      startOnce: async (port?: number) => {
+        // not used for dependency restarts (handled via drainRestarts)
+        return startOnce(port);
+      },
+      fingerprintOf: machineFingerprintOf,
+      logger
+    });
 
-  return {
-    url: origin,
-    port: initialServer.port,
-    workbenchUrl,
-    close: async () => {
+    const watcher = watchDependencyScope(
+      opts.projectRoot,
+      (fingerprint) => {
+        pendingFingerprint = fingerprint;
+        store.set({ fingerprint });
+        machine?.send({ type: 'DEPENDENCY_CHANGED', fingerprint });
+        void drainRestarts();
+      },
+      undefined,
+      config.paths?.configDir
+    );
+
+    // attach watcher stop to machine dispose
+    const originalClose = async (): Promise<void> => {
       closing = true;
+      machine?.send({ type: 'CLOSE' });
+      store.set({ status: 'closed' });
       watcher.stop();
+      machine?.dispose();
       refreshRuntime?.dispose();
       await server?.close();
-    }
-  };
+    };
+
+    return {
+      url: store.get().origin,
+      port: initialServer.port,
+      workbenchUrl,
+      close: originalClose
+    };
+  }
 }
 
 function localRuntimeEntry(packageVersion: string): {
@@ -402,14 +463,6 @@ function localRuntimeEntry(packageVersion: string): {
   };
 }
 
-/**
- * The bundled `@microsoft/sp-*` packages reference internal modules that are
- * never published to npm — `@msinternal/*` (telemetry, feature flags,
- * safe-html) and the first-party MSAL builds used by sp-http-base's token
- * provider. sp-loader provides them on real tenants; the local preview
- * externalizes them as AMD dependencies that the preview bootstrap satisfies
- * with a no-op stand-in (see `PLATFORM_ONLY_PREFIXES` in sharepoint-runtime).
- */
 function platformOnlyExternal(data: { request?: string }): string | undefined {
   return typeof data.request === 'string' && isPlatformOnlyModule(data.request)
     ? `amd ${data.request}`
