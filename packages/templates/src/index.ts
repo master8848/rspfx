@@ -259,16 +259,17 @@ function rspackConfig(vars: TemplateVars): string {
     `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
   ];
   const lines: string[] = [
+    `import { defineConfig } from '@mbsks/rspfx-core';`,
     `import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';`,
     '',
     'export default {',
     "  mode: 'development',",
     '  resolve: rspfxResolve(),',
     '  plugins: [',
-    '    new RspfxPlugin({',
+    '    new RspfxPlugin(defineConfig({',
     `      name: '${vars.packageName}',`,
     `      version: '${vars.packageVersion}',`,
-    `      framework: '${vars.framework}',`,
+    `      framework: '${vars.framework}' as const,`,
     `      spfxVersion: '${vars.spfxVersion}',`,
     '      dev: {',
     ...devLines,
@@ -281,7 +282,7 @@ function rspackConfig(vars: TemplateVars): string {
     `        outDir: '${configDefaults.build.outDir}',`,
     `        releaseDir: '${configDefaults.build.releaseDir}'`,
     '      }',
-    '    })',
+    '    } as const))',
     '  ]',
     '};'
   ];
@@ -297,14 +298,15 @@ export function viteConfig(vars: TemplateVars): string {
     `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
   ];
   const lines: string[] = [
+    `import { defineConfig } from '@mbsks/rspfx-core';`,
     `import { rspfxVite } from '@mbsks/rspfx-plugin';`,
     '',
     'export default {',
     '  plugins: [',
-    '    rspfxVite({',
+    '    rspfxVite(defineConfig({',
     `      name: '${vars.packageName}',`,
     `      version: '${vars.packageVersion}',`,
-    `      framework: '${vars.framework}',`,
+    `      framework: '${vars.framework}' as const,`,
     `      spfxVersion: '${vars.spfxVersion}',`,
     '      dev: {',
     ...devLines,
@@ -315,7 +317,7 @@ export function viteConfig(vars: TemplateVars): string {
     `        outDir: '${configDefaults.build.outDir}',`,
     `        releaseDir: '${configDefaults.build.releaseDir}'`,
     '      }',
-    '    })',
+    '    } as const))',
     '  ],',
     '  // build.cssCodeSplit is false by default via rspfxVite (SPFx requires a single AMD bundle per entry, no separate CSS files)',
     '  // .module.scss is handled via Vite CSS modules (postcss) and inlined into the JS bundle by the plugin',
@@ -333,14 +335,15 @@ export function rsbuildConfig(vars: TemplateVars): string {
     `        openBrowser: ${configDefaults.dev.openBrowser}${vars.tenantUrl ? `,\n        tenantUrl: ${JSON.stringify(vars.tenantUrl)}` : ''}`
   ];
   const lines: string[] = [
+    `import { defineConfig } from '@mbsks/rspfx-core';`,
     `import { rspfxRsbuild } from '@mbsks/rspfx-plugin';`,
     '',
     'export default {',
     '  plugins: [',
-    '    rspfxRsbuild({',
+    '    rspfxRsbuild(defineConfig({',
     `      name: '${vars.packageName}',`,
     `      version: '${vars.packageVersion}',`,
-    `      framework: '${vars.framework}',`,
+    `      framework: '${vars.framework}' as const,`,
     `      spfxVersion: '${vars.spfxVersion}',`,
     '      dev: {',
     ...devLines,
@@ -351,7 +354,7 @@ export function rsbuildConfig(vars: TemplateVars): string {
     `        outDir: '${configDefaults.build.outDir}',`,
     `        releaseDir: '${configDefaults.build.releaseDir}'`,
     '      }',
-    '    })',
+    '    } as const))',
     '  ],',
     '  output: {',
     '    // SPFx requires styles inlined into the JS bundle — no separate CSS emit',
