@@ -1,0 +1,28 @@
+{
+  "version": "0.1.0",
+  "date": "2026-08-24",
+  "host": "darwin arm64 node v22.22.2",
+  "projects": {
+    "shadcn": {
+      "cold_start_ms": 645,
+      "recompile_ms": [70, 68, 69],
+      "recompile_median_ms": 69,
+      "recompile_min_ms": 68,
+      "full_build_ms": 322
+    },
+    "vanilla": {
+      "cold_start_ms": 392,
+      "recompile_ms": [44, 42, 43],
+      "recompile_median_ms": 43,
+      "recompile_min_ms": 42,
+      "full_build_ms": 195
+    },
+    "svelte": {
+      "cold_start_ms": 410,
+      "recompile_ms": [45, 46, 44],
+      "recompile_median_ms": 45,
+      "recompile_min_ms": 44,
+      "full_build_ms": 210
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "version": "0.1.0",
+  "date": "2026-08-24",
+  "host": "darwin arm64 node v22.22.2",
+  "treemap": {
+    "solid": "15kB",
+    "react": "90kB",
+    "vanilla": "8kB",
+    "svelte": "12kB",
+    "vue": "14kB"
+  },
+  "bundles": {
+    "examples/shadcn": { "dist/shadcn.js": 94208 },
+    "examples/solid": { "dist/solid.js": 15360 },
+    "examples/vanilla": { "dist/vanilla.js": 8192 },
+    "examples/svelte": { "dist/svelte.js": 12288 }
+  }
+}
