@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { program } from 'commander';
-import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { AggregateRspfxError, createDiagnosticFormatter, createLogger, isAggregateRspfxError, isRspfxError, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
 import { SPFX_TARGETS } from '@mbsks/rspfx-core';
 import { version } from './version.js';
 import { runNew, type NewOptions } from './commands/new.js';
@@ -15,14 +15,110 @@ import { runDoctor } from './commands/doctor.js';
 import { runClean } from './commands/clean.js';
 import { runMigrate } from './commands/migrate.js';
 
-const logger = createLogger('rspfx');
+function getLogger() {
+  const json = process.env.RSPFX_LOG_JSON === '1';
+  return json ? createLogger('rspfx', { json: true }) : createLogger('rspfx');
+}
+
 const cwd = process.cwd();
 
 async function guard(action: () => Promise<unknown>): Promise<void> {
+  const logger = getLogger();
+  const fmt = createDiagnosticFormatter(logger);
   try {
     await action();
   } catch (error) {
-    if (error instanceof Error && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+    if (isAggregateRspfxError(error)) {
+      logger.error(fmt(error));
+      // Also log each sub-error for exhaustive handling?
+      for (const sub of error.errors) {
+        // exhaustive per sub code could be handled, but we just ensure switch is exhaustive via type
+        switch (sub.code) {
+          case RspfxErrorCode.AGGREGATE:
+          case RspfxErrorCode.ANALYZE_NO_DIST:
+          case RspfxErrorCode.BUILD_FAILED:
+          case RspfxErrorCode.CLEAN_NOT_A_PROJECT:
+          case RspfxErrorCode.COMPILE_ENTRY_NO_COMPONENT_ID:
+          case RspfxErrorCode.COMPILE_ENTRY_NO_VERSION:
+          case RspfxErrorCode.COMPILE_FAILED:
+          case RspfxErrorCode.COMPILE_NO_ENTRIES:
+          case RspfxErrorCode.CONFIG_NOT_FOUND:
+          case RspfxErrorCode.DEPLOY_FAILED:
+          case RspfxErrorCode.DEPLOY_INVALID_URL:
+          case RspfxErrorCode.DEPLOY_TIMEOUT:
+          case RspfxErrorCode.DEST_EXISTS:
+          case RspfxErrorCode.DEV_COMPILE_TIMEOUT:
+          case RspfxErrorCode.DUPLICATE_MANIFEST_ID:
+          case RspfxErrorCode.HOOK_FAILED:
+          case RspfxErrorCode.INSTALL_FAILED:
+          case RspfxErrorCode.INVALID_MANIFEST_ID:
+          case RspfxErrorCode.INVALID_MANIFEST_JSON:
+          case RspfxErrorCode.INVALID_OPTION:
+          case RspfxErrorCode.INVALID_PACKAGE_CONFIG:
+          case RspfxErrorCode.MISSING_ELEMENT_ASSET:
+          case RspfxErrorCode.MULTIPLE_MANIFESTS:
+          case RspfxErrorCode.NO_MANIFESTS_FOUND:
+          case RspfxErrorCode.PACKAGE_VALIDATION:
+          case RspfxErrorCode.PLUGIN_NOT_FOUND:
+          case RspfxErrorCode.RSBUILD_BUILD_FAILED:
+          case RspfxErrorCode.RSBUILD_NOT_FOUND:
+          case RspfxErrorCode.SPPKG_TRAVERSAL:
+          case RspfxErrorCode.UNRESOLVED_EXTERNAL:
+          case RspfxErrorCode.VITE_BUILD_FAILED:
+          case RspfxErrorCode.VITE_NOT_FOUND:
+          case RspfxErrorCode.VITE_NO_ENTRY:
+            break;
+          default: {
+            const _exhaustive: never = sub.code;
+            void _exhaustive;
+          }
+        }
+      }
+    } else if (isRspfxError(error) && error instanceof RspfxError) {
+      logger.error(fmt(error as RspfxError));
+      switch ((error as RspfxError).code) {
+        case RspfxErrorCode.AGGREGATE:
+        case RspfxErrorCode.ANALYZE_NO_DIST:
+        case RspfxErrorCode.BUILD_FAILED:
+        case RspfxErrorCode.CLEAN_NOT_A_PROJECT:
+        case RspfxErrorCode.COMPILE_ENTRY_NO_COMPONENT_ID:
+        case RspfxErrorCode.COMPILE_ENTRY_NO_VERSION:
+        case RspfxErrorCode.COMPILE_FAILED:
+        case RspfxErrorCode.COMPILE_NO_ENTRIES:
+        case RspfxErrorCode.CONFIG_NOT_FOUND:
+        case RspfxErrorCode.DEPLOY_FAILED:
+        case RspfxErrorCode.DEPLOY_INVALID_URL:
+        case RspfxErrorCode.DEPLOY_TIMEOUT:
+        case RspfxErrorCode.DEST_EXISTS:
+        case RspfxErrorCode.DEV_COMPILE_TIMEOUT:
+        case RspfxErrorCode.DUPLICATE_MANIFEST_ID:
+        case RspfxErrorCode.HOOK_FAILED:
+        case RspfxErrorCode.INSTALL_FAILED:
+        case RspfxErrorCode.INVALID_MANIFEST_ID:
+        case RspfxErrorCode.INVALID_MANIFEST_JSON:
+        case RspfxErrorCode.INVALID_OPTION:
+        case RspfxErrorCode.INVALID_PACKAGE_CONFIG:
+        case RspfxErrorCode.MISSING_ELEMENT_ASSET:
+        case RspfxErrorCode.MULTIPLE_MANIFESTS:
+        case RspfxErrorCode.NO_MANIFESTS_FOUND:
+        case RspfxErrorCode.PACKAGE_VALIDATION:
+        case RspfxErrorCode.PLUGIN_NOT_FOUND:
+        case RspfxErrorCode.RSBUILD_BUILD_FAILED:
+        case RspfxErrorCode.RSBUILD_NOT_FOUND:
+        case RspfxErrorCode.SPPKG_TRAVERSAL:
+        case RspfxErrorCode.UNRESOLVED_EXTERNAL:
+        case RspfxErrorCode.VITE_BUILD_FAILED:
+        case RspfxErrorCode.VITE_NOT_FOUND:
+        case RspfxErrorCode.VITE_NO_ENTRY:
+          break;
+        default: {
+          const _exhaustive: never = (error as RspfxError).code;
+          void _exhaustive;
+        }
+      }
+    } else if (error instanceof AggregateRspfxError) {
+      logger.error(fmt(error));
+    } else if (error instanceof Error && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
       const code = (error as { code: string }).code;
       logger.error(`[${code}] ${error.message}`);
       if (process.env.RSPFX_LOG_LEVEL === 'debug' && error.cause !== undefined) {
@@ -117,7 +213,7 @@ export function configureProgram(): void {
       };
       return guard(async () => {
         await runBuild(cwd, opts);
-        logger.success('Build complete');
+        getLogger().success('Build complete');
       });
     });
 

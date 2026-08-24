@@ -71,7 +71,7 @@ afterAll(() => {
 
 describe('rspfxVite native build', () => {
   it('builds every bundle and assembles the release output via closeBundle', async () => {
-    const captured: { before: boolean; after: { manifests: unknown[]; releaseDir: string } | null } =
+    const captured: { before: boolean; after: { manifests: readonly unknown[]; releaseDir: string } | null } =
       { before: false, after: null };
     registerPlugin({
       name: 'vite-hooks-test',

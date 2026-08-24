@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
+
+const logger = createLogger('rspfx');
 
 export function amdName(entry: BundleEntry): string {
   return `${entry.componentIds[0]}_${entry.version}`;
@@ -45,4 +48,5 @@ export function writeStatsJson(root: string, moduleCounts: Record<string, number
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify({ moduleCounts: { ...existing, ...moduleCounts } }));
+  logger.child({ phase: 'afterStats' }).trace('writeStatsJson', { root, ...moduleCounts });
 }

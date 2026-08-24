@@ -25,4 +25,4 @@ export function unwrap<T, E>(r: Result<T, E>): T {
 
 export type Issue = { path: (string | number)[]; message: string; code: RspfxErrorCode };
 
-export type HookResult<T> = Result<T, Error>;
+export type HookResult<T> = Result<T, import('./error.js').RspfxError | import('./error.js').AggregateRspfxError>;

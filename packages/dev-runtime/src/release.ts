@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { generateComponentManifests, type ComponentManifest } from '@mbsks/rspfx-manifest-generator';
 import { createLogger, formatBytes } from '@mbsks/rspfx-diagnostics';
-import { getPlugins } from '@mbsks/rspfx-plugin-api';
+import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxConfig } from '@mbsks/rspfx-core';
 import type { ReadProjectResult } from './project.js';
 
@@ -15,6 +15,7 @@ export interface AssembleReleaseOptions {
   externals: string[];
   outputFiles: string[];
   production: boolean;
+  hookBus?: ReturnType<typeof createHookBus>;
 }
 
 export interface ReleaseOutput {
@@ -50,8 +51,10 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
     entryModuleIds[project.webParts.manifestIds[index]!] = bundle.bundleName;
   });
 
-  for (const plugin of getPlugins()) {
-    plugin.releaseHooks?.beforeGenerate?.({ production: opts.production, webParts: project.webParts });
+  {
+    const bus = opts.hookBus ?? createHookBus(getPlugins(), { logger });
+    const result = await bus.emitBeforeGenerate({ production: opts.production, webParts: project.webParts.entries as unknown as import('@mbsks/rspfx-plugin-api').WebPartEntry[] });
+    if (!result.ok) throw result.error;
   }
 
   const manifests = await generateComponentManifests({
@@ -96,8 +99,9 @@ export async function assembleRelease(opts: AssembleReleaseOptions): Promise<Rel
     }
   }
 
-  for (const plugin of getPlugins()) {
-    plugin.releaseHooks?.afterGenerate?.({ manifests, releaseDir });
+  {
+    const bus = opts.hookBus ?? createHookBus(getPlugins(), { logger });
+    await bus.emitAfterGenerate({ manifests: manifests as unknown as import('@mbsks/rspfx-plugin-api').ComponentManifest[], releaseDir });
   }
 
   return {

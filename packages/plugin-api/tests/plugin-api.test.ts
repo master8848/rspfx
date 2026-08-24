@@ -124,7 +124,7 @@ describe('RspfxExtension hooks', () => {
     plugin.compilerHooks!.afterStats!({ hasErrors: () => false, hasWarnings: () => false, toString: () => '' });
     plugin.packageHooks!.beforePackage!({
       manifests: [{ id: 'm1', version: '1.0.0' }],
-      files: new Map([['a.js', new Uint8Array([1, 2])]])
+      files: new Map([['a.js' as unknown as import('@mbsks/rspfx-core').ZipPath, new Uint8Array([1, 2])]])
     });
     expect(called).toEqual(['beforeCompile', 'afterStats', 'beforePackage:1:1']);
   });

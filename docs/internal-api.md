@@ -165,33 +165,47 @@ export interface FrameworkPreset<F extends string = import('@mbsks/rspfx-core').
   vite?(opts: { fastRefresh: boolean }): FrameworkViteContributions;       // optional — absent = no Vite support; rspfxVite warns loudly
   rsbuild?(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions; // optional — rspfxRsbuild falls back to contributions() when absent
 }
-export interface CompilerHooks {
-  beforeCompile?(config: unknown): unknown;       // invoked with the resolved CompileContext; mutate it in place
-  afterStats?(stats: unknown): void;
-}
-export interface ReleaseHooks {
-  beforeGenerate?(ctx: { production: boolean; webParts: unknown }): void;
-  afterGenerate?(ctx: { manifests: unknown[]; releaseDir: string }): void;
-}
-export interface DevHooks {
-  beforeStart?(ctx: { mode: 'local' | 'sharepoint'; port?: number }): void;
-  afterStart?(ctx: { url: string }): void;
-}
-export interface PackageHooks {
-  beforePackage?(ctx: { manifests: unknown[]; files: { path: string; content: Uint8Array }[] }): void;
-  afterPackage?(ctx: { sppkgPath: string }): void;
-}
+export const HOOK_PHASES = ['beforeCompile','afterCompile','afterStats','beforeGenerate','afterGenerate','beforeStart','afterStart','beforePackage','afterPackage'] as const;
+export type HookPhase = typeof HOOK_PHASES[number];
+export type HookResult<T> = Result<T, RspfxError | AggregateRspfxError>;
+export type BeforeCompile = (ctx: CompileContext) => HookResult<CompileContext> | void | Promise<HookResult<CompileContext>|void>;
+export type AfterStats = (stats: Stats) => void | Promise<void>;
+export type BeforeGenerate = (ctx: { readonly production: boolean; readonly webParts: readonly WebPartEntry[] }) => HookResult<typeof ctx> | void | Promise<HookResult<typeof ctx>|void>;
+export type AfterGenerate = (ctx: { readonly manifests: readonly ComponentManifest[]; readonly releaseDir: string }) => void | Promise<void>;
+export type BeforePackage = (ctx: { readonly manifests: readonly ComponentManifest[]; readonly files: ReadonlyMap<ZipPath, Uint8Array> }) => HookResult<ReadonlyMap<ZipPath,Uint8Array>> | ReadonlyMap<ZipPath,Uint8Array> | void | Promise<...>;
+export type AfterPackage = (ctx: { readonly sppkgPath: ZipPath }) => void | Promise<void>;
+export type OnHookError = (err: RspfxError, phase: HookPhase, pluginName: string) => 'throw' | 'continue';
+export interface CompilerHooks { beforeCompile?: BeforeCompile; afterStats?: AfterStats; afterCompile?: AfterStats; }
+export interface ReleaseHooks { beforeGenerate?: BeforeGenerate; afterGenerate?: AfterGenerate; }
+export interface DevHooks { beforeStart?: (ctx: { readonly mode: 'local'|'sharepoint'; readonly port?: number }) => HookResult<typeof ctx>|void | Promise<...> ; afterStart?: (ctx: { readonly url: string }) => void | Promise<void>; }
+export interface PackageHooks { beforePackage?: BeforePackage; afterPackage?: AfterPackage; }
 export interface RspfxExtension {
-  name: string;
-  frameworkPreset?: FrameworkPreset;
-  compilerHooks?: CompilerHooks;
-  releaseHooks?: ReleaseHooks;
-  devHooks?: DevHooks;
-  packageHooks?: PackageHooks;
+  readonly name: string;
+  readonly frameworkPreset?: FrameworkPreset;
+  readonly compilerHooks?: CompilerHooks;
+  readonly releaseHooks?: ReleaseHooks;
+  readonly devHooks?: DevHooks;
+  readonly packageHooks?: PackageHooks;
+  readonly onError?: OnHookError;
+  readonly priority?: number;
 }
 export function definePlugin(plugin: RspfxExtension): RspfxExtension;
 export function registerPlugin(plugin: RspfxExtension): void;      // global registry; read by the CLI before each build/package
 export function getPlugins(): RspfxExtension[];
+export interface HookBus {
+  readonly plugins: readonly RspfxExtension[];
+  emitBeforeCompile(ctx: CompileContext): Promise<HookResult<CompileContext>>;
+  emitAfterStats(stats: Stats): Promise<void>;
+  emitBeforeGenerate(ctx: { readonly production: boolean; readonly webParts: readonly WebPartEntry[] }): Promise<HookResult<typeof ctx>>;
+  emitAfterGenerate(ctx: { readonly manifests: readonly ComponentManifest[]; readonly releaseDir: string }): Promise<void>;
+  emitBeforeStart(ctx: { readonly mode: 'local'|'sharepoint'; readonly port?: number }): Promise<HookResult<typeof ctx>>;
+  emitAfterStart(ctx: { readonly url: string }): Promise<void>;
+  emitBeforePackage(ctx: { readonly manifests: readonly ComponentManifest[]; readonly files: ReadonlyMap<ZipPath,Uint8Array> }): Promise<HookResult<ReadonlyMap<ZipPath,Uint8Array>>>;
+  emitAfterPackage(ctx: { readonly sppkgPath: ZipPath }): Promise<void>;
+}
+export function createHookBus(plugins: readonly RspfxExtension[], opts?: { logger?: Logger; onError?: OnHookError }): HookBus;
+export function composeHooks<T>(...hooks: Array<(ctx: T) => HookResult<T>|void>): (ctx: T) => Promise<HookResult<T>>;
+export function sortedPlugins(plugins: readonly RspfxExtension[]): readonly RspfxExtension[];
 ```
 
 The hooks are wired at fixed points in the shared pipeline; with no registered
@@ -227,14 +241,36 @@ plugins the loops are empty no-ops and behavior is unchanged:
 ## @mbsks/rspfx-diagnostics (depends on core only)
 
 ```ts
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'success';
-export class RspfxError extends Error { constructor(code: string, message: string, cause?: unknown) }
-export interface Logger { error(m: string): void; warn(m: string): void; info(m: string): void; debug(m: string): void; success(m: string): void; }
-export function createLogger(name: string): Logger;
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'success' | 'trace';
+export type LogFields = Record<string, string|number|boolean|undefined>;
+export interface LogEntry { readonly level: LogLevel; readonly name: string; readonly message: string; readonly fields: Readonly<LogFields>; readonly timestamp: string; readonly error?: unknown; }
+export interface LoggerOptions { readonly level?: LogLevel; readonly json?: boolean; readonly sinks?: Array<(e: LogEntry)=>void>; }
+export interface Logger {
+  readonly name: string;
+  error(message: string, fields?: LogFields): void;
+  warn(message: string, fields?: LogFields): void;
+  info(message: string, fields?: LogFields): void;
+  debug(message: string, fields?: LogFields): void;
+  success(message: string, fields?: LogFields): void;
+  trace(message: string, fields?: LogFields): void;
+  child(fields: LogFields): Logger;
+  isLevelEnabled(level: LogLevel): boolean;
+  withLevel(level: LogLevel): Logger;
+}
+export function createLogger(name: string, opts?: LoggerOptions): Logger;
+export function createDiagnosticFormatter(logger: Logger): (err: RspfxError|AggregateRspfxError)=>string;
+export class RspfxError extends Error { readonly code: RspfxErrorCode; readonly cause?: RspfxError|Error; constructor(code: RspfxErrorCode, message: string, cause?: RspfxError|Error) }
+export class AggregateRspfxError extends Error { readonly code: RspfxErrorCode.AGGREGATE; readonly errors: readonly RspfxError[]; constructor(errors: readonly RspfxError[], message?: string) }
+export function isRspfxError(e: unknown): e is RspfxError | AggregateRspfxError;
+export function isAggregateRspfxError(e: unknown): e is AggregateRspfxError;
+export function flatCauseChain(err: RspfxError): RspfxError[];
+export function formatError(err: RspfxError|AggregateRspfxError, opts?: { color?: boolean }): string;
 export async function trace<T>(name: string, fn: () => Promise<T>): Promise<T>; // logs duration
 export function timeStart(name: string): () => number;      // returns elapsed ms fn
 export function reportBenchmark(name: string, ms: number): void;  // appends .rspfx/benchmarks.jsonl
 export function formatBytes(bytes: number): string;
+export interface Tracer { span<T>(name: string, fn: ()=>Promise<T>): Promise<T>; time<T>(name: string, fn: ()=>T): T; }
+export function createTracer(logger: Logger): Tracer;
 ```
 
 ## @mbsks/rspfx-compiler-rspack (depends on plugin-api, diagnostics)

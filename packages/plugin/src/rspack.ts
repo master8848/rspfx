@@ -20,6 +20,7 @@ import {
   type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxPluginOptions } from './types.js';
 
 const logger = createLogger('rspfx');
@@ -106,6 +107,13 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
     compiler.hooks.beforeRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
     compiler.hooks.watchRun.tapPromise('rspfx-pipeline', () => this.configureCompiler(compiler, options));
     compiler.hooks.done.tapPromise('rspfx-release', async (stats) => {
+      {
+        const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'afterStats' }) });
+        try {
+          await bus.emitAfterStats(stats as unknown as import('@mbsks/rspfx-plugin-api').Stats);
+        } catch {}
+        logger.child({ phase: 'afterStats' }).trace('afterStats emitted');
+      }
       if (!this.configured || !this.project) {
         return;
       }
@@ -142,7 +150,7 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
       );
 
       const production = compiler.options.mode === 'production';
-      const ctx = createCompileContext({
+      let ctx = createCompileContext({
         projectRoot: this.projectRoot,
         config: this._options,
         entries: this.project!.webParts.entries,
@@ -154,6 +162,13 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
         serveMode: false,
         build: { ...this._options.build }
       });
+      // HookBus: beforeCompile may mutate the compile context
+      {
+        const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'beforeCompile' }) });
+        const result = await bus.emitBeforeCompile(ctx as unknown as import('@mbsks/rspfx-plugin-api').CompileContext);
+        if (!result.ok) throw result.error;
+        ctx = result.value as unknown as typeof ctx;
+      }
       ctx.swcContributions = [contributions as Record<string, unknown>];
 
       const full = (await createRspackConfig(ctx)) as Configuration;

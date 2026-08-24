@@ -30,7 +30,7 @@ import {
   resolveContributionLoaders,
   type ReadProjectResult
 } from '@mbsks/rspfx-dev-runtime';
-import { getPlugins } from '@mbsks/rspfx-plugin-api';
+import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspfx-plugin-api';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
@@ -183,9 +183,10 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         if (project) {
           const settingsNow = resolveServeSettings({ config: resolved }, project.serveJson);
           const mode = resolveServeMode({ mode: undefined, config: resolved }, settingsNow.tenantDomain);
-          for (const plugin of getPlugins()) {
-            plugin.devHooks?.beforeStart?.({ mode, port: settingsNow.port });
-          }
+          const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'beforeStart' }) });
+          void bus.emitBeforeStart({ mode, port: settingsNow.port }).then((result) => {
+            if (!result.ok) logger.warn(`beforeStart hook failed: ${result.error.message}`);
+          });
         }
         server.middlewares.use('/temp/manifests.js', (_req, res, next) => {
           const regen = ensureRegenerator();
@@ -223,7 +224,7 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
       // falling back to `config.dev.openBrowser`. `onAfterDevCompile`/`regenerateAndTick`
       // intentionally do NOT open the browser.
       let browserOpened = false;
-      api.onAfterStartDevServer(({ port }) => {
+      api.onAfterStartDevServer(async ({ port }) => {
         isDevServer = true;
         originRef.value = `${settings.scheme}://${settings.hostname}:${port}`;
         void regenerateAndTick().catch((error: unknown) => {
@@ -244,8 +245,9 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           logger.info(`Workbench: ${workbenchUrl}`);
         }
         logger.success(`Manifest server running at ${originRef.value}/temp/manifests.js`);
-        for (const plugin of getPlugins()) {
-          plugin.devHooks?.afterStart?.({ url: originRef.value });
+        {
+          const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'afterStart' }) });
+          await bus.emitAfterStart({ url: originRef.value });
         }
       });
 

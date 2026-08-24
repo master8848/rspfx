@@ -6,6 +6,7 @@ import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
+import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import { readProject, createCompileContext, loadFrameworkPreset, resolveContributionLoaders } from './project.js';
 import { createRefreshRuntime } from './refresh.js';
 import { createManifestRegenerator } from './manifests.js';
@@ -128,6 +129,12 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
 
   const settings = resolveServeSettings(opts, project.serveJson);
   const mode = resolveServeMode(opts, settings.tenantDomain);
+  // HookBus: beforeStart
+  {
+    const bus = createHookBus(getPlugins(), { logger: logger.child({ service: 'dev', phase: 'beforeStart' }) });
+    const result = await bus.emitBeforeStart({ mode, port: settings.port });
+    if (!result.ok) throw result.error;
+  }
   const local = mode === 'local';
   const https = local ? false : settings.https;
   const scheme = https ? 'https' : 'http';
@@ -297,6 +304,13 @@ export async function startServe(opts: DevRuntimeOptions): Promise<DevRuntimeHan
     browserOpened = true;
     openBrowser(openTarget);
   }
+
+  // HookBus: afterStart
+  {
+    const bus = createHookBus(getPlugins(), { logger: logger.child({ service: 'dev', phase: 'afterStart' }) });
+    await bus.emitAfterStart({ url: origin });
+  }
+  logger.trace('ws reload setup', { origin });
 
   if (local) {
     logger.success(`Local preview running at ${origin}/ — no SharePoint needed.`);

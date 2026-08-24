@@ -258,7 +258,8 @@ The `RspfxPlugin` options carry your project settings:
 
 | Variable | What it does |
 |---|---|
-| `RSPFX_LOG_LEVEL` | Log verbosity (debug/info/warn) — see `packages/diagnostics/src/logger.ts:30` |
+| `RSPFX_LOG_LEVEL` | Log verbosity (`error` \| `warn` \| `info` \| `debug` \| `trace`) — see `packages/diagnostics/src/logger.ts:30` |
+| `RSPFX_LOG_JSON` | JSON log output (`1` → JSON lines) — see `packages/diagnostics/src/logger.ts:42` |
 | `SPFX_SERVE_TENANT_DOMAIN` | Tenant domain fallback for `dev.tenantUrl` — see `packages/dev-runtime/src/serve.ts:102` |
 | `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` | Bearer token and catalog URL for `rspfx deploy` — see `apps/cli/src/commands/deploy.ts:16` |
 | `RSPFX_NPM_OTP` | One-time password for `node scripts/publish.mjs:34` |

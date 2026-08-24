@@ -1,6 +1,9 @@
+import type { Result } from '@mbsks/rspfx-diagnostics';
+import type { RspfxError, AggregateRspfxError } from '@mbsks/rspfx-diagnostics';
 import type { RspfxConfig } from '@mbsks/rspfx-core';
+import type { ZipPath } from '@mbsks/rspfx-core';
 
-export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+export type { Result } from '@mbsks/rspfx-diagnostics';
 
 // Framework IDs - branded via core but redefined here for augmentation
 export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'preact' | 'vue' | 'svelte';
@@ -76,7 +79,21 @@ export type FrameworkPresetUnion =
 export type FrameworkPresetFor<F extends FrameworkId> = FrameworkPreset<F>;
 
 // Hook types with Result
-export type HookResult<T> = Result<T, Error>;
+export const HOOK_PHASES = [
+  'beforeCompile',
+  'afterCompile',
+  'afterStats',
+  'beforeGenerate',
+  'afterGenerate',
+  'beforeStart',
+  'afterStart',
+  'beforePackage',
+  'afterPackage'
+] as const;
+
+export type HookPhase = (typeof HOOK_PHASES)[number];
+
+export type HookResult<T> = Result<T, RspfxError | AggregateRspfxError>;
 
 export interface CompileContext {
   projectRoot: string;
@@ -95,11 +112,12 @@ export interface Stats {
   [key: string]: unknown;
 }
 
-export type BeforeCompile = (ctx: CompileContext) => HookResult<CompileContext> | void;
-export type BeforePackage = (ctx: {
-  readonly manifests: readonly ComponentManifest[];
-  files: Map<string, Uint8Array>;
-}) => Map<string, Uint8Array> | HookResult<Map<string, Uint8Array>> | void;
+export interface WebPartEntry {
+  readonly name: string;
+  readonly import: string;
+  readonly componentIds: readonly string[];
+  readonly version: string;
+}
 
 export interface ComponentManifest {
   id: string;
@@ -108,26 +126,58 @@ export interface ComponentManifest {
   [key: string]: unknown;
 }
 
-export type HookPhase = 'beforeCompile' | 'afterStats' | 'beforePackage' | 'afterPackage';
+export type BeforeCompile = (
+  ctx: CompileContext
+) => HookResult<CompileContext> | void | Promise<HookResult<CompileContext> | void>;
+
+export type AfterStats = (stats: Stats) => void | Promise<void>;
+export type AfterCompile = AfterStats;
+
+export type BeforeGenerate = (ctx: {
+  readonly production: boolean;
+  readonly webParts: readonly WebPartEntry[];
+}) => HookResult<typeof ctx> | void | Promise<HookResult<typeof ctx> | void>;
+
+export type AfterGenerate = (ctx: {
+  readonly manifests: readonly ComponentManifest[];
+  readonly releaseDir: string;
+}) => void | Promise<void>;
+
+export type BeforeStart = (ctx: {
+  readonly mode: 'local' | 'sharepoint';
+  readonly port?: number;
+}) => HookResult<typeof ctx> | void | Promise<HookResult<typeof ctx> | void>;
+
+export type AfterStart = (ctx: { readonly url: string }) => void | Promise<void>;
+
+export type BeforePackage = (ctx: {
+  readonly manifests: readonly ComponentManifest[];
+  readonly files: ReadonlyMap<ZipPath, Uint8Array>;
+}) => HookResult<ReadonlyMap<ZipPath, Uint8Array>> | ReadonlyMap<ZipPath, Uint8Array> | void | Promise<HookResult<ReadonlyMap<ZipPath, Uint8Array>> | ReadonlyMap<ZipPath, Uint8Array> | void>;
+
+export type AfterPackage = (ctx: { readonly sppkgPath: ZipPath }) => void | Promise<void>;
+
+export type OnHookError = (err: RspfxError, phase: HookPhase, pluginName: string) => 'throw' | 'continue';
 
 export interface CompilerHooks {
   beforeCompile?: BeforeCompile;
-  afterStats?: (stats: Stats) => void;
+  afterStats?: AfterStats;
+  afterCompile?: AfterCompile;
 }
 
 export interface ReleaseHooks {
-  beforeGenerate?(ctx: { production: boolean; webParts: unknown }): void;
-  afterGenerate?(ctx: { manifests: Array<Record<string, unknown>>; releaseDir: string }): void;
+  beforeGenerate?: BeforeGenerate;
+  afterGenerate?: AfterGenerate;
 }
 
 export interface DevHooks {
-  beforeStart?(ctx: { mode: 'local' | 'sharepoint'; port?: number }): void;
-  afterStart?(ctx: { url: string }): void;
+  beforeStart?: BeforeStart;
+  afterStart?: AfterStart;
 }
 
 export interface PackageHooks {
   beforePackage?: BeforePackage;
-  afterPackage?: (ctx: { sppkgPath: string }) => void;
+  afterPackage?: AfterPackage;
 }
 
 export interface RspfxExtension {
@@ -137,22 +187,25 @@ export interface RspfxExtension {
   readonly releaseHooks?: ReleaseHooks;
   readonly devHooks?: DevHooks;
   readonly packageHooks?: PackageHooks;
-  readonly onError?: (err: Error, phase: HookPhase) => 'throw' | 'continue';
+  readonly onError?: OnHookError;
+  readonly priority?: number;
 }
 
-export function composeHooks(...hs: BeforeCompile[]): BeforeCompile {
-  return (ctx: CompileContext) => {
+export function composeHooks<T>(...hooks: Array<(ctx: T) => HookResult<T> | void | Promise<HookResult<T> | void>>): (ctx: T) => Promise<HookResult<T>> {
+  return async (ctx: T): Promise<HookResult<T>> => {
     let current = ctx;
-    for (const h of hs) {
-      const res = h(current);
+    for (const h of hooks) {
+      const res = await h(current);
       if (res !== undefined && typeof res === 'object' && 'ok' in (res as Record<string, unknown>)) {
-        if (!(res as { ok: boolean }).ok) return res;
-        current = (res as { ok: true; value: CompileContext }).value;
-      } else if (res !== undefined && typeof res === 'object') {
-        current = res as unknown as CompileContext;
+        const r = res as HookResult<T>;
+        if (!r.ok) return r;
+        current = (r as { ok: true; value: T }).value ?? current;
       }
     }
-    if (current !== ctx) return { ok: true, value: current } as HookResult<CompileContext>;
-    return undefined;
+    return { ok: true, value: current } as HookResult<T>;
   };
+}
+
+export function definePlugin(plugin: RspfxExtension): RspfxExtension {
+  return plugin;
 }

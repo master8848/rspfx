@@ -17,7 +17,7 @@ import {
   scriptUrlPublicPathExpression
 } from '@mbsks/rspfx-compiler-rspack';
 import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
-import { getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
+import { createHookBus, getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
   resolveServeSettings,
@@ -422,7 +422,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       transformEntryBundle(entryName, bundle);
     },
 
-    configureServer(server) {
+    async configureServer(server) {
       const project = readProject(root, resolved.paths, resolved.version, resolved);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
       const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain);
@@ -452,9 +452,11 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         bundleUrlSuffix: () => `?t=${reload.current}`
       });
 
-      for (const plugin of getPlugins()) {
-        plugin.devHooks?.beforeStart?.({ mode, port: settings.port });
-      }
+      void createHookBus(getPlugins(), { logger: logger.child({ phase: 'beforeStart' }) })
+        .emitBeforeStart({ mode, port: settings.port })
+        .then((result) => {
+          if (!result.ok) logger.warn(`beforeStart hook failed: ${result.error.message}`);
+        });
 
       const rebuildAll = async (): Promise<void> => {
         const vite = await importViteFrom(root);
@@ -529,8 +531,9 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           openBrowser(workbenchUrl);
           logger.info(`Workbench: ${workbenchUrl}`);
         }
-        for (const plugin of getPlugins()) {
-          plugin.devHooks?.afterStart?.({ url: originRef.value });
+        {
+          const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'afterStart' }) });
+          void bus.emitAfterStart({ url: originRef.value }).catch((e) => logger.warn(`afterStart hook failed: ${e instanceof Error ? e.message : String(e)}`));
         }
       });
       logger.success(`Manifest server running at ${settings.origin}/temp/manifests.js`);

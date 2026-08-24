@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveConfig } from '@mbsks/rspfx-core';
 import { build, type CompileContext } from '@mbsks/rspfx-compiler-rspack';
 import { assembleRelease, readProject, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
+import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { rspfxRsbuild, rspfxVite } from '../src/index.js';
 
 // fixture uses fs.mkdtemp(os.tmpdir() + '/rspfx-parity-') for space-free tmpdir
@@ -174,13 +175,14 @@ describe('bundler parity for the same fixture', () => {
   it('rspack build produces parity output', async () => {
     cleanOutput();
     const project = readProject(FIXTURE, undefined, '1.0.0');
+    const spExternals = [...findSpDependencies(FIXTURE).keys()];
     const ctx: CompileContext = {
       projectRoot: FIXTURE,
       framework: 'vanilla',
       fastRefresh: false,
       production: true,
       entries: project.webParts.entries,
-      externals: [],
+      externals: spExternals,
       aliases: {},
       build: { sourcemap: false, minify: false, splitChunks: false, outDir: 'dist', releaseDir: 'release' },
       serveMode: false
@@ -190,7 +192,7 @@ describe('bundler parity for the same fixture', () => {
       projectRoot: FIXTURE,
       config: resolveConfig({ name: 'parity-proj', version: '1.0.0', framework: 'vanilla' }),
       project,
-      externals: [],
+      externals: spExternals,
       outputFiles: project.webParts.entries.map((entry) => `${entry.name}.js`),
       production: true
     });

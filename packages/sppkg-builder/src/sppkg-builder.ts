@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
+import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
+import type { ZipPath } from '@mbsks/rspfx-core';
 import { globFiles } from './glob.js';
 import { parseResx } from './resx.js';
 import {
@@ -50,6 +52,7 @@ export interface BuildPackageOptions {
   prettyXml?: boolean;
   teamsDir?: string;
   resxDir?: string;
+  hookBus?: ReturnType<typeof createHookBus>;
 }
 
 export interface BuildPackageResult {
@@ -235,6 +238,23 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
     pretty
   });
 
+  // Hook: beforePackage — allow plugins to add/transform files
+  {
+    const bus = opts.hookBus ?? createHookBus(getPlugins(), { logger });
+    const filesMap = new Map<ZipPath, Uint8Array>(entries.map((e) => [e.name as ZipPath, new Uint8Array(e.buffer)]));
+    const hookResult = await bus.emitBeforePackage({ manifests: manifests as unknown as import('@mbsks/rspfx-plugin-api').ComponentManifest[], files: filesMap });
+    if (!hookResult.ok) throw hookResult.error;
+    if (hookResult.value !== filesMap) {
+      // Reconstruct entries from returned map
+      entries.length = 0;
+      allEntryNames.length = 0;
+      for (const [zipPath, content] of hookResult.value) {
+        entries.push({ name: zipPath as string, buffer: Buffer.from(content) });
+        allEntryNames.push(zipPath as string);
+      }
+    }
+  }
+
   const extensions = new Set<string>();
   for (const name of allEntryNames) {
     const dotIndex = name.lastIndexOf('.');
@@ -261,6 +281,11 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeZip(outputPath, orderedEntries);
+
+  {
+    const bus = opts.hookBus ?? createHookBus(getPlugins(), { logger });
+    await bus.emitAfterPackage({ sppkgPath: outputPath as ZipPath });
+  }
 
   const debugDir = path.join(path.dirname(outputPath), 'debug', path.basename(outputPath, path.extname(outputPath)));
   for (const entry of orderedEntries) {

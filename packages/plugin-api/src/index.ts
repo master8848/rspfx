@@ -1,6 +1,13 @@
 export type {
+  AfterCompile,
+  AfterGenerate,
+  AfterPackage,
+  AfterStart,
+  AfterStats,
   BeforeCompile,
+  BeforeGenerate,
   BeforePackage,
+  BeforeStart,
   CompilerHooks,
   ComponentManifest,
   CompileContext,
@@ -17,15 +24,18 @@ export type {
   FrameworkViteContributions,
   HookPhase,
   HookResult,
+  OnHookError,
   PackageHooks,
   ReleaseHooks,
   RspackContribs,
   RsbuildContribs,
   ViteContribs,
   RspfxExtension,
-  Stats
+  Stats,
+  WebPartEntry
 } from './types.js';
-export { composeHooks } from './types.js';
-export { definePlugin, getPlugins, registerPlugin, __clearRegistryForTests } from './registry.js';
+export { definePlugin, HOOK_PHASES } from './types.js';
+export { getPlugins, registerPlugin, __clearRegistryForTests } from './registry.js';
 export { createRSPFX } from './instance.js';
 export type { HookBus, RspfxInstance } from './instance.js';
+export { createHookBus, sortedPlugins, composeHooks } from './hook-bus.js';

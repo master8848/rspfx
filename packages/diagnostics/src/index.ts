@@ -1,10 +1,11 @@
 export { reportBenchmark } from './benchmark.js';
-export { isRspfxError, RspfxError } from './error.js';
+export { AggregateRspfxError, isAggregateRspfxError, isRspfxError, RspfxError, flatCauseChain } from './error.js';
 export { RspfxErrorCode } from './codes.js';
 export type { RspfxErrorCode as RspfxErrorCodeType } from './codes.js';
-export { formatBytes } from './format.js';
-export type { Logger, LogLevel } from './logger.js';
-export { createLogger } from './logger.js';
-export { timeStart, trace } from './trace.js';
+export { formatBytes, formatError } from './format.js';
+export type { Logger, LogLevel, LogFields, LogEntry, LoggerOptions } from './logger.js';
+export { createLogger, createDiagnosticFormatter } from './logger.js';
+export { timeStart, trace, createTracer } from './trace.js';
+export type { Tracer } from './trace.js';
 export type { HookResult, Issue, Result } from './result.js';
 export { andThen, err, map, ok, unwrap } from './result.js';

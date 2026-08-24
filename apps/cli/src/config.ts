@@ -3,7 +3,10 @@ import path from 'node:path';
 import { createJiti } from 'jiti';
 import { resolveConfig, RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS, type RspfxConfig } from '@mbsks/rspfx-core';
 import type { RspfxBundlerPluginLike } from '@mbsks/rspfx-core';
-import { RspfxError } from '@mbsks/rspfx-diagnostics';
+import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
+import type { Logger } from '@mbsks/rspfx-diagnostics';
+import { createHookBus } from '@mbsks/rspfx-plugin-api';
+import type { HookBus } from '@mbsks/rspfx-plugin-api';
 
 export type BundlerId = 'rspack' | 'vite' | 'rsbuild';
 
@@ -12,6 +15,8 @@ export interface LoadedProject {
   bundler: BundlerId;
   configFile: string;
   userModuleRules?: unknown[];
+  logger: Logger;
+  hookBus: HookBus;
 }
 
 const CONFIG_CANDIDATES: readonly { bundler: BundlerId; file: string }[] = [
@@ -60,13 +65,6 @@ export async function loadConfig(projectRoot: string): Promise<LoadedProject> {
       `No rspack.config.ts / vite.config.ts / rsbuild.config.ts found in ${projectRoot}. Run "rspfx new" to scaffold a project.`
     );
   }
-  // SECURITY: jiti executes the project's config file as JavaScript (rspack.config.ts /
-  // vite.config.ts / rsbuild.config.ts). This is intentional and analogous to Vite/Rspack
-  // loading user config — the file is user-owned code. We do not sandbox it, but we
-  // document the risk: only run `rspfx` in trusted checkouts, review config changes,
-  // and prefer `--frozen` / locked installs in CI. `fsCache: true` caches transpiled
-  // artifacts under node_modules/.cache/jiti for faster subsequent loads; stale
-  // entries are invalidated by content hash.
   const jiti = createJiti(import.meta.url, {
     interopDefault: true,
     fsCache: true,
@@ -84,10 +82,16 @@ export async function loadConfig(projectRoot: string): Promise<LoadedProject> {
     );
   }
   const userModuleRules = (bundlerConfig as { module?: { rules?: unknown[] } })?.module?.rules;
+  const logger = createLogger('cli');
+  // The CLI config does not yet discover plugins via HookBus (plugin-api registry), but we expose a HookBus for callers.
+  // For now, create an empty bus; real plugins are discovered via getPlugins() at runtime.
+  const hookBus = createHookBus([], { logger });
   return {
     config: resolveConfig(plugin[RSPFX_PLUGIN_OPTIONS]),
     bundler: found.bundler,
     configFile: found.file,
     userModuleRules: Array.isArray(userModuleRules) ? userModuleRules : undefined,
+    logger,
+    hookBus
   };
 }

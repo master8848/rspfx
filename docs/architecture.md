@@ -40,8 +40,8 @@ RSPFX is a complete SPFx-compatible build toolchain powered by **Rspack**, repla
 |---|---|---|---|
 | `core` | foundation | — | SPFx interfaces, `HeadlessAdapter`, `HeadlessContext`, `WebPartContextLike`, `Environment`, `Version`, `defineConfig` — zero-deps, no `BaseWebPart` |
 | `webpart-base` | foundation | core + `@microsoft/sp-webpart-base` | `HeadlessWebPart`, `BaseWebPart` alias, `defineWebPart` |
-| `diagnostics` | foundation | core | logger, `RspfxError`, telemetry, benchmarks |
-| `plugin-api` | foundation | core, diagnostics | `FrameworkPreset`, compiler/package hooks, plugin registry |
+| `diagnostics` | foundation | core | logger (`child`, `isLevelEnabled`, `trace`, JSON), `RspfxError` + `AggregateRspfxError`, `formatError`, `trace`/`benchmark`, `codes` |
+| `plugin-api` | foundation | core, diagnostics | `FrameworkPreset`, `HookBus` (`emitBeforeCompile` etc.), hooks (`BeforeCompile`, `BeforePackage` etc.), `RSpfxInstance.hooks: HookBus` |
 | `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, swc TS/JSX, SCSS/CSS-modules, assets, caching, framework plugin stubs |
 | `manifest-generator` | build | core, diagnostics | component manifests, manifests.js, loaderConfig, sp-* dependency discovery |
 | `sppkg-builder` | build (priority 1) | manifest-generator, core | package-solution.json → AppManifest/features/ZIP `.sppkg` |
