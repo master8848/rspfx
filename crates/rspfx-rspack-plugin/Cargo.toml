@@ -1,0 +1,10 @@
+[package]
+name = "rspfx-rspack-plugin"
+version = "0.1.0"
+edition = "2021"
+description = "Rust rspack plugins (public-path, localized) with JS fallback"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
