@@ -227,7 +227,8 @@ describe('scaffoldProject', () => {
     expect(entry).toContain('extends SvelteWebPart {');
 
     const component = fs.readFileSync(path.join(dir, 'src/webparts/hello-world/components/HelloWorld.svelte'), 'utf-8');
-    expect(component).toContain('export let description');
+    expect(component).toContain('let { description } = $props()');
+    expect(component).toContain('transition:fade');
     expect(component).not.toContain('lang="ts"');
   });
 

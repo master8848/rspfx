@@ -147,6 +147,9 @@ function buildFiles(vars: TemplateVars): TemplateFile[] {
     path: `src/webparts/${vars.name}/styles/${vars.namePascal}.module.scss`,
     content: stylesheet(vars)
   });
+  if (vars.framework === 'svelte') {
+    files.push({ path: 'svelte.config.js', content: svelteConfigJs() });
+  }
   return files;
 }
 
@@ -208,7 +211,8 @@ function packageJson(vars: TemplateVars): string {
         '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
         '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
         ...bundlerDevDeps,
-        typescript: '^5.7.0'
+        typescript: '^5.7.0',
+        ...(vars.framework === 'svelte' ? { 'svelte-check': '^4.0.0' } : {})
       }
     },
     null,
@@ -706,9 +710,16 @@ function vueComponent(vars: TemplateVars, js: boolean): string {
 }
 
 function svelteComponent(js: boolean): string {
-  const markup = `<div class="card">\n  <h2 class="card-title">{description}</h2>\n  <p class="card-description">\n    Change the Description property in the property pane to update this title.\n  </p>\n</div>`;
+  const script = js
+    ? `<script>\n  let { description } = $props();\n  import { fade } from 'svelte/transition';\n</script>`
+    : `<script lang="ts">\n  let { description }: { description: string } = $props();\n  import { fade } from 'svelte/transition';\n</script>`;
+  const markup = `<div class="card" transition:fade>\n  <h2 class="card-title">{description}</h2>\n  <p class="card-description">\n    Change the Description property in the property pane to update this title.\n  </p>\n</div>`;
   const style = `\n\n<style>\n  .card {\n    max-width: 480px;\n    margin: 24px auto;\n    padding: 24px;\n    border: 1px solid #e1dfdd;\n    border-radius: 6px;\n    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);\n    font-family: 'Segoe UI', sans-serif;\n  }\n\n  .card-title {\n    margin: 0 0 12px 0;\n    color: #323130;\n    font-size: 20px;\n  }\n\n  .card-description {\n    margin: 0;\n    color: #605e5c;\n    font-size: 14px;\n  }\n</style>`;
-  return `<script>\n  export let description = '';\n</script>\n\n${markup}${style}\n`;
+  return `${script}\n\n${markup}${style}\n`;
+}
+
+function svelteConfigJs(): string {
+  return `import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';\nexport default { preprocess: vitePreprocess(), compilerOptions: { css: 'injected' } };\n`;
 }
 
 function solidComponent(vars: TemplateVars, js: boolean): string {
@@ -788,9 +799,12 @@ function declarations(vars: TemplateVars): string {
     lines.push(
       ``,
       `declare module '*.svelte' {`,
+      `  import type { Component } from 'svelte';`,
       `  import type { ComponentConstructorOptions, SvelteComponentTyped } from 'svelte';`,
       ``,
-      `  const component: new (options: ComponentConstructorOptions<Record<string, unknown>>) => SvelteComponentTyped<Record<string, unknown>>;`,
+      `  type Svelte4Component<T> = new (options: ComponentConstructorOptions<T>) => SvelteComponentTyped<T>;`,
+      `  type SvelteComponentUnion<T> = Svelte4Component<T> | Component<T>;`,
+      `  const component: SvelteComponentUnion<Record<string, unknown>>;`,
       `  export default component;`,
       `}`
     );
