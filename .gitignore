@@ -39,3 +39,6 @@ crates/*/target/
 crates/*/*.node
 /target/
 Cargo.lock
+
+# test-generated fixtures (dev-runtime tests scaffold these in beforeAll)
+tests/fixtures/

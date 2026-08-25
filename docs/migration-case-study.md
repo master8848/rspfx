@@ -37,7 +37,7 @@ which is exactly RSPFX's supported surface.
    - rewrite the one `pkg:` SCSS import to a relative `node_modules` path
    - delete rig/sass/typescript/customize-webpack config files
    - write `rspack.config.ts` (with the `RspfxPlugin`) + a plain `tsconfig.json`
-3. `pnpm install` — 52s from warm cache.
+3. `bun install` — 52s from warm cache.
 4. `rspfx build` — handles:
    - `*.html` template imports via Rspack `asset/source` rule (raw-string module).
    - Localized string modules (`SearchResultsWebPartStrings`, `CommonStrings`, `ControlStrings`, `PropertyControlStrings`) via `config.json` `localizedResources` mapping to the default-locale source file (including `node_modules` resources from `@pnp/spfx-controls-react`).
@@ -93,7 +93,7 @@ These are the honest limits (tracked in [why-not-to-migrate.md](why-not-to-migra
 git clone https://github.com/microsoft-search/pnp-modern-search.git
 cd pnp-modern-search/search-parts
 node <rspfx-repo>/scripts/migrate-to-rspfx.mjs .
-pnpm install
+bun install
 rspfx build && rspfx package
 ```
 

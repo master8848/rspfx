@@ -136,11 +136,11 @@ point: adding a version is a ~30-minute change, not a multi-file hunt.
 Then from the repo root:
 
 ```sh
-pnpm typecheck
-pnpm test
+bun run typecheck
+bun run test
 ```
 
-`pnpm test` is the only gate (no lint, no CI).
+`bun run test` is the only gate (no lint, no CI).
 
 ## 8. Update docs
 
@@ -230,7 +230,7 @@ tenant-gate.**
 - [ ] `reference/sp-component-ids.json` and `packages/manifest-generator/src/data/component-ids.ts` in sync
 - [ ] One entry added to `packages/core/src/versions.ts` (target / npmVersion / toolchain / status)
 - [ ] Tests updated (core default, template dep pins, CLI)
-- [ ] `pnpm typecheck` && `pnpm test` green from repo root
+- [ ] `bun run typecheck` && `bun run test` green from repo root
 - [ ] Docs updated: compatibility.md, commands.md, why-not-to-migrate.md, roadmap.md, ARCHITECTURE.md, skills/rspfx/SKILL.md
 - [ ] Scaffolded project at the new target: bundle header + currentScript line byte-checked, .sppkg diffed
 - [ ] Real-tenant install through the M1 gate (app catalog → site → workbench)

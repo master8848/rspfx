@@ -43,4 +43,4 @@ A non-trivial doc or behavior change ships with an Agent Note in the same commit
 
 ## Verification
 
-Every relative link must resolve: target file exists and `#fragment` matches a heading slug. Word budgets must hold (`wc -w`). Note header must be exactly `# Agent Note: <title>` on line 1, blank line on line 2, `Status: implemented` on line 3. `pnpm test` is the only gate; `pnpm build` and `pnpm typecheck` cover package surfaces.
+Every relative link must resolve: target file exists and `#fragment` matches a heading slug. Word budgets must hold (`wc -w`). Note header must be exactly `# Agent Note: <title>` on line 1, blank line on line 2, `Status: implemented` on line 3. `bun run test` is the only gate; `bun run build` and `bun run typecheck` cover package surfaces.

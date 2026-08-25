@@ -51,7 +51,7 @@ export default {
 
 With the default layout, a web part folder `src/webparts/hello/` maps to a bundle named `hello`. With `config.json` bundles (or a custom `paths.webpartsDir`), the bundle name is authoritative: `loaderConfig.entryModuleId` is derived from the bundle entry name.
 
-Bundler config is optional — omit it for zero-config. `pnpm build` / `rspfx build` synthesizes the same options from the manifests and runs Rspack or Vite internally; if `rspack` or `vite` is installed it just works.
+Bundler config is optional — omit it for zero-config. `bun run build` / `rspfx build` synthesizes the same options from the manifests and runs Rspack or Vite internally; if `rspack` or `vite` is installed it just works.
 
 ## What `rspfx build` does
 
@@ -123,9 +123,9 @@ Exit codes are 0/1 and logs are structured, so the pipeline slots into CI:
 
 ```yaml
 steps:
-  - run: pnpm install --frozen-lockfile
+  - run: bun install --frozen-lockfile
   - run: rspfx doctor            # preflight; fails fast on bad env
-  - run: rspfx package           # build + package (zero-config also works: pnpm build)
+  - run: rspfx package           # build + package (zero-config also works: bun run build)
   - upload: sharepoint/solution/*.sppkg
 ```
 

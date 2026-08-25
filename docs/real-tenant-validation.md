@@ -4,9 +4,9 @@ This page is a reference for the manual real-tenant gate described in [docs/road
 
 ## Prerequisites
 
-Developer tenant with an app catalog site (`https://contoso.sharepoint.com/sites/appcatalog`) and a site collection for testing; Node ≥ 20, pnpm, and a built CLI (`pnpm --filter @mbsks/rspfx-cli build` → `apps/cli/dist/cli.js`).
+Developer tenant with an app catalog site (`https://contoso.sharepoint.com/sites/appcatalog`) and a site collection for testing; Node ≥ 20, Bun, and a built CLI (`bun run --filter @mbsks/rspfx-cli build` → `apps/cli/dist/cli.js`).
 
-For local-only checks unset any tenant override so `packages/dev-runtime` stays in local preview mode: `SPFX_SERVE_TENANT_DOMAIN= pnpm test` — see [docs/commands.md](commands.md#rspfx-dev) and `AGENTS.md:47`; for tenant mode set `SPFX_SERVE_TENANT_DOMAIN` or `dev.tenantUrl` in `rspack.config.ts` or pass `rspfx dev --tenant https://contoso.sharepoint.com`.
+For local-only checks unset any tenant override so `packages/dev-runtime` stays in local preview mode: `SPFX_SERVE_TENANT_DOMAIN= bun run test` — see [docs/commands.md](commands.md#rspfx-dev) and `AGENTS.md:47`; for tenant mode set `SPFX_SERVE_TENANT_DOMAIN` or `dev.tenantUrl` in `rspack.config.ts` or pass `rspfx dev --tenant https://contoso.sharepoint.com`.
 
 ## Tenant credential setup
 
@@ -68,7 +68,7 @@ If any check fails, compare against an unzipped official `.sppkg` captured per `
 Measure RSPFX alone on `examples/shadcn` (cold 633 ms on M1 Pro per `docs/performance.md:24`) with `BENCH_RUNS=3` — requires built CLI and leaves `dist/`/`release/` behind.
 
 ```sh
-pnpm --filter @mbsks/rspfx-cli build
+bun run --filter @mbsks/rspfx-cli build
 BENCH_RUNS=3 node bench/bench.mjs examples/shadcn
 ```
 
@@ -84,5 +84,5 @@ See `bench/README.md` for `BENCH_KEEP_OUTPUT`, `BENCH_OFFICIAL_FRESH`, and full 
 
 ## Unsetting tenant for local tests
 
-Local preview and unit tests must not leak a tenant domain — run with an empty override: `SPFX_SERVE_TENANT_DOMAIN= pnpm test` (the `=` with empty value unsets the var for the child process; see [docs/commands.md](commands.md#rspfx-dev)) and keep `RSPFX_ACCESS_TOKEN` unset so `rspfx deploy` falls back to manual steps.
+Local preview and unit tests must not leak a tenant domain — run with an empty override: `SPFX_SERVE_TENANT_DOMAIN= bun run test` (the `=` with empty value unsets the var for the child process; see [docs/commands.md](commands.md#rspfx-dev)) and keep `RSPFX_ACCESS_TOKEN` unset so `rspfx deploy` falls back to manual steps.
 

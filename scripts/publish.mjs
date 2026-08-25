@@ -5,7 +5,7 @@
  *
  * Safety rails:
  *   - hard abort if anything under examples/ or apps/playground is publishable
- *   - gates: clean git tree, `pnpm build`, `pnpm test` (unless --skip-checks)
+ *   - gates: clean git tree, `bun run build`, `bun run test` (unless --skip-checks)
  *   - consistent version bump across the whole set (default: patch)
  *   - publishes in dependency order, one package at a time
  *   - verifies each version lands on the registry (retried)
@@ -16,6 +16,7 @@
  *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-commit]
  *   npm dist-tag defaults to "latest" (prereleases default to "next"); git tag vX.Y.Z is created on success.
  *   Changelog: update CHANGELOG.md with ## [X.Y.Z] - YYYY-MM-DD before publishing (see CONTRIBUTING.md#changelog-rule).
+ *   Publishes with `bun publish` (workspace protocol resolved by bun); registry reads use `npm view`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -231,9 +232,9 @@ if (!SKIP_CHECKS) {
     fatal(`Working tree is not clean. Commit or stash first:\n${dirty}`);
   }
   console.log('  ✓ git tree clean');
-  run('pnpm', ['build'], { cwd: ROOT });
-  run('pnpm', ['--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
-  run('pnpm', ['test'], { cwd: ROOT });
+  run('bun', ['run', 'build'], { cwd: ROOT });
+  run('bun', ['run', '--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
+  run('bun', ['run', 'test'], { cwd: ROOT });
   console.log('');
 }
 
@@ -284,16 +285,16 @@ for (const name of order) {
     continue;
   }
   console.log(`  → ${name}@${targetVersion} (tag: ${npmTag})`);
-  const publishArgs = ['publish', '--no-git-checks', '--access', 'public', '--tag', npmTag];
+  const publishArgs = ['publish', '--access', 'public', '--tag', npmTag];
   // OTP via env (npm_config_otp) to avoid `ps` argv visibility and log leakage.
-  // We intentionally do NOT add --otp to publishArgs; pnpm/npm reads npm_config_otp.
+  // We intentionally do NOT add --otp to publishArgs; bun/npm read npm_config_otp.
   const publishEnv = otp
     ? { ...process.env, npm_config_otp: otp, NPM_OTP: otp, RSPFX_NPM_OTP: otp }
     : process.env;
-  // Pipe stdin so pnpm never shows interactive prompts (branch check, OTP) —
+  // Pipe stdin so the publisher never shows interactive prompts (OTP) —
   // a missing OTP surfaces as a hard error instead of a hung prompt.
   const publishOnce = () =>
-    spawnSync('pnpm', publishArgs, {
+    spawnSync('bun', publishArgs, {
       cwd: pkg.dir,
       stdio: ['pipe', 'inherit', 'inherit'],
       env: publishEnv

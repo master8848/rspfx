@@ -12,9 +12,9 @@ rspfx deploy     → upload .sppkg to app catalog via REST       (implies packag
 
 | Command | Produces | When to use |
 |---|---|---|
-| `pnpm build` / `npm run build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, bundle analysis (`rspfx analyze`) — package.json `build` script runs `rspfx build` |
-| `pnpm package` / `npm run package` | `sharepoint/solution/<name>.sppkg` (DEFLATE zip) — path from `config/package-solution.json:355` `paths.zippedPackage` (default `sharepoint/solution/<name>.sppkg`) | Ship — upload the `.sppkg` |
-| `rspfx package` | Same as `pnpm package` (same codepath). `rspfx package --no-build` skips compile and packages existing `release/` | Incremental packaging |
+| `bun run build` / `npm run build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, bundle analysis (`rspfx analyze`) — package.json `build` script runs `rspfx build` |
+| `bun run package` / `npm run package` | `sharepoint/solution/<name>.sppkg` (DEFLATE zip) — path from `config/package-solution.json:355` `paths.zippedPackage` (default `sharepoint/solution/<name>.sppkg`) | Ship — upload the `.sppkg` |
+| `rspfx package` | Same as `bun run package` (same codepath). `rspfx package --no-build` skips compile and packages existing `release/` | Incremental packaging |
 | `rspfx deploy` | Packages then `POST` to `/_api/web/GetFolderByServerRelativeUrl('AppCatalog')/Files/add(url='<file>',overwrite=true)` (see `apps/cli/src/commands/deploy.ts:50`); bearer token `RSPFX_ACCESS_TOKEN`, catalog URL `RSPFX_APP_CATALOG_URL` or `config.deploy.appCatalogSiteUrl` | Automated upload; without token prints manual steps and exits 0 |
 
 National clouds use the same pipeline — only the catalog hostname differs (`*.sharepoint.com` vs `*.sharepoint.cn` / `*.sharepoint.de` etc.).
@@ -22,7 +22,7 @@ National clouds use the same pipeline — only the catalog hostname differs (`*.
 ## 1. Build
 
 ```sh
-pnpm install --frozen-lockfile
+bun install --frozen-lockfile
 rspfx doctor              # preflight — Node ≥20, config loads, sp-* versions match, port free
 rspfx build               # minified, no sourcemap by default
 # or for a debuggable staging build:
@@ -44,7 +44,7 @@ What it emits (`packages/dev-runtime/src/release.ts:39` `assembleRelease()`):
 ```sh
 rspfx package
 # equivalent:
-pnpm package
+bun run package
 
 # verify:
 unzip -l sharepoint/solution/<name>.sppkg | head -20
@@ -202,7 +202,7 @@ Microsoft docs: serve.json schema https://developer.microsoft.com/json-schemas/s
 
 ```yaml
 steps:
-  - run: pnpm install --frozen-lockfile
+  - run: bun install --frozen-lockfile
   - run: rspfx doctor           # fails fast — exit 1 blocks package
   - run: rspfx package          # build + package
   - upload: sharepoint/solution/*.sppkg   # artifact for manual catalog upload

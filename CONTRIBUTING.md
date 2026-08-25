@@ -5,18 +5,18 @@ This guide covers local development, the per-version changelog rule, and the tag
 ## Getting started
 
 ```sh
-pnpm install
-pnpm build        # builds packages/* only (see AGENTS.md)
-pnpm --filter @mbsks/rspfx-cli build  # before using rspfx
-pnpm test         # vitest at repo root
+bun install
+bun run build        # builds packages/* only (see AGENTS.md)
+bun run --filter @mbsks/rspfx-cli build  # before using rspfx
+bun run test         # vitest at repo root
 ```
 
-Requirements: Node `>=20` (`package.json:9`), pnpm `10.33.0` (`package.json:8`). Use `pnpm publish` / `node scripts/publish.mjs` for releases — not `bun publish` (see `AGENTS.md#publishing`).
+Requirements: Node `>=20` (`package.json` `engines`), Bun `>=1.4`. Use `bun publish` / `node scripts/publish.mjs` for releases (see `AGENTS.md#publishing`).
 
 ## Development workflow
 
 - Branch from `main`, keep `git status` clean — `scripts/publish.mjs:227` aborts on a dirty tree.
-- Run `pnpm build` and `pnpm test` before pushing; CI gates on both plus `pnpm typecheck`.
+- Run `bun run build` and `bun run test` before pushing.
 - One fact, one home — see `docs/AGENTS.md#fact-homes`. Reference pages (`docs/`) describe current state only; history lives in `CHANGELOG.md`.
 - Non-trivial changes ship with an Agent Note at `.agents/notes/implemented/{class}/YYYY-MM-DD-slug.md` (see `.agents/notes/README.md` and `docs/AGENTS.md#non-trivial-changes-carry-an-agent-note`).
 
@@ -53,9 +53,8 @@ All 19 publishable packages (`packages/*` + `apps/cli`, all `@mbsks/rspfx-*`) sh
 - **npm dist-tag:** `latest` for stable releases, `next` for prereleases (versions containing `-`, e.g. `0.1.0-beta.1`). Override with `--tag <dist-tag>`:
   ```sh
   node scripts/publish.mjs --tag next      # or beta, canary, etc.
-  pnpm publish -- --tag next
   ```
-  `scripts/publish.mjs:188` computes the tag and passes `--tag <tag>` to `pnpm publish` (`scripts/publish.mjs:272`).
+  `scripts/publish.mjs` computes the tag and passes `--tag <tag>` to `bun publish`.
 
 - **Git tag:** annotated tag `vX.Y.Z` created after the bump commit (`scripts/publish.mjs:327`). Message body references `CHANGELOG.md ## [X.Y.Z]` and the npm tag. Push with:
   ```sh
@@ -72,7 +71,7 @@ All 19 publishable packages (`packages/*` + `apps/cli`, all `@mbsks/rspfx-*`) sh
 1. Update `CHANGELOG.md`: add or promote `## [X.Y.Z] - YYYY-MM-DD`.
 2. Dry run (verifies tag and changelog, no side effects):
    ```sh
-   pnpm publish:dry
+   bun run publish:dry
    # or
    node scripts/publish.mjs --dry-run
    node scripts/publish.mjs --dry-run --tag next --version 0.1.0-beta.1
@@ -80,8 +79,8 @@ All 19 publishable packages (`packages/*` + `apps/cli`, all `@mbsks/rspfx-*`) sh
    Dry runs print an AI-agent reminder to add the changelog entry (see below) and an advisory `✓/⚠` for `CHANGELOG.md`.
 3. Live run (requires clean tree, builds, tests):
    ```sh
-   pnpm publish                 # patch bump, tag latest
-   pnpm publish -- --minor      # or --major, --version 1.0.0, --tag next
+   bun run publish                 # patch bump, tag latest
+   bun run publish --minor         # or --major, --version 0.2.0, --tag next
    node scripts/publish.mjs --skip-checks  # only outside CI
    ```
    Live run also warns if `CHANGELOG.md` lacks `## [X.Y.Z]` (`scripts/publish.mjs:240`) but continues.

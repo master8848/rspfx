@@ -49,7 +49,7 @@ rspfx migrate --dry-run          # preview: what would change
 rspfx migrate                    # apply: rewrites config, writes bundler config, backs up to .rspfx/migrate-backup.json
 rspfx migrate --bundler vite     # same, but scaffolds vite.config.ts with rspfxVite
 rspfx migrate --revert           # restore from .rspfx/migrate-backup.json (or use git restore)
-pnpm install
+bun install
 rspfx dev
 ```
 
@@ -223,7 +223,7 @@ The bundler commands work standalone — no rspfx CLI needed:
 
 `rspfx build` / `rspfx package` use the same pipeline through the plugins: `rspfx build` spawns the project's bundler once and the plugin assembles the release, so native and CLI builds produce identical output.
 
-When no bundler config exists, `rspfx build` / `pnpm build` synthesize the config and run the bundler internally — no manual `rspack.config.ts` is required.
+When no bundler config exists, `rspfx build` / `bun run build` synthesize the config and run the bundler internally — no manual `rspack.config.ts` is required.
 
 ### Vite — `vite.config.ts`
 

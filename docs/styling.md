@@ -12,7 +12,7 @@ Use `style-loader` in `packages/compiler-rspack/src/config.ts:182`, `output.inje
 
 `packages/compiler-rspack/src/config.ts:212` registers `test: /\.css$/` with `style-loader` + `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }` `importLoaders: hasPostcss && postcssLoader ? 1 : 0` and `test: /\.s[ac]ss$/i` with `style-loader` + `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }, importLoaders: (postcss ? 1 : 0) + 1` + `sass-loader` `api: "modern"`. `packages/plugin/src/vite.ts:340` sets `build.cssCodeSplit: false` and `css.modules: { localsConvention: 'asIs', scopeBehaviour: 'local' }` (`packages/plugin/src/vite.ts:330`). `packages/plugin/src/rsbuild.ts:398` registers the same `style-loader` + `css-loader` + `sass-loader` rules inside `modifyRspackConfig` and `packages/plugin/src/rspack.ts` inherits the compiler rules via `createRspackConfig`.
 
-All three paths handle `.css`, `.scss`, `.sass`, and `*.module.*` without user config. Enable PostCSS by adding `postcss.config.js`, `postcss.config.cjs`, `postcss.config.mjs`, `postcss.config.ts`, `postcss.config.cts`, `postcss.config.mts`, or `postcss.config.json` at the project root; Vite and Rsbuild auto-detect `postcss.config.*`, and `packages/compiler-rspack/src/config.ts:37` plus `packages/compiler-rspack/src/helpers/css.ts:8` plus `packages/plugin/src/rsbuild.ts:70` apply `postcss-loader` only when the config file exists (`importLoaders` is `1` for CSS / `2` for SCSS when present, otherwise `0`/`1`). Enable SCSS by installing `sass` (`pnpm add -D sass`); `sass-loader` resolves against the project `node_modules` and is skipped when `sass` is absent. CSS Modules activate automatically for `*.module.css` and `*.module.scss` via `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }`; plain `.css`/`.scss` stay global.
+All three paths handle `.css`, `.scss`, `.sass`, and `*.module.*` without user config. Enable PostCSS by adding `postcss.config.js`, `postcss.config.cjs`, `postcss.config.mjs`, `postcss.config.ts`, `postcss.config.cts`, `postcss.config.mts`, or `postcss.config.json` at the project root; Vite and Rsbuild auto-detect `postcss.config.*`, and `packages/compiler-rspack/src/config.ts:37` plus `packages/compiler-rspack/src/helpers/css.ts:8` plus `packages/plugin/src/rsbuild.ts:70` apply `postcss-loader` only when the config file exists (`importLoaders` is `1` for CSS / `2` for SCSS when present, otherwise `0`/`1`). Enable SCSS by installing `sass` (`bun add -D sass`); `sass-loader` resolves against the project `node_modules` and is skipped when `sass` is absent. CSS Modules activate automatically for `*.module.css` and `*.module.scss` via `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }`; plain `.css`/`.scss` stay global.
 
 Scope behaviour: `packages/plugin/src/vite.ts:330` sets `css.modules.scopeBehaviour: 'local'` explicitly with `localsConvention: 'asIs'`; `packages/compiler-rspack/src/config.ts:218` and `packages/compiler-rspack/src/helpers/css.ts:58` and `packages/plugin/src/rsbuild.ts:403` use `css-loader` `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }` without explicit `mode` — `css-loader` defaults to `mode: 'local'` when `auto` matches, so `*.module.*` is local and plain files are global; `:global{}` inside a module leaks to the global scope, so use it only intentionally.
 
@@ -70,7 +70,7 @@ export default defineConfig({
 
 Tailwind v4 integrates via PostCSS only; no bundler-specific plugin or patch is required.
 
-Install `tailwindcss`, `@tailwindcss/postcss`, and `postcss` (`pnpm add -D tailwindcss @tailwindcss/postcss postcss`), add `postcss.config.mjs` at the project root, and import Tailwind once in `src/app.css`.
+Install `tailwindcss`, `@tailwindcss/postcss`, and `postcss` (`bun add -D tailwindcss @tailwindcss/postcss postcss`), add `postcss.config.mjs` at the project root, and import Tailwind once in `src/app.css`.
 
 ```js
 // postcss.config.mjs
@@ -102,7 +102,7 @@ export const Hello = () => <div className={styles.hello}>Hello</div>;
 
 Files named `*.css` and `*.scss` without `.module.` are global: selectors apply document-wide and the import has no mapping export. Use for resets, Tailwind entry (`src/app.css`), or third-party CSS.
 
-SCSS requires `sass` (`pnpm add -D sass`); `sass-loader` `api: "modern"` in `packages/compiler-rspack/src/config.ts:245` and `packages/compiler-rspack/src/helpers/css.ts:95` and `packages/plugin/src/rsbuild.ts:426` compiles `@mixin`, `@include`, `@import`, and `@use`. Install `sass` when any `.scss` or `.sass` file exists; plain `.css` projects do not need it.
+SCSS requires `sass` (`bun add -D sass`); `sass-loader` `api: "modern"` in `packages/compiler-rspack/src/config.ts:245` and `packages/compiler-rspack/src/helpers/css.ts:95` and `packages/plugin/src/rsbuild.ts:426` compiles `@mixin`, `@include`, `@import`, and `@use`. Install `sass` when any `.scss` or `.sass` file exists; plain `.css` projects do not need it.
 
 ## Opt-out and fully custom CSS
 

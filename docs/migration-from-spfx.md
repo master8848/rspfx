@@ -39,12 +39,12 @@ RSPFX intentionally mirrors official SPFx project conventions, so most of an exi
    ```sh
    rspfx migrate --dry-run
    rspfx migrate             # or rspfx migrate --bundler vite
-   pnpm install
+   bun install
    ```
 
-   Bundler config is optional — `rspfx migrate` writes `rspack.config.ts` (or `vite.config.ts` / `rsbuild.config.ts` with `--bundler`), but you can also run zero-config where `pnpm build` / `rspfx dev` synthesize the config from the manifests and run Rspack/Vite internally.
+   Bundler config is optional — `rspfx migrate` writes `rspack.config.ts` (or `vite.config.ts` / `rsbuild.config.ts` with `--bundler`), but you can also run zero-config where `bun run build` / `rspfx dev` synthesize the config from the manifests and run Rspack/Vite internally.
 
-> **Quick way:** `rspfx migrate --dry-run` → `rspfx migrate` → `pnpm install` → `rspfx dev`. No hand-editing of configs.
+> **Quick way:** `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` → `rspfx dev`. No hand-editing of configs.
 
 > **Tip:** No manual `@microsoft/sp-*` install is needed for most web parts — the toolchain externalizes them and emits `"type": "component"` entries so SharePoint resolves its built-in copies. Install `sp-*` only if your code imports that runtime.
 
@@ -54,7 +54,7 @@ RSPFX intentionally mirrors official SPFx project conventions, so most of an exi
    - **Config drift:** `spfxVersion` must match any installed `@microsoft/sp-*` versions; component-manifest `version: "*"` is replaced by the `package.json` version, and sp-* dependency ids/versions are harvested from `node_modules` when present with fallback to `reference/sp-component-ids.json`.
    - **Localization/assets:** `localizedPath` resources and `assets/` folders are picked up from the manifest as before.
 
-4. **Package** — `rspfx package` → `sharepoint/solution/<name>.sppkg` → upload to the app catalog → add to a page. See [building-packages.md](building-packages.md) for the artifact anatomy and CI usage. `pnpm build` works identically zero-config.
+4. **Package** — `rspfx package` → `sharepoint/solution/<name>.sppkg` → upload to the app catalog → add to a page. See [building-packages.md](building-packages.md) for the artifact anatomy and CI usage. `bun run build` works identically zero-config.
 
 5. **Revert if needed** — `rspfx migrate --revert` restores from `.rspfx/migrate-backup.json`, or `git restore .` if the branch was clean.
 

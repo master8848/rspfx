@@ -8,7 +8,7 @@ RSPFX replaces all of it with one modern bundler and zero required config files.
 
 Official SPFx projects need `gulpfile.js`, `tsconfig.json` (with Heft extends), `config/config.json`, `config/serve.json`, `config/write-manifests.json`, `config/package-solution.json` and a `.yo-rc.json` — and the build behavior is spread across all of them.
 
-RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `pnpm build` synthesize the same options and run Rspack or Vite internally. If `rspack` or `vite` is installed they just work.
+RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `bun run build` synthesize the same options and run Rspack or Vite internally. If `rspack` or `vite` is installed they just work.
 
 When you want explicit control, one optional plugin in your bundler config is enough:
 
@@ -94,10 +94,10 @@ None of this breaks SharePoint:
 | Workbench dev server (`:4321` HTTPS) | gulp serve | `rspfx dev` (zero-config — synthesizes from manifests) |
 | Web part + app manifests | Heft plugin | auto-generated |
 | Localized resources | Heft | built-in (per-locale bundles) |
-| `.sppkg` packaging | gulp bundle + package-solution | `rspfx package` (or `pnpm build` zero-config) |
+| `.sppkg` packaging | gulp bundle + package-solution | `rspfx package` (or `bun run build` zero-config) |
 | App catalog deploy | manual / CI scripts | `rspfx deploy` (token) |
 | Property pane, Teams hosts, full-page | runtime, unaffected | runtime, unaffected |
 | Fast refresh | — | `rspfx dev --refresh` (react/preact/vue/svelte/solid; vanilla reloads) |
 | Bundle analysis | webpack-bundle-analyzer setup | `rspfx analyze` |
 | One-command project creation | `yo @microsoft/sharepoint` | `rspfx new` |
-| Migrate existing project | manual edits | `rspfx migrate --dry-run` → `rspfx migrate` → `pnpm install` |
+| Migrate existing project | manual edits | `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` |

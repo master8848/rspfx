@@ -59,7 +59,7 @@ Baseline figures are user-reported for `fast-spfx`/`gulp serve` on similar hardw
 ## What to expect on CI / corporate machines
 
 - Numbers above are for a local Apple Silicon machine with warm caches. On Linux CI runners, cold Docker images, or slower disks, expect higher absolute numbers — but the **ratio** versus the classic stack holds because both stacks suffer the same environmental overhead.
-- **`node_modules` state dominates cold starts.** The measured "cold start" assumes dependencies are already installed. A fresh `pnpm install` (classic: `npm install` with package.json shrinkwraps, often 1–3+ min) adds on top for both stacks; RSPFX's own serve path adds only a few hundred ms once install is done.
+- **`node_modules` state dominates cold starts.** The measured "cold start" assumes dependencies are already installed. A fresh `bun install` (classic: `npm install` with package.json shrinkwraps, often 1–3+ min) adds on top for both stacks; RSPFX's own serve path adds only a few hundred ms once install is done.
 - **Warm-cache note**: the first `rspfx dev` after a fresh clone pays install + a one-time `~/.rspfx/certs` generation (~1–2 s); subsequent starts skip both. Keep `node_modules` intact across sessions to stay in the measured regime — every npm reinstall resets the cache the toolchain depends on.
 - **Disk speed matters**: the dev server writes bundles to disk (`writeToDisk`), so recompile latency includes disk write time; on network-backed or heavily loaded corporate storage add a small constant, not a multiplier.
 - Reproducing: run `node bench/bench.mjs examples/shadcn` (see [`bench/README.md`](../bench/README.md)). `rspfx doctor`/`rspfx analyze` are not part of the benchmark.

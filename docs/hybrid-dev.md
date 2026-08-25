@@ -40,8 +40,8 @@ Hybrid mode is dev-only by design so production output stays byte-compatible wit
 ```sh
 rspfx migrate --dry-run   # preview
 rspfx migrate             # apply — backs up to .rspfx/migrate-backup.json
-pnpm install
-rspfx build               # or pnpm build — bundler config is optional, Rspack/Vite runs internally
+bun install
+rspfx build               # or bun run build — bundler config is optional, Rspack/Vite runs internally
 ```
 
 After migrate the same `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` drive both toolchains — see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx). Revert with `rspfx migrate --revert` or `git restore .`.

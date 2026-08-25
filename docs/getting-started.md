@@ -4,7 +4,7 @@ RSPFX builds SharePoint web parts with Rspack instead of gulp + webpack — you 
 
 ## 1. Install
 
-Requirements: **Node 20+** and **pnpm** (npm and yarn also work).
+Requirements: **Node 20+** and **Bun** (npm, yarn, pnpm also work for consumers).
 
 ```sh
 npm i -g @mbsks/rspfx-cli
@@ -59,7 +59,7 @@ Every path above is a default — you can move folders by setting `paths` in the
 
 ### Bundler config is optional
 
-For standard layouts you can omit `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` entirely. The CLI uses your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` and runs Rspack or Vite internally (`pnpm build` / `rspfx build`). If `rspack` or `vite` is installed in the project it is used directly — no extra setup. Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts`) is the recommended default; see [styling.md](styling.md) for CSS/SCSS, CSS Modules, and Tailwind v4.
+For standard layouts you can omit `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` entirely. The CLI uses your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` and runs Rspack or Vite internally (`bun run build` / `rspfx build`). If `rspack` or `vite` is installed in the project it is used directly — no extra setup. Vite (`vite.config.ts` with `rspfxVite` from `@mbsks/rspfx-plugin` `packages/plugin/src/vite.ts`) is the recommended default; see [styling.md](styling.md) for CSS/SCSS, CSS Modules, and Tailwind v4.
 
 When you do have a bundler config, your project config lives there:
 
@@ -161,7 +161,7 @@ rspfx build      # production compile: dist/ bundles + release/ manifests & asse
 rspfx package    # assemble sharepoint/solution/<name>.sppkg (implies build)
 ```
 
-You can also run `pnpm build` — the toolchain runs Rspack or Vite internally, no manual `rspack.config.ts` edits needed. If you added a bundler config it is used; otherwise the same manifests drive the build.
+You can also run `bun run build` — the toolchain runs Rspack or Vite internally, no manual `rspack.config.ts` edits needed. If you added a bundler config it is used; otherwise the same manifests drive the build.
 
 The `.sppkg` is a DEFLATE zip containing `AppManifest.xml`, feature XML, component-manifest-bearing elements files, and — when `includeClientSideAssets` is true in `config/package-solution.json` — your bundles under `ClientSideAssets/`, with manifest base URLs rewritten to the `HTTPS://SPCLIENTSIDEASSETLIBRARY/` pseudo-URL that SharePoint resolves at install time.
 

@@ -31,12 +31,12 @@ To fully switch to RSPFX builds:
 ```sh
 rspfx migrate --dry-run   # preview changes (no writes)
 rspfx migrate             # apply: rewrites package.json/config.json, writes bundler config, backs up to .rspfx/migrate-backup.json
-pnpm install              # toolchain deps drop out, @mbsks/rspfx-plugin added
+bun install              # toolchain deps drop out, @mbsks/rspfx-plugin added
 rspfx dev                 # verify workbench
 rspfx package             # → sharepoint/solution/<name>.sppkg
 ```
 
-`--bundler vite` or `--bundler rsbuild` scaffolds `vite.config.ts` / `rsbuild.config.ts` instead of `rspack.config.ts`. After migrate `pnpm build` / `rspfx build` runs Rspack or Vite internally — if `rspack` or `vite` is installed it just works.
+`--bundler vite` or `--bundler rsbuild` scaffolds `vite.config.ts` / `rsbuild.config.ts` instead of `rspack.config.ts`. After migrate `bun run build` / `rspfx build` runs Rspack or Vite internally — if `rspack` or `vite` is installed it just works.
 
 > **Tip:** Commit or stash before migrating. `git diff` shows the exact changes. No `src/` is touched outside the documented rewrites.
 
@@ -51,7 +51,7 @@ Or, if the branch is clean:
 ```sh
 git restore .
 git clean -fd .rspfx
-pnpm install
+bun install
 ```
 
 Both restore the Heft/Gulp toolchain. Delete the generated `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` and Heft scripts return as before.
@@ -68,9 +68,9 @@ Both restore the Heft/Gulp toolchain. Delete the generated `rspack.config.ts` / 
 ```sh
 rspfx migrate --dry-run
 rspfx migrate
-pnpm install        # or npm/yarn — toolchain deps drop out of the lockfile
-pnpm dev            # workbench-first development (see getting-started.md)
-pnpm package        # → sharepoint/solution/<name>.sppkg (or your paths.zippedPackage)
+bun install        # or npm/yarn — toolchain deps drop out of the lockfile
+bun run dev            # workbench-first development (see getting-started.md)
+bun run package        # → sharepoint/solution/<name>.sppkg (or your paths.zippedPackage)
 ```
 
 `rspfx migrate` performs the mechanical parts (idempotent, never touches `src/` outside the two documented rewrites, never installs anything, backs up to `.rspfx/migrate-backup.json`):
@@ -93,7 +93,7 @@ Keep runtime deps (your framework, Fluent UI, PnPjs). Keep `@microsoft/sp-*` onl
 
 ### 2. Add the config file (optional — zero-config also works)
 
-For standard layouts you can skip this and run `pnpm build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Rspack/Vite internally. If you want an explicit config:
+For standard layouts you can skip this and run `bun run build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Rspack/Vite internally. If you want an explicit config:
 
 ```ts
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
@@ -165,7 +165,7 @@ If `config/spfx-customize-webpack.js` did something real (aliases, loader tweaks
 ### 8. Migrate CI
 
 ```yaml
-- run: pnpm install --frozen-lockfile
+- run: bun install --frozen-lockfile
 - run: rspfx doctor
 - run: rspfx package
 - upload: sharepoint/solution/*.sppkg
@@ -190,7 +190,7 @@ If `config/spfx-customize-webpack.js` did something real (aliases, loader tweaks
 |---|---|---|
 | Dev | `gulp serve` / `heft start --clean` | `rspfx dev` |
 | Hot reload | + spfx-fast-serve | `rspfx dev --refresh` |
-| Production build | `gulp bundle --ship` / `heft test --production` | `rspfx build` (or `pnpm build` — zero-config, no manual bundler config) |
+| Production build | `gulp bundle --ship` / `heft test --production` | `rspfx build` (or `bun run build` — zero-config, no manual bundler config) |
 | Package | `gulp package-solution --ship` | `rspfx package` |
 | Upload | manual / azure storage | `rspfx deploy` |
 | Bundle report | webpack-bundle-analyzer | `rspfx analyze` |

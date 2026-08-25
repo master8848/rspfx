@@ -16,9 +16,9 @@ RSPFX is a complete, from-scratch replacement for the official SharePoint Framew
 From this repository:
 
 ```sh
-pnpm install
-pnpm build        # build all @mbsks/rspfx-* packages
-pnpm test         # run the vitest suite
+bun install
+bun run build        # build all @mbsks/rspfx-* packages
+bun run test         # run the vitest suite
 ```
 
 Use the CLI in your own projects (installed globally from npm):
@@ -38,9 +38,9 @@ npm i -g @mbsks/rspfx-cli
 cd my-existing-spfx-app
 rspfx migrate --dry-run   # preview changes
 rspfx migrate             # apply: backs up to .rspfx/migrate-backup.json
-pnpm install
+bun install
 rspfx dev                 # same manifests work for both toolchains
-pnpm build                # or rspfx build — bundler config is optional, Rspack/Vite is used internally
+bun run build             # or rspfx build — bundler config is optional, Rspack/Vite is used internally
 ```
 
 > **Tip:** You do not need to manually install `@microsoft/sp-*` for most web parts. The toolchain externalizes them and emits `"type": "component"` manifest entries so SharePoint resolves its built-in copies. Install them only if your code imports a specific `sp-*` runtime (e.g. `@microsoft/sp-http`).
@@ -50,7 +50,7 @@ pnpm build                # or rspfx build — bundler config is optional, Rspac
 Use `@pnp/sp` over raw `fetch`/`SPHttpClient` for list queries — it handles `select`/`expand`/`filter`/batching and SharePoint REST details for you.
 
 ```sh
-pnpm add @pnp/sp @pnp/graph
+bun add @pnp/sp @pnp/graph
 ```
 
 ```ts
@@ -91,7 +91,7 @@ Use dual npm scripts in `package.json` to switch: `"build": "rspfx build"` vs `"
 
 No migration required for dev: `rspfx dev` synthesizes config from the manifests and runs zero-config on an official project (see [docs/hybrid-dev.md](docs/hybrid-dev.md)).
 
-To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`); revert with `rspfx migrate --revert` or `git restore . && git clean -fd .rspfx && pnpm install`, then delete the generated `rspack.config.ts`/`vite.config.ts` — Heft returns as before. See [docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
+To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`); revert with `rspfx migrate --revert` or `git restore . && git clean -fd .rspfx && bun install`, then delete the generated `rspack.config.ts`/`vite.config.ts` — Heft returns as before. See [docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
 
 ## Supported targets
 
@@ -104,7 +104,7 @@ To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`)
 Frameworks plug in via `FrameworkPreset` in `@mbsks/rspfx-core`; see [docs/frameworks.md](docs/frameworks.md).
 
 - **SPFx targets:** see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
-- **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
+- **Node:** 20+; **Bun** recommended for repo development (consumers can use npm/yarn/pnpm/bun)
 
 > **Tip:** If you need Vue/Svelte/Solid/Preact, use RSPFX — Microsoft's toolchain supports only React/vanilla (and Angular via Heft). For React/vanilla either toolchain works; keep the same manifests and switch via scripts (see [Same manifest for Heft/Gulp and RSPFX](#same-manifest-for-heftgulp-and-rspfx)).
 

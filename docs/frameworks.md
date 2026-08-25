@@ -129,7 +129,7 @@ Nothing in the build, packaging, or dev pipeline changes.
 - `onThemeChanged()` syncs the SharePoint theme (`context.themeProvider` /
   `ThemeProvider.addChangeListener`) into a Fluent `ThemeProvider`, so web parts
   track the tenant theme live.
-- Install it explicitly (`pnpm add @mbsks/rspfx-fluent-adapter @fluentui/react`) and extend `FluentWebPart` in your web part class.
+- Install it explicitly (`bun add @mbsks/rspfx-fluent-adapter @fluentui/react`) and extend `FluentWebPart` in your web part class.
 
 Notes: bundle React per web part (official SPFx behavior — do not externalize it);
 be aware of React version skew in tenants running an older React on the page.
