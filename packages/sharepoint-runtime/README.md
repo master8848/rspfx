@@ -1,6 +1,6 @@
 # @mbsks/rspfx-sharepoint-runtime
 
-SharePoint runtime bridges for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+SharePoint runtime bridges for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Shims and bridges that let `@microsoft/sp-*` packages run in the local playground sandbox: mock web part context, playground loaders, and environment emulation.
 

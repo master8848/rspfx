@@ -38,7 +38,7 @@
     "commander": "^12.1.0",
     "jiti": "^2.4.0"
   },
-  "description": "rspfx CLI - SPFx-compatible build toolchain powered by Rspack",
+  "description": "SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

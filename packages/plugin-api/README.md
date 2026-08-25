@@ -1,6 +1,6 @@
 # @mbsks/rspfx-plugin-api
 
-Plugin API of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Plugin API of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Lets you extend the toolchain with `RspfxExtension` instances: framework presets, compiler hooks, and package hooks.
 

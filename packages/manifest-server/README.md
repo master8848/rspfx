@@ -1,6 +1,6 @@
 # @mbsks/rspfx-manifest-server
 
-Development certificates for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Development certificates for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Generates and caches the self-signed TLS key/cert pair used by the local HTTPS dev server (the compiler-rspack dev server; serving itself is handled there, not here). Certificates live in `~/.rspfx/certs` and are reused across runs.
 

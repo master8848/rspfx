@@ -1,6 +1,6 @@
 # @mbsks/rspfx-core
 
-Zero-dependency core of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Zero-dependency core of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Contains the shared foundation used by every RSPFX package: SPFx types, the base web part, project config, and environment helpers. It has **no dependencies** — no framework, no bundler, no Node APIs — and runs anywhere.
 

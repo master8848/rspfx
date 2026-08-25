@@ -151,7 +151,7 @@ function toPort(value: unknown): number | undefined {
 export function configureProgram(): void {
   program
     .name('rspfx')
-    .description('SPFx-compatible build toolchain powered by Rspack')
+    .description('SPFx-compatible build toolchain. Works with Vite, Rsbuild, and Rspack')
     .version(version, '-v, --version')
     .showHelpAfterError();
 
@@ -187,7 +187,7 @@ export function configureProgram(): void {
 
   program
     .command('dev')
-    .description('start the dev server — local preview at / (Rspack projects) or SharePoint workbench with --tenant')
+    .description('start the dev server — local preview at / or workbench with --tenant')
     .option('--refresh', 'enable fast refresh')
     .option('--browser', 'open the local preview or workbench in a browser')
     .option('--port <n>', 'dev server port')

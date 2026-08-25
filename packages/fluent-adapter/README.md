@@ -1,6 +1,6 @@
 # @mbsks/rspfx-fluent-adapter
 
-Fluent UI adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Fluent UI adapter for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Optional `FluentWebPart` base class for React web parts styled with Fluent UI v8.
 

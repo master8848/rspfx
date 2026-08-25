@@ -1,12 +1,12 @@
 # Architecture
 
-See [ARCHITECTURE.md](../ARCHITECTURE.md) for the full plan; this page is the quick orientation.
+Short orientation. Full plan is [`ARCHITECTURE.md`](../ARCHITECTURE.md).
 
 ## Overview
 
-RSPFX is a complete SPFx-compatible build toolchain powered by **Rspack**, replacing Heft + webpack + gulp. The CLI is the only package that composes everything else; no dependency cycles. Bundler config (`rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts`) is optional — when absent the CLI synthesizes the same options from `config/config.json` + `package.json` and runs Rspack or Vite internally.
+RSPFX replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbuild, or Rspack. No bundler config needed for standard layouts; the CLI builds the same options from `config/config.json` + `package.json`.
 
-Optional native acceleration lives in `crates/*` (`rspfx-sppkg`, `rspfx-manifest`, `rspfx-rspack-plugin`) — Rust crates with JS fallback; no native binary required to build or test.
+`crates/*` are optional Rust with JS fallback.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -18,46 +18,48 @@ Optional native acceleration lives in `crates/*` (`rspfx-sppkg`, `rspfx-manifest
          ├───────────────┬──────────────────┬─────────────────┬──────────┐
          ▼               ▼                  ▼                 ▼          ▼
    ┌───────────┐  ┌────────────┐   ┌──────────────┐   ┌────────────┐  ┌──────────┐
-   │compiler-  │  │ manifest-  │   │ sppkg-       │   │ dev-runtime│  │templates │
-   │rspack     │  │ generator  │   │ builder      │   │            │  │          │
-   └─────┬─────┘  └─────┬──────┘   └──────┬───────┘   └─────┬──────┘  └──────────┘
-         │              │                 │                 │
+   │  bundler  │  │ manifest-  │   │   sppkg-     │   │dev-runtime │  │templates │
+   │Vite/Rsbuild│  │ generator  │   │   builder    │   │            │  │          │
+   │  / Rspack  │  └─────┬──────┘   └──────┬───────┘   └─────┬──────┘  └──────────┘
+   └─────┬─────┘        │                 │                 │
          ▼              ▼                 ▼                 ▼
-     Rspack        manifests.js      solution.sppkg   ┌─────────────┐
-     (the ONLY      (component         (valid ZIP)    │dev server   │
-      bundler)      manifests)                        │on :4321     │
-                                                      └──────┬──────┘
-                                                             │ HTTPS
-┌────────────────────  RUNTIME (SharePoint tenant)  ─────────────────────┐
-│  Workbench (_layouts/15/workbench.aspx)                                │
-│    └─ debugManifestsFile ──▶ https://localhost:4321/temp/manifests.js │
-│         └─ loaderConfig ──▶ https://localhost:4321/dist/*.js          │
-│              (dev)   or  relative paths inside installed .sppkg (prod) │
-└────────────────────────────────────────────────────────────────────────┘
+   Vite/Rsbuild/   manifests.js      solution.sppkg   ┌─────────────┐
+     Rspack        (component         (valid ZIP)    │ dev server  │
+     bundles       manifests)                        │  on :4321   │
+                                                    └──────┬──────┘
+                                                           │ HTTP (local) / HTTPS (sharepoint)
+┌────────────────────  RUNTIME (SharePoint tenant / local preview)  ──────────┐
+│  Workbench (_layouts/15/workbench.aspx)                                     │
+│    └─ debugManifestsFile ──▶ https://localhost:4321/temp/manifests.js      │
+│         └─ loaderConfig ──▶ https://localhost:4321/dist/*.js               │
+│              (dev)   or  relative paths inside installed .sppkg (prod)     │
+│  Local preview (no tenant): http://localhost:4321/ → local-runtime.js     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Package map
+## Packages
 
-| Package | Layer | Depends on | Owns |
-|---|---|---|---|
-| `core` | foundation | — | SPFx interfaces, `HeadlessAdapter`, `HeadlessContext`, `WebPartContextLike`, `Environment`, `Version`, `defineConfig` — zero-deps, no `BaseWebPart` |
-| `webpart-base` | foundation | core + `@microsoft/sp-webpart-base` | `HeadlessWebPart`, `BaseWebPart` alias, `defineWebPart` |
-| `diagnostics` | foundation | core | logger (`child`, `isLevelEnabled`, `trace`, JSON), `RspfxError` + `AggregateRspfxError`, `formatError`, `trace`/`benchmark`, `codes` |
-| `plugin-api` | foundation | core, diagnostics | `FrameworkPreset`, `HookBus` (`emitBeforeCompile` etc.), hooks (`BeforeCompile`, `BeforePackage` etc.), `RSpfxInstance.hooks: HookBus` |
-| `compiler-rspack` | build | plugin-api, diagnostics | Rspack config factory, swc TS/JSX, SCSS/CSS-modules, assets, caching, framework plugin stubs |
-| `manifest-generator` | build | core, diagnostics | component manifests, manifests.js, loaderConfig, sp-* dependency discovery |
-| `sppkg-builder` | build (priority 1) | manifest-generator, core | package-solution.json → AppManifest/features/ZIP `.sppkg` |
-| `manifest-server` | dev | core, diagnostics | dev certificates in `~/.rspfx/certs` only; `:4321` serving is handled by the compiler dev server |
-| `dev-runtime` | dev | core, compiler-rspack, manifest-server, manifest-generator | serve emulation (`--mode local|sharepoint`), auto-reload (HTTP poll → `location.reload`), fast-refresh runtime, local preview page + mock `/_api`, workbench URL |
-| `framework-vanilla\|react\|solid\|preact\|vue\|svelte` | framework | core, plugin-api, webpart-base | `createXAdapter` headless adapter + thin `<Cap>WebPart` shim + compiler preset |
-| `fluent-adapter` | optional | core, framework-react, webpart-base | `FluentWebPart`, `createFluentAdapter`, theme sync |
-| `sharepoint-runtime` | runtime | core | SPFx client emulation for the local preview: real `WebPartContext` over a mock PageContext + local theme provider, `createHeadlessContext`, local bootstrap loader (`/dist/local-runtime.js`), sp-* bridges |
-| `templates` | scaffolding | core | project scaffolding (no playground — the local preview page is generated by dev-runtime) |
-| `cli` | app | everything | all commands, prompts |
+| Package | Depends on | What it does |
+|---|---|---|
+| `core` | — | Types, `HeadlessAdapter`, `defineConfig`. Zero deps. |
+| `webpart-base` | `core` + `@microsoft/sp-webpart-base` | `HeadlessWebPart`, `defineWebPart`. |
+| `diagnostics` | `core` | Logger, `RspfxError`. |
+| `plugin-api` | `core`, `diagnostics` | `FrameworkPreset`, `HookBus`. |
+| `compiler-rspack` | `core`, `plugin-api`, `diagnostics` | Rspack config, SWC, SCSS, cache, dev server. |
+| `manifest-generator` | `core`, `diagnostics` | Component manifests, `manifests.js`. |
+| `sppkg-builder` | `core`, `diagnostics` | `package-solution.json` → `.sppkg`. |
+| `manifest-server` | `core`, `diagnostics` | Certs `~/.rspfx/certs`. |
+| `dev-runtime` | `core`, `compiler-rspack`, `manifest-server`, `manifest-generator`, `diagnostics`, `plugin-api`, `sharepoint-runtime`, `framework-*` | Dev server, reload, preview + mock `/_api`, workbench URL. |
+| `plugin` | `core`, `compiler-rspack`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api`, `@rspack/core` | `RSpfxPlugin` / `rspfxVite` / `rspfxRsbuild`. |
+| `framework-*` | `core`, `plugin-api`, `webpart-base` | Adapter + preset + thin shim. |
+| `fluent-adapter` | `core`, `framework-react`, `webpart-base` | Fluent theme sync. |
+| `sharepoint-runtime` | `core`, `diagnostics` | Local preview context, `local-runtime.js`. |
+| `templates` | `core` | Scaffolds. |
+| `cli` | everything | All commands. |
 
-`@microsoft/sp-*` packages are externalized and handled internally — most web parts need no manual install. When your code imports a `sp-*` runtime the toolchain emits `"type": "component"` script-resource entries so SharePoint resolves its built-in copies (ids/versions harvested from `node_modules` when present, otherwise `reference/sp-component-ids.json`).
+`@microsoft/sp-*` is externalized — no manual install for most web parts. Ids come from `node_modules` or `reference/sp-component-ids.json`.
 
-Node-only framework plugin modules (`@rspack/plugin-react-refresh`, `@rspack/plugin-preact-refresh`, `vue-loader`) are aliased by `createRspackConfig` to build-time stubs in `packages/compiler-rspack/src/stubs/`, so framework presets can reference them for compiler contributions without the browser bundle ever including those modules.
+Framework loaders (`vue-loader`, `@rspack/plugin-react-refresh`) are aliased to stubs by `createRspackConfig` so they never ship to the browser.
 
 ## Dependency graph
 
@@ -85,59 +87,48 @@ Node-only framework plugin modules (`@rspack/plugin-react-refresh`, `@rspack/plu
          └─────────┬────────┴──────────────────┘
                    ▼
             ┌────────────┐
-            │dev-runtime │  (serve emulation, ws, fast-refresh runtime)
+            │dev-runtime │
             └─────┬──────┘
                   ▼
-             rspfx CLI (composition root)
+            ┌─────────┐
+            │ plugin  │  (carries RspfxConfig)
+            └────┬────┘
+                  ▼
+             rspfx CLI
 ```
 
-Rules: `core` has zero dependencies except `valibot` for config schema; `compiler-rspack` knows nothing about SharePoint; `manifest-server` + `dev-runtime` exist only in dev; the CLI composes everything.
+`core` has no deps. `webpart-base` owns `sp-webpart-base`. `compiler-rspack` knows nothing about SharePoint. `manifest-server` + `dev-runtime` only run in dev.
 
-## Config flow
+## Config
 
-The CLI prefers an explicit bundler config when present — `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` loaded via `jiti`, scanning `plugins` for `RSPFX_PLUGIN_MARKER` and reading `options` (name, framework, `spfxVersion`, dev, build, paths, deploy). When no config is found it synthesizes the same shape from `config/config.json` + `config/package-solution.json` + `package.json` + `src/*/*.manifest.json` (see [hybrid-dev.md](hybrid-dev.md) and [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx)). `rspfx migrate` persists that synthesized config to a bundler file and backs up to `.rspfx/migrate-backup.json` for `--revert`.
+The CLI looks for `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` via `jiti`, finds `RSPFX_PLUGIN_MARKER`, reads `options`. If missing, it builds the same from `config/config.json` + `package.json` + `src/*/*.manifest.json`.
 
-File save validates `RspfxConfig` via `tryResolveConfig` before kernel cache version is computed.
+Use `rspfx migrate` to write the file (`--revert` to undo, backup in `.rspfx/migrate-backup.json`).
 
-## Dev-mode flow
+Validated via `tryResolveConfig` before the cache version is computed.
 
-```
-File save → Rspack incremental rebuild → build counter tick (/__rspfx_hot.json)
-→ client polls → browser update (location.reload)
-
-Local mode (default, no tenant): HTTP on :4321 — serves the local preview page
-at / + the mock SharePoint REST API at /_api (see commands.md).
-
-Workbench mode (tenant configured): HTTPS on :4321 (self-signed cert from
-manifest-server's ensureCertificates):
-  GET /temp/manifests.js   → cumulative debug manifests (project + sp-*)
-  GET /dist/*              → compiled bundles (writeToDisk)
-  GET /node_modules/*      → sp-* package manifests/bundles
-Workbench loads:
-  <tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true
-    &debugManifestsFile=<enc>https://localhost:4321/temp/manifests.js
-  → loaderConfig → https://localhost:4321/dist/*.js
-```
-
-Workbench-first is true only in sharepoint mode: `localhost:4321` serves bundles and manifests, but the workbench on the tenant is the primary surface. `manifests.js` is regenerated after each rebuild (bundle names are stable `[name].js` so loader entries stay valid).
-
-## Production flow
-
-Pipeline `src/ → compiler-rspack → dist/ → manifest-generator → sppkg-builder → solution.sppkg` — current behavior only.
+## Dev mode
 
 ```
-src/ → compiler-rspack → dist/ (bundles + assets)
-     → manifest-generator → release/manifests + release/assets
-       (release base URLs: write-manifests.json cdnBasePath, or [] /
-        HTTPS://SPCLIENTSIDEASSETLIBRARY/ when includeClientSideAssets)
-     → sppkg-builder → sharepoint/solution/<name>.sppkg
-       (ZIP: AppManifest.xml, feature_<id>.xml(.config/.rels),
-        <featureId>/WebPart_<componentId>.xml, ClientSideAssets/ bundles)
-     → app catalog install → workbench page → loads
+Save → rebuild → tick /__rspfx_hot.json → reload.
 ```
 
-Non-negotiables: sp-* never bundled (always `externals` + `"type": "component"` entries with ids/versions from the targeted SPFx version's `node_modules` when present, otherwise `reference/sp-component-ids.json`); bundle wrapper is the AMD `define('<id>_<version>', [...])` form; output naming `[name].js` matches `loaderConfig.scriptResources`; the `.sppkg` must be a byte-valid zip installable via app catalog.
+Local (no tenant): HTTP `:4321` — preview at `/` + mock `/_api`.
 
-## Same manifest for Heft/Gulp and RSPFX
+SharePoint (tenant set): HTTPS `:4321` — `/temp/manifests.js`, `/dist/*.js`, `node_modules/*`. Workbench loads `…/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` drive both the official toolchain and RSPFX. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx) for switching and revert.
+`manifests.js` is regenerated each rebuild. Bundle names are stable `[name].js`.
+
+## Production
+
+```
+src/ → bundler → dist/ → manifest-generator → release/ → sppkg-builder → sharepoint/solution/<name>.sppkg
+```
+
+Release URLs come from `write-manifests.json` `cdnBasePath`, or `[]` / `HTTPS://SPCLIENTSIDEASSETLIBRARY/` when `includeClientSideAssets`.
+
+sp-* is `externals` + `"type": "component"`. Wrapper is `define('<id>_<version>', …)`. Output is `[name].js`. `.sppkg` is a valid ZIP.
+
+## Same manifest
+
+`config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` work for both Heft/Gulp and RSPFX. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).

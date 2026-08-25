@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-vue
 
-Vue framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Vue framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Provides the `VueWebPart` base class with `vue-loader` SFC compilation.
 

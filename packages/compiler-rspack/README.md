@@ -1,6 +1,6 @@
 # @mbsks/rspfx-compiler-rspack
 
-Compiler layer of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Compiler layer of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 A thin, owned configuration factory around **Rspack** (no webpack, Heft, or gulp anywhere): TypeScript via SWC, SCSS, PostCSS/Tailwind, asset handling, dev server, and fast refresh wiring.
 

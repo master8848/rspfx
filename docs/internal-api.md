@@ -7,7 +7,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ## Shared conventions
 
-- Packages: `@mbsks/rspfx-<name>`, version `0.0.14`, ESM, `main`/`types` → `dist/`; all 19 publishable packages (`packages/*` + `apps/cli`) share one version bumped together via `scripts/publish.mjs:17`; `examples/*` and `apps/playground` are `private:true` and excluded.
+- Packages: `@mbsks/rspfx-<name>`, version `0.0.14`, ESM, `main`/`types` → `dist/`; all 20 publishable packages (`packages/*` + `apps/cli`) share one version bumped together via `scripts/publish.mjs:17`; `examples/*` and `apps/playground` are `private:true` and excluded.
 - Native acceleration (optional): `crates/rspfx-sppkg`, `crates/rspfx-manifest`, `crates/rspfx-rspack-plugin` provide Rust implementations with JS fallback (`try { require('../../crates/.../index.node') } catch {}`); no `.node` required — `bun run build` and `bun run test` pass with or without native.
 - All packages build with `tsc` to `dist/`; typecheck: `bunx --cwd tsc --noEmit -p <pkg>/tsconfig.json`.
 - Errors: throw `RspfxError(code, message, cause?)` from `@mbsks/rspfx-diagnostics`.
@@ -145,7 +145,7 @@ export const BaseWebPart = HeadlessWebPart;
 
 Compat shim at `@mbsks/rspfx-core/webpart` re-exports `HeadlessWebPart as BaseWebPart` with a one-time `console.warn('deprecated: use @mbsks/rspfx-webpart-base')`.
 
-## @mbsks/rspfx-plugin-api (depends on core only)
+## @mbsks/rspfx-plugin-api (depends on core, diagnostics)
 
 ```ts
 export interface FrameworkRspackContributions {   // structural; typed loosely to stay compiler-agnostic
@@ -282,7 +282,7 @@ export interface Tracer { span<T>(name: string, fn: ()=>Promise<T>): Promise<T>;
 export function createTracer(logger: Logger): Tracer;
 ```
 
-## @mbsks/rspfx-compiler-rspack (depends on plugin-api, diagnostics)
+## @mbsks/rspfx-compiler-rspack (depends on core, plugin-api, diagnostics)
 
 ```ts
 export interface BundleEntry {
@@ -310,7 +310,7 @@ export function watch(ctx: CompileContext, onDone: (stats: unknown, errors: unkn
 export async function startDevServer(ctx: CompileContext, devServerOptions: unknown): Promise<{ close(): Promise<void>; port: number; compiler: unknown; onEmit(cb: () => void): void }>;
 ```
 
-## @mbsks/rspfx-plugin (depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, diagnostics)
+## @mbsks/rspfx-plugin (depends on core, compiler-rspack, dev-runtime, manifest-generator, manifest-server, diagnostics, plugin-api, @rspack/core)
 
 The project config as bundler plugins — the replacement for the legacy
 `rspfx.config.ts`. The CLI loads the user's `rspack.config.ts` /
@@ -417,7 +417,7 @@ export function findSpDependencies(projectRoot: string): Map<string, { id: strin
 export function rewriteSpManifestForDebug(spManifest: unknown, relativePath: string, baseUrl: string): unknown; // prepend base url per ManifestUrlProcessor
 ```
 
-## @mbsks/rspfx-sppkg-builder (depends on core, manifest-generator, diagnostics)
+## @mbsks/rspfx-sppkg-builder (depends on core, diagnostics)
 
 ```ts
 export interface PackageConfig { solution: Record<string, unknown>; paths: { zippedPackage: string } } // package-solution.json
@@ -455,7 +455,7 @@ export async function ensureCertificates(certsDir: string): Promise<{ key: strin
 // writes cert.pem.trust.txt + logs trust instructions on first generation
 ```
 
-## @mbsks/rspfx-dev-runtime (depends on core, compiler-rspack, manifest-server, manifest-generator, diagnostics)
+## @mbsks/rspfx-dev-runtime (depends on core, compiler-rspack, manifest-server, manifest-generator, diagnostics, plugin-api, sharepoint-runtime, framework-*)
 
 ```ts
 export type ServeMode = 'local' | 'sharepoint';
@@ -595,7 +595,7 @@ export abstract class <Cap>WebPart<TProps, TState> extends HeadlessWebPart<TProp
 - Svelte: `createSvelteAdapter` does `new Component({ target: root, props })` with `WeakMap<HTMLElement,SvelteComponentTyped>`; checks `$destroy` existence for Svelte 4/5 compat.
 - Each preset's `contributions` unchanged; `vite()`/`rsbuild()` methods unchanged.
 
-## @mbsks/rspfx-sharepoint-runtime (depends on core; peer @microsoft/sp-*)
+## @mbsks/rspfx-sharepoint-runtime (depends on core, diagnostics; peer @microsoft/sp-*)
 
 Local preview emulation of the SPFx client — used by the `/dist/local-runtime.js`
 bootstrap (`rspfx dev` local mode) to instantiate web parts without SharePoint:

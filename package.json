@@ -3,7 +3,7 @@
   "version": "0.0.14",
   "private": true,
   "type": "module",
-  "description": "SPFx-compatible build toolchain powered by Rspack",
+  "description": "SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

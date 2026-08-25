@@ -1,15 +1,15 @@
 # RSPFX
 
-**An SPFx-compatible build toolchain powered by Rspack. Replaces Heft + webpack + gulp.**
+**An SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.**
 
-RSPFX is a complete, from-scratch replacement for the official SharePoint Framework toolchain. It builds SPFx client-side web parts that load in the SharePoint workbench and install as `.sppkg` packages through the app catalog — without ever touching webpack, Heft, or gulp.
+RSPFX is a drop-in replacement for the official SPFx toolchain. It builds web parts that load in the SharePoint workbench and install as `.sppkg` — without webpack, Heft, or gulp.
 
 ## Principles
 
-- **Never webpack / Heft / gulp.** Those strings never appear in the runtime, the build output, or `node_modules` of generated projects. Only `@microsoft/sp-*` runtime dependencies are allowed in generated projects when you need them — for most web parts they are externalized and handled internally so you do not install them manually.
-- **Rspack is the default bundler.** The compiler layer is a thin, owned config factory around Rspack; Vite and Rsbuild are also supported via `@mbsks/rspfx-plugin`. If `rspack` or `vite` is installed in your project they just work — no manual bundler config is required for standard layouts.
-- **Framework-agnostic core.** `@mbsks/rspfx-core` has zero dependencies — no framework, no bundler, no Node APIs. Frameworks plug in via the `FrameworkPreset` contract.
-- **Workbench-first development.** The SharePoint workbench is the primary dev surface, exactly like official `gulp serve`: an HTTPS manifest server on `:4321`, debug manifests, browser opens only with `--browser`.
+- **Never webpack / Heft / gulp.** Those strings never appear in build output or generated projects. `@microsoft/sp-*` is externalized — you only install it if your code imports it.
+- **Pick your bundler.** Vite is default. Rsbuild and Rspack also work. No bundler config needed for standard layouts — `config/config.json` and your manifests are enough.
+- **Framework-agnostic core.** `@mbsks/rspfx-core` has zero dependencies. Frameworks plug in via `FrameworkPreset`.
+- **Workbench-first.** Same as `gulp serve`: dev server on `:4321`, debug manifests, browser opens only with `--browser`.
 
 ## Quick start
 
@@ -40,7 +40,7 @@ rspfx migrate --dry-run   # preview changes
 rspfx migrate             # apply: backs up to .rspfx/migrate-backup.json
 bun install
 rspfx dev                 # same manifests work for both toolchains
-bun run build             # or rspfx build — bundler config is optional, Rspack/Vite is used internally
+bun run build             # or rspfx build — bundler config is optional, Vite/Rspack is used internally
 ```
 
 > **Tip:** You do not need to manually install `@microsoft/sp-*` for most web parts. The toolchain externalizes them and emits `"type": "component"` manifest entries so SharePoint resolves its built-in copies. Install them only if your code imports a specific `sp-*` runtime (e.g. `@microsoft/sp-http`).

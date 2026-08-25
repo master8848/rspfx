@@ -8,7 +8,7 @@ RSPFX replaces all of it with one modern bundler and zero required config files.
 
 Official SPFx projects need `gulpfile.js`, `tsconfig.json` (with Heft extends), `config/config.json`, `config/serve.json`, `config/write-manifests.json`, `config/package-solution.json` and a `.yo-rc.json` — and the build behavior is spread across all of them.
 
-RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `bun run build` synthesize the same options and run Rspack or Vite internally. If `rspack` or `vite` is installed they just work.
+RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `bun run build` synthesize the same options and run Vite or Rspack internally.
 
 When you want explicit control, one optional plugin in your bundler config is enough:
 
@@ -44,12 +44,12 @@ Everything else is auto-discovered: web part bundles from `src/webparts/*/`, ext
 
 | Bundler | Config | Status |
 |---|---|---|
-| **Rspack** (Rust webpack successor) | `rspack.config.ts` + `RspfxPlugin` | ✅ default, fully supported |
-| **Vite** (Rollup + esbuild) | `vite.config.ts` + `rspfxVite` | ✅ build + dev (workbench) |
-| **Rsbuild** (Rspack-based build tool) | `rsbuild.config.ts` + `rspfxRsbuild` | ✅ build + dev (workbench) |
-| **Turbopack** | — | ❌ not possible today — Turbopack has no webpack plugin API and no standalone CLI outside Next.js; tracked in `docs/roadmap.md` |
+| **Vite** (default) | `vite.config.ts` + `rspfxVite` | ✅ build + dev (workbench) |
+| **Rsbuild** | `rsbuild.config.ts` + `rspfxRsbuild` | ✅ build + dev (workbench) |
+| **Rspack** | `rspack.config.ts` + `RspfxPlugin` | ✅ build + dev (workbench) |
+| **Turbopack** | — | ❌ no webpack plugin API; tracked in `docs/roadmap.md` |
 
-The official toolchain is hardwired to webpack 5. If you want Vite or Rspack, you can't have SPFx.
+The official toolchain only does webpack 5. RSPFX lets you use Vite, Rsbuild, or Rspack.
 
 ## Every UI framework — not just React
 
@@ -63,10 +63,10 @@ Official SPFx templates ship React only; the other frameworks are left to commun
 
 ## Faster by construction
 
-- **Rspack is Rust-based** — 5–10× faster cold builds than webpack 5, with persistent caching between dev runs (`.rspack-cache`).
-- **No task-runner hop**: gulp → Heft → webpack is three process generations; RSPFX is `rspfx` → Rspack/Vite directly.
-- **TS/SWX**: TypeScript compiles through SWC (native), not `ts-loader`-style per-file transpiles.
-- **Dev loop**: in-process dev server, `writeToDisk` bundles, regenerated `manifests.js`, fast refresh where the framework supports it.
+- **Vite / Rspack are fast** — 5–10× faster than webpack 5. Rspack caches to `.rspack-cache` between dev runs.
+- **No task runner** — the official chain is gulp → Heft → webpack (three processes). RSPFX is `rspfx` → bundler directly.
+- **SWC** — TypeScript via native SWC, not slow `ts-loader`.
+- **Dev loop** — fast rebuilds, auto reload, fast refresh where supported.
 
 See [performance.md](performance.md) for benchmark methodology.
 

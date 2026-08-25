@@ -1,6 +1,6 @@
 # @mbsks/rspfx-manifest-generator
 
-Manifest generation for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain powered by Rspack.
+Manifest generation for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Generates SPFx-compatible component manifests, the AMD `manifests.js` loader script, and detects `@microsoft/sp-*` dependencies — byte-compatible with official SPFx output formats.
 
