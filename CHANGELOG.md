@@ -12,9 +12,9 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 > Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
 
-## [0.1.0] - 2026-08-24
+## [0.0.14] - 2026-08-25
 
-Breaking release `0.0.13 → 0.1.0` — consumers on `^0.0.13` get peer conflict; run `npx rspfx migrate --to 0.1 --dry-run` then `npx rspfx migrate --to 0.1` and `npx rspfx doctor --fix` to codemod.
+Breaking release `0.0.13 → 0.0.14` — the project stays on the `0.0.x` line by design (no `1.0.0` planned). Because `^0.0.13` resolves only `>=0.0.13 <0.0.14`, consumers must opt in explicitly (`pnpm add @mbsks/rspfx-cli@0.0.14`). Run `npx rspfx migrate --to 0.1 --dry-run` then `npx rspfx migrate --to 0.1` and `npx rspfx doctor --fix` to codemod.
 
 ### Breaking Changes
 - `FrameworkPreset` field `contributions` renamed to `rspack` — `FrameworkPreset<T extends FrameworkId> { rspack(opts)=>FrameworkRspackContributions }` in `packages/plugin-api/src/index.ts` — codemod via `rspfx migrate --to 0.1`.
@@ -52,7 +52,7 @@ Breaking release `0.0.13 → 0.1.0` — consumers on `^0.0.13` get peer conflict
 - `platformOnlyExternal` handling — externalization via `packages/core/src/platform.ts` in rspack/vite/rsbuild.
 - Rsbuild `modifyRsbuildConfig` arity and CLI `--to`/`--revert` handling (`632d336`, `85e6e24`).
 
-> Git tag: `v0.1.0` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.1.0` (single version, `scripts/publish.mjs`). Compare `v0.0.13...v0.1.0`.
+> Git tag: `v0.0.14` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.0.14` (single version, `scripts/publish.mjs`). Compare `v0.0.13...v0.0.14`.
 
 ## [0.0.13] - 2026-08-23
 
@@ -258,8 +258,8 @@ Initial public line — rebrand `@rspfx → @mbsks`, workspace and examples setu
 - **npm dist-tag:** published via `pnpm publish --tag <dist-tag>` (default `latest`; prereleases default to `next`; override with `node scripts/publish.mjs --tag <dist-tag>`). All 19 publishable packages share the same version and tag in one run.
 - **CHANGELOG.md:** one `## [X.Y.Z] - YYYY-MM-DD` section per version. Link the tag in the section footer. `Unreleased` tracks work since the last tag. On `v1.0.0`, freeze pre-`1.0` entries to `CHANGELOG_ARCHIVE.md`.
 
-[Unreleased]: https://github.com/master8848/rspfx/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/master8848/rspfx/compare/v0.0.13...v0.1.0
+[Unreleased]: https://github.com/master8848/rspfx/compare/v0.0.14...HEAD
+[0.0.14]: https://github.com/master8848/rspfx/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/master8848/rspfx/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/master8848/rspfx/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/master8848/rspfx/compare/v0.0.10...v0.0.11

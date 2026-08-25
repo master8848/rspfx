@@ -1,6 +1,6 @@
 {
   "name": "@mbsks/rspfx-manifest-generator",
-  "version": "0.1.0",
+  "version": "0.0.14",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",

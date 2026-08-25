@@ -7,7 +7,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ## Shared conventions
 
-- Packages: `@mbsks/rspfx-<name>`, version `0.1.0`, ESM, `main`/`types` → `dist/`; all 19 publishable packages (`packages/*` + `apps/cli`) share one version bumped together via `scripts/publish.mjs:17`; `examples/*` and `apps/playground` are `private:true` and excluded.
+- Packages: `@mbsks/rspfx-<name>`, version `0.0.14`, ESM, `main`/`types` → `dist/`; all 19 publishable packages (`packages/*` + `apps/cli`) share one version bumped together via `scripts/publish.mjs:17`; `examples/*` and `apps/playground` are `private:true` and excluded.
 - Native acceleration (optional): `crates/rspfx-sppkg`, `crates/rspfx-manifest`, `crates/rspfx-rspack-plugin` provide Rust implementations with JS fallback (`try { require('../../crates/.../index.node') } catch {}`); no `.node` required — `pnpm build` and `pnpm test` pass with or without native.
 - All packages build with `tsc` to `dist/`; typecheck: `pnpm -w exec tsc --noEmit -p <pkg>/tsconfig.json`.
 - Errors: throw `RspfxError(code, message, cause?)` from `@mbsks/rspfx-diagnostics`.

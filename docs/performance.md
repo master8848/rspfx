@@ -28,7 +28,7 @@ Full methodology in [`bench/README.md`](../bench/README.md). Summary:
 | `examples/vanilla` | 380 | 42, 43, 43 | 42 / 43 | 189 |
 | `examples/shadcn` (React + shadcn/ui + Tailwind v4) | 633 | 69, 68, 68 | 68 / 68 | 315 |
 
-## Results 0.1.0 (measured 2026-08-24, `reference/baseline-0.1.0.json`, `BENCH_RUNS=3` median)
+## Results 0.0.14 (measured 2026-08-24, `reference/baseline-0.0.14.json`, `BENCH_RUNS=3` median)
 
 | Project | Cold start (ms) | Recompile ×3 (ms) | Recompile min / median (ms) | Full build (ms) |
 | ------- | --------------- | ----------------- | --------------------------- | --------------- |
@@ -36,7 +36,7 @@ Full methodology in [`bench/README.md`](../bench/README.md). Summary:
 | `examples/svelte` | 410 | 45, 46, 44 | 44 / 45 | 210 |
 | `examples/shadcn` (React + shadcn/ui + Tailwind v4) | 645 | 70, 68, 69 | 68 / 69 | 322 |
 
-Gates per `ARCHITECTURE.md:218`: `cold start <2000ms`, `recompile <300ms`, `refresh <150ms`, `small build <4000ms` — all medians pass; host `darwin arm64 node v22.22.2`; treemap `solid ~15kB / react ~90kB` stored in `reference/sizes-0.1.0.json`.
+Gates per `ARCHITECTURE.md:218`: `cold start <2000ms`, `recompile <300ms`, `refresh <150ms`, `small build <4000ms` — all medians pass; host `darwin arm64 node v22.22.2`; treemap `solid ~15kB / react ~90kB` stored in `reference/sizes-0.0.14.json`.
 
 ## Comparison vs classic SPFx (gulp serve / fast-spfx)
 
