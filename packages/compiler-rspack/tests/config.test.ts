@@ -165,7 +165,15 @@ describe('createRspackConfig', () => {
   });
 
   it('enables filesystem cache in serve mode under .rspack-cache', async () => {
-    const serve = await getConfig(makeCtx({ serveMode: true }));
+    const prevCache = process.env.RSPFX_CACHE;
+    process.env.RSPFX_CACHE = '1';
+    let serve: Awaited<ReturnType<typeof getConfig>>;
+    try {
+      serve = await getConfig(makeCtx({ serveMode: true }));
+    } finally {
+      if (prevCache === undefined) delete process.env.RSPFX_CACHE;
+      else process.env.RSPFX_CACHE = prevCache;
+    }
     expect(serve.experiments?.cache).toMatchObject({
       type: 'persistent',
       storage: { type: 'filesystem', directory: '/tmp/proj/.rspack-cache' }
@@ -179,6 +187,21 @@ describe('createRspackConfig', () => {
     const notServe = await getConfig(makeCtx());
     expect(notServe.experiments?.cache).toBeUndefined();
     expect(notServe.experiments?.lazyCompilation).toBeUndefined();
+  });
+
+  it('disables filesystem cache under Vitest by default (opt-in via RSPFX_CACHE=1)', async () => {
+    const prevCache = process.env.RSPFX_CACHE;
+    delete process.env.RSPFX_CACHE;
+    const serveDefault = await getConfig(makeCtx({ serveMode: true }));
+    expect(serveDefault.experiments?.cache).toBeUndefined();
+    // lazyCompilation is independent of the filesystem cache and still applies in serveMode
+    expect(serveDefault.experiments?.lazyCompilation).toEqual({ entries: false, imports: true });
+
+    process.env.RSPFX_CACHE = '1';
+    const serveOptIn = await getConfig(makeCtx({ serveMode: true }));
+    expect(serveOptIn.experiments?.cache).toBeDefined();
+    if (prevCache === undefined) delete process.env.RSPFX_CACHE;
+    else process.env.RSPFX_CACHE = prevCache;
   });
 
   it('adds plain css/scss rules', async () => {

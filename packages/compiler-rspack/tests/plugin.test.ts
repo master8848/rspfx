@@ -74,15 +74,22 @@ describe('spfx', () => {
   });
 
   it('honours production, serveMode and build overrides', async () => {
-    const config = (await spfx({
-      ...DEFAULT_OPTIONS,
-      production: false,
-      serveMode: true,
-      build: { sourcemap: true, minify: false }
-    })) as Configuration;
-    expect(config.mode).toBe('development');
-    expect(config.devtool).toBe('source-map');
-    expect(config.optimization?.minimize).toBe(false);
-    expect(config.experiments?.cache).toBeDefined();
+    const prevCache = process.env.RSPFX_CACHE;
+    process.env.RSPFX_CACHE = '1';
+    try {
+      const config = (await spfx({
+        ...DEFAULT_OPTIONS,
+        production: false,
+        serveMode: true,
+        build: { sourcemap: true, minify: false }
+      })) as Configuration;
+      expect(config.mode).toBe('development');
+      expect(config.devtool).toBe('source-map');
+      expect(config.optimization?.minimize).toBe(false);
+      expect(config.experiments?.cache).toBeDefined();
+    } finally {
+      if (prevCache === undefined) delete process.env.RSPFX_CACHE;
+      else process.env.RSPFX_CACHE = prevCache;
+    }
   });
 });
