@@ -199,13 +199,21 @@ function amdBundleTransform(entryName: string, code: string): string {
 
 function transformEntryBundle(
   entryName: string,
-  bundle: Record<string, { type: string; code?: string; source?: unknown }>
+  bundle: Record<string, { type: string; code?: string; map?: unknown; source?: unknown }>
 ): void {
-  const chunk = bundle[`${entryName}.js`];
+  const chunk = bundle[`${entryName}.js`] as
+    | { type: string; code?: string; map?: { mappings: string } | null; source?: unknown }
+    | undefined;
   if (!chunk || chunk.type !== 'chunk' || typeof chunk.code !== 'string') {
     return;
   }
-  chunk.code = amdBundleTransform(entryName, chunk.code);
+  // Preserve sourceMappingURL at EOF: strip it, transform, then re-append so CSS injection doesn't break mapping
+  const sourceMapUrlRegex = /\/\/# sourceMappingURL=.*(?:\r?\n)?$/;
+  const match = chunk.code.match(sourceMapUrlRegex);
+  const sourceMapComment = match ? match[0] : '';
+  let codeWithoutMap = sourceMapComment ? chunk.code.slice(0, -sourceMapComment.length) : chunk.code;
+
+  codeWithoutMap = amdBundleTransform(entryName, codeWithoutMap);
   for (const key of Object.keys(bundle)) {
     const asset = bundle[key];
     if (!asset || asset.type !== 'asset' || !key.endsWith('.css')) {
@@ -215,8 +223,34 @@ function transformEntryBundle(
       typeof asset.source === 'string'
         ? asset.source
         : Buffer.from(asset.source as ArrayBuffer).toString('utf8');
-    chunk.code += inlineStyleCode(css);
+    codeWithoutMap += inlineStyleCode(css);
     delete bundle[key];
+  }
+
+  chunk.code = codeWithoutMap + (sourceMapComment || '');
+
+  // Adjust sourcemap for the prepended capture line (1 line): prepend ';' to mappings
+  if (chunk.map && typeof (chunk.map as { mappings?: unknown }).mappings === 'string') {
+    const map = chunk.map as { mappings: string };
+    if (!map.mappings.startsWith(';')) {
+      map.mappings = ';' + map.mappings;
+    }
+  }
+  // Also patch the separate .js.map asset if Rollup emitted it
+  const mapAssetKey = `${entryName}.js.map`;
+  const mapAsset = bundle[mapAssetKey] as { type: string; source?: unknown } | undefined;
+  if (mapAsset && mapAsset.type === 'asset' && chunk.map) {
+    try {
+      const srcStr =
+        typeof mapAsset.source === 'string'
+          ? mapAsset.source
+          : Buffer.from(mapAsset.source as ArrayBuffer).toString('utf8');
+      const parsed = JSON.parse(srcStr) as { mappings?: string };
+      if (typeof parsed.mappings === 'string' && !parsed.mappings.startsWith(';')) {
+        parsed.mappings = ';' + parsed.mappings;
+        (mapAsset as { source: unknown }).source = JSON.stringify(parsed);
+      }
+    } catch {}
   }
 }
 
@@ -363,10 +397,15 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
             ? { minify: resolved.build.minify }
             : {}),
         ...(overrides.sourcemap !== undefined
-          ? { sourcemap: overrides.sourcemap }
-          : resolved.build.sourcemap !== undefined
-            ? { sourcemap: resolved.build.sourcemap }
-            : {}),
+          ? {
+              sourcemap:
+                overrides.sourcemap === true && mode === 'production' ? 'hidden' : overrides.sourcemap
+            }
+          : command === 'serve'
+            ? { sourcemap: true }
+            : resolved.build.sourcemap
+              ? { sourcemap: mode === 'production' ? 'hidden' : true }
+              : {}),
         rollupOptions: {
           input: { [entry.name]: entry.import },
           external: externals,

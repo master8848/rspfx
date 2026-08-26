@@ -414,6 +414,13 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
           minimize: production ? (resolved.build.minify ?? true) : false,
           splitChunks: false
         };
+        // Source maps: dev always has full source-map for debugging (like rspack & vite), prod respects build.sourcemap
+        const sourcemap = resolved.build.sourcemap ?? false;
+        (config as unknown as { devtool?: unknown }).devtool = production
+          ? sourcemap
+            ? 'hidden-source-map'
+            : false
+          : 'source-map';
         const frameworkModule = await loadPreset();
         const preset = frameworkModule.preset as unknown as FrameworkPreset;
         const fastRefresh =

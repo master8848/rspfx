@@ -97,19 +97,80 @@ class SpfxPublicPathPluginJs {
             if (!asset) {
               continue;
             }
-            const src = asset.source.source().toString();
-            if (!src.includes(SPFX_PUBLIC_PATH_SENTINEL)) {
-              compilation.updateAsset(
-                assetName,
-                new rspack.sources.RawSource(captureLine(entry.name) + src)
-              );
+            const original = asset.source;
+            const src = original.source().toString();
+            const hasSentinel = src.includes(SPFX_PUBLIC_PATH_SENTINEL);
+            const capture = captureLine(entry.name);
+            if (!hasSentinel) {
+              // Preserve original sourcemap by concatenating via ConcatSource (offsets map by 1 line for capture)
+              const ConcatSource = (rspack.sources as unknown as { ConcatSource?: new (...args: unknown[]) => unknown }).ConcatSource;
+              if (ConcatSource) {
+                compilation.updateAsset(
+                  assetName,
+                  new ConcatSource(capture, original) as unknown as typeof original
+                );
+              } else {
+                compilation.updateAsset(
+                  assetName,
+                  new rspack.sources.RawSource(capture + src)
+                );
+              }
               continue;
             }
             const quote = src.includes(`"${SPFX_PUBLIC_PATH_SENTINEL}"`) ? '"' : "'";
-            const rewritten =
-              captureLine(entry.name) +
-              src.split(quote + SPFX_PUBLIC_PATH_SENTINEL + quote).join(publicPathExpression(entry.name));
-            compilation.updateAsset(assetName, new rspack.sources.RawSource(rewritten));
+            const sentinelQuoted = quote + SPFX_PUBLIC_PATH_SENTINEL + quote;
+            const replacement = publicPathExpression(entry.name);
+            // Try ReplaceSource to preserve sourcemap while replacing sentinel (column offset is acceptable, lines unchanged)
+            const ReplaceSource = (rspack.sources as unknown as { ReplaceSource?: new (src: unknown) => { replace(a: number, b: number, c: string): void } })
+              .ReplaceSource;
+            const ConcatSource = (rspack.sources as unknown as { ConcatSource?: new (...args: unknown[]) => unknown }).ConcatSource;
+            if (ReplaceSource && ConcatSource) {
+              try {
+                const replaceSource = new ReplaceSource(original);
+                let idx = 0;
+                while ((idx = src.indexOf(sentinelQuoted, idx)) !== -1) {
+                  replaceSource.replace(idx, idx + sentinelQuoted.length - 1, replacement);
+                  idx += replacement.length;
+                }
+                compilation.updateAsset(
+                  assetName,
+                  new ConcatSource(capture, replaceSource) as unknown as typeof original
+                );
+                continue;
+              } catch {}
+            }
+            // Fallback: string replacement with ConcatSource+SourceMapSource if map available
+            const rewrittenWithoutCapture = src.split(sentinelQuoted).join(replacement);
+            const mapFn = (original as unknown as { map?: (opts?: unknown) => unknown }).map;
+            let map: unknown = null;
+            try {
+              map = typeof mapFn === 'function' ? mapFn.call(original, { columns: true }) ?? mapFn.call(original) : null;
+            } catch {
+              map = null;
+            }
+            if (map && ConcatSource) {
+              const SourceMapSource = (rspack.sources as unknown as { SourceMapSource?: new (...args: unknown[]) => unknown }).SourceMapSource;
+              if (SourceMapSource) {
+                try {
+                  compilation.updateAsset(
+                    assetName,
+                    new ConcatSource(
+                      capture,
+                      new SourceMapSource(rewrittenWithoutCapture, assetName, map as string, src, map as string, true)
+                    ) as unknown as typeof original
+                  );
+                  continue;
+                } catch {}
+              }
+            }
+            if (ConcatSource) {
+              compilation.updateAsset(
+                assetName,
+                new ConcatSource(capture, new rspack.sources.RawSource(rewrittenWithoutCapture)) as unknown as typeof original
+              );
+            } else {
+              compilation.updateAsset(assetName, new rspack.sources.RawSource(capture + rewrittenWithoutCapture));
+            }
           }
         }
       );
