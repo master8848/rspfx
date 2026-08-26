@@ -46,6 +46,18 @@ if (!projectRoot) {
 
 const log = (msg) => console.log(msg);
 
+const TOOLCHAIN_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    if (pkg.version) return pkg.version;
+  } catch {}
+  try {
+    const pkg = JSON.parse(fs.readFileSync(new URL('../apps/cli/package.json', import.meta.url), 'utf8'));
+    if (pkg.version) return pkg.version;
+  } catch {}
+  return '0.0.1';
+})();
+
 // ─── toolchain devDependencies that exist only to serve Heft/webpack/gulp ────
 const TOOLCHAIN_DEPS = [
   '@babel/plugin-transform-logical-assignment-operators',
@@ -135,7 +147,7 @@ const removed = Object.keys(devDeps).filter((name) => TOOLCHAIN_DEPS.includes(na
 for (const name of removed) {
   delete devDeps[name];
 }
-devDeps['@mbsks/rspfx-plugin'] = '^0.0.1';
+devDeps['@mbsks/rspfx-plugin'] = `^${TOOLCHAIN_VERSION}`;
 pkg.devDependencies = devDeps;
 const removedHeftScripts = [];
 if (pkg.scripts?.start && pkg.scripts.start.includes('heft')) {
@@ -250,13 +262,35 @@ const hasScss = fs.existsSync(path.join(srcDir, 'webparts')) &&
   fs.readdirSync(path.join(srcDir, 'webparts'), { recursive: true }).some((f) => f.endsWith('.scss'));
 const styling = hasScss || pkg.dependencies?.sass ? 'scss' : 'css';
 let defaultSpfxVersion = '1.23';
+let supportedTargets = ['1.20', '1.21', '1.22', '1.23'];
 try {
   const versionsPath = path.join(new URL('.', import.meta.url).pathname, '../packages/core/src/versions.ts');
   const content = fs.readFileSync(versionsPath, 'utf8');
   const match = content.match(/SPFX_DEFAULT_TARGET:\s*SpfxTarget\s*=\s*'([^']+)'/);
   if (match?.[1]) defaultSpfxVersion = match[1];
+  const targetMatches = [...content.matchAll(/target:\s*'([^']+)'/g)];
+  if (targetMatches.length > 0) supportedTargets = targetMatches.map((m) => m[1]);
 } catch {
-  // fallback to 1.23
+  // fallback to 1.23 / hardcoded list
+}
+// Detect SPFx version from @microsoft/sp-core-library, robust to "^1.20.0", "~1.21.0", ">=1.23.0", etc.
+let spfxVersion = defaultSpfxVersion;
+let spfxSource = 'fallback';
+const rawSpfx = pkg.dependencies?.['@microsoft/sp-core-library'] ?? pkg.devDependencies?.['@microsoft/sp-core-library'];
+if (rawSpfx !== undefined) {
+  const m = /(\d+)\.(\d+)\./.exec(rawSpfx);
+  const candidate = m ? `${m[1]}.${m[2]}` : '';
+  if (candidate && supportedTargets.includes(candidate)) {
+    spfxVersion = candidate;
+    spfxSource = 'detected';
+    log(`ℹ detected SPFx version ${spfxVersion} from @microsoft/sp-core-library ${rawSpfx}`);
+  } else if (candidate) {
+    log(`ℹ SPFx version "${rawSpfx}" (target "${candidate}") not in supported targets — using default ${defaultSpfxVersion}`);
+  } else {
+    log(`ℹ could not parse SPFx version from "${rawSpfx}" — using default ${defaultSpfxVersion}`);
+  }
+} else {
+  log(`ℹ no @microsoft/sp-core-library found — using default SPFx version ${defaultSpfxVersion}`);
 }
 
 const configContent = `import { RspfxPlugin } from '@mbsks/rspfx-plugin';
@@ -267,7 +301,7 @@ export default {
     new RspfxPlugin({
       name: '${projectName}',
       framework: '${framework}',
-      spfxVersion: '${defaultSpfxVersion}',
+      spfxVersion: '${spfxVersion}',
       styling: '${styling}',
       dev: {
         // https://{tenantdomain}/... is taken from config/serve.json initialPage
@@ -280,7 +314,8 @@ export default {
 const configTsPath = path.join(projectRoot, 'rspack.config.ts');
 if (!fs.existsSync(configTsPath)) {
   fs.writeFileSync(configTsPath, configContent);
-  log(`✓ wrote rspack.config.ts with RspfxPlugin (framework: ${framework}, styling: ${styling}) — edit dev.tenantUrl`);
+  const spfxLabel = spfxSource === 'detected' ? `${spfxVersion} (detected)` : `${spfxVersion} (default)`;
+  log(`✓ wrote rspack.config.ts with RspfxPlugin (framework: ${framework}, styling: ${styling}, spfx: ${spfxLabel}) — edit dev.tenantUrl`);
 }
 
 const tsconfigPath = path.join(projectRoot, 'tsconfig.json');

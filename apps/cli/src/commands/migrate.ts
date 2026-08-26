@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { isSpfxTarget, SPFX_DEFAULT_TARGET, type SpfxTarget } from '@mbsks/rspfx-core';
 import { promptConfirm } from '../prompts.js';
+import { version } from '../version.js';
 
 const logger = createLogger('rspfx');
 
@@ -154,7 +155,7 @@ interface BackupSnapshot {
 function resolveConfigDir(cwd: string): string {
   // Try to read existing bundler config to get paths.configDir; fallback to 'config'
   try {
-    const candidates = ['rspack.config.ts', 'rspack.config.js', 'vite.config.ts', 'vite.config.js', 'rsbuild.config.ts', 'rsbuild.config.js'];
+    const candidates = ['vite.config.ts', 'vite.config.js', 'rsbuild.config.ts', 'rsbuild.config.js', 'rspack.config.ts', 'rspack.config.js'];
     for (const f of candidates) {
       if (fs.existsSync(path.join(cwd, f))) {
         // We can't easily parse without jiti; just use default. Migration runs before config exists usually.
@@ -347,7 +348,37 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
     // ignore
   }
 
-  const spfxVersion: SpfxTarget = (opts.spfxVersion as SpfxTarget) ?? SPFX_DEFAULT_TARGET;
+  // spfxVersion detection: explicit --spfx-version overrides, otherwise inspect @microsoft/sp-core-library
+  let spfxVersion: SpfxTarget;
+  let spfxVersionSource: 'explicit' | 'detected' | 'fallback' = 'fallback';
+  let spfxVersionRaw: string | undefined;
+  if (opts.spfxVersion !== undefined) {
+    spfxVersion = opts.spfxVersion as SpfxTarget;
+    spfxVersionSource = 'explicit';
+    logger.info(`Using explicit SPFx version ${spfxVersion} (from --spfx-version)`);
+  } else {
+    const raw = (pkg.dependencies?.['@microsoft/sp-core-library'] ?? pkg.devDependencies?.['@microsoft/sp-core-library']) as string | undefined;
+    spfxVersionRaw = raw;
+    if (raw !== undefined) {
+      const match = /(\d+)\.(\d+)\./.exec(raw);
+      const candidate = match ? `${match[1]}.${match[2]}` : '';
+      if (candidate && isSpfxTarget(candidate)) {
+        spfxVersion = candidate;
+        spfxVersionSource = 'detected';
+        logger.info(`Detected SPFx version ${spfxVersion} from @microsoft/sp-core-library ${raw}`);
+      } else {
+        spfxVersion = SPFX_DEFAULT_TARGET;
+        if (candidate) {
+          logger.info(`SPFx version "${raw}" (target "${candidate}") not in supported targets — using default ${spfxVersion}`);
+        } else {
+          logger.info(`Could not parse SPFx version from "${raw}" — using default ${spfxVersion}`);
+        }
+      }
+    } else {
+      spfxVersion = SPFX_DEFAULT_TARGET;
+      logger.info(`No @microsoft/sp-core-library dependency found — using default SPFx version ${spfxVersion}`);
+    }
+  }
 
   const plan: string[] = [];
 
@@ -404,8 +435,15 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
   else plan.push('no Heft-only config files to delete');
 
   // bundler config
-  if (!existingConfigExists) plan.push(`write ${existingBundlerFile} with ${bundler} plugin (framework: ${framework}, styling: ${styling}, spfx: ${spfxVersion})`);
-  else plan.push(`overwrite ${existingBundlerFile} (force)`);
+  if (!existingConfigExists) {
+    const spfxLabel =
+      spfxVersionSource === 'explicit'
+        ? `${spfxVersion} (explicit --spfx-version)`
+        : spfxVersionSource === 'detected'
+          ? `${spfxVersion} (detected from @microsoft/sp-core-library ${spfxVersionRaw})`
+          : `${spfxVersion} (default)`;
+    plan.push(`write ${existingBundlerFile} with ${bundler} plugin (framework: ${framework}, styling: ${styling}, spfx: ${spfxLabel})`);
+  } else plan.push(`overwrite ${existingBundlerFile} (force)`);
 
   // tsconfig
   const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
@@ -509,7 +547,7 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
   const newPkg = JSON.parse(JSON.stringify(pkg)) as typeof pkg;
   newPkg.devDependencies = newPkg.devDependencies ?? {};
   for (const name of removed) delete (newPkg.devDependencies as Record<string, string>)[name];
-  (newPkg.devDependencies as Record<string, string>)['@mbsks/rspfx-plugin'] = '^0.0.1';
+  (newPkg.devDependencies as Record<string, string>)['@mbsks/rspfx-plugin'] = `^${version}`;
   newPkg.devDependencies = (newPkg.devDependencies as Record<string, string>);
   if (newPkg.scripts?.start && newPkg.scripts.start.includes('heft')) {
     delete newPkg.scripts.start;

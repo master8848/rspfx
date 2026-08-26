@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { build } from "@mbsks/rspfx-compiler-rspack";
 import type { RspfxConfig } from "@mbsks/rspfx-core";
+import { isSpfxTarget, SPFX_DEFAULT_TARGET } from "@mbsks/rspfx-core";
 import {
   type ReadProjectResult,
   assembleRelease,
@@ -112,10 +113,11 @@ async function loadConfigWithSynthesis(cwd: string): Promise<{
     return loaded as any;
   } catch (error) {
     if (error instanceof RspfxError && error.code === "CONFIG_NOT_FOUND") {
-      // Zero-config synthesis: create minimal rspack.config.ts with RspfxPlugin so delegation works
+      // Zero-config synthesis: create minimal vite.config.ts with rspfxVite so delegation works
       const pkgPath = path.join(cwd, "package.json");
       let name = path.basename(cwd).replace(/^@[^/]+\//, "");
       let framework = "vanilla";
+      let spfxVersion: string = SPFX_DEFAULT_TARGET;
       try {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
           name?: string;
@@ -132,16 +134,22 @@ async function loadConfigWithSynthesis(cwd: string): Promise<{
         else if (deps["svelte"]) framework = "svelte";
         else if (deps["preact"]) framework = "preact";
         else if (deps["solid-js"]) framework = "solid";
+        const rawSpfx = deps["@microsoft/sp-core-library"];
+        if (typeof rawSpfx === "string") {
+          const m = /(\d+)\.(\d+)\./.exec(rawSpfx);
+          const candidate = m ? `${m[1]}.${m[2]}` : "";
+          if (candidate && isSpfxTarget(candidate)) spfxVersion = candidate;
+        }
       } catch {}
-      const synthesizedPath = path.join(cwd, "rspack.config.ts");
+      const synthesizedPath = path.join(cwd, "vite.config.ts");
       if (!fs.existsSync(synthesizedPath)) {
         const safeName = name.replace(/'/g, "\\'");
         const safeFramework = framework.replace(/'/g, "\\'");
+        const safeSpfxVersion = spfxVersion.replace(/'/g, "\\'");
         const content =
-          `import { RspfxPlugin } from '@mbsks/rspfx-plugin';\n\n` +
+          `import { rspfxVite } from '@mbsks/rspfx-plugin';\n\n` +
           `export default {\n` +
-          `  mode: 'production',\n` +
-          `  plugins: [new RspfxPlugin({ name: '${safeName}', framework: '${safeFramework}' as any })]\n` +
+          `  plugins: [rspfxVite({ name: '${safeName}', framework: '${safeFramework}' as any, spfxVersion: '${safeSpfxVersion}' })]\n` +
           `};\n`;
         fs.writeFileSync(synthesizedPath, content);
         const loaded = await loadConfig(cwd);

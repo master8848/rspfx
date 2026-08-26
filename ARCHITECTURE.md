@@ -127,7 +127,7 @@ Rules:
 
 `@microsoft/sp-*` is externalized. Most web parts need no manual install. SharePoint resolves `"type": "component"` entries (ids from `node_modules` or `reference/sp-component-ids.json`).
 
-**Config:** CLI looks for `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` via `jiti`, finds `RSPFX_PLUGIN_MARKER`, reads `options`. If missing, it builds the same options from `config/config.json` + `package.json` + `src/*/*.manifest.json`. `rspfx migrate` writes the file, backs up to `.rspfx/migrate-backup.json`.
+**Config:** CLI looks for `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts` (vite first) via `jiti`, finds `RSPFX_PLUGIN_MARKER`, reads `options`. If missing, it builds the same options from `config/config.json` + `package.json` + `src/*/*.manifest.json`. `rspfx migrate` writes the file, backs up to `.rspfx/migrate-backup.json`.
 
 ---
 

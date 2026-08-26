@@ -23,15 +23,15 @@ export interface LoadedProject {
 }
 
 const CONFIG_CANDIDATES: readonly { bundler: BundlerId; file: string }[] = [
-  { bundler: 'rspack', file: 'rspack.config.ts' },
-  { bundler: 'rspack', file: 'rspack.config.js' },
-  { bundler: 'rspack', file: 'rspack.config.mjs' },
   { bundler: 'vite', file: 'vite.config.ts' },
   { bundler: 'vite', file: 'vite.config.js' },
   { bundler: 'vite', file: 'vite.config.mjs' },
   { bundler: 'rsbuild', file: 'rsbuild.config.ts' },
   { bundler: 'rsbuild', file: 'rsbuild.config.js' },
-  { bundler: 'rsbuild', file: 'rsbuild.config.mjs' }
+  { bundler: 'rsbuild', file: 'rsbuild.config.mjs' },
+  { bundler: 'rspack', file: 'rspack.config.ts' },
+  { bundler: 'rspack', file: 'rspack.config.js' },
+  { bundler: 'rspack', file: 'rspack.config.mjs' }
 ];
 
 export function findConfigFile(projectRoot: string): { bundler: BundlerId; file: string } | undefined {
@@ -104,7 +104,7 @@ export async function loadConfig(projectRoot: string, opts?: { jitiCache?: boole
   if (!found) {
     throw new RspfxError(
       RspfxErrorCode.CONFIG_NOT_FOUND,
-      `No rspack.config.ts / vite.config.ts / rsbuild.config.ts found in ${projectRoot}. Run "rspfx new" to scaffold a project.`
+      `No vite.config.ts / rsbuild.config.ts / rspack.config.ts found in ${projectRoot}. Run "rspfx new" to scaffold a project.`
     );
   }
   const jiti = createJiti(import.meta.url, {

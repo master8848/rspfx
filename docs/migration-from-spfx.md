@@ -42,7 +42,7 @@ RSPFX intentionally mirrors official SPFx project conventions, so most of an exi
    bun install
    ```
 
-   Bundler config is optional — `rspfx migrate` writes `rspack.config.ts` (or `vite.config.ts` / `rsbuild.config.ts` with `--bundler`), but you can also run zero-config where `bun run build` / `rspfx dev` synthesize the config from the manifests and run Rspack/Vite internally.
+   Bundler config is optional — `rspfx migrate` writes `vite.config.ts` by default (or `rspack.config.ts` / `rsbuild.config.ts` with `--bundler rspack|rsbuild`), but you can also run zero-config where `bun run build` / `rspfx dev` synthesize the config from the manifests and run Vite/Rspack internally.
 
 > **Quick way:** `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` → `rspfx dev`. No hand-editing of configs.
 

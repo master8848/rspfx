@@ -36,7 +36,7 @@ rspfx dev                 # verify workbench
 rspfx package             # → sharepoint/solution/<name>.sppkg
 ```
 
-`--bundler vite` or `--bundler rsbuild` scaffolds `vite.config.ts` / `rsbuild.config.ts` instead of `rspack.config.ts`. After migrate `bun run build` / `rspfx build` runs Vite or Rspack internally — if `vite` or `rspack` is installed it just works.
+`rspfx migrate` writes `vite.config.ts` by default; `--bundler rspack` or `--bundler rsbuild` scaffolds `rspack.config.ts` / `rsbuild.config.ts` instead. After migrate `bun run build` / `rspfx build` runs Vite or Rspack internally — if `vite` or `rspack` is installed it just works.
 
 > **Tip:** Commit or stash before migrating. `git diff` shows the exact changes. No `src/` is touched outside the documented rewrites.
 
@@ -79,7 +79,7 @@ bun run package        # → sharepoint/solution/<name>.sppkg (or your paths.zip
 2. **config/config.json** — entrypoints `./lib/webparts/<name>/<Name>WebPart.js` (Heft output convention) → `./src/webparts/<name>/<Name>WebPart.ts`, bundle keys renamed to match web part folder names (in the default layout RSPFX requires bundle name == `src/webparts/<name>` folder; a custom layout can decouple the two via `paths` — see below).
 3. **SCSS** — `@import 'pkg:<pkg>/<path>'` (sass-loader ≥16.5 syntax) rewritten to a relative `node_modules` path.
 4. **Deletes** the Heft-only config files above.
-5. **Writes `rspack.config.ts`** (with the `RspfxPlugin`; detects react/vanilla + scss) and a plain `tsconfig.json` if the old one extends a rig. Use `--bundler vite` / `--bundler rsbuild` for those variants.
+5. **Writes `vite.config.ts`** (with `rspfxVite`; detects react/vanilla + scss) and a plain `tsconfig.json` if the old one extends a rig. Use `--bundler rspack` / `--bundler rsbuild` for those variants.
 
 > **Quick way:** One-liner preview → migrate → install → dev. No hand-editing of configs and no AI edits needed.
 
@@ -93,15 +93,14 @@ Keep runtime deps (your framework, Fluent UI, PnPjs). Keep `@microsoft/sp-*` onl
 
 ### 2. Add the config file (optional — zero-config also works)
 
-For standard layouts you can skip this and run `bun run build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Vite or Rspack internally. If you want an explicit config:
+For standard layouts you can skip this and run `bun run build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Vite or Rspack internally. If you want an explicit config (Vite default):
 
 ```ts
-import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+import { rspfxVite } from '@mbsks/rspfx-plugin';
 
 export default {
-  mode: 'development',
   plugins: [
-    new RspfxPlugin({
+    rspfxVite({
       name: 'my-app',
       framework: 'react',          // vanilla | react | solid | preact | vue | svelte
       spfxVersion: '1.22',         // 1.20 | 1.21 | 1.22 | 1.23 — must match any installed sp-* versions if you have them
@@ -111,7 +110,7 @@ export default {
 };
 ```
 
-`@mbsks/rspfx-plugin` is a devDependency (the plugin carries the whole project config; its core dependency is zero-dependency, so no version fights). For Vite/Rsbuild use `rspfxVite` / `rspfxRsbuild` (see [commands.md](commands.md)).
+`@mbsks/rspfx-plugin` is a devDependency (the plugin carries the whole project config; its core dependency is zero-dependency, so no version fights). For Rspack/Rsbuild use `RspfxPlugin` / `rspfxRsbuild` (see [commands.md](commands.md)).
 
 ### 3. Rewrite `config/config.json` entrypoints
 

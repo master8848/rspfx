@@ -114,7 +114,7 @@ describe('config loading', () => {
 
   it('throws when no config file exists', async () => {
     const dir = makeTmpDir('no-config');
-    await expect(loadConfig(dir)).rejects.toThrow(/No rspack.config.ts \/ vite.config.ts \/ rsbuild.config.ts found/);
+    await expect(loadConfig(dir)).rejects.toThrow(/No vite.config.ts \/ rsbuild.config.ts \/ rspack.config.ts found/);
     rmRf(dir);
   });
 
@@ -125,8 +125,8 @@ describe('config loading', () => {
     rmRf(dir);
   });
 
-  it('prefers rspack.config.ts over vite.config.ts', async () => {
-    const dir = makeTmpDir('prefer-rspack');
+  it('prefers vite.config.ts over rspack.config.ts', async () => {
+    const dir = makeTmpDir('prefer-vite');
     fs.writeFileSync(path.join(dir, 'rspack.config.ts'), [
       'export default {',
       '  plugins: [{',
@@ -144,8 +144,8 @@ describe('config loading', () => {
       '};'
     ].join('\n'));
     const loaded = await loadConfig(dir);
-    expect(loaded.bundler).toBe('rspack');
-    expect(loaded.configFile).toBe('rspack.config.ts');
+    expect(loaded.bundler).toBe('vite');
+    expect(loaded.configFile).toBe('vite.config.ts');
     rmRf(dir);
   });
 });

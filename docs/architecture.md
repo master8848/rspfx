@@ -101,7 +101,7 @@ Framework loaders (`vue-loader`, `@rspack/plugin-react-refresh`) are aliased to 
 
 ## Config
 
-The CLI looks for `rspack.config.ts` / `vite.config.ts` / `rsbuild.config.ts` via `jiti`, finds `RSPFX_PLUGIN_MARKER`, reads `options`. If missing, it builds the same from `config/config.json` + `package.json` + `src/*/*.manifest.json`.
+The CLI looks for `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts` via `jiti` (vite first), finds `RSPFX_PLUGIN_MARKER`, reads `options`. If missing, it builds the same from `config/config.json` + `package.json` + `src/*/*.manifest.json`.
 
 Use `rspfx migrate` to write the file (`--revert` to undo, backup in `.rspfx/migrate-backup.json`).
 

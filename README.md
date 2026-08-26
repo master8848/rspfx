@@ -85,13 +85,13 @@ const items = await sp.web.lists.getByTitle("Orders").items.select("Title", "Sta
 
 `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work unchanged for both toolchains — no fork.
 
-Keep both toolchains side-by-side: leave `gulpfile.js` and `config/rig.json` alongside `rspack.config.ts` and share the same `config/` and `src/` manifests.
+Keep both toolchains side-by-side: leave `gulpfile.js` and `config/rig.json` alongside `vite.config.ts` (default) and share the same `config/` and `src/` manifests.
 
 Use dual npm scripts in `package.json` to switch: `"build": "rspfx build"` vs `"build:heft": "heft build --clean"`, `"dev": "rspfx dev"` vs `"dev:heft": "gulp serve"`.
 
 No migration required for dev: `rspfx dev` synthesizes config from the manifests and runs zero-config on an official project (see [docs/hybrid-dev.md](docs/hybrid-dev.md)).
 
-To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`); revert with `rspfx migrate --revert` or `git restore . && git clean -fd .rspfx && bun install`, then delete the generated `rspack.config.ts`/`vite.config.ts` — Heft returns as before. See [docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
+To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`); revert with `rspfx migrate --revert` or `git restore . && git clean -fd .rspfx && bun install`, then delete the generated `vite.config.ts`/`rspack.config.ts` — Heft returns as before. See [docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
 
 ## Supported targets
 

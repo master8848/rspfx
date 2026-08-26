@@ -33,7 +33,7 @@ export function localPreviewUnavailableWarning(
   }
   return (
     `Local preview (no SharePoint) is only available on the Rspack bundler path — this project uses ${bundler}. ` +
-    "Pass --tenant <url> to serve the SharePoint workbench instead, or scaffold a project with the default Rspack config (rspack.config.ts)."
+    "Pass --tenant <url> to serve the SharePoint workbench instead, or scaffold a project with vite as default (vite.config.ts) for workbench-only local preview."
   );
 }
 
