@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
-import { ensureCertificates, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
+import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { Logger } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
@@ -135,7 +135,34 @@ export async function startServe(
   if (https && settings.hostname) {
     validateCustomHostname(settings.hostname);
   }
+  const preStatus = https ? await getCertStatus(certsDir, settings.hostname).catch(() => undefined) : undefined;
+  const wasMissing = preStatus ? !preStatus.exists || !preStatus.valid : false;
   const certs = https ? await ensureCertificates(certsDir, settings.hostname) : undefined;
+  if (https && certs) {
+    if (wasMissing) {
+      logger.warn(
+        `Dev cert was missing or expiring and has been (re)generated in ${certsDir}. ` +
+          `Browsers will block https://localhost:4321 until it is trusted — ${formatTrustInstructions(certsDir)}. ` +
+          `See ${path.join(certsDir, 'cert.pem.trust.txt')} and run rspfx doctor to verify. ` +
+          `Untrusted certs surface as CORS errors, NET::ERR_CERT_AUTHORITY_INVALID, or blank workbench.`
+      );
+    } else {
+      try {
+        const trusted = await isCertTrusted(path.join(certsDir, 'cert.pem'));
+        if (trusted.trusted === false) {
+          logger.warn(
+            `Dev cert at ${path.join(certsDir, 'cert.pem')} is not trusted by the OS — ${trusted.detail}. ` +
+              `SharePoint workbench will fail with CORS / NET::ERR_CERT_AUTHORITY_INVALID until trusted. ` +
+              `${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor for details.`
+          );
+        } else if (trusted.trusted === 'unknown') {
+          logger.info(
+            `Dev cert trust status unknown — ${trusted.detail}. If workbench shows CORS or NET::ERR_CERT_AUTHORITY_INVALID, ${formatTrustInstructions(certsDir).toLowerCase()}. Run rspfx doctor.`
+          );
+        }
+      } catch {}
+    }
+  }
 
   const fastRefresh = opts.fastRefresh ?? config.dev.fastRefresh ?? false;
   const devtools = opts.devtools ?? process.env.RSPFX_DEVTOOLS === '1' ? true : false;

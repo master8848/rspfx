@@ -12,6 +12,21 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 > Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
 
+### Added
+
+- Dev cert diagnostics — `getCertStatus()`, `isCertTrusted()`, `formatTrustInstructions()`, `getCertsDir()` in `packages/manifest-server/src/index.ts:8` with `X509Certificate` expiry/SAN checks and best-effort OS trust check (`security verify-cert` on macOS, `certutil -verify` on Windows) (`.agents/notes/implemented/fix/2026-08-26-cert-trust-diagnostics.md`).
+- `rspfx doctor` cert checks — `cert exists` (`~/.rspfx/certs/cert.pem`), `cert valid` (>7d), `key.pem 0600`, `cert trusted` (OS store) in `apps/cli/src/commands/doctor.ts:252` with per-OS trust command in detail and CORS/NOT_TRUSTED guidance.
+- `rspfx dev` cert warnings — `packages/dev-runtime/src/serve.ts:134` and `apps/cli/src/commands/dev.ts:71` warn at startup when cert is missing, expiring, or not trusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID` / blank workbench), linking to `~/.rspfx/certs/cert.pem.trust.txt` and `rspfx doctor`.
+
+### Changed
+
+- `cert.pem.trust.txt` now notes CORS/`NET::ERR_CERT_AUTHORITY_INVALID` symptom and `rspfx doctor` (`packages/manifest-server/src/index.ts:14`).
+- Docs `getting-started.md#cert-trust`, `commands.md#rspfx-dev` and `commands.md#rspfx-doctor`, `architecture.md#dev-mode`, and `internal-api.md#rspfx-manifest-server` document cert trust per-OS commands, `rspfx doctor` checks, and `rspfx dev` warnings (see `docs/AGENTS.md` fact homes).
+
+### Fixed
+
+- First-run SharePoint workbench CORS confusion — `rspfx dev` no longer silently serves untrusted `https://localhost:4321`; `rspfx doctor` now surfaces missing/expiring/untrusted cert with actionable `sudo security add-trusted-cert` / `certutil -addstore` command instead of user debugging CORS.
+
 ## [0.0.14] - 2026-08-25
 
 Breaking release `0.0.13 → 0.0.14` — the project stays on the `0.0.x` line by design (no `1.0.0` planned). Because `^0.0.13` resolves only `>=0.0.13 <0.0.14`, consumers must opt in explicitly (`pnpm add @mbsks/rspfx-cli@0.0.14`). Run `npx rspfx migrate --to 0.1 --dry-run` then `npx rspfx migrate --to 0.1` and `npx rspfx doctor --fix` to codemod.

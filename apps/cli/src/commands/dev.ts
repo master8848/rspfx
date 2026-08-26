@@ -9,6 +9,9 @@ import {
   startServe,
 } from "@mbsks/rspfx-dev-runtime";
 import { RspfxError, RspfxErrorCode, createLogger } from "@mbsks/rspfx-diagnostics";
+import { formatTrustInstructions, getCertStatus, isCertTrusted } from "@mbsks/rspfx-manifest-server";
+import os from "node:os";
+import path from "node:path";
 import { type BundlerId, loadConfig } from "../config.js";
 import { detectOfficialProject, loadOfficialConfig } from "../hybrid.js";
 import { spawnRsbuildDev } from "../rsbuild.js";
@@ -91,6 +94,34 @@ export async function runDev(
     const warning = localPreviewUnavailableWarning(bundler, serveMode);
     if (warning) {
       logger.warn(warning);
+    }
+
+    // Cert trust warning for SharePoint mode (vite/rsbuild dev is workbench-only)
+    if (serveMode === 'sharepoint' && settings.https) {
+      try {
+        const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+        const status = await getCertStatus(certsDir, settings.hostname).catch(() => undefined);
+        if (status && (!status.exists || !status.valid)) {
+          logger.warn(
+            `Dev cert missing or expiring in ${certsDir} — ${status.detail ?? 'needs generation'}. ` +
+              `Run rspfx doctor --fix and ${formatTrustInstructions(certsDir).toLowerCase()}. ` +
+              `Untrusted certs surface as CORS / NET::ERR_CERT_AUTHORITY_INVALID in workbench.`
+          );
+        } else {
+          const certPath = path.join(certsDir, 'cert.pem');
+          const trusted = await isCertTrusted(certPath).catch(() => undefined);
+          if (trusted?.trusted === false) {
+            logger.warn(
+              `Dev cert at ${certPath} is not trusted — ${trusted.detail}. ` +
+                `${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor.`
+            );
+          } else if (trusted?.trusted === 'unknown') {
+            logger.info(
+              `Dev cert trust unknown — ${trusted.detail}. If workbench shows CORS errors, ${formatTrustInstructions(certsDir).toLowerCase()}. Run rspfx doctor.`
+            );
+          }
+        }
+      } catch {}
     }
 
     const workbenchUrl = buildWorkbenchUrl(settings, config);

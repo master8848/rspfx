@@ -20,7 +20,14 @@ const { key, cert } = await ensureCertificates('.rspfx/certs');
 
 ## API
 
-- `ensureCertificates(dir)` — generate/load self-signed key + cert (writes `key.pem`, `cert.pem`, and `cert.pem.trust.txt` with trust instructions)
+- `ensureCertificates(dir, hostname?)` — generate/load self-signed key + cert (writes `key.pem`, `cert.pem`, and `cert.pem.trust.txt` with trust instructions; warns about CORS / `NET::ERR_CERT_AUTHORITY_INVALID` if untrusted)
+- `validateCustomHostname(hostname)` — allowlist check for custom SAN hostname
+- `getCertsDir()` — default `~/.rspfx/certs`
+- `getCertStatus(dir, hostname?)` — `CertStatus` (exists, valid, expiry, SAN mismatch via `X509Certificate`)
+- `isCertTrusted(certPath)` — best-effort OS trust check (`security verify-cert` on macOS, `certutil -verify` on Windows)
+- `formatTrustInstructions(dir)` — per-OS trust command string
+
+See `docs/getting-started.md#cert-trust` for user-facing trust steps and `rspfx doctor` for automated checks.
 
 ## Links
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createLogger, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
 import { SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
 import { ensureProjectConfigs, readProject } from '@mbsks/rspfx-dev-runtime';
-import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
+import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted } from '@mbsks/rspfx-manifest-server';
 import { loadConfig, type LoadedProject } from '../config.js';
 import { resolveViteBin } from '../vite.js';
 import { resolveRsbuildBin } from '../rsbuild.js';
@@ -137,7 +137,10 @@ export async function runDoctor(cwd: string, opts?: { fix?: boolean }): Promise<
   checks.push({ name: `port ${devPort} free (dev server)`, ok: portFree });
 
   checks.push(checkDistWritable(cwd, config?.build.outDir ?? 'dist'));
+  checks.push(await checkCertExists());
+  checks.push(await checkCertExpiry());
   checks.push(checkCertPermissions());
+  checks.push(await checkCertTrusted());
   checks.push(checkServeJsonSchema(cwd));
 
   const failed = checks.filter((check) => !check.ok).length;
@@ -252,7 +255,7 @@ function checkDistWritable(cwd: string, outDir: string): DoctorCheck {
 function checkCertPermissions(): DoctorCheck {
   const keyPath = path.join(os.homedir(), '.rspfx', 'certs', 'key.pem');
   if (!fs.existsSync(keyPath)) {
-    return { name: 'cert permissions (key.pem 0600)', ok: true, detail: 'not generated yet' };
+    return { name: 'cert permissions (key.pem 0600)', ok: true, detail: 'not generated yet — run rspfx dev or rspfx doctor --fix' };
   }
   try {
     const stat = fs.statSync(keyPath);
@@ -261,13 +264,78 @@ function checkCertPermissions(): DoctorCheck {
     return {
       name: 'cert permissions (key.pem 0600)',
       ok,
-      detail: ok ? `0o${mode.toString(8)}` : `expected 0o600, got 0o${mode.toString(8)}`
+      detail: ok ? `0o${mode.toString(8)}` : `expected 0o600, got 0o${mode.toString(8)} — fix with chmod 600 ${keyPath}`
     };
   } catch (error) {
     return {
       name: 'cert permissions (key.pem 0600)',
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+async function checkCertExists(): Promise<DoctorCheck> {
+  const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+  const status = await getCertStatus(certsDir);
+  if (!status.exists) {
+    return {
+      name: 'dev cert exists (~/.rspfx/certs/cert.pem)',
+      ok: false,
+      detail: `${status.detail} — run rspfx doctor --fix or rspfx dev to generate. Without it SharePoint workbench shows CORS / NET::ERR_CERT_AUTHORITY_INVALID`
+    };
+  }
+  return { name: 'dev cert exists (~/.rspfx/certs/cert.pem)', ok: true, detail: 'found' };
+}
+
+async function checkCertExpiry(): Promise<DoctorCheck> {
+  const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+  const status = await getCertStatus(certsDir);
+  if (!status.exists) {
+    return { name: 'dev cert valid (expiry >7d)', ok: true, detail: 'not generated yet' };
+  }
+  if (!status.valid) {
+    return {
+      name: 'dev cert valid (expiry >7d)',
+      ok: false,
+      detail: `${status.detail}${status.expiresAt ? ` — expires ${status.expiresAt}` : ''} — run rspfx doctor --fix to regenerate`
+    };
+  }
+  return {
+    name: 'dev cert valid (expiry >7d)',
+    ok: true,
+    detail: `expires ${status.expiresAt} (${status.daysUntilExpiry}d left)`
+  };
+}
+
+async function checkCertTrusted(): Promise<DoctorCheck> {
+  const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+  const certPath = path.join(certsDir, 'cert.pem');
+  if (!fs.existsSync(certPath)) {
+    return { name: 'dev cert trusted (OS store)', ok: true, detail: 'not generated yet' };
+  }
+  try {
+    const result = await isCertTrusted(certPath);
+    if (result.trusted === true) {
+      return { name: 'dev cert trusted (OS store)', ok: true, detail: result.detail };
+    }
+    if (result.trusted === false) {
+      return {
+        name: 'dev cert trusted (OS store)',
+        ok: false,
+        detail: `${result.detail} — browsers block https://localhost:4321 until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). See ~/.rspfx/certs/cert.pem.trust.txt`
+      };
+    }
+    return {
+      name: 'dev cert trusted (OS store)',
+      ok: true,
+      detail: `${result.detail} — ${formatTrustInstructions(certsDir)}`
+    };
+  } catch (error) {
+    return {
+      name: 'dev cert trusted (OS store)',
+      ok: true,
+      detail: `check skipped: ${error instanceof Error ? error.message : String(error)} — ${formatTrustInstructions(certsDir)}`
     };
   }
 }

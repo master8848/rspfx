@@ -113,9 +113,13 @@ Validated via `tryResolveConfig` before the cache version is computed.
 Save → rebuild → tick /__rspfx_hot.json → reload.
 ```
 
-Local (no tenant): HTTP `:4321` — preview at `/` + mock `/_api`.
+Local (no tenant): HTTP `:4321` — preview at `/` + mock `/_api` (no cert).
 
-SharePoint (tenant set): HTTPS `:4321` — `/temp/manifests.js`, `/dist/*.js`, `node_modules/*`. Workbench loads `…/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
+SharePoint (tenant set): HTTPS `:4321` — `/temp/manifests.js`, `/dist/*.js`, `node_modules/*` via `packages/manifest-server/src/index.ts:121` `ensureCertificates()` (`~/.rspfx/certs`, 825-day self-signed).
+
+Workbench loads `…/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
+
+`rspfx dev` warns if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
 
 `manifests.js` is regenerated each rebuild. Bundle names are stable `[name].js`.
 

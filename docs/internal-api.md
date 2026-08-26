@@ -450,9 +450,24 @@ export function validateSppkg(zipPath: string): Promise<{ ok: boolean; errors: s
 `manifest-server` provides certs only; `:4321` serving is handled by the compiler dev server (`compiler-rspack` `startDevServer`) (bundles, `/temp/manifests.js`, `node_modules` static proxy).
 
 ```ts
-export async function ensureCertificates(certsDir: string): Promise<{ key: string; cert: string }>;
-// selfsigned (localhost + 127.0.0.1 SANs, 825 days); cached in certsDir (~/.rspfx/certs);
-// writes cert.pem.trust.txt + logs trust instructions on first generation
+export async function ensureCertificates(certsDir: string, hostname?: string): Promise<{ key: string; cert: string }>;
+// selfsigned (localhost + 127.0.0.1 + ::1 SANs + optional hostname, 825 days, 2048-bit, sha256);
+// cached in certsDir (~/.rspfx/certs); validates via X509Certificate (expiry <7d, SAN mismatch);
+// writes cert.pem.trust.txt + logs trust instructions and CORS warning on first generation
+export function validateCustomHostname(hostname: string): void;
+// allowlist for custom SAN hostname (rejects .., sharepoint suffix, injection chars)
+export function getCertsDir(): string;
+// → path.join(os.homedir(), '.rspfx', 'certs')
+export interface CertStatus {
+  exists: boolean; keyExists: boolean; certExists: boolean; valid: boolean;
+  expiresAt?: string; daysUntilExpiry?: number; hostnameMismatch?: boolean; detail?: string;
+}
+export async function getCertStatus(certsDir: string, hostname?: string): Promise<CertStatus>;
+// reads cert.pem via X509Certificate, checks expiry and SAN
+export async function isCertTrusted(certPath: string): Promise<{ trusted: boolean | 'unknown'; detail: string }>;
+// best-effort OS check: `security verify-cert` (macOS), `certutil -verify` (Windows), unknown on Linux
+export function formatTrustInstructions(certsDir: string): string;
+// per-OS trust command for ~/.rspfx/certs/cert.pem
 ```
 
 ## @mbsks/rspfx-dev-runtime (depends on core, compiler-rspack, manifest-server, manifest-generator, diagnostics, plugin-api, sharepoint-runtime, framework-*)

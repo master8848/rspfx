@@ -86,7 +86,11 @@ Local preview (default, no tenant):
 - Mock `/_api` — OData v4 JSON-light (`/_api/web`, `/web/lists`, `/items`, `X-HTTP-Method` for merge/delete, `/contextinfo`). Seed with `local/data.json`.
 - HTTP, no cert.
 
-SharePoint mode (tenant set): HTTPS with cert in `~/.rspfx/certs`, `Workbench: https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`. Bundles from `https://localhost:4321/dist/*`.
+SharePoint mode (tenant set): HTTPS with cert in `~/.rspfx/certs` (`packages/manifest-server/src/index.ts:121` `ensureCertificates()`), `Workbench: https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`. Bundles from `https://localhost:4321/dist/*`.
+
+`rspfx dev` (and `packages/dev-runtime/src/serve.ts:134` / `apps/cli/src/commands/dev.ts:71` for Vite/Rsbuild) auto-generates the cert on first run and warns if it is missing, expiring (<7d), or not trusted by the OS — untrusted certs surface as CORS, `NET::ERR_CERT_AUTHORITY_INVALID`, or blank workbench (see [getting-started.md#cert-trust](getting-started.md#cert-trust) for trust commands per OS and `~/.rspfx/certs/cert.pem.trust.txt`).
+
+If `rspfx dev` reports a cert warning, run `rspfx doctor` to verify (`cert exists`, `cert valid`, `key.pem 0600`, `cert trusted`).
 
 ```sh
 rspfx dev
@@ -140,11 +144,15 @@ Build + report sizes as console table + `.rspfx/analyze.html`. Module counts wor
 
 ## `rspfx doctor`
 
-Checks Node 20+, manifests, framework, sp-* externals, bundles, port, outDir. Exit 1 on fail.
+Checks Node 20+, manifests, framework, sp-* externals, bundles, port, outDir, and cert (`cert exists` at `~/.rspfx/certs/cert.pem`, `cert valid` expiry >7d via `X509Certificate`, `key.pem 0600`, `cert trusted` via `security verify-cert` on macOS / `certutil -verify` on Windows — `packages/manifest-server/src/index.ts:8` `getCertStatus()` / `isCertTrusted()` / `formatTrustInstructions()` and `apps/cli/src/commands/doctor.ts:252`).
+
+Exit 1 on fail — use in CI.
 
 | Flag | Description |
 |---|---|
-| `--fix` | Fix missing configs/certs then re-validate |
+| `--fix` | Fix missing configs/certs then re-validate (`ensureCertificates()` + `ensureProjectConfigs()`) |
+
+On first-run SharePoint mode the most common failure is an untrusted or missing `~/.rspfx/certs/cert.pem` — the workbench then shows CORS or `NET::ERR_CERT_AUTHORITY_INVALID` instead of bundles; `rspfx doctor` reports it with the per-OS trust command and `rspfx dev` warns at startup (see [getting-started.md#cert-trust](getting-started.md#cert-trust)).
 
 ## `rspfx clean`
 
