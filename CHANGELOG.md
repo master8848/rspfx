@@ -26,6 +26,7 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 ### Fixed
 
 - First-run SharePoint workbench CORS confusion — `rspfx dev` no longer silently serves untrusted `https://localhost:4321`; `rspfx doctor` now surfaces missing/expiring/untrusted cert with actionable `sudo security add-trusted-cert` / `certutil -addstore` command instead of user debugging CORS.
+- `rspfx dev` source maps now ship in dev (was missing/broken) — Vite `transformEntryBundle` in `packages/plugin/src/vite.ts:199` strips/restores `sourceMappingURL` and offsets mappings `';'` for the capture line plus `build.sourcemap:'hidden'` parity, Rspack `SpfxPublicPathPlugin` in `packages/compiler-rspack/src/public-path.ts:97` preserves `SourceMapSource` via `ConcatSource`/`ReplaceSource`, Rsbuild `modifyRspackConfig` in `packages/plugin/src/rsbuild.ts:414` sets `devtool:'source-map'` dev / `'hidden-source-map'` prod (`74427c7`) — breakpoints/file-origin debugging now works (was unusable vs `spfx-fast-serve`).
 
 ## [0.0.14] - 2026-08-25
 
