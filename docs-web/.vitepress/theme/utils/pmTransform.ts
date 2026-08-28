@@ -95,6 +95,69 @@ export function detectPM(content: string): string | null {
     })
   }
 
+  if ((c.includes('create vite') || c.includes('create rsbuild')) && c.includes('@mbsks/rspfx-plugin')) {
+    const isRsbuild = c.includes('create rsbuild')
+    const createTag = isRsbuild
+      ? pmTag({
+          npm: 'npm create rsbuild@latest',
+          pnpm: 'pnpm create rsbuild@latest',
+          yarn: 'yarn create rsbuild@latest',
+          bun: 'bun create rsbuild@latest',
+          deno: 'deno run -A npm:create-rsbuild@latest',
+        })
+      : pmTag({
+          npm: 'npm create vite@latest my-app -- --template react-ts',
+          pnpm: 'pnpm create vite@latest my-app -- --template react-ts',
+          yarn: 'yarn create vite@latest my-app -- --template react-ts',
+          bun: 'bun create vite@latest my-app -- --template react-ts',
+          deno: 'deno run -A npm:create-vite@latest my-app -- --template react-ts',
+        })
+    const addTag = pmTag({
+      npm: 'npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      pnpm: 'pnpm add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      yarn: 'yarn add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      bun: 'bun add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      deno: 'deno add -D npm:@mbsks/rspfx-plugin npm:@mbsks/rspfx-cli',
+    })
+    const cdLine = lines.find((l) => l.trim().startsWith('cd '))
+    if (cdLine) {
+      return `${createTag}\n${codeBlockHtml(cdLine.trim())}\n${addTag}`
+    }
+    return `${createTag}\n${addTag}`
+  }
+
+  if (c.includes('create vite')) {
+    // npm create vite@latest my-app -- --template react-ts (+ GH comment with alternatives)
+    // Keep template and project name fixed to common example; tabs show PM-specific create commands
+    return pmTag({
+      npm: 'npm create vite@latest my-app -- --template react-ts',
+      pnpm: 'pnpm create vite@latest my-app -- --template react-ts',
+      yarn: 'yarn create vite@latest my-app -- --template react-ts',
+      bun: 'bun create vite@latest my-app -- --template react-ts',
+      deno: 'deno run -A npm:create-vite@latest my-app -- --template react-ts',
+    })
+  }
+
+  if (c.includes('create rsbuild')) {
+    return pmTag({
+      npm: 'npm create rsbuild@latest',
+      pnpm: 'pnpm create rsbuild@latest',
+      yarn: 'yarn create rsbuild@latest',
+      bun: 'bun create rsbuild@latest',
+      deno: 'deno run -A npm:create-rsbuild@latest',
+    })
+  }
+
+  if (c.includes('@mbsks/rspfx-plugin') && (c.includes('i -D @mbsks') || c.includes('add -D @mbsks'))) {
+    return pmTag({
+      npm: 'npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      pnpm: 'pnpm add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      yarn: 'yarn add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      bun: 'bun add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
+      deno: 'deno add -D npm:@mbsks/rspfx-plugin npm:@mbsks/rspfx-cli',
+    })
+  }
+
   if (c.includes('tailwindcss @tailwindcss/postcss postcss')) {
     return pmTag({
       npm: 'npm i -D tailwindcss @tailwindcss/postcss postcss',

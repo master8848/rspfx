@@ -197,7 +197,7 @@ Cache `node_modules` and `.rspack-cache` between runs.
 |---|---|
 | `No web part or extension bundles found` | `src/webparts/<name>/` missing `*.manifest.json` or entrypoint — see [project-structure.md](project-structure.md) |
 | Bundle 404 in workbench / page | Bundle name vs `entryModuleId` mismatch — default: folder name = bundle key |
-| `External 'X' could not be resolved` | `externals` key not in `node_modules` — remove or `npm i X` |
+| `External 'X' could not be resolved` | `externals` key not in `node_modules` — remove or add `X` with your package manager (`npm i X` / `pnpm add X` / `yarn add X` / `bun add X` / `deno add npm:X`) |
 | `Can't resolve 'XxxWebPartStrings'` | `localizedResources` pattern must contain `{locale}` |
 | `paths.zippedPackage` missing | `package-solution.json` must have `solution.id`, `solution.name`, `paths.zippedPackage` |
 | Catalog **Sync to Teams** missing | `teams/` not at package time, or `includeClientSideAssets: false`, or `skipFeatureDeployment: false` |

@@ -16,7 +16,7 @@ Docs: https://rspfx.mbsks.me · Repo: https://github.com/master8848/rspfx
 ## Install
 
 ```sh
-npm i -g @mbsks/rspfx-cli
+npm i -g @mbsks/rspfx-cli   # or pnpm add -g / yarn global add / bun add -g / deno install -g
 rspfx --version
 rspfx --help
 ```
@@ -26,9 +26,9 @@ rspfx --help
 RSPFX is a Vite/Rsbuild/Rspack plugin. Scaffold with your favorite starter, then add the plugin. Vite is default.
 
 ```sh
-npm create vite@latest my-app -- --template react-ts
+npm create vite@latest my-app -- --template react-ts   # or pnpm create vite@latest / yarn create vite@latest / bun create vite@latest / deno run -A npm:create-vite@latest
 cd my-app
-npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli           # or pnpm add -D / yarn add -D / bun add -D / deno add -D
 ```
 
 Add to `vite.config.ts`:
@@ -50,8 +50,8 @@ Then create `src/webparts/<name>/*.manifest.json` + `config/package-solution.jso
 ```sh
 rspfx migrate --dry-run   # preview
 rspfx migrate             # writes vite.config.ts
-npm install
-npm run dev
+bun install      # or pnpm install / npm install / yarn / deno install
+rspfx dev        # http://localhost:4321
 ```
 
 Commit before migrating. Keeps `config/package-solution.json` and `src/*/*.manifest.json`; `gulpfile.js` can stay for dual builds.
@@ -61,8 +61,8 @@ See `docs/migrating-from-gulp-heft.md`.
 ## Develop and build
 
 ```sh
-npm run dev                                          # http://localhost:4321
-npm run dev -- --tenant https://contoso.sharepoint.com
+rspfx dev                                            # http://localhost:4321
+rspfx dev --tenant https://contoso.sharepoint.com    # or rspfx dev --tenant https://contoso.sharepoint.com
 rspfx build; rspfx package                           # → sharepoint/solution/*.sppkg
 rspfx doctor; rspfx doctor --fix                     # validate env + cert
 ```
@@ -94,7 +94,7 @@ Rsbuild (`rspfxRsbuild` in `rsbuild.config.ts`) and Rspack (`RSpfxPlugin` in `rs
 SPFx requires CSS bundled into JS.
 
 ```sh
-npm add -D sass
+bun add -D sass   # or pnpm add -D sass / npm i -D sass / yarn add -D sass / deno add -D npm:sass
 ```
 
 Then import `*.scss`/`*.css` directly. See `docs/styling.md`.
@@ -102,7 +102,7 @@ Then import `*.scss`/`*.css` directly. See `docs/styling.md`.
 ## Query lists
 
 ```sh
-npm add @pnp/sp @pnp/graph
+bun add @pnp/sp @pnp/graph   # or pnpm add / npm i / yarn add / deno add
 ```
 
 In `onInit`: `spfi().using(SPFx(this.context))`, then `sp.web.lists.getByTitle("MyList").items()`.

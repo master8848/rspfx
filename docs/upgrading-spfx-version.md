@@ -102,11 +102,11 @@ Details: [compatibility.md](compatibility.md) and [reference/FORMATS.md](../refe
 If moving an existing Heft/Gulp project and changing target, do it in two commits:
 
 ```sh
-npm i -g @mbsks/rspfx-cli
+npm i -g @mbsks/rspfx-cli   # or pnpm add -g / yarn global add / bun add -g / deno install -g
 cd my-existing-spfx-app
 rspfx migrate --dry-run
 rspfx migrate --bundler vite   # or rspack | rsbuild
-bun install      # or pnpm install / npm install / yarn
+bun install      # or pnpm install / npm install / yarn / deno install
 rspfx dev
 rspfx package
 # then upgrade:

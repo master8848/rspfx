@@ -19,7 +19,7 @@ import {
 const logger = createLogger('rspfx');
 
 const LANGUAGES = ['ts', 'js'] as const;
-const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn', 'bun'] as const;
+const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn', 'bun', 'deno'] as const;
 
 export interface NewOptions {
   name: string;

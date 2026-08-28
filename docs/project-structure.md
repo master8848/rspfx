@@ -26,7 +26,7 @@ Relocatable roots (`src`, `src/webparts`, `src/extensions`, `src/libraries`, `co
 
 | Path | Purpose | Required | Created |
 |---|---|---|---|
-| `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` | Bundler config host (`rspfxVite()` / `RspfxPlugin` / `rspfxRsbuild()`). Synthesized from manifests if missing. Add to any starter (`create-vite`, `better-t-stack`, TanStack Router, etc.). | No | `npm create vite@latest` + `rspfxVite()` or `rspfx new` / `rspfx migrate` |
+| `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` | Bundler config host (`rspfxVite()` / `RspfxPlugin` / `rspfxRsbuild()`). Synthesized from manifests if missing. Add to any starter (`create-vite`, `better-t-stack`, TanStack Router, etc.). | No | `npm create vite@latest` (or `pnpm`/`yarn`/`bun`/`deno`) + `rspfxVite()` or `rspfx new` / `rspfx migrate` |
 | `package.json` | `name`/`version` (AMD `_<version>` source). | Yes | Scaffolded |
 | `tsconfig.json` | `strict`, `bundler`, `jsx` per framework. | Yes | Scaffolded |
 | `.env` | Dotenv loaded before `serve.json` expansion. | No | User-provided |

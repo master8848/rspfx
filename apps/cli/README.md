@@ -7,7 +7,7 @@ Create, develop, build, and deploy SharePoint Framework client-side web parts wi
 ## Install
 
 ```sh
-npm i -g @mbsks/rspfx-cli
+npm i -g @mbsks/rspfx-cli   # or pnpm add -g @mbsks/rspfx-cli / yarn global add @mbsks/rspfx-cli / bun add -g @mbsks/rspfx-cli / deno install -g npm:@mbsks/rspfx-cli
 ```
 
 ## Quick start

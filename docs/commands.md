@@ -10,7 +10,7 @@ Pick bundler at scaffold/migrate: `--bundler vite` (default), `rsbuild`, or `rsp
 
 ## `rspfx new <name>`
 
-Create a project and initialize git (no dependency install — run your package manager manually). Convenience wrapper — recommended path is bring-your-own scaffold (`npm create vite@latest` + add `@mbsks/rspfx-plugin`).
+Create a project and initialize git (no dependency install — run your package manager manually). Convenience wrapper — recommended path is bring-your-own scaffold (`npm create vite@latest` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest` + add `@mbsks/rspfx-plugin`).
 
 | Flag | Values |
 |---|---|
@@ -19,7 +19,7 @@ Create a project and initialize git (no dependency install — run your package 
 | `--bundler <id>` | `vite` (default), `rsbuild`, `rspack` |
 | `--language <lang>` | `ts`, `js` (web parts) |
 | `--spfx-version <v>` | See [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23) |
-| `--pm <pm>` | `pnpm`, `npm`, `yarn`, `bun` |
+| `--pm <pm>` | `pnpm`, `npm`, `yarn`, `bun`, `deno` |
 | `--no-install` | Kept for compatibility; install never runs automatically |
 | `--yes` | Accept defaults, no prompts |
 
@@ -28,7 +28,7 @@ rspfx new my-app --framework vue --yes
 rspfx new my-extension --component applicationcustomizer --yes
 ```
 
-Prefer `npm create vite@latest my-app -- --template react-ts` (or `better-t-stack`, TanStack Router, etc.) then `npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli` and add `rspfxVite()` to `vite.config.ts` — see [getting-started.md#2-create-a-project](getting-started.md#2-create-a-project). `rspfx new` does the same but hides the starter choice. No codebase changes needed for other starters — `packages/plugin/src/vite.ts`/`rsbuild.ts`/`rspack.ts` already support Vite/Rsbuild/Rspack.
+Prefer `npm create vite@latest my-app -- --template react-ts` (or `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest`, `better-t-stack`, TanStack Router, etc.) then `npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli` (or `pnpm add -D` / `yarn add -D` / `bun add -D` / `deno add -D`) and add `rspfxVite()` to `vite.config.ts` — see [getting-started.md#2-create-a-project](getting-started.md#2-create-a-project). `rspfx new` does the same but hides the starter choice. No codebase changes needed for other starters — `packages/plugin/src/vite.ts`/`rsbuild.ts`/`rspack.ts` already support Vite/Rsbuild/Rspack.
 
 ## `rspfx migrate`
 
@@ -138,7 +138,7 @@ Removes `dist/`, `release/`, `temp/`, `.rspfx`, `node_modules/.cache`, `sharepoi
 
 ## Bundler plugin
 
-RSPFX is a plugin for any Vite/Rsbuild/Rspack starter — scaffold with `npm create vite@latest`, `better-t-stack`, TanStack Router, `create-rsbuild`, etc., then add the plugin. Config file is optional (CLI synthesizes from manifests if missing).
+RSPFX is a plugin for any Vite/Rsbuild/Rspack starter — scaffold with `npm create vite@latest` (or `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest`), `better-t-stack`, TanStack Router, `create-rsbuild`, etc., then add the plugin. Config file is optional (CLI synthesizes from manifests if missing).
 
 Vite `vite.config.ts` — recommended default:
 

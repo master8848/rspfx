@@ -653,7 +653,7 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
     }
   }
 
-  logger.success('Migration complete. Next steps: pnpm install, rspfx dev, rspfx package');
+  logger.success('Migration complete. Next steps: <pm> install (pnpm / npm / yarn / bun / deno), rspfx dev, rspfx package');
   logger.info(`Backup saved to ${path.relative(projectRoot, backupPath)} — run rspfx migrate --revert to restore`);
 
   return { migrated: true, reverted: false, dryRun: false, backupPath };

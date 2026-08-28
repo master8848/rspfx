@@ -33,10 +33,10 @@ See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating
 ### 1. Preview and migrate
 
 ```sh
-npm i -g @mbsks/rspfx-cli   # or bun add -g @mbsks/rspfx-cli
+npm i -g @mbsks/rspfx-cli   # or pnpm add -g / yarn global add / bun add -g / deno install -g
 rspfx migrate --dry-run     # preview
 rspfx migrate               # or --bundler vite | rspack | rsbuild — writes bundler config, backs up to .rspfx/migrate-backup.json
-bun install      # or pnpm install / npm install / yarn
+bun install      # or pnpm install / npm install / yarn / deno install
 ```
 
 Bundler config is optional — without it `rspfx dev` and `rspfx build` synthesize config from manifests and run Vite, Rsbuild, or Rspack directly.

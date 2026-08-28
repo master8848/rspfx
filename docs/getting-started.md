@@ -7,7 +7,7 @@ Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. S
 Node 20+ and your package manager — bun, pnpm, npm, yarn, or deno.
 
 ```sh
-npm i -g @mbsks/rspfx-cli
+npm i -g @mbsks/rspfx-cli   # or pnpm add -g @mbsks/rspfx-cli / yarn global add @mbsks/rspfx-cli / bun add -g @mbsks/rspfx-cli / deno install -g npm:@mbsks/rspfx-cli
 rspfx --version
 ```
 
@@ -20,9 +20,9 @@ RSPFX is a plugin — scaffold with your favorite starter, then add the plugin. 
 **Recommended — bring your own scaffold (Vite):**
 
 ```sh
-npm create vite@latest my-app -- --template react-ts
+npm create vite@latest my-app -- --template react-ts   # or pnpm create vite@latest / yarn create vite@latest / bun create vite@latest / deno run -A npm:create-vite@latest
 cd my-app
-npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli           # or pnpm add -D / yarn add -D / bun add -D / deno add -D
 ```
 
 Add the plugin to `vite.config.ts`:

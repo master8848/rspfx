@@ -52,9 +52,9 @@ features:
 ::: code-group
 
 ```sh [new project — plugin]
-npm create vite@latest my-app -- --template react-ts
+npm create vite@latest my-app -- --template react-ts   # or pnpm create vite@latest / yarn create vite@latest / bun create vite@latest / deno run -A npm:create-vite@latest
 cd my-app
-npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli           # or pnpm add -D / yarn add -D / bun add -D / deno add -D
 # add rspfxVite() to vite.config.ts + manifests, then
 rspfx dev          # http://localhost:4321 — no tenant needed
 rspfx package      # → sharepoint/solution/my-app.sppkg

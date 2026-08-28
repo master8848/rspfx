@@ -58,4 +58,4 @@ Internal - not in sidebar, private, for contributors and agents
 Notes
   Docs site sidebar is under /docs - docs-web/docs is a symlink to ../docs. The three files above are hidden from nav and search via private, search false, noindex and sitemap filtering but are still servable at /docs/<name> if visited directly.
   Raw text index is at /llms.txt and alias /llm.txt, linked in top nav and via link rel alternate type text/plain for AI agents.
-  Install CLI: npm i -g @mbsks/rspfx-cli then rspfx new <name> -> rspfx dev -> rspfx package
+  Install CLI: npm i -g @mbsks/rspfx-cli (or pnpm add -g / yarn global add / bun add -g / deno install -g) then rspfx new <name> -> rspfx dev -> rspfx package
