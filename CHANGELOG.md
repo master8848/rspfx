@@ -14,7 +14,7 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 ## [0.0.15] - 2026-08-28
 
-Covers `89556b8..202d0f0` (28 commits since `v0.0.14`).
+Covers `89556b8..eae7736` (30 commits since `v0.0.14`).
 
 ### Added
 
@@ -44,6 +44,7 @@ Covers `89556b8..202d0f0` (28 commits since `v0.0.14`).
 - `rspfx dev` source maps now ship in dev (was missing/broken) — Vite `transformEntryBundle` in `packages/plugin/src/vite.ts:199` strips/restores `sourceMappingURL` and offsets mappings `';'` for the capture line plus `build.sourcemap:'hidden'` parity, Rspack `SpfxPublicPathPlugin` in `packages/compiler-rspack/src/public-path.ts:97` preserves `SourceMapSource` via `ConcatSource`/`ReplaceSource`, Rsbuild `modifyRspackConfig` in `packages/plugin/src/rsbuild.ts:414` sets `devtool:'source-map'` dev / `'hidden-source-map'` prod (`74427c7`) — breakpoints/file-origin debugging now works (was unusable vs `spfx-fast-serve`).
 - `compiler-rspack` filesystem cache disabled under `VITEST` — `packages/compiler-rspack/src/kernel.ts` guards `experiments.cache` with `!process.env.VITEST` to avoid `rspack_storage` panic `scope not loaded` (`6441784`).
 - `sppkg` parity for `1.20`–`1.24` — `[Content_Types].xml` `txt` now conditional on feature usage, `DeveloperProperties` omits `undefined` (not empty string), `IsDomainIsolated` deprecated for `1.24+`, `crates/rspfx-sppkg/src/xml.rs` Rust map fix; `docs/compatibility.md`, `docs/roadblocks.md`, `docs/roadmap.md`, `docs/supporting-a-new-spfx-version.md` clarify verified gate vs CI matrix and mandate blackbox parity (`da876d6`).
+- `skills/rspfx/SKILL.md` SPFx targets sync — lists `1.20, 1.21, 1.22, 1.23, 1.24` with `default 1.23` to match `packages/core/src/versions.ts:22` and satisfy `versions-doc-sync` guard (`eae7736`).
 
 > Git tag: `v0.0.15` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.0.15` (single version, `scripts/publish.mjs`). Compare `v0.0.14...v0.0.15`.
 
