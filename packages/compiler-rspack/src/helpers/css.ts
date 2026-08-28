@@ -37,14 +37,11 @@ function hasPostcssConfigFile(projectRoot: string): boolean {
 
 export function rspfxCssInlineRule(projectRoot?: string): RuleSetRule {
   const root = projectRoot ?? process.cwd();
-  let styleLoaderPath: string | undefined = tryResolve('style-loader', root);
-  let cssLoaderPath: string | undefined = tryResolve('css-loader', root);
-  if (!styleLoaderPath) styleLoaderPath = tryResolve('style-loader', root) ?? 'style-loader';
-  if (!cssLoaderPath) cssLoaderPath = tryResolve('css-loader', root) ?? 'css-loader';
-  // fallback to package's own if still undefined: tryResolve already tried require.resolve
-  // but ensure string fallback
-  const sPath = styleLoaderPath ?? 'style-loader';
-  const cPath = cssLoaderPath ?? 'css-loader';
+  // tryResolve: projectRoot -> compiler's own require.resolve fallback; bun isolates loaders in .bun/
+  const styleLoaderPath = tryResolve('style-loader', root) ?? 'style-loader';
+  const cssLoaderPath = tryResolve('css-loader', root) ?? 'css-loader';
+  const sPath = styleLoaderPath;
+  const cPath = cssLoaderPath;
   const hasPostcss = hasPostcssConfigFile(root);
   const postcssLoaderPath = tryResolve('postcss-loader', root);
   const postcssPath = tryResolve('postcss', root);
@@ -64,7 +61,7 @@ export function rspfxCssInlineRule(projectRoot?: string): RuleSetRule {
   if (postcssAvailable && postcssLoaderPath) {
     use.push({ loader: postcssLoaderPath });
   }
-  return { test: /\.css$/, use: use as RuleSetRule['use'] };
+  return { test: /\.css$/, type: 'javascript/auto' as const, use: use as RuleSetRule['use'] };
 }
 
 export function rspfxSassRule(projectRoot?: string): RuleSetRule {
@@ -99,5 +96,5 @@ export function rspfxSassRule(projectRoot?: string): RuleSetRule {
   // Suppress unused variable warning when not needed
   void hasSass;
 
-  return { test: /\.s[ac]ss$/i, use: use as RuleSetRule['use'] };
+  return { test: /\.s[ac]ss$/i, type: 'javascript/auto' as const, use: use as RuleSetRule['use'] };
 }

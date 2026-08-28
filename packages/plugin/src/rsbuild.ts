@@ -330,7 +330,19 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
 
       api.modifyRsbuildConfig(async (config) => {
         const userInject = (config.output as any)?.injectStyles;
-        config.tools = { ...(config.tools ?? {}), htmlPlugin: false };
+        // Fix Rsbuild double PostCSS: Rsbuild auto-adds postcss-loader when postcss.config.* exists
+        // via tools.postcss (postcss-load-config). Our rspfxCssInlineRule also adds postcss-loader
+        // for the same config, causing postcss to run twice — second pass then sees JS emitted by
+        // style-loader as CSS (Tailwind v4 error). Disable Rsbuild's built-in postcss handling here;
+        // the Rspack rule (rspfxCssInlineRule, type: 'javascript/auto') is the single source of truth.
+        // Shallow merge via Object.assign in Rsbuild means postcssOptions is replaced, so Rsbuild
+        // sees plugins: [] and skips adding its loader. Keep user's ability to opt-out via output.injectStyles.
+        config.tools = {
+          ...(config.tools ?? {}),
+          htmlPlugin: false,
+          // deduplicate postcss: keep Rsbuild from adding a second postcss-loader
+          postcss: { postcssOptions: { plugins: [] } } as unknown as NonNullable<typeof config.tools>['postcss']
+        };
         config.output = {
           ...(config.output ?? {}),
           legalComments: 'none',
@@ -374,6 +386,13 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         (frameworkPresetPromise ??= loadFrameworkPreset(resolved.framework, root));
 
       api.modifyRspackConfig(async (config, utils) => {
+        // Disable Rspack native CSS experiments when we inject via style-loader;
+        // prevents Rsbuild's built-in css pipeline (type: 'css') from re-matching
+        // the JS output of style-loader and avoids double postcss handling.
+        (config as unknown as { experiments?: Record<string, unknown> }).experiments = {
+          ...((config as unknown as { experiments?: Record<string, unknown> }).experiments ?? {}),
+          css: false
+        };
         const project = read();
         if (!project) {
           return;

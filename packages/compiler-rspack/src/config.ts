@@ -285,6 +285,9 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
     },
     devtool,
     experiments: {
+      // SPFx injects CSS via style-loader (javascript/auto) — disable Rspack native CSS
+      // experiments.css to avoid asset emission / double handling.
+      css: false as unknown as false,
       cache: useCache
         ? {
             type: 'persistent',
