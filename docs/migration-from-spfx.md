@@ -58,6 +58,8 @@ RSPFX intentionally mirrors official SPFx project conventions, so most of an exi
 
 5. **Revert if needed** — `rspfx migrate --revert` restores from `.rspfx/migrate-backup.json`, or `git restore .` if the branch was clean.
 
+6. **Upgrade SPFx target (optional, after migration)** — change one field `spfxVersion` in the generated `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` and `bun update @mbsks/rspfx-plugin` — see [upgrading-spfx-version.md](upgrading-spfx-version.md) for the step-by-step, zero-install notes, and what RSPFX handles per version; verify with `rspfx doctor` / `rspfx build` / `rspfx package`.
+
 ## Known gaps
 
 - **No gulp task ecosystem.** Arbitrary gulp tasks (custom bundling pipelines, release automation hooks) have no equivalent. RSPFX exposes compiler/package hooks via `plugin-api` (`compilerHooks`, `packageHooks`) for scriptable extensions.

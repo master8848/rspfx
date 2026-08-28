@@ -183,6 +183,14 @@ If `config/spfx-customize-webpack.js` did something real (aliases, loader tweaks
 | Type errors in IDE on `*.module.scss` / string modules | RSPFX compiles with swc (no typecheck); add `declare module '*.module.scss'` / string-module `*.d.ts` for IDE niceness (official projects already ship these) |
 | `engines` warnings on install | relax `engines.node` to `>=20` |
 
+## After migration: upgrade the SPFx target
+
+Migrating keeps the detected `spfxVersion` (from `package.json` `@microsoft/sp-core-library`, else `SPFX_DEFAULT_TARGET` `packages/core/src/versions.ts:13`).
+
+To move `1.22 → 1.23` after the migrate, change one field `spfxVersion: '1.23'` in the generated config and `bun update @mbsks/rspfx-plugin` — see [upgrading-spfx-version.md](upgrading-spfx-version.md) for the step-by-step, zero-install notes (`@microsoft/sp-*` stays externalized), and the Node 20+ matrix.
+
+Full matrix and per-version guarantees: [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix).
+
 ## After migration: what changes day to day
 
 | Task | Official SPFx | RSPFX |

@@ -1,9 +1,8 @@
 # Compatibility Statement
 
-RSPFX produces artifacts that official SPFx tooling produces — same formats, same
-semantics — so existing tenants, workbenches, and app catalogs accept them without
-changes. Format ground truth lives in [reference/FORMATS.md](../reference/FORMATS.md),
-harvested from official npm packages; provenance is marked per section there.
+RSPFX produces artifacts that official SPFx tooling produces — same formats, same semantics — so existing tenants, workbenches, and app catalogs accept them without changes.
+
+Format ground truth lives in [reference/FORMATS.md](../reference/FORMATS.md), harvested from official npm packages; provenance is marked per section there.
 
 ## Guaranteed
 
@@ -27,29 +26,87 @@ harvested from official npm packages; provenance is marked per section there.
 | Extension (`componentType: Extension`) and Library (`componentType: Library`) | **Verified** — extension and library compile/discovery, manifests.js, and sppkg (`Extension_<id>.xml`, `Library_<id>.xml` `packages/sppkg-builder/src/xml.ts:181`) installed via app catalog and rendered in workbench; parity suite covers Library and Extension entries |
 | sp-* component IDs | Stable across versions (FORMATS §6); fallback table in `reference/sp-component-ids.json` |
 
-Rules: **never assume** a format — verify against an unzipped official `.sppkg`
-on any discrepancy; sp-* dependency ids/versions are harvested from the
-referenced package's own `node_modules` manifest at build time, never hardcoded.
+Rules: **never assume** a format — verify against an unzipped official `.sppkg` on any discrepancy; sp-* dependency ids/versions are harvested from the referenced package's own `node_modules` manifest at build time, never hardcoded.
 
 ## SPFx version matrix
 
-| Target | Status |
+Single source of truth: `packages/core/src/versions.ts:13` (`SPFX_VERSIONS`, `SPFX_DEFAULT_TARGET`, `SPFX_TARGETS`, `spfxNpmVersion()`).
+
+| Target | Status | Official toolchain | Official Node | RSPFX Node | npmVersion |
+|---|---|---|---|---|---|
+| `1.20` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.20.0` |
+| `1.21` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.21.0` |
+| `1.22` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.22.0` |
+| `1.23` | Supported, default | Heft | 20.19+ / 22+ | 20+ | `1.23.0` |
+
+SPFx `1.24` is in public preview (beta.1, July 2026; GA expected September 2026) and is **not** yet a supported target.
+
+Component IDs for `sp-*` packages are stable across `1.20`–`1.23`; the `version` field of each `"type": "component"` entry is read from the installed `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, with the `reference/sp-component-ids.json` table as fallback (`packages/manifest-generator/src/sp-dependencies.ts`, `packages/manifest-generator/src/data/component-ids.ts`).
+
+Pin the target via the plugin options (`spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`) and keep `@microsoft/sp-*` deps in sync when you have them (`apps/cli/src/commands/doctor.ts:202` checks `sp-*` prefix `<spfxVersion>.`).
+
+See [upgrading-spfx-version.md](upgrading-spfx-version.md) for the step-by-step upgrade, zero-install notes, and what changes per version.
+
+## RSPFX and SPFx compatibility
+
+Every RSPFX release supports the full `SPFxTargets` list above — there is no per-release SPFx subset.
+
+| RSPFX line | SPFx `1.20` | `1.21` | `1.22` | `1.23` |
+|---|---|---|---|---|
+| `0.0.14` (`latest`) | ✅ | ✅ | ✅ | ✅ (default) |
+| `0.0.13` | ✅ | ✅ | ✅ | ✅ |
+| `<0.0.13` | ✅ | ✅ | ✅ | ✅ (added at `0.0.x`; `1.23` formats harvested from `1.23.2` packages) |
+
+History lives in [CHANGELOG.md](../CHANGELOG.md) (one `## [X.Y.Z]` per version, tag `vX.Y.Z`); this matrix is current state only.
+
+If a future RSPFX drops an old target, it will be noted in that version's `CHANGELOG.md` entry and `packages/core/src/versions.ts:13` will remove the entry so `isSpfxTarget()` rejects it.
+
+## Node.js requirements per SPFx target
+
+RSPFX requires Node 20+ for every SPFx target (`package.json:9` `engines.node >=20`, `apps/cli/src/commands/doctor.ts:159` checks `node >= 20`).
+
+Official SPFx Node ranges differ per target (Heft-era `1.23` wants Node 20.19+ / 22; gulp-era `1.20`–`1.22` accepted Node 18) — RSPFX normalizes to one range so you don't switch Node when you switch `spfxVersion`.
+
+Use any manager (`nvm`, `volta`, `fnm`) pinned to Node 20+; `rspfx doctor` passes on Node 20, 22, and 24.
+
+For the repo itself Bun is recommended; consumers can use npm/yarn/pnpm/bun.
+
+## What RSPFX handles automatically per SPFx version
+
+Change `spfxVersion` — RSPFX adjusts the artifacts; you do not patch manifests or bundler config by hand.
+
+| Area | What RSPFX does |
 |---|---|
-| 1.20 | Supported — component IDs stable across versions; versions come from `node_modules` |
-| 1.21 | Supported — same |
-| 1.22 | Supported — same |
-| 1.23 | Supported, default — Heft-era; formats unchanged (verified-by-reference from 1.23.2 packages) |
+| Manifest schema (`componentType`, `manifestVersion: 2`, `preconfiguredEntries`, `loaderConfig`, `safeWithCustomScriptDisabled`) | `packages/manifest-generator/src/component-manifests.ts:80` generates `loaderConfig` (`internalModuleBaseUrls`, `entryModuleId`, `scriptResources`) matching `reference/FORMATS.md` §1 |
+| CDN URLs (`write-manifests.json` `cdnBasePath` ↔ `HTTPS://SPCLIENTSIDEASSETLIBRARY/` ↔ `[]`) | `packages/dev-runtime/src/release.ts:39` `assembleRelease` reads `cdnBasePath`; `packages/sppkg-builder` rewrites to pseudo-URL when `includeClientSideAssets` (`reference/FORMATS.md` §4) |
+| Bundle wrapper (`define('<id>_<version>', …)` + `chunkLoadingGlobal: webpackJsonp_<uniqueName>` + `publicPath: auto`) | `packages/compiler-rspack/src/config.ts:234` (Rspack), `packages/plugin/src/vite.ts:412` / `packages/plugin/src/rsbuild.ts:414` (Vite/Rsbuild) — verified byte-compatible per bundler in `packages/plugin/tests/parity.test.ts` |
+| `manifests.js` template (`self.debugManifests`, `define([], () => a)`, `window.__MANIFESTS__`, sp-* base URL rewrite) | `packages/manifest-generator/src/manifests-js.ts` matches `reference/FORMATS.md` §3 |
+| `.sppkg` ZIP layout (`AppManifest.xml`, `feature_<id>.xml`, `ClientSideAssets`, `[Content_Types].xml` ordering, rels) | `packages/sppkg-builder/src/sppkg-builder.ts:105` + `packages/sppkg-builder/src/xml.ts:111` per `reference/FORMATS.md` §4 |
+| `sp-*` `id` / `version` for `"type": "component"` deps | Harvested from `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time (`packages/manifest-generator/src/sp-dependencies.ts`); fallback `reference/sp-component-ids.json` → `packages/manifest-generator/src/data/component-ids.ts` |
+| Workbench debug URL (`?debug=true&noredir=true&debugManifestsFile=`) | `packages/dev-runtime/src/serve.ts:134` builds `<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` |
+| Future schema / component-type changes | Added centrally in `packages/core/src/versions.ts:13` per [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md); until added, `isSpfxTarget()` rejects unknown `spfxVersion` |
 
-Component IDs for sp-* packages are stable across 1.20–1.23; the `version`
-field of each `"type": "component"` entry is read from the installed
-`node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, with the
-`reference/sp-component-ids.json` table as fallback. Pin the target via the
-plugin options (`spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`) and
-keep `@microsoft/sp-*` deps in sync.
+## Zero-install upgrades
 
-### Switching targets (consumer)
+Most web parts need no `@microsoft/sp-*` install — the toolchain externalizes them (`reference/FORMATS.md` §1, `packages/compiler-rspack/src/config.ts:234` `externals`) and emits `"type": "component"` so SharePoint resolves its built-in copies.
 
-To move a project between supported SPFx versions (e.g. `1.21 → 1.23`), change one field in your bundler config (`vite.config.ts` with `rspfxVite`, `rsbuild.config.ts` with `rspfxRsbuild`, or `rspack.config.ts` with `RspfxPlugin`): `spfxVersion: '1.23'`.
+Upgrading SPFx (`1.20 → 1.23`) does not require installing new `@microsoft/sp-*` versions unless your code imports that runtime (e.g. `@microsoft/sp-http`, `@microsoft/sp-listview-extensibility`).
+
+Official upgrades bump the generator, Heft rig, `rush-stack-compiler-*`, `spfx-heft-plugins` / `sp-build-web`, and every `sp-*` pin — RSPFX keeps the version in one field (`spfxVersion`) and one bump (`bun update @mbsks/rspfx-plugin`).
+
+If you do have `sp-*` deps, keep their `major.minor` prefix equal to `spfxVersion` — `rspfx doctor` warns when they diverge (`apps/cli/src/commands/doctor.ts:202`) and `rspfx new` pins `spfxNpmVersion(target)` at scaffold (`packages/core/src/versions.ts:27`).
+
+## Switching targets (consumer)
+
+Full tutorial: [upgrading-spfx-version.md](upgrading-spfx-version.md).
+
+One-line switch — edit the plugin options in the bundler config that your project uses (`vite.config.ts` with `rspfxVite`, `rsbuild.config.ts` with `rspfxRsbuild`, or `rspack.config.ts` with `RspfxPlugin`):
+
+```ts
+// vite.config.ts — vite.config.ts with rspfxVite
+// change one value
+spfxVersion: '1.23'
+```
 
 Then bump the toolchain and rebuild:
 
@@ -58,19 +115,12 @@ bun update @mbsks/rspfx-plugin   # or edit package.json and bun install
 rspfx build                       # dist/ + release/ now targets 1.23
 ```
 
-Compare official: update `@microsoft/generator-sharepoint`, `@rushstack/heft`, `@microsoft/rush-stack-compiler-*` rigs, `@microsoft/spfx-heft-plugins` / `sp-build-web`, and every `@microsoft/sp-*` pin plus `heft.json` / `rig.json` extends. RSPFX keeps the version in one place (`packages/core/src/versions.ts:13` is the single source of truth; see [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for the maintainer-side checklist).
+Compare official: update `@microsoft/generator-sharepoint`, `@rushstack/heft`, `@microsoft/rush-stack-compiler-*` rigs, `@microsoft/spfx-heft-plugins` / `sp-build-web`, and every `@microsoft/sp-*` pin plus `heft.json` / `rig.json` extends.
 
-SPFx 1.24 is in public preview (beta.1, July 2026; GA expected September 2026)
-and is **not** yet a supported target. The matrix above is defined in
-`packages/core/src/versions.ts` (single source of truth, `SPFX_VERSIONS`); see
-[docs/supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for
-the process of adding a new target, [roadblocks.md](roadblocks.md) for takeover blockers, and [real-tenant-validation.md](real-tenant-validation.md) for the tenant gate validation steps.
+RSPFX keeps the version in one place (`packages/core/src/versions.ts:13` is the single source of truth; see [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for the maintainer-side checklist).
 
-SPFx 1.23 deprecated the hosted workbench (`workbench.aspx`); it retires
-December 1, 2026, replaced by the SPFx Debug Toolbar. RSPFX dev-serve output is
-unaffected — it still emits the same `manifests.js` + workbench URL format.
+SPFx `1.23` deprecated the hosted workbench (`workbench.aspx`); it retires December 1, 2026, replaced by the SPFx Debug Toolbar.
 
-Non-negotiables (from ARCHITECTURE.md §7): sp-* never bundled in production
-output; output naming identical to official; the `.sppkg` must install via app
-catalog → site collection → workbench; dev works like official `serve`; no
-webpack/Heft/gulp strings anywhere in runtime or build output.
+RSPFX dev-serve output is unaffected — it still emits the same `manifests.js` + workbench URL format.
+
+Non-negotiables (from `ARCHITECTURE.md` §7): sp-* never bundled in production output; output naming identical to official; the `.sppkg` must install via app catalog → site collection → workbench; dev works like official `serve`; no `webpack`/`Heft`/`gulp` strings anywhere in runtime or build output.

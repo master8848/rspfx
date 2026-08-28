@@ -62,7 +62,7 @@ import { rspfxVite } from '@mbsks/rspfx-plugin';
 export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
 ```
 
-If the file is missing, the same manifests drive the build. Run `rspfx migrate` to write it, or stay zero-config. See [hybrid-dev.md](hybrid-dev.md).
+If the file is missing, the same manifests drive the build. Run `rspfx migrate` to write it, or stay zero-config. See [hybrid-dev.md](hybrid-dev.md). To move between targets (`1.20 ↔ 1.23`) change that one `spfxVersion` field and `bun update @mbsks/rspfx-plugin` — see [upgrading-spfx-version.md](upgrading-spfx-version.md).
 
 > `rspfx new` already writes the config. For an existing Heft/Gulp project run `rspfx migrate --dry-run` first.
 

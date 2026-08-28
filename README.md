@@ -146,6 +146,7 @@ It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
 | Multi-webpart & extensions | [docs/multi-webpart.md](docs/multi-webpart.md) |
 | Teams & Outlook install | [docs/teams-outlook-install.md](docs/teams-outlook-install.md) |
 | Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
+| Upgrade SPFx version (zero-install) | [docs/upgrading-spfx-version.md](docs/upgrading-spfx-version.md) |
 | Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |
 | Roadmap | [docs/roadmap.md](docs/roadmap.md) |
