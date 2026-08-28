@@ -2,6 +2,8 @@
 
 **SPFx-compatible build toolchain — Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.**
 
+Spfx developer dont need to wait minutes for dev server we start in seconds. Saving Time and frustration working with SPFx. Well documented and agent first and plug and play articture makes this even better than heft. Supporting new tools help project development and increases developer satisfaction. 
+
 Builds web parts that load in the SharePoint workbench and install as `.sppkg` — no webpack, Heft, or gulp.
 
 📖 **Docs:** https://rspfx.mbsks.me
