@@ -5,6 +5,7 @@ aside: false
 outline: false
 editLink: false
 lastUpdated: false
+copyMarkdown: false
 head:
   - - meta
     - name: robots

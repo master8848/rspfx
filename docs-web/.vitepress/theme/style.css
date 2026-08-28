@@ -1027,19 +1027,41 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   .rspfx-accent-menu { right: -4px; width: min(300px, calc(100vw - 24px)); max-width: min(300px, calc(100vw - 24px)); }
 }
 
-/* ── Copy as markdown — Bun-style split button ── */
+/* ── Copy — humanized default, small icon-split on title row (flex) ── */
+.rspfx-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+.rspfx-doc-header h1 {
+  flex: 1 1 0%;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  line-height: 1.2;
+}
+
 .rspfx-copy-markdown {
   display: flex;
   justify-content: flex-end;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   position: relative;
+  flex-shrink: 0;
 }
-/* Center placement: button sits in doc-before slot, right-aligned above content — always visible */
+.rspfx-doc-header .rspfx-copy-markdown {
+  margin: 0;
+  justify-content: flex-start;
+}
 
 .rspfx-copy-group {
   display: inline-flex;
   align-items: stretch;
-  height: 32px;
+  height: 28px;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
   background: var(--vp-c-bg-soft);
@@ -1057,18 +1079,14 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 .rspfx-copy-main {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 12px;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
   border: none;
   border-right: 1px solid var(--vp-c-divider);
   background: transparent;
   color: var(--vp-c-text-2);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.01em;
   cursor: pointer;
-  white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
   outline: none;
 }
@@ -1103,7 +1121,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
+  width: 22px;
   flex-shrink: 0;
   border: none;
   background: transparent;
@@ -1118,6 +1136,21 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 }
 .rspfx-copy-trigger:active {
   background: var(--vp-c-default-soft);
+}
+.rspfx-copy-hint {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vp-c-text-3);
+  letter-spacing: 0.01em;
+}
+.rspfx-copy-menu-item.is-active {
+  background: var(--vp-c-default-soft);
+}
+.rspfx-check {
+  margin-left: auto;
+  color: var(--vp-c-brand-1);
+  flex-shrink: 0;
 }
 
 .rspfx-copy-menu {
@@ -1189,6 +1222,92 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 
 /* ── Code blocks ── */
 .vp-doc div[class*="language-"] { border-radius: var(--rspfx-radius-md); }
+
+/* ── Docs tables — primary-tinted, full-width ── */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 20px 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 12%, var(--vp-c-divider));
+  border-radius: 10px;
+  background: var(--vp-c-bg);
+}
+.vp-doc th,
+.vp-doc td {
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--primary)) 7%, var(--vp-c-divider));
+  border-right: 1px solid color-mix(in srgb, hsl(var(--primary)) 5%, var(--vp-c-divider) / 0.7);
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  vertical-align: top;
+}
+.vp-doc th:last-child,
+.vp-doc td:last-child {
+  border-right: none;
+}
+.vp-doc tr:last-child td {
+  border-bottom: none;
+}
+.vp-doc th {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid hsl(var(--primary) / 0.9);
+  border-right-color: hsl(var(--primary-foreground) / 0.18);
+}
+.vp-doc th:first-child { border-top-left-radius: 10px; }
+.vp-doc th:last-child { border-top-right-radius: 10px; }
+.vp-doc tr:last-child td:first-child { border-bottom-left-radius: 10px; }
+.vp-doc tr:last-child td:last-child { border-bottom-right-radius: 10px; }
+.vp-doc td {
+  background: transparent;
+  color: var(--vp-c-text-1);
+  font-size: 13.8px;
+}
+.vp-doc tr:nth-child(even) td {
+  background: hsl(var(--primary) / 0.018);
+}
+.vp-doc tr:hover td {
+  background: hsl(var(--primary) / 0.03);
+}
+.vp-doc tr:nth-child(even):hover td {
+  background: hsl(var(--primary) / 0.045);
+}
+.dark .vp-doc table {
+  border-color: color-mix(in srgb, hsl(var(--primary)) 16%, var(--vp-c-divider));
+}
+.dark .vp-doc th {
+  background: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary) / 0.9);
+  color: hsl(var(--primary-foreground));
+}
+.dark .vp-doc tr:nth-child(even) td {
+  background: hsl(var(--primary) / 0.05);
+}
+.dark .vp-doc tr:hover td {
+  background: hsl(var(--primary) / 0.07);
+}
+.dark .vp-doc tr:nth-child(even):hover td {
+  background: hsl(var(--primary) / 0.09);
+}
+.vp-doc td code {
+  font-size: 12.8px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: color-mix(in srgb, hsl(var(--primary)) 6%, var(--vp-c-default-soft));
+  border: 1px solid color-mix(in srgb, hsl(var(--primary)) 8%, var(--vp-c-divider));
+}
 
 /* ── Footer subtle ── */
 .VPFooter { border-top: 1px solid var(--vp-c-divider); }
