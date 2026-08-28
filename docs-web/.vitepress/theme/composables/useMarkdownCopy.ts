@@ -40,6 +40,19 @@ export function useMarkdownCopy(
     }
   }
 
+  function ensureRawFooter(md: string): string {
+    if (md.includes('Source:')) return md
+    const fallbackOrigin = 'https://rspfx.mbsks.me'
+    const sourceUrl =
+      typeof window !== 'undefined' && window.location.href ? window.location.href : fallbackOrigin + route.path
+    const mdUrl = fallbackOrigin + '/md' + route.path
+    const base = fallbackOrigin + '/md/'
+    const mdPath = '/md' + route.path
+    // Prepend header at start (replaces footer) — consistent with humanizer
+    const header = `Source: ${sourceUrl}\nMD: ${mdUrl}\nBase: ${base}\nTip: fetch markdown via Base + relative md path or absolute /md route (${mdPath})\n---\n\n`
+    return header + md.trimStart()
+  }
+
   async function copyMarkdown(): Promise<string> {
     let md = await fetchRawMarkdown()
     // DOM fallback is legacy; markdown route /md makes it unnecessary, kept for offline preview only.
@@ -48,6 +61,9 @@ export function useMarkdownCopy(
       const doc = typeof document !== 'undefined' ? document.querySelector('.vp-doc') : null
       md = doc ? (doc as HTMLElement).innerText : (typeof document !== 'undefined' ? document.body.innerText : '')
     }
+    if (!md) md = ''
+    // Always guarantee footer with Base/Source even for raw mode
+    if (!md.includes('Source:')) md = ensureRawFooter(md)
     return md
   }
 
@@ -60,8 +76,11 @@ export function useMarkdownCopy(
       md = doc ? (doc as HTMLElement).innerText : (typeof document !== 'undefined' ? document.body.innerText : '')
     }
     try {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined
-      const sourceUrl = typeof window !== 'undefined' ? window.location.href : undefined
+      const fallbackOrigin = 'https://rspfx.mbsks.me'
+      const baseUrl =
+        typeof window !== 'undefined' && window.location.origin ? window.location.origin : fallbackOrigin
+      const sourceUrl =
+        typeof window !== 'undefined' && window.location.href ? window.location.href : fallbackOrigin + route.path
       return humanizeMarkdown(md, { baseUrl, sourceUrl })
     } catch {
       return md

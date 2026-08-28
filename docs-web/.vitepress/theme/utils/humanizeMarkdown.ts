@@ -6,6 +6,8 @@ export interface HumanizeOptions {
 
 type LinkRef = { text: string; href: string }
 
+const DEFAULT_ORIGIN = 'https://rspfx.mbsks.me'
+
 function getOrigin(url: string): string | null {
   try {
     return new URL(url).origin
@@ -73,7 +75,10 @@ function stripLinks(
   seen: Set<string>,
   opts: HumanizeOptions,
 ): string {
-  const baseOrigin = (opts.baseUrl ? getOrigin(opts.baseUrl) : null) ?? (opts.sourceUrl ? getOrigin(opts.sourceUrl) : null)
+  const baseOrigin =
+    (opts.baseUrl ? getOrigin(opts.baseUrl) : null) ??
+    (opts.sourceUrl ? getOrigin(opts.sourceUrl) : null) ??
+    DEFAULT_ORIGIN
   const { text: prot, slots } = protectCodeSpans(text)
   let out = prot
   out = out.replace(/!?\[([^\]]*)\]\(([^)]+)\)/g, (match, p1: string, p2: string) => {
@@ -204,8 +209,10 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
 
   const sourceUrl = opts.sourceUrl ?? ''
   const baseUrl = opts.baseUrl
-  const baseOrigin = (baseUrl ? getOrigin(baseUrl) : null) ?? (sourceUrl ? getOrigin(sourceUrl) : null)
-  const baseMd = baseOrigin ? baseOrigin + '/md/' : null
+  const HARD_ORIGIN = DEFAULT_ORIGIN
+  const HARD_BASE = DEFAULT_ORIGIN + '/md/'
+  const baseOrigin =
+    (baseUrl ? getOrigin(baseUrl) : null) ?? (sourceUrl ? getOrigin(sourceUrl) : null) ?? DEFAULT_ORIGIN
 
   let mdUrl: string | null = null
   let mdPath: string | null = null
@@ -219,21 +226,29 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
       mdUrl = u.origin + mdPath
     } catch {}
   }
+  const sourceDisplay = sourceUrl || HARD_ORIGIN
+  if (!mdUrl || !mdPath) {
+    mdPath = mdPath ?? '/md/'
+    mdUrl = mdUrl ?? HARD_ORIGIN + mdPath
+  }
 
-  if (sourceUrl || baseOrigin || refs.length > 0) {
-    out.push('', '---')
-    if (sourceUrl) out.push(`Source: ${sourceUrl}`)
-    if (mdUrl) out.push(`MD: ${mdUrl}`)
-    if (baseMd) out.push(`Base: ${baseMd}`)
-    else if (baseOrigin) out.push(`Base: ${baseOrigin}`)
-    if (mdPath) out.push(`Tip: fetch markdown via Base + relative md path or absolute /md route (${mdPath})`)
-    if (refs.length > 0) {
-      out.push('', 'References:')
-      for (const r of refs) {
-        const t = r.text.replace(/\s+/g, ' ').trim()
-        const h = r.href.trim()
-        out.push(`- ${t} → ${h}`)
-      }
+  // Header at start (replaces footer): Source/MD/Base/Tip before content.
+  const header: string[] = [
+    `Source: ${sourceDisplay}`,
+    `MD: ${mdUrl}`,
+    `Base: ${HARD_BASE}`,
+    `Tip: fetch markdown via Base + relative md path or absolute /md route (${mdPath})`,
+    '---',
+    '',
+  ]
+  out.unshift(...header)
+
+  if (refs.length > 0) {
+    out.push('', '---', '', 'References:')
+    for (const r of refs) {
+      const t = r.text.replace(/\s+/g, ' ').trim()
+      const h = r.href.trim()
+      out.push(`- ${t} → ${h}`)
     }
   }
 
