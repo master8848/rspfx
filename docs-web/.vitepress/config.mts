@@ -46,15 +46,17 @@ export default defineConfig({
     siteTitle: 'RSPFX',
     // Minimal nav: sidebar holds all docs navigation; socialLinks + footer already expose GitHub/npm/Changelog.
     // Keeping top bar clean (logo left, search middle, appearance+accent+social right) avoids clutter and prevents outline overlap.
-    nav: [{ text: 'llm.txt', link: '/llm.txt' }],
+    nav: [],
     sidebar: {
-      '/docs/': [
+      '/llms': [
         {
           text: 'Getting Started',
           collapsed: false,
           items: [
             { text: 'Why RSPFX', link: '/docs/why-rspfx' },
             { text: 'Getting Started', link: '/docs/getting-started' },
+            { text: 'llms.txt', link: '/llms' },
+
           ],
         },
         {
@@ -76,7 +78,113 @@ export default defineConfig({
         },
         {
           text: 'Migration',
+          collapsed: true,
+          items: [
+            { text: 'Migrating from SPFx', link: '/docs/migration-from-spfx' },
+            { text: 'Migrating off gulp + Heft', link: '/docs/migrating-from-gulp-heft' },
+            { text: 'Case Study — PnP Modern Search', link: '/docs/migration-case-study' },
+            { text: 'Hybrid Dev Mode', link: '/docs/hybrid-dev' },
+            { text: 'Upgrading SPFx Version', link: '/docs/upgrading-spfx-version' },
+          ],
+        },
+        {
+          text: 'Reference',
           collapsed: false,
+          items: [
+            { text: 'Architecture', link: '/docs/architecture' },
+            { text: 'Internal API', link: '/docs/internal-api' },
+            { text: 'Compatibility', link: '/docs/compatibility' },
+            { text: 'Performance', link: '/docs/performance' },
+            { text: 'Roadmap', link: '/docs/roadmap' },
+            { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
+            { text: 'Roadblocks', link: '/docs/roadblocks' },
+          ],
+        },
+      ],
+      '/llm': [
+        {
+          text: 'Getting Started',
+          collapsed: false,
+          items: [
+            { text: 'Why RSPFX', link: '/docs/why-rspfx' },
+            { text: 'Getting Started', link: '/docs/getting-started' },
+            { text: 'llms.txt', link: '/llms' },
+
+          ],
+        },
+        {
+          text: 'Guide',
+          collapsed: false,
+          items: [
+            { text: 'Command Reference', link: '/docs/commands' },
+            { text: 'Project Structure', link: '/docs/project-structure' },
+            { text: 'Building & Packaging', link: '/docs/building-packages' },
+            { text: 'Deployment', link: '/docs/deployment' },
+            { text: 'Teams & Outlook Install', link: '/docs/teams-outlook-install' },
+            { text: 'Multi-webpart', link: '/docs/multi-webpart' },
+            { text: 'Frameworks', link: '/docs/frameworks' },
+            { text: 'Custom Framework', link: '/docs/custom-framework' },
+            { text: 'Styling', link: '/docs/styling' },
+            { text: 'Favicon & Assets', link: '/docs/favicon-and-assets' },
+            { text: 'Fast Refresh', link: '/docs/fast-refresh' },
+          ],
+        },
+        {
+          text: 'Migration',
+          collapsed: true,
+          items: [
+            { text: 'Migrating from SPFx', link: '/docs/migration-from-spfx' },
+            { text: 'Migrating off gulp + Heft', link: '/docs/migrating-from-gulp-heft' },
+            { text: 'Case Study — PnP Modern Search', link: '/docs/migration-case-study' },
+            { text: 'Hybrid Dev Mode', link: '/docs/hybrid-dev' },
+            { text: 'Upgrading SPFx Version', link: '/docs/upgrading-spfx-version' },
+          ],
+        },
+        {
+          text: 'Reference',
+          collapsed: false,
+          items: [
+            { text: 'Architecture', link: '/docs/architecture' },
+            { text: 'Internal API', link: '/docs/internal-api' },
+            { text: 'Compatibility', link: '/docs/compatibility' },
+            { text: 'Performance', link: '/docs/performance' },
+            { text: 'Roadmap', link: '/docs/roadmap' },
+            { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
+            { text: 'Roadblocks', link: '/docs/roadblocks' },
+          ],
+        },
+      ],
+      '/docs/': [
+        {
+          text: 'Getting Started',
+          collapsed: false,
+          items: [
+            { text: 'Why RSPFX', link: '/docs/why-rspfx' },
+            { text: 'Getting Started', link: '/docs/getting-started' },
+            { text: 'llms.txt', link: '/llms' },
+
+          ],
+        },
+        {
+          text: 'Guide',
+          collapsed: false,
+          items: [
+            { text: 'Command Reference', link: '/docs/commands' },
+            { text: 'Project Structure', link: '/docs/project-structure' },
+            { text: 'Building & Packaging', link: '/docs/building-packages' },
+            { text: 'Deployment', link: '/docs/deployment' },
+            { text: 'Teams & Outlook Install', link: '/docs/teams-outlook-install' },
+            { text: 'Multi-webpart', link: '/docs/multi-webpart' },
+            { text: 'Frameworks', link: '/docs/frameworks' },
+            { text: 'Custom Framework', link: '/docs/custom-framework' },
+            { text: 'Styling', link: '/docs/styling' },
+            { text: 'Favicon & Assets', link: '/docs/favicon-and-assets' },
+            { text: 'Fast Refresh', link: '/docs/fast-refresh' },
+          ],
+        },
+        {
+          text: 'Migration',
+          collapsed: true,
           items: [
             { text: 'Migrating from SPFx', link: '/docs/migration-from-spfx' },
             { text: 'Migrating off gulp + Heft', link: '/docs/migrating-from-gulp-heft' },

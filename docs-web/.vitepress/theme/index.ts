@@ -14,10 +14,8 @@ export default {
   Layout: () => {
     return h(DefaultTheme.Layout, null, {
       'nav-bar-content-after': () => h(AccentSwitcher),
-      // desktop: in right aside above "On this page" (VitePress slot `aside-outline-before`)
-      // mobile: fallback in doc top (aside is hidden < 960px) — CSS toggles visibility
+      // Center: above doc content (Bun-style split button, always visible on docs pages)
       'doc-before': () => h(CopyMarkdown),
-      'aside-outline-before': () => h(CopyMarkdown),
     })
   },
 } satisfies Theme

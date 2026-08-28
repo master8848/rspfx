@@ -21,18 +21,22 @@ Tenant gate: scaffold → `rspfx package` → upload `.sppkg` to real app catalo
 
 Real-tenant CI is planned across SPFx targets (needs tenant credentials in CI secrets; env vars see [commands.md#rspfx-deploy](commands.md#rspfx-deploy)).
 
-## Open items
-
-| Item | Verdict |
-|---|---|
-| Turbopack | Not possible — no webpack plugin API, no standalone CLI outside Next.js |
-| React 19 | Feasible, small effort — bump examples/templates, validate Fluent 8 peers |
-| Official-toolchain benchmarks | Feasible — harness ships as `bench/compare-official.mjs`; classic numbers on this machine are seconds vs RSPFX milliseconds |
-| Real-tenant CI | External dependency — needs Microsoft 365 developer tenant credentials |
-
 ## Backlog
 
-React 19 validation with Fluent before promoting "any React version" from demo to guarantee.
+| Status | Item | Notes |
+|---|---|---|
+| ✅ Done | SPFx output format locked in | Reference build output captured so SharePoint loads the bundle correctly (see `reference/FORMATS.md`). |
+| ✅ Done | Core build and packaging | Manifests and `.sppkg` generation working. Plugin hooks wired into the CLI. |
+| ✅ Done | Compilers and CLI | Rspack, Vite, and Rsbuild all produce the same output. Commands `new`, `dev`, `build`, `package`, `deploy`, `doctor`, `analyze`, and `clean` work. |
+| ✅ Done | Dev server | Local manifest server, workbench URL, and auto-reload. |
+| ✅ Done | Fast refresh and local preview | Edits keep component state for React, Preact, Vue, Svelte, and Solid. Local preview with mock API on Rspack; Vite/Rsbuild uses workbench. |
+| ✅ Done | Frameworks and Fluent UI | Vanilla, React, Solid, Preact, Vue, and Svelte supported with Fluent adapter. |
+| ✅ Done | Bundler parity | Same output across Rspack, Vite, and Rsbuild verified by tests. |
+| ✅ Done | Tested on a real tenant | Web part, extension, and library installed from the app catalog and rendered. |
+| ❌ Not planned | Turbopack | No plugin API and no standalone CLI — can't be supported. |
+| 💡 Future | React 19 + Fluent 8 | Need to check latest React with Fluent before we promise full support. |
+| 💡 Future | Speed comparison with official toolchain | Test harness exists, needs results on more machines. |
+| 💡 Future | Automated tenant checks in CI | Needs a Microsoft 365 test tenant and credentials. |
 
 ## Testing
 

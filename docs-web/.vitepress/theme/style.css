@@ -1027,80 +1027,165 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   .rspfx-accent-menu { right: -4px; width: min(300px, calc(100vw - 24px)); max-width: min(300px, calc(100vw - 24px)); }
 }
 
-/* ── Copy as markdown ── */
+/* ── Copy as markdown — Bun-style split button ── */
 .rspfx-copy-markdown {
   display: flex;
   justify-content: flex-end;
   margin: 0 0 14px;
+  position: relative;
 }
-/* Right-aside placement (aside-outline-before) — sits above "On this page" */
-.VPDocAside .rspfx-copy-markdown {
-  justify-content: stretch;
-  margin: 0 0 16px;
+/* Center placement: button sits in doc-before slot, right-aligned above content — always visible */
+
+.rspfx-copy-group {
+  display: inline-flex;
+  align-items: stretch;
+  height: 32px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.VPDocAside .rspfx-copy-markdown-btn {
-  width: 100%;
-  justify-content: center;
+.rspfx-copy-group:hover {
+  border-color: color-mix(in srgb, var(--vp-c-brand-1) 18%, var(--vp-c-divider));
 }
-/* Toggle: show aside version on desktop, doc version on mobile where aside is hidden */
-@media (min-width: 960px) {
-  .VPDoc .rspfx-copy-markdown { display: none; }
+.rspfx-copy-group.open {
+  border-color: color-mix(in srgb, var(--vp-c-brand-1) 22%, var(--vp-c-divider));
+  box-shadow: 0 0 0 2px var(--vp-c-brand-soft);
 }
-@media (max-width: 959px) {
-  .VPDocAside .rspfx-copy-markdown { display: none; }
-}
-.rspfx-copy-markdown-btn {
+
+.rspfx-copy-main {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 11px;
-  border-radius: 8px;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  gap: 7px;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid var(--vp-c-divider);
+  background: transparent;
   color: var(--vp-c-text-2);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.01em;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   outline: none;
 }
-.rspfx-copy-markdown-btn:hover {
+.rspfx-copy-main:hover {
   background: var(--vp-c-default-soft);
   color: var(--vp-c-text-1);
-  border-color: color-mix(in srgb, var(--vp-c-brand-1) 22%, var(--vp-c-divider));
 }
-.rspfx-copy-markdown-btn:active {
-  transform: translateY(0.5px);
+.rspfx-copy-main:active {
+  background: var(--vp-c-default-soft);
 }
-.rspfx-copy-markdown-btn:focus-visible {
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 0 0 2px var(--vp-c-brand-soft);
+.rspfx-copy-main:focus-visible {
+  background: var(--vp-c-default-soft);
 }
-.rspfx-copy-markdown-btn:disabled {
+.rspfx-copy-main:disabled {
   opacity: 0.7;
   cursor: wait;
 }
-.rspfx-copy-markdown-btn.copied {
-  background: var(--vp-c-brand-soft);
-  border-color: color-mix(in srgb, var(--vp-c-brand-1) 28%, transparent);
+.rspfx-copy-main.copied {
   color: var(--vp-c-brand-1);
 }
-.rspfx-copy-markdown-btn.failed {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.28);
+.rspfx-copy-main.failed {
   color: #ef4444;
 }
-.dark .rspfx-copy-markdown-btn.failed {
-  background: rgba(248, 113, 113, 0.12);
+.dark .rspfx-copy-main.failed {
   color: #f87171;
 }
-.rspfx-copy-markdown-label {
+.rspfx-copy-label {
   line-height: 1;
 }
+
+.rspfx-copy-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  outline: none;
+}
+.rspfx-copy-trigger:hover {
+  background: var(--vp-c-default-soft);
+  color: var(--vp-c-text-1);
+}
+.rspfx-copy-trigger:active {
+  background: var(--vp-c-default-soft);
+}
+
+.rspfx-copy-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: var(--vp-c-bg-elv, var(--vp-c-bg));
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  box-shadow: var(--vp-shadow-3, 0 12px 32px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08));
+  padding: 6px;
+  z-index: 30;
+  overflow: hidden;
+}
+.dark .rspfx-copy-menu {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+}
+.rspfx-copy-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vp-c-text-1);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+  transition: background 0.13s ease, color 0.13s ease;
+  box-sizing: border-box;
+}
+.rspfx-copy-menu-item:hover {
+  background: var(--vp-c-default-soft);
+  color: var(--vp-c-text-1);
+}
+.rspfx-copy-menu-item:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: -2px;
+}
+.rspfx-copy-menu-sep {
+  height: 1px;
+  background: var(--vp-c-divider);
+  margin: 6px 2px;
+}
+.rspfx-external {
+  opacity: 0.55;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.rspfx-copy-menu-enter-active,
+.rspfx-copy-menu-leave-active {
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.rspfx-copy-menu-enter-from,
+.rspfx-copy-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+/* legacy single-button class — hidden, kept for backwards compat if cached */
+.rspfx-copy-markdown-btn { display: none !important; }
 
 /* ── Code blocks ── */
 .vp-doc div[class*="language-"] { border-radius: var(--rspfx-radius-md); }
