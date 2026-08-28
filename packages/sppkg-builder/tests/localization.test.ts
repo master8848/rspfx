@@ -83,9 +83,9 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
   const localizedStrings = [
     {
       locale: 'en-us',
-      values: { SolutionTitle: 'RSPFX test solution', Description: "A test with & entities <like> 'those' \"quotes\"" }
+      values: { SolutionTitle: 'RSPFx test solution', Description: "A test with & entities <like> 'those' \"quotes\"" }
     },
-    { locale: 'fr-fr', values: { SolutionTitle: 'Solution de test RSPFX', Description: 'Une solution de test' } }
+    { locale: 'fr-fr', values: { SolutionTitle: 'Solution de test RSPFx', Description: 'Une solution de test' } }
   ];
 
   it('resolves $Resources: keys into one LocalizedString per locale', () => {
@@ -96,8 +96,8 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
     });
     expect(xml).toContain(
       `    <ShortDescription>\n` +
-        `      <LocalizedString CultureName="en-US">RSPFX test solution</LocalizedString>\n` +
-        `      <LocalizedString CultureName="fr-FR">Solution de test RSPFX</LocalizedString>\n` +
+        `      <LocalizedString CultureName="en-US">RSPFx test solution</LocalizedString>\n` +
+        `      <LocalizedString CultureName="fr-FR">Solution de test RSPFx</LocalizedString>\n` +
         `    </ShortDescription>`
     );
     expect(xml).toContain(
@@ -142,10 +142,10 @@ describe('buildAppManifestXml ($Resources: resolution)', () => {
   it('keeps { default } objects and plain values as before', () => {
     const xml = buildAppManifestXml({
       ...baseOptions,
-      metadata: { shortDescription: { default: 'RSPFX test solution' }, longDescription: 'plain string' },
+      metadata: { shortDescription: { default: 'RSPFx test solution' }, longDescription: 'plain string' },
       localizedStrings
     });
-    expect(xml).toContain('<LocalizedString CultureName="default">RSPFX test solution</LocalizedString>');
+    expect(xml).toContain('<LocalizedString CultureName="default">RSPFx test solution</LocalizedString>');
     expect(xml).not.toContain('LongDescription');
   });
 });
@@ -180,8 +180,8 @@ describe('buildPackage (resx + teams)', () => {
       const appManifest = result.appManifest;
       expect(appManifest).toContain(
         `    <ShortDescription>\n` +
-          `      <LocalizedString CultureName="default">RSPFX test solution</LocalizedString>\n` +
-          `      <LocalizedString CultureName="fr-FR">Solution de test RSPFX</LocalizedString>\n` +
+          `      <LocalizedString CultureName="default">RSPFx test solution</LocalizedString>\n` +
+          `      <LocalizedString CultureName="fr-FR">Solution de test RSPFx</LocalizedString>\n` +
           `    </ShortDescription>`
       );
       expect(appManifest).toContain(

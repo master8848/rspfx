@@ -24,7 +24,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*"
   },
-  "description": "RSPFX project scaffolding templates",
+  "description": "RSPFx project scaffolding templates",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

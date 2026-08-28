@@ -1,9 +1,9 @@
 ---
 name: rspfx
-description: Build SharePoint Framework (SPFx) web parts, libraries, and extensions with RSPFX. Use for scaffolding (rspfx new), dev server, and packaging .sppkg. Unofficial toolchain.
+description: Build SharePoint Framework (SPFx) web parts, libraries, and extensions with RSPFx. Use for scaffolding (rspfx new), dev server, and packaging .sppkg. Unofficial toolchain.
 ---
 
-# RSPFX — Fast SPFx Toolchain
+# RSPFx — Fast SPFx Toolchain
 
 Builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp. Vite is the default bundler.
 
@@ -23,7 +23,7 @@ rspfx --help
 
 ## New project — plugin-first
 
-RSPFX is a Vite/Rsbuild/Rspack plugin. Scaffold with your favorite starter, then add the plugin. Vite is default.
+RSPFx is a Vite/Rsbuild/Rspack plugin. Scaffold with your favorite starter, then add the plugin. Vite is default.
 
 ```sh
 npm create vite@latest my-app -- --template react-ts   # or pnpm create vite@latest / yarn create vite@latest / bun create vite@latest / deno run -A npm:create-vite@latest
@@ -41,7 +41,7 @@ export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: '
 
 Then create `src/webparts/<name>/*.manifest.json` + `config/package-solution.json` (see `docs/project-structure.md`).
 
-**Other starters:** `better-t-stack`, TanStack Router, `create-rsbuild`, etc. — same plugin pattern: `rspfxVite` for Vite, `rspfxRsbuild` for Rsbuild, `RSpfxPlugin` for Rspack. No extra code needed; RSPFX already supports all three. See `docs/getting-started.md`, `docs/commands.md#bundler-plugin`, `docs/frameworks.md`.
+**Other starters:** `better-t-stack`, TanStack Router, `create-rsbuild`, etc. — same plugin pattern: `rspfxVite` for Vite, `rspfxRsbuild` for Rsbuild, `RSpfxPlugin` for Rspack. No extra code needed; RSPFx already supports all three. See `docs/getting-started.md`, `docs/commands.md#bundler-plugin`, `docs/frameworks.md`.
 
 **Shortcut:** `rspfx new my-app --yes` (also `rspfx new my-app --framework react --spfx-version 1.24 --yes`) scaffolds Vite + manifests + `git init` for you. See `docs/commands.md#rspfx-new-name` for all flags (`--framework`, `--language`, `--spfx-version`, `--pm`, `--component`, `--bundler vite|rsbuild|rspack`).
 

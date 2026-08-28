@@ -2,7 +2,7 @@
 
 Teams and Outlook share the same Teams app manifest. See Microsoft docs: [Integrate with Microsoft Teams](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/integrate-with-teams-introduction) and [Build SharePoint Teams apps](https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/build-and-test/sharepoint-teams-apps).
 
-RSPFX scaffolds `teams/manifest.json` + `teams/<id>_color.png` (192×192) + `teams/<id>_outline.png` (32×32); `rspfx package` bundles them under `ClientSideAssets/teams/` in the `.sppkg`.
+RSPFx scaffolds `teams/manifest.json` + `teams/<id>_color.png` (192×192) + `teams/<id>_outline.png` (32×32); `rspfx package` bundles them under `ClientSideAssets/teams/` in the `.sppkg`.
 
 SharePoint's app catalog syncs the app to Teams and, with `personal` scope, to new Outlook.
 
@@ -64,7 +64,7 @@ Outlook follows Teams block.
 
 ## Comparison vs official
 
-| Area | Official SPFx + Teams | RSPFX |
+| Area | Official SPFx + Teams | RSPFx |
 |---|---|---|
 | Teams manifest | Manual `manifest.json` or `yo @microsoft/sharepoint` | Scaffolded — `id`/`entityId` auto-synced to web part |
 | Packaging | `gulp package-solution` embeds `teams/` | `rspfx package` — same, auto-detected |

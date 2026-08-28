@@ -15,7 +15,7 @@
       "mpnId": "Undefined-0000"
     },
     "metadata": {
-      "shortDescription": { "default": "RSPFX React 19 + Compiler + Tailwind form → SharePoint list" },
+      "shortDescription": { "default": "RSPFx React 19 + Compiler + Tailwind form → SharePoint list" },
       "longDescription": { "default": "React 19 web part with Valibot + TanStack Form + Tailwind posting to a SharePoint list. Optional Ox React Compiler via Vite." },
       "categories": [],
       "screenshotPaths": []

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: React web part styled with shadcn/ui + Tailwind CSS v4",
+  "description": "RSPFx example: React web part styled with shadcn/ui + Tailwind CSS v4",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

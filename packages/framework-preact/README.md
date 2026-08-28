@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-preact
 
-Preact framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Preact framework package for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Provides the `PreactWebPart` base class with fast refresh: Rspack via `@rspack/plugin-preact-refresh`, Vite and Rsbuild via their Preact refresh plugins — same `FrameworkPreset` for all three bundlers.
 

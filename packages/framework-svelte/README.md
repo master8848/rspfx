@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-svelte
 
-Svelte framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Svelte framework package for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Provides the `SvelteWebPart` base class with compilation: Rspack via `svelte-loader` + `svelte-hmr`, Vite via `@sveltejs/vite-plugin-svelte`, Rsbuild via its Svelte plugin.
 

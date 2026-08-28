@@ -7,7 +7,7 @@
     "isDomainIsolated": false,
     "skipFeatureDeployment": true,
     "developer": {
-      "name": "RSPFX",
+      "name": "RSPFx",
       "websiteUrl": "https://rspfx.dev",
       "privacyUrl": "https://rspfx.dev/privacy",
       "termsOfUseUrl": "https://rspfx.dev/terms",
@@ -15,10 +15,10 @@
     },
     "metadata": {
       "shortDescription": {
-        "default": "RSPFX test solution"
+        "default": "RSPFx test solution"
       },
       "longDescription": {
-        "default": "A test solution produced by the RSPFX sppkg-builder."
+        "default": "A test solution produced by the RSPFx sppkg-builder."
       },
       "categories": [
         "Web Design"

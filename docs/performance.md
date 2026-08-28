@@ -1,6 +1,6 @@
 # Performance
 
-Measured speed of the RSPFX toolchain (Rspack-based) on real examples. Full methodology in [`bench/README.md`](../bench/README.md).
+Measured speed of the RSPFx toolchain (Rspack-based) on real examples. Full methodology in [`bench/README.md`](../bench/README.md).
 
 ## Hardware
 
@@ -35,14 +35,14 @@ Gates: `cold <2000 ms`, `recompile <300 ms`, `build <4000 ms` — all pass.
 
 ## Comparison vs classic SPFx
 
-| Metric | Classic (gulp `fast-spfx`, user-reported) | RSPFX (`shadcn`) | Factor |
+| Metric | Classic (gulp `fast-spfx`, user-reported) | RSPFx (`shadcn`) | Factor |
 |---|---|---|---|
 | Dev start (cold) | ~120 s | 0.63 s | ~190× |
 | Recompile | ~40 s | 68 ms | ~590× |
 
 Classic numbers are user-reported approximations; margin is orders of magnitude so exact baseline does not affect the conclusion.
 
-> Tip: compare on your hardware with `BENCH_RUNS=3 node bench/bench.mjs examples/shadcn` and `BENCH_RUNS=3 node bench/compare-official.mjs`. Classic toolchain is seconds, RSPFX is milliseconds — ratio holds across machines.
+> Tip: compare on your hardware with `BENCH_RUNS=3 node bench/bench.mjs examples/shadcn` and `BENCH_RUNS=3 node bench/compare-official.mjs`. Classic toolchain is seconds, RSPFx is milliseconds — ratio holds across machines.
 
 ## Why it's fast
 

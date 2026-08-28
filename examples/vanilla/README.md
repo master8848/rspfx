@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-vanilla
 
-A minimal RSPFX web part written in plain TypeScript — no UI framework.
+A minimal RSPFx web part written in plain TypeScript — no UI framework.
 
 ## What it demonstrates
 

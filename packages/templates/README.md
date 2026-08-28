@@ -1,6 +1,6 @@
 # @mbsks/rspfx-templates
 
-Project scaffolding templates for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Project scaffolding templates for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Programmatic scaffolders used by the `rspfx new` command: SPFx web part projects (vanilla, React, Solid, Preact, Vue, Svelte) and playground pages.
 

@@ -11,7 +11,7 @@ export async function runClean(cwd: string): Promise<string[]> {
   if (!fs.existsSync(path.join(cwd, 'package.json'))) {
     throw new RspfxError(
       'CLEAN_NOT_A_PROJECT',
-      `No package.json found in ${cwd}. Run "rspfx clean" inside an RSPFX project.`
+      `No package.json found in ${cwd}. Run "rspfx clean" inside an RSPFx project.`
     );
   }
 

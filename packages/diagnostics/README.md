@@ -1,6 +1,6 @@
 # @mbsks/rspfx-diagnostics
 
-Diagnostics for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Diagnostics for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Structured logging, typed errors, benchmarks, and formatting helpers shared across the toolchain and CLI.
 

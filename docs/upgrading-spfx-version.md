@@ -8,7 +8,7 @@ For supported targets and Node ranges see [compatibility.md#spfx-version-matrix]
 
 Official upgrades require bumping `@microsoft/generator-sharepoint`, `@rushstack/heft`, `@microsoft/rush-stack-compiler-*`, `@microsoft/spfx-heft-plugins` / `sp-build-web`, and every `@microsoft/sp-*` pin.
 
-RSPFX upgrades need no new `@microsoft/*` installs for most web parts — `sp-*` is externalized and SharePoint resolves its built-in copies as `"type": "component"`.
+RSPFx upgrades need no new `@microsoft/*` installs for most web parts — `sp-*` is externalized and SharePoint resolves its built-in copies as `"type": "component"`.
 
 Install `@microsoft/sp-*` only if your code imports that runtime (e.g. `@microsoft/sp-http`).
 
@@ -72,9 +72,9 @@ Inspect `sharepoint/solution/<name>.sppkg` and upload to app catalog.
 
 No other files need editing — `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` stay unchanged.
 
-## What RSPFX handles per version
+## What RSPFx handles per version
 
-Change the number — RSPFX adjusts the rest:
+Change the number — RSPFx adjusts the rest:
 
 | Area | What happens |
 |---|---|
@@ -90,7 +90,7 @@ Details: [compatibility.md](compatibility.md) and [reference/FORMATS.md](../refe
 
 ## Comparison vs official
 
-| Area | Official | RSPFX |
+| Area | Official | RSPFx |
 |---|---|---|
 | SPFx version | Pins in generator + Heft rig + every `sp-*` | One field `spfxVersion` |
 | Node | Switch per target (18 for 1.20–1.22, 20.19+ for 1.23) | Node 20+ for all — see [compatibility.md](compatibility.md) |

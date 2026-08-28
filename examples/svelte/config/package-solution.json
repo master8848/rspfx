@@ -16,10 +16,10 @@
     },
     "metadata": {
       "shortDescription": {
-        "default": "RSPFX Svelte example"
+        "default": "RSPFx Svelte example"
       },
       "longDescription": {
-        "default": "RSPFX Svelte example web part"
+        "default": "RSPFx Svelte example web part"
       },
       "categories": [],
       "screenshotPaths": []

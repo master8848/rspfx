@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-vanilla
 
-Vanilla JS/TS framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Vanilla JS/TS framework package for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 The default framework with no runtime: extend `BaseWebPart` directly.
 

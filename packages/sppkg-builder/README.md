@@ -1,6 +1,6 @@
 # @mbsks/rspfx-sppkg-builder
 
-Package builder for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Package builder for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Assembles the deployable SharePoint package: `sharepoint/solution/<name>.sppkg` — a ZIP containing the app manifest, features, and assets, exactly matching official SPFx output.
 

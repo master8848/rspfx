@@ -477,8 +477,8 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
         if (contribs.define) {
           const allowed = new Set(['DEBUG', 'DEPRECATED_UNIT_TEST', 'process.env.NODE_ENV']);
           for (const [k, v] of Object.entries(contribs.define)) {
-            if (k.startsWith('RSPFX_') || k.includes('RSPFX')) {
-              logger.warn(`Ignoring disallowed define key '${k}' from rsbuild contributions (RSPFX leakage blocked)`);
+            if (k.startsWith('RSPFX_') || k.includes('RSPFx')) {
+              logger.warn(`Ignoring disallowed define key '${k}' from rsbuild contributions (RSPFx leakage blocked)`);
               continue;
             }
             if (!allowed.has(k)) {
@@ -499,5 +499,3 @@ export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
     }
   };
 }
-
-

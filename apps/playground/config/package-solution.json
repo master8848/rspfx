@@ -16,10 +16,10 @@
     },
     "metadata": {
       "shortDescription": {
-        "default": "RSPFX playground smoke-test app"
+        "default": "RSPFx playground smoke-test app"
       },
       "longDescription": {
-        "default": "In-repo RSPFX smoke-test app"
+        "default": "In-repo RSPFx smoke-test app"
       },
       "categories": [],
       "screenshotPaths": []

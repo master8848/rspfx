@@ -18,7 +18,7 @@ const X509CertificateCtor: typeof crypto.X509Certificate | undefined = (
 ).X509Certificate;
 
 const TRUST_NOTES = [
-  'RSPFX development certificate (self-signed, 825 days)',
+  'RSPFx development certificate (self-signed, 825 days)',
   '',
   'key.pem / cert.pem are used by the local HTTPS dev server for localhost and 127.0.0.1.',
   '',

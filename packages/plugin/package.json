@@ -53,7 +53,7 @@
       "optional": true
     }
   },
-  "description": "RSPFX bundler plugins: RspfxPlugin (Rspack/Webpack-compatible), rspfxVite (Vite) and rspfxRsbuild (Rsbuild) carrying the single project config object",
+  "description": "RSPFx bundler plugins: RspfxPlugin (Rspack/Webpack-compatible), rspfxVite (Vite) and rspfxRsbuild (Rsbuild) carrying the single project config object",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

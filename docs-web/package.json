@@ -3,7 +3,7 @@
   "version": "0.0.14",
   "private": true,
   "type": "module",
-  "description": "RSPFX documentation site — VitePress",
+  "description": "RSPFx documentation site — VitePress",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",

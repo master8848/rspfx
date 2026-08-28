@@ -2,7 +2,7 @@
 /**
  * bench/blackbox-compare.mjs — CLI diff helper for blackbox parity.
  *
- * Builds the same input project with RSPFX (buildPackage) and optionally the
+ * Builds the same input project with RSPFx (buildPackage) and optionally the
  * official toolchain (gulp/heft via npx), then prints a sorted diff of zip
  * entry lists and volatile-normalized XML contents.
  *
@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function printHelp() {
-  console.log(`blackbox-compare.mjs — RSPFX vs official .sppkg blackbox diff
+  console.log(`blackbox-compare.mjs — RSPFx vs official .sppkg blackbox diff
 
 Usage:
   node bench/blackbox-compare.mjs [options]
@@ -50,7 +50,7 @@ Examples:
   OFFICIAL_SPPKG_TEST=1 node bench/blackbox-compare.mjs --official --version 1.22
 
 Notes:
-  - RSPFX path uses packages/sppkg-builder/src/sppkg-builder.ts:119 buildPackage().
+  - RSPFx path uses packages/sppkg-builder/src/sppkg-builder.ts:119 buildPackage().
   - Official path spawns gulp/heft via npx pinned to @microsoft/sp-build-web@<npmVersion>.
   - Volatile fields (AppPartConfig Id, Extension Instance Id) are normalized before diff.
 `);
@@ -108,7 +108,7 @@ async function main() {
     const rspfxZip = await readZipEntries(result.outputPath);
     const rspfxNames = sortedEntries([...rspfxZip.keys()]);
 
-    console.log(`RSPFX .sppkg: ${result.outputPath}`);
+    console.log(`RSPFx .sppkg: ${result.outputPath}`);
     console.log(`  spfxVersion: ${versionArg}  entries: ${rspfxNames.length}`);
     console.log(`  entries: ${rspfxNames.join(', ')}`);
     console.log(`  AppManifest ProductID: ${/ProductID="([^"]+)"/.exec(result.appManifest)?.[1] ?? '?'}`);

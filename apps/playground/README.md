@@ -1,6 +1,6 @@
 # @mbsks/rspfx-playground
 
-The in-repo smoke-test app for RSPFX.
+The in-repo smoke-test app for RSPFx.
 
 ## What it is
 

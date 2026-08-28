@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-react
 
-React framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+React framework package for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Provides the `ReactWebPart` base class with fast refresh: Rspack via `@rspack/plugin-react-refresh`, Vite via `@vitejs/plugin-react`, Rsbuild via its React plugin — same `FrameworkPreset` works with all three bundlers (`rspfxVite` / `rspfxRsbuild` / `RSpfxPlugin`).
 

@@ -44,7 +44,7 @@
   "devDependencies": {
     "@mbsks/rspfx-webpart-base": "workspace:*"
   },
-  "description": "Zero-dependency core for RSPFX: SPFx types, base web part, config, environment",
+  "description": "Zero-dependency core for RSPFx: SPFx types, base web part, config, environment",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

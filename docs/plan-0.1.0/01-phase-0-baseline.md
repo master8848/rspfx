@@ -10,7 +10,7 @@
 
 **Rationale:**
 
-* RSPFX has three bundler kernels (`/Volumes/New Volume/code/spfx/packages/plugin/src/rspack.ts:53`, `vite.ts:298`, `rsbuild.ts:185`), two packaging pipelines (`manifest-generator`, `sppkg-builder`), and six framework presets. Without a frozen baseline a later “fix” in `compiler-rspack/src/config.ts:212` (CSS dedup) or `plugin/src/rsbuild.ts:486` (DefinePlugin ordering) cannot be distinguished from a regression.
+* RSPFx has three bundler kernels (`/Volumes/New Volume/code/spfx/packages/plugin/src/rspack.ts:53`, `vite.ts:298`, `rsbuild.ts:185`), two packaging pipelines (`manifest-generator`, `sppkg-builder`), and six framework presets. Without a frozen baseline a later “fix” in `compiler-rspack/src/config.ts:212` (CSS dedup) or `plugin/src/rsbuild.ts:486` (DefinePlugin ordering) cannot be distinguished from a regression.
 * `core` zero-deps invariant (`/Volumes/New Volume/code/spfx/ARCHITECTURE.md:102`, `docs/architecture.md:63`) is currently only documented. Phase 0 must capture an auditable snapshot so Phase 1’s new `core/src/newtypes.ts` and `webpart-base` split do not silently introduce deps.
 * Metrics are currently anecdotal (`bench/bench.mjs:59` comments `633ms / 68ms / 315ms`). Capturing median over `BENCH_RUNS=3` on a pinned fixture (`examples/shadcn`, `examples/svelte`, `templates`) gives a contrarian signal when Phase 5 lazyCompilation or Phase 6 Rust changes claim wins.
 * Branch discipline prevents scope creep: Angular is deferred (`ARCHITECTURE.md:7`), `docs/roadmap.md` M8/M9 frozen. Without a `next` branch every Phase 1 branded-type rename bleeds into `main` patch releases.

@@ -30,7 +30,7 @@ Switch with `rspfx new --bundler vite|rsbuild|rspack` or `rspfx migrate --bundle
 
 ## Customize
 
-Your bundler file owns styling — RSPFX doesn't overwrite `css`/`tools`.
+Your bundler file owns styling — RSPFx doesn't overwrite `css`/`tools`.
 
 **Rspack** — prefer helpers:
 
@@ -48,7 +48,7 @@ Set `build: { css: false }` if you take full ownership.
 
 ## When default inlining fails
 
-RSPFX inlines CSS by default, but custom `assetFileNames`, merged Vite configs, or extraction can break it and leave `dist/assets/*.css` that never loads in SharePoint.
+RSPFx inlines CSS by default, but custom `assetFileNames`, merged Vite configs, or extraction can break it and leave `dist/assets/*.css` that never loads in SharePoint.
 
 Use the exported fallback plugin to guarantee inlining — it collects emitted `.css`, deletes the assets, and injects a `<style>` into every entry chunk.
 
@@ -121,7 +121,7 @@ All helpers are zero-dependency and available from `@mbsks/rspfx-core/inline-css
 
 ## Tailwind and UnoCSS
 
-Tailwind v2/v3/v4 and UnoCSS work via PostCSS — no special RSPFX plugin.
+Tailwind v2/v3/v4 and UnoCSS work via PostCSS — no special RSPFx plugin.
 
 ```sh
 bun add -D tailwindcss @tailwindcss/postcss postcss   # or pnpm add -D / npm i -D / yarn add -D

@@ -1,6 +1,6 @@
 ---
 title: llms.txt
-description: LLM-friendly index — all RSPFX docs in one pasteable file.
+description: LLM-friendly index — all RSPFx docs in one pasteable file.
 aside: false
 outline: false
 editLink: false

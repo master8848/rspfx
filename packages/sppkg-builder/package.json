@@ -27,7 +27,7 @@
     "@mbsks/rspfx-plugin-api": "workspace:*",
     "fflate": "^0.8.2"
   },
-  "description": "RSPFX .sppkg package assembly (AppManifest, features, assets)",
+  "description": "RSPFx .sppkg package assembly (AppManifest, features, assets)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

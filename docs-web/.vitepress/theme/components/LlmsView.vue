@@ -55,7 +55,7 @@ onMounted(async () => {
       <div>
         <h1 class="llms-title">llms.txt</h1>
         <p class="llms-desc">
-          LLM-friendly index of RSPFX docs — one file, every page with description. Paste into ChatGPT / Claude / Cursor. Raw at
+          LLM-friendly index of RSPFx docs — one file, every page with description. Paste into ChatGPT / Claude / Cursor. Raw at
           <a href="/llms.txt" target="_blank" rel="noopener">/llms.txt</a> (alias <a href="/llm.txt" target="_blank" rel="noopener">/llm.txt</a>).
         </p>
       </div>

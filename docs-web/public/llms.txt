@@ -1,4 +1,4 @@
-# RSPFX
+# RSPFx
 
 SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild and Rspack ready — same manifests, same .sppkg.
 
@@ -8,7 +8,7 @@ npm: @mbsks/rspfx-cli
 
 All paths below are relative to repo root. On the docs site they live under /docs/<name>. For raw markdown use the GitHub path, for rendered docs use the site path.
 
-RSPFX reads config/config.json, config/package-solution.json and src/*/*.manifest.json and produces AMD bundles plus .sppkg identical to official tooling. See README.md for quick start and ARCHITECTURE.md for the full plan.
+RSPFx reads config/config.json, config/package-solution.json and src/*/*.manifest.json and produces AMD bundles plus .sppkg identical to official tooling. See README.md for quick start and ARCHITECTURE.md for the full plan.
 
 Getting Started
   docs/why-rspfx.md : Why a drop-in toolchain - same manifests and outputs, faster builds, no Heft rig
@@ -44,7 +44,7 @@ Reference
   docs/roadblocks.md : Pre-1.0 blockers, real-tenant gate status
 
 Project docs
-  README.md : RSPFX overview and quick start, principles, rspfx commands, same-manifest for Heft and Gulp, supported targets
+  README.md : RSPFx overview and quick start, principles, rspfx commands, same-manifest for Heft and Gulp, supported targets
   ARCHITECTURE.md : Package map and design rationale
   CONTRIBUTING.md : Publishing and tagging - scripts/publish.mjs, CHANGELOG.md with ## [X.Y.Z], vX.Y.Z tags, dist-tags
   CHANGELOG.md : Version history, one ## [X.Y.Z] - YYYY-MM-DD per version

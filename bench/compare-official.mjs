@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSPFX vs official SPFx toolchain benchmark — no dependencies beyond Node (ESM).
+ * RSPFx vs official SPFx toolchain benchmark — no dependencies beyond Node (ESM).
  *
  * Benchmarks the OFFICIAL SharePoint toolchain on minimal vanilla projects:
  *   --tool gulp        SPFx 1.22 skeleton (gulp + webpack):  gulp bundle --production + gulp serve --nobrowser

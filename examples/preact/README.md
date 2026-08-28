@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-preact
 
-A Preact web part demonstrating the RSPFX framework support.
+A Preact web part demonstrating the RSPFx framework support.
 
 ## What it demonstrates
 

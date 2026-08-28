@@ -34,7 +34,7 @@ Wait for GA. Preview risks drifting scaffold pins.
 | New component type (e.g. Copilot Apps) | New manifest shape, possibly new packaging elements |
 | Schema changes | Check [SPFx schemas](https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json) and [write-manifests schema](https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json) |
 | Deprecations (e.g. 1.23 workbench) | Dev URL, not bundle format |
-| Toolchain shift (Heft since 1.23) | Official scaffold shape, not RSPFX format |
+| Toolchain shift (Heft since 1.23) | Official scaffold shape, not RSPFx format |
 
 ## Harvest (core methodology)
 
@@ -76,7 +76,7 @@ History lives only in `CHANGELOG.md`.
 2. Bundle header starts with capture line then `define('<id>_<version>', …)`
 3. Diff `.sppkg` entry list vs harvested reference
 4. Real-tenant install (app catalog → site → workbench)
-5. Blackbox parity: `bun run test -- --run packages/sppkg-builder/tests/blackbox` (fast, RSPFX invariants only) or `OFFICIAL_SPPKG_TEST=1 bun run test -- --run packages/sppkg-builder/tests/blackbox` with `OFFICIAL_SPPKG_VERSIONS=1.22,1.23,1.24` for full RSPFX vs official ZIP comparison (see `packages/sppkg-builder/tests/blackbox.test.ts:1` and `bench/blackbox-compare.mjs:1`). The harness treats both generators as external ZIP producers and normalizes volatile `AppPartConfig Id`/`Extension Instance Id` before asserting `AppManifest.xml`, `[Content_Types].xml`, `feature_*.xml`, `<featureId>/*_*.xml`, and entry-list equality.
+5. Blackbox parity: `bun run test -- --run packages/sppkg-builder/tests/blackbox` (fast, RSPFx invariants only) or `OFFICIAL_SPPKG_TEST=1 bun run test -- --run packages/sppkg-builder/tests/blackbox` with `OFFICIAL_SPPKG_VERSIONS=1.22,1.23,1.24` for full RSPFx vs official ZIP comparison (see `packages/sppkg-builder/tests/blackbox.test.ts:1` and `bench/blackbox-compare.mjs:1`). The harness treats both generators as external ZIP producers and normalizes volatile `AppPartConfig Id`/`Extension Instance Id` before asserting `AppManifest.xml`, `[Content_Types].xml`, `feature_*.xml`, `<featureId>/*_*.xml`, and entry-list equality.
 
 ## Checklist
 

@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-vue
 
-A Vue 3 web part demonstrating the RSPFX framework support.
+A Vue 3 web part demonstrating the RSPFx framework support.
 
 ## What it demonstrates
 

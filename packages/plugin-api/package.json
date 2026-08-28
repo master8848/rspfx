@@ -25,7 +25,7 @@
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*"
   },
-  "description": "RSPFX plugin API: FrameworkPreset, extension hooks",
+  "description": "RSPFx plugin API: FrameworkPreset, extension hooks",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

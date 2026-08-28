@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-react
 
-A React 18 web part demonstrating the RSPFX framework support.
+A React 18 web part demonstrating the RSPFx framework support.
 
 ## What it demonstrates
 

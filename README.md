@@ -1,8 +1,8 @@
-# RSPFX
+# RSPFx
 
 **SPFx-compatible build toolchain — Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.**
 
-SPFx development shouldn't be frustrating. RSPFX dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack. Built with agents in mind. 
+SPFx development shouldn't be frustrating. RSPFx dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack. Built with agents in mind. 
 
 Builds web parts that load in the SharePoint workbench and install as `.sppkg` — no webpack, Heft, or gulp.
 
@@ -10,7 +10,7 @@ Builds web parts that load in the SharePoint workbench and install as `.sppkg` �
 
 ## Quick start
 
-RSPFX is a Vite/Rsbuild/Rspack plugin — scaffold with your favorite starter, then add the plugin. Vite is the default. Any starter works (`create-vite`, `better-t-stack`, TanStack Router, etc.).
+RSPFx is a Vite/Rsbuild/Rspack plugin — scaffold with your favorite starter, then add the plugin. Vite is the default. Any starter works (`create-vite`, `better-t-stack`, TanStack Router, etc.).
 
 **New project (bring your own scaffold — recommended):**
 
@@ -51,13 +51,13 @@ Requires Node 20+.
 npx skills add https://github.com/master8848/rspfx --skill rspfx
 ```
 
-Installs `skills/rspfx/SKILL.md` — the agent guide for building SPFx with RSPFX.
+Installs `skills/rspfx/SKILL.md` — the agent guide for building SPFx with RSPFx.
 
 ## Agent prompt
 
 Copy-paste to your agent:
 
-> Use RSPFX from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read `skills/rspfx/SKILL.md` and `docs/` in that repo (or https://rspfx.mbsks.me) for all toolchain details. Scaffold with Vite by default (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest` then add `@mbsks/rspfx-plugin` `rspfxVite()`), or use any starter the user prefers (better-t-stack, Rsbuild, Rspack, TanStack Router, etc.) — RSPFX is just a plugin (`rspfxVite`/`rspfxRsbuild`/`RSpfxPlugin`). Use `rspfx new` only as a shortcut. Check `ARCHITECTURE.md` and `packages/*/src` if docs lag — code is truth. Do not use webpack/Heft/gulp.
+> Use RSPFx from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read `skills/rspfx/SKILL.md` and `docs/` in that repo (or https://rspfx.mbsks.me) for all toolchain details. Scaffold with Vite by default (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest` then add `@mbsks/rspfx-plugin` `rspfxVite()`), or use any starter the user prefers (better-t-stack, Rsbuild, Rspack, TanStack Router, etc.) — RSPFx is just a plugin (`rspfxVite`/`rspfxRsbuild`/`RSpfxPlugin`). Use `rspfx new` only as a shortcut. Check `ARCHITECTURE.md` and `packages/*/src` if docs lag — code is truth. Do not use webpack/Heft/gulp.
 
 ## Docs
 

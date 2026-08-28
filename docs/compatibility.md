@@ -1,6 +1,6 @@
 # Compatibility
 
-RSPFX produces the same artifact formats as official SPFx tooling — tenants, workbenches, and app catalogs accept them without changes. Format ground truth lives in [reference/FORMATS.md](../reference/FORMATS.md) (harvested from official npm packages; provenance per section).
+RSPFx produces the same artifact formats as official SPFx tooling — tenants, workbenches, and app catalogs accept them without changes. Format ground truth lives in [reference/FORMATS.md](../reference/FORMATS.md) (harvested from official npm packages; provenance per section).
 
 ## Guaranteed
 
@@ -29,7 +29,7 @@ Never assume a format — on discrepancy verify against an unzipped official `.s
 
 Single source of truth: `packages/core/src/versions.ts:13` (`SPFX_VERSIONS`, `SPFX_DEFAULT_TARGET`, `SPFX_TARGETS`, `spfxNpmVersion()`). See Microsoft docs: [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility) and [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23) ([1.22](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.22), [1.21](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.21), [1.20](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.20)).
 
-| Target | Status | Official toolchain | Official Node | RSPFX Node | npmVersion |
+| Target | Status | Official toolchain | Official Node | RSPFx Node | npmVersion |
 |---|---|---|---|---|---|
 | `1.20` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.20.0` |
 | `1.21` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.21.0` |
@@ -41,28 +41,28 @@ Component `version` for `"type": "component"` deps is read from `node_modules/@m
 
 Pin target via `spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts` and keep `@microsoft/sp-*` prefix equal to `spfxVersion`. See [upgrading-spfx-version.md](upgrading-spfx-version.md).
 
-> Tip: after changing `spfxVersion`, run `bun update @mbsks/rspfx-plugin` (or `pnpm update` / `npm update` / `yarn upgrade`) `&& rspfx build` — no manifest or bundler patching needed. RSPFX adjusts `loaderConfig`, `chunkLoadingGlobal`, `manifests.js`, and `.sppkg` layout.
+> Tip: after changing `spfxVersion`, run `bun update @mbsks/rspfx-plugin` (or `pnpm update` / `npm update` / `yarn upgrade`) `&& rspfx build` — no manifest or bundler patching needed. RSPFx adjusts `loaderConfig`, `chunkLoadingGlobal`, `manifests.js`, and `.sppkg` layout.
 
-## RSPFX line support
+## RSPFx line support
 
-Every RSPFX release supports the full `SPFxTargets` above.
+Every RSPFx release supports the full `SPFxTargets` above.
 
-| RSPFX line | `1.20` | `1.21` | `1.22` | `1.23` |
+| RSPFx line | `1.20` | `1.21` | `1.22` | `1.23` |
 |---|---|---|---|---|
 | `0.0.14` (`latest`) | ✓ | ✓ | ✓ | ✓ default |
 | `0.0.13` | ✓ | ✓ | ✓ | ✓ |
 
-History lives in [CHANGELOG.md](../CHANGELOG.md). If a future RSPFX drops a target, its `CHANGELOG.md` entry notes it and `isSpfxTarget()` rejects it.
+History lives in [CHANGELOG.md](../CHANGELOG.md). If a future RSPFx drops a target, its `CHANGELOG.md` entry notes it and `isSpfxTarget()` rejects it.
 
 ## Node requirements
 
-RSPFX requires Node 20+ for every target (`package.json` `engines.node >=20`). Official SPFx ranges differ per target; RSPFX normalizes to one range. `rspfx doctor` passes on Node 20/22/24. See Microsoft docs: [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+RSPFx requires Node 20+ for every target (`package.json` `engines.node >=20`). Official SPFx ranges differ per target; RSPFx normalizes to one range. `rspfx doctor` passes on Node 20/22/24. See Microsoft docs: [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
 
-## What RSPFX handles per version
+## What RSPFx handles per version
 
 Change `spfxVersion` — artifacts adjust automatically.
 
-| Area | What RSPFX does |
+| Area | What RSPFx does |
 |---|---|
 | Manifest schema | Generates `loaderConfig` per [reference/FORMATS.md](../reference/FORMATS.md) §1 |
 | CDN URLs | Reads `cdnBasePath`; rewrites to pseudo-URL when `includeClientSideAssets` |
@@ -78,7 +78,7 @@ Most web parts need no `@microsoft/sp-*` — externalized and SharePoint resolve
 
 Upgrading `1.20 → 1.23` needs no new `sp-*` unless your code imports that runtime.
 
-Official upgrades bump generator, Heft rig, and every `sp-*` pin — RSPFX keeps it in one field (`spfxVersion`) and one bump (`bun update` / `pnpm update` / `npm update` / `yarn upgrade` `@mbsks/rspfx-plugin`).
+Official upgrades bump generator, Heft rig, and every `sp-*` pin — RSPFx keeps it in one field (`spfxVersion`) and one bump (`bun update` / `pnpm update` / `npm update` / `yarn upgrade` `@mbsks/rspfx-plugin`).
 
 Keep `major.minor` of any installed `sp-*` equal to `spfxVersion` — `rspfx doctor` warns on drift.
 
@@ -96,6 +96,6 @@ rspfx build
 
 Full tutorial: [upgrading-spfx-version.md](upgrading-spfx-version.md).
 
-SPFx `1.23` deprecated the hosted workbench (retires Dec 1 2026, replaced by Debug Toolbar). RSPFX `manifests.js` + workbench URL format is unchanged.
+SPFx `1.23` deprecated the hosted workbench (retires Dec 1 2026, replaced by Debug Toolbar). RSPFx `manifests.js` + workbench URL format is unchanged.
 
 Non-negotiables: sp-* never bundled; output naming identical to official; `.sppkg` installs via app catalog → site → workbench; dev works like official `serve`; no `webpack`/`Heft`/`gulp` in runtime output (see `ARCHITECTURE.md` §7).

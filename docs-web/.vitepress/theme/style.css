@@ -1,4 +1,4 @@
-/* RSPFX — modern clean theme. Glass hero, soft depth, accent-aware + shadcn CSS variables. */
+/* RSPFx — modern clean theme. Glass hero, soft depth, accent-aware + shadcn CSS variables. */
 
 /* ── How to add a new shadcn theme ──────────────────────────────────────
  * EASY (drop-in, for 20+ themes): drop a file into `themes/`:
@@ -600,7 +600,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   border-radius: 24px;
 }
 
-/* ── Hero — Copy RSPFX Prompt (TanStack Start parity) ── */
+/* ── Hero — Copy RSPFx Prompt (TanStack Start parity) ── */
 .rspfx-hero-prompt {
   padding-top: 24px;
 }

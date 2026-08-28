@@ -1,14 +1,14 @@
 ---
 layout: home
-title: RSPFX — SPFx-compatible build toolchain
+title: RSPFx — SPFx-compatible build toolchain
 titleTemplate: false
 hero:
-  name: RSPFX
+  name: RSPFx
   text: Ship SharePoint web parts without the legacy toolchain
-  tagline: SPFx development shouldn't be frustrating. RSPFX dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack.
+  tagline: SPFx development shouldn't be frustrating. RSPFx dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack.
   image:
     src: /hero.svg
-    alt: RSPFX — build SharePoint web parts with Vite
+    alt: RSPFx — build SharePoint web parts with Vite
   actions:
     - theme: brand
       text: Get started
@@ -16,7 +16,7 @@ hero:
 
 features:
   - title: Zero-config to start
-    details: No vite.config.ts required. RSPFX reads config/config.json and your manifests — add config only when you need control.
+    details: No vite.config.ts required. RSPFx reads config/config.json and your manifests — add config only when you need control.
     link: /docs/getting-started
     linkText: Quick start
   - title: One pipeline, three bundlers
@@ -89,7 +89,7 @@ export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: '
 
 <div class="rspfx-compare-table">
 
-| | Official toolchain (Heft / gulp) | RSPFX |
+| | Official toolchain (Heft / gulp) | RSPFx |
 |---|---|---|
 | Bundler | webpack only | Vite (default), Rsbuild, Rspack |
 | Frameworks | React, vanilla | React, Vue, Svelte, Solid, Preact + custom presets |

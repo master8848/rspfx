@@ -112,7 +112,7 @@ export function createDefaultMockStore(): MockStore {
         LastItemModifiedDate: iso(-1),
         ItemCount: 2,
         items: [
-          { Id: 1, Title: 'Welcome to RSPFX', Body: 'Local preview running without SharePoint.', Created: iso(-30), Modified: iso(-30), AuthorId: 1, EditorId: 1 },
+          { Id: 1, Title: 'Welcome to RSPFx', Body: 'Local preview running without SharePoint.', Created: iso(-30), Modified: iso(-30), AuthorId: 1, EditorId: 1 },
           { Id: 2, Title: 'Mock list data', Body: 'Edit local/data.json in the project root to customize.', Created: iso(-15), Modified: iso(-15), AuthorId: 1, EditorId: 1 }
         ]
       },

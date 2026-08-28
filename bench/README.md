@@ -1,6 +1,6 @@
-# RSPFX Benchmarks
+# RSPFx Benchmarks
 
-A dependency-free Node harness that measures the RSPFX toolchain on a real example project.
+A dependency-free Node harness that measures the RSPFx toolchain on a real example project.
 
 ## Run
 

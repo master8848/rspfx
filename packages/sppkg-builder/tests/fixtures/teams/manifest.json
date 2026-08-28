@@ -3,8 +3,8 @@
   "manifestVersion": "1.19",
   "id": "f8f3f8c8-2c9a-4f1e-9c3d-444444444444",
   "packageName": "com.rspfx.test",
-  "developer": { "name": "RSPFX", "websiteUrl": "https://rspfx.dev", "privacyUrl": "https://rspfx.dev/privacy", "termsOfUseUrl": "https://rspfx.dev/terms" },
+  "developer": { "name": "RSPFx", "websiteUrl": "https://rspfx.dev", "privacyUrl": "https://rspfx.dev/privacy", "termsOfUseUrl": "https://rspfx.dev/terms" },
   "icons": { "color": "color.png", "outline": "outline.png" },
-  "name": { "short": "RSPFX test" },
-  "description": { "short": "RSPFX test team app", "full": "RSPFX test team app" }
+  "name": { "short": "RSPFx test" },
+  "description": { "short": "RSPFx test team app", "full": "RSPFx test team app" }
 }

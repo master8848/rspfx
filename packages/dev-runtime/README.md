@@ -1,6 +1,6 @@
 # @mbsks/rspfx-dev-runtime
 
-Dev runtime for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Dev runtime for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Implements the workbench-first development experience: serve emulation, websocket-based refresh, state-preserving fast refresh, and project discovery (reads the project's bundler config plugin options).
 

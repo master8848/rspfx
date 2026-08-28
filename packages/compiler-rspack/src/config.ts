@@ -178,8 +178,8 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
     }
     if (contrib.define) {
       for (const [k, v] of Object.entries(contrib.define)) {
-        if (k.startsWith('RSPFX_') || k.includes('RSPFX')) {
-          // Silently drop RSPFX leakage; framework contributions must not define RSPFX env.
+        if (k.startsWith('RSPFX_') || k.includes('RSPFx')) {
+          // Silently drop RSPFx leakage; framework contributions must not define RSPFx env.
           continue;
         }
         if (!ALLOWED_DEFINE_KEYS.has(k)) {

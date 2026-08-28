@@ -1,6 +1,6 @@
 # Multi-webpart projects
 
-One RSPFX project can ship multiple web parts, extensions, and libraries in a single `.sppkg`. See Microsoft docs: [Working with web part manifests](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-web-part-manifests).
+One RSPFx project can ship multiple web parts, extensions, and libraries in a single `.sppkg`. See Microsoft docs: [Working with web part manifests](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-web-part-manifests).
 
 `rspfx new` scaffolds the first web part; add more by duplicating the folder and manifest.
 
@@ -85,7 +85,7 @@ Per-webpart icons use the web part `assets/` folder; shared branding uses `asset
 
 ## Comparison vs official
 
-| Area | Official | RSPFX |
+| Area | Official | RSPFx |
 |---|---|---|
 | Discovery | `config.json` `bundles` only | `bundles` or folder scan (`src/webparts/*`) |
 | Adding a web part | `yo @microsoft/sharepoint` or manual `config.json` | Duplicate folder + new `id` — no generator needed |

@@ -1,6 +1,6 @@
 # Demos
 
-Runnable RSPFX examples in `examples/` plus one external project. Every example scaffolds via `rspfx new`, builds with `rspfx build`, and packages with `rspfx package` to `sharepoint/solution/*.sppkg`.
+Runnable RSPFx examples in `examples/` plus one external project. Every example scaffolds via `rspfx new`, builds with `rspfx build`, and packages with `rspfx package` to `sharepoint/solution/*.sppkg`.
 
 Clone the repo and run any demo with `rspfx dev` on `http://localhost:4321` (local preview) or `https://localhost:4321` when a tenant is set via `dev.tenantUrl` or `--tenant`. See [getting-started.md](getting-started.md) and [commands.md](commands.md).
 
@@ -16,7 +16,7 @@ Engine runs as WebAssembly (~7 MB, single-threaded) in a Web Worker, so the UI n
 
 Games persist to a SharePoint list `Chess Games` (created on first use via PnPjs, columns PGN/Moves/Result/WhiteElo/BlackElo/WhiteName/BlackName/Site) and fall back to localStorage demo mode without a SharePoint context. Includes 7 Elo levels (700–2800), thinking timer, confetti on win, and theme-aware styling (`data-theme="light|dark"`).
 
-What it proves for RSPFX: non-React framework at a modern version, ~7 MB WASM asset handling, Web Worker chunk, Tailwind v4 PostCSS pipeline, and a single `rspack.config.ts` with `RspfxPlugin` (`packages/plugin/src/index.ts`). See the demo repo for `pnpm dev` / `pnpm build` / `pnpm package` and deployment steps.
+What it proves for RSPFx: non-React framework at a modern version, ~7 MB WASM asset handling, Web Worker chunk, Tailwind v4 PostCSS pipeline, and a single `rspack.config.ts` with `RspfxPlugin` (`packages/plugin/src/index.ts`). See the demo repo for `pnpm dev` / `pnpm build` / `pnpm package` and deployment steps.
 
 ## All demos at a glance
 
@@ -53,7 +53,7 @@ All frameworks support `rspfx dev --refresh` where the preset provides HMR (see 
 
 ## By bundler
 
-RSPFX exposes one plugin per bundler with the same options shape. Pick the config file, not a different API:
+RSPFx exposes one plugin per bundler with the same options shape. Pick the config file, not a different API:
 
 - Vite — `rspfxVite()` in `vite.config.ts`: [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react), [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla), [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed), [examples/vite-react19](https://github.com/master8848/rspfx/tree/main/examples/vite-react19) (React 19 + Vite 8). Vite is the default for new projects.
 
@@ -65,7 +65,7 @@ See [architecture.md](architecture.md) for the pipeline and [building-packages.m
 
 ## Production-scale and multi-component
 
-- [examples/modern-search](https://github.com/master8848/rspfx/tree/main/examples/modern-search) — PnP Modern Search v4.23.3 (~178 TS files, 24 SCSS modules, 4 web parts, Graph `webApiPermissionRequests`, Handlebars/Adaptive Cards/MGT). Validates that a large real-world SPFx solution compiles unchanged under RSPFX. See [migration-case-study.md](migration-case-study.md) and `examples/modern-search/README.md`.
+- [examples/modern-search](https://github.com/master8848/rspfx/tree/main/examples/modern-search) — PnP Modern Search v4.23.3 (~178 TS files, 24 SCSS modules, 4 web parts, Graph `webApiPermissionRequests`, Handlebars/Adaptive Cards/MGT). Validates that a large real-world SPFx solution compiles unchanged under RSPFx. See [migration-case-study.md](migration-case-study.md) and `examples/modern-search/README.md`.
 
 - [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed) — one solution with a web part (`src/webparts/hello`), an application customizer (`src/extensions/banner`), and a library (`src/libraries/utils`), plus `assets/favicon.svg` and localized `loc/en-us.ts`. See [project-structure.md](project-structure.md) and [multi-webpart.md](multi-webpart.md).
 

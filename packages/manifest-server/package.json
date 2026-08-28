@@ -25,7 +25,7 @@
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "selfsigned": "^2.4.1"
   },
-  "description": "RSPFX HTTPS manifest server for the SharePoint workbench (:4321)",
+  "description": "RSPFx HTTPS manifest server for the SharePoint workbench (:4321)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

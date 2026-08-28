@@ -1,8 +1,8 @@
-# RSPFX — Architecture & Implementation Plan
+# RSPFx — Architecture & Implementation Plan
 
 **Status: v0.0.14 shipped. See `docs/architecture.md` for the short orientation.**
 
-RSPFX replaces Heft + webpack + gulp. Vite is the default bundler. Rsbuild and Rspack also work. No bundler config is required for standard layouts — `config/config.json` and your manifests are enough.
+RSPFx replaces Heft + webpack + gulp. Vite is the default bundler. Rsbuild and Rspack also work. No bundler config is required for standard layouts — `config/config.json` and your manifests are enough.
 
 No built-in preset for other frameworks. Any framework ships as a `FrameworkPreset` (`packages/plugin-api/src/types.ts:29`) + `BaseWebPart` (`packages/core/src/base-web-part.ts:10`) registered with `definePlugin`/`registerPlugin` (`packages/plugin-api/src/registry.ts:5`) — see `docs/custom-framework.md`.
 

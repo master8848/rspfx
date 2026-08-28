@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "In-repo RSPFX smoke-test app (vanilla web part + playground page)",
+  "description": "In-repo RSPFx smoke-test app (vanilla web part + playground page)",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

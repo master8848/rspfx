@@ -1,5 +1,5 @@
 /**
- * Blackbox .sppkg parity harness — RSPFX vs official toolchain.
+ * Blackbox .sppkg parity harness — RSPFx vs official toolchain.
  *
  * Blackbox: identical input project (config/package-solution.json +
  * release/manifests/*.manifest.json + release/assets + teams + resx)
@@ -8,7 +8,7 @@
  *
  * Official generation is gated on OFFICIAL_SPPKG_TEST=1 (network + toolchain,
  * slow). Without the env var, the official comparison suite is skipped and the
- * file still validates the RSPFX path alone so `bun run test` stays green in CI.
+ * file still validates the RSPFx path alone so `bun run test` stays green in CI.
  *
  * Run:
  *   bun run test -- --run packages/sppkg-builder/tests            # fast, official skipped
@@ -60,7 +60,7 @@ function normalizeVolatileIds(xml: string): string {
 }
 
 // Normalize XML whitespace for comparison: collapse attribute order-insensitive?
-// We keep literal comparison for now; the official builder and RSPFX both use
+// We keep literal comparison for now; the official builder and RSPFx both use
 // the same serializeXml path — differences should show as failures.
 function normalizeXml(xml: string): string {
   return normalizeVolatileIds(xml).trim();
@@ -71,7 +71,7 @@ function sortedEntries(names: string[]): string[] {
   return [...names].sort();
 }
 
-// Map ORIGINAL RSPFX zip entries through volatile normalization for comparison.
+// Map ORIGINAL RSPFx zip entries through volatile normalization for comparison.
 function normalizedZip(zip: Map<string, Buffer>): Map<string, string> {
   const out = new Map<string, string>();
   for (const [name, buf] of zip) {
@@ -302,12 +302,12 @@ function diffNormalized(a: Map<string, string>, b: Map<string, string>): string[
   const diffs: string[] = [];
   const allKeys = new Set([...a.keys(), ...b.keys()]);
   for (const k of [...allKeys].sort()) {
-    if (!a.has(k)) diffs.push(`missing in RSPFX: ${k}`);
+    if (!a.has(k)) diffs.push(`missing in RSPFx: ${k}`);
     else if (!b.has(k)) diffs.push(`missing in official: ${k}`);
     else if (a.get(k) !== b.get(k)) {
       const av = a.get(k)!;
       const bv = b.get(k)!;
-      const snippet = `RSPFX len ${av.length} vs official len ${bv.length}; first diff at ${firstDiffIndex(av, bv)}`;
+      const snippet = `RSPFx len ${av.length} vs official len ${bv.length}; first diff at ${firstDiffIndex(av, bv)}`;
       diffs.push(`content mismatch ${k}: ${snippet}`);
     }
   }
@@ -321,10 +321,10 @@ function firstDiffIndex(a: string, b: string): number {
 }
 
 // -----------------------------------------------------------------------------
-// Always-run suite — validates the RSPFX path alone (no network, no official).
+// Always-run suite — validates the RSPFx path alone (no network, no official).
 // This is what CI executes when OFFICIAL_SPPKG_TEST is unset.
 
-describe('blackbox: RSPFX invariants (always run)', () => {
+describe('blackbox: RSPFx invariants (always run)', () => {
   it('produces a valid WebPart package (Module, no Location/Instance)', async () => {
     const dir = await createBlackboxProject({ components: ['webpart'] });
     try {
@@ -418,11 +418,11 @@ describe('blackbox: RSPFX invariants (always run)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Gated suite — RSPFX vs official byte parity. Skipped unless
+// Gated suite — RSPFx vs official byte parity. Skipped unless
 // OFFICIAL_SPPKG_TEST=1. When enabled, tries each version in OFFICIAL_SPPKG_VERSIONS
 // and asserts deep equality after volatile normalization.
 
-describe.skipIf(!OFFICIAL_ENABLED)('blackbox: RSPFX vs official parity (OFFICIAL_SPPKG_TEST=1)', () => {
+describe.skipIf(!OFFICIAL_ENABLED)('blackbox: RSPFx vs official parity (OFFICIAL_SPPKG_TEST=1)', () => {
   for (const version of OFFICIAL_VERSIONS) {
     for (const variant of [
       { label: 'WebPart', components: ['webpart'] as const },

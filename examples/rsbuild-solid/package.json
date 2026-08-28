@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: Solid web part built with the Rsbuild plugin (rspfxRsbuild)",
+  "description": "RSPFx example: Solid web part built with the Rsbuild plugin (rspfxRsbuild)",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

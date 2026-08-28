@@ -21,10 +21,10 @@ function patchReadme(file, content) {
   let next = content;
 
   // 1. Fix stale github docs link → rspfx.mbsks.me
-  //    Handles `[RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)`
+  //    Handles `[RSPFx documentation](https://github.com/master8848/rspfx/tree/main/docs)`
   if (next.includes('github.com/master8848/rspfx/tree/main/docs')) {
     next = next.replace(
-      /\[RSPFX documentation\]\(https:\/\/github\.com\/master8848\/rspfx\/tree\/main\/docs\)/g,
+      /\[RSPFx documentation\]\(https:\/\/github\.com\/master8848\/rspfx\/tree\/main\/docs\)/g,
       `[Documentation](${DOCS})`
     );
   }

@@ -138,7 +138,7 @@ Removes `dist/`, `release/`, `temp/`, `.rspfx`, `node_modules/.cache`, `sharepoi
 
 ## Bundler plugin
 
-RSPFX is a plugin for any Vite/Rsbuild/Rspack starter — scaffold with `npm create vite@latest` (or `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest`), `better-t-stack`, TanStack Router, `create-rsbuild`, etc., then add the plugin. Config file is optional (CLI synthesizes from manifests if missing).
+RSPFx is a plugin for any Vite/Rsbuild/Rspack starter — scaffold with `npm create vite@latest` (or `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest`), `better-t-stack`, TanStack Router, `create-rsbuild`, etc., then add the plugin. Config file is optional (CLI synthesizes from manifests if missing).
 
 Vite `vite.config.ts` — recommended default:
 

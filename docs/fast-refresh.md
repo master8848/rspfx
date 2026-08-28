@@ -37,7 +37,7 @@ Enable with `rspfx dev --refresh` or `dev.fastRefresh: true` in your bundler con
 
 ## Comparison vs official
 
-| Aspect | Official SPFx (`gulp serve`) | RSPFX |
+| Aspect | Official SPFx (`gulp serve`) | RSPFx |
 |---|---|---|
 | Hot update | Full reload only | State-preserving for react/preact/vue/svelte/solid with `--refresh` |
 | Vanilla JS | Reload | Reload (same) |
@@ -45,7 +45,7 @@ Enable with `rspfx dev --refresh` or `dev.fastRefresh: true` in your bundler con
 
 ## Missing plugin → warning, not breakage
 
-Fast refresh plugins are build-time dependencies. If the plugin package isn't installed, RSPFX logs a warning and falls back to full reload instead of failing the build:
+Fast refresh plugins are build-time dependencies. If the plugin package isn't installed, RSPFx logs a warning and falls back to full reload instead of failing the build:
 
 ```
 [rspfx] fast-refresh plugin for react is not installed — HMR is disabled; fallback to full reload. Install @rspack/plugin-react-refresh to enable it.

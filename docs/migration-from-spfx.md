@@ -1,6 +1,6 @@
-# Migrating an existing SPFx project to RSPFX
+# Migrating an existing SPFx project to RSPFx
 
-RSPFX mirrors official SPFx conventions, so most of an existing project carries over as-is. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
+RSPFx mirrors official SPFx conventions, so most of an existing project carries over as-is. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
 
 > For the full step-by-step see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md); for a real example see [migration-case-study.md](migration-case-study.md); for blockers see [why-not-to-migrate.md](why-not-to-migrate.md).
 
@@ -22,9 +22,9 @@ RSPFX mirrors official SPFx conventions, so most of an existing project carries 
 - Build devDependencies — `@microsoft/spfx-heft-plugins`, `@microsoft/sp-build-web`, `gulp`, `webpack` and loaders.
 - `config/deploy-azure-storage.json` — replaced by `config/write-manifests.json` `cdnBasePath`.
 
-## Same manifest for Heft/Gulp and RSPFX
+## Same manifest for Heft/Gulp and RSPFx
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` are identical for Heft/Gulp and RSPFX.
+`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` are identical for Heft/Gulp and RSPFx.
 
 See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx) and [hybrid-dev.md](hybrid-dev.md) for switching and revert.
 
@@ -88,7 +88,7 @@ See [upgrading-spfx-version.md](upgrading-spfx-version.md) — verify with `rspf
 
 ## Comparison vs official
 
-| Area | Official | RSPFX |
+| Area | Official | RSPFx |
 |---|---|---|
 | Config | Heft rig + `gulpfile.js` + webpack | One plugin in `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` (or zero-config) |
 | Dev server | `gulp serve` on `:4321` + spfx-fast-serve | `rspfx dev` on `:4321` — `https://localhost:4321` (workbench) or `http://localhost:4321` (local preview) |

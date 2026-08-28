@@ -103,7 +103,7 @@ describe('createMockSharePointApi', () => {
     expect(data.value).toHaveLength(2);
     expect(data.value[0]).toMatchObject({
       Id: 1,
-      Title: 'Welcome to RSPFX',
+      Title: 'Welcome to RSPFx',
       Body: 'Local preview running without SharePoint.',
       OData__UIVersionString: '1.0',
       Attachments: false,
@@ -114,7 +114,7 @@ describe('createMockSharePointApi', () => {
   it('serves a single item by index and 404s for unknown indices', async () => {
     const item = await call(api, makeReq({ url: "/_api/web/lists/getbytitle('Announcements')/items(1)" }));
     expect(item.statusCode).toBe(200);
-    expect(json(item)).toMatchObject({ Id: 1, Title: 'Welcome to RSPFX', Body: 'Local preview running without SharePoint.' });
+    expect(json(item)).toMatchObject({ Id: 1, Title: 'Welcome to RSPFx', Body: 'Local preview running without SharePoint.' });
 
     const missing = await call(api, makeReq({ url: "/_api/web/lists/getbytitle('Announcements')/items(99)" }));
     expect(missing.statusCode).toBe(404);
@@ -271,7 +271,7 @@ describe('createMockSharePointApi', () => {
     );
     const data = json(res) as { value: Record<string, unknown>[] };
     expect(data.value).toHaveLength(1);
-    expect(data.value[0]).toEqual({ Title: 'Welcome to RSPFX' });
+    expect(data.value[0]).toEqual({ Title: 'Welcome to RSPFx' });
   });
 
   it('honors $orderby on item collections', async () => {
@@ -280,7 +280,7 @@ describe('createMockSharePointApi', () => {
       makeReq({ url: "/_api/web/lists/getbytitle('Announcements')/items?$orderby=Title%20desc" })
     );
     const data = json(res) as { value: { Title: string }[] };
-    expect(data.value.map((item) => item.Title)).toEqual(['Welcome to RSPFX', 'Mock list data']);
+    expect(data.value.map((item) => item.Title)).toEqual(['Welcome to RSPFx', 'Mock list data']);
   });
 
   it('returns an SP-style error envelope for unknown endpoints', async () => {

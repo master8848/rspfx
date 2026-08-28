@@ -1,6 +1,6 @@
-# Migrating off gulp + Heft to RSPFX
+# Migrating off gulp + Heft to RSPFx
 
-Definitive guide for moving an existing SPFx project from the official toolchain (gulp/Heft, webpack, `@microsoft/spfx-web-build-rig`) to RSPFX. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
+Definitive guide for moving an existing SPFx project from the official toolchain (gulp/Heft, webpack, `@microsoft/spfx-web-build-rig`) to RSPFx. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
 
 Based on the real migration of [PnP Modern Search](../examples/modern-search) — see [migration-case-study.md](migration-case-study.md) for the full play-by-play.
 
@@ -24,11 +24,11 @@ Web parts with React/Vanilla and standard `config/` layout are a good fit; custo
 | Localized strings (`import strings from 'XxxWebPartStrings'`) | Resolved from `localizedResources` (default `en-us`) |
 | Lazy `import()` chunks, `*.module.scss`, HTML imports, `require('*.json')` | Supported |
 
-## Same manifest for Heft/Gulp and RSPFX
+## Same manifest for Heft/Gulp and RSPFx
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work unchanged for Heft/Gulp and RSPFX.
+`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work unchanged for Heft/Gulp and RSPFx.
 
-You can keep Heft for production and use RSPFX for dev — `rspfx dev` synthesizes config from manifests.
+You can keep Heft for production and use RSPFx for dev — `rspfx dev` synthesizes config from manifests.
 
 See [hybrid-dev.md](hybrid-dev.md).
 
@@ -139,7 +139,7 @@ For Rspack/Rsbuild use `RspfxPlugin` / `rspfxRsbuild` — see [commands.md](comm
 
 ### 3. Rewrite entrypoints
 
-Official projects point at Heft output; RSPFX compiles source directly:
+Official projects point at Heft output; RSPFx compiles source directly:
 
 ```jsonc
 // before
@@ -207,7 +207,7 @@ See [building-packages.md](building-packages.md) for output details and [referen
 | Manifest references missing `<bundle>.js` | Bundle name ≠ folder name — rename key or set `paths` |
 | `@import 'pkg:…'` fails | Rewrite as in step 5 |
 | `Module parse failed` on `.html` | Rebuild CLI — HTML handled as `asset/source` |
-| Type errors on `*.module.scss` | RSPFX uses swc (no typecheck); add `declare module '*.module.scss'` for IDE |
+| Type errors on `*.module.scss` | RSPFx uses swc (no typecheck); add `declare module '*.module.scss'` for IDE |
 | `engines` warnings | Relax `engines.node` to `>=20` |
 
 ## After migration
@@ -228,7 +228,7 @@ Full matrix: [compatibility.md#spfx-version-matrix](compatibility.md#spfx-versio
 
 ## Comparison vs official
 
-| Task | Official SPFx | RSPFX |
+| Task | Official SPFx | RSPFx |
 |---|---|---|
 | Dev | `gulp serve` / `heft start --clean` | `rspfx dev` (workbench at `https://localhost:4321`, local preview at `http://localhost:4321`) |
 | Hot reload | `spfx-fast-serve` | `rspfx dev --refresh` |

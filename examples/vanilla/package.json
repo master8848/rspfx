@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: vanilla TypeScript web part (no framework)",
+  "description": "RSPFx example: vanilla TypeScript web part (no framework)",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

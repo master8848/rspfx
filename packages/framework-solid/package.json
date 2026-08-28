@@ -54,7 +54,7 @@
   "devDependencies": {
     "solid-js": "^1.9.4"
   },
-  "description": "RSPFX Solid framework preset and web part base class",
+  "description": "RSPFx Solid framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

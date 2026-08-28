@@ -1,6 +1,6 @@
 # @mbsks/rspfx-plugin
 
-Bundler plugins for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. **Vite (default) · Rsbuild · Rspack** — one config, three bundlers.
+Bundler plugins for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. **Vite (default) · Rsbuild · Rspack** — one config, three bundlers.
 
 Provides the three thin adapters over a single compilation kernel: **Rspack** (`RSpfxPlugin`), **Vite** (`rspfxVite`), **Rsbuild** (`rspfxRsbuild`). All read the same `RSPFX_PLUGIN_MARKER` project config and share manifest / sppkg / dev-runtime.
 

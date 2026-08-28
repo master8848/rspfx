@@ -1,6 +1,6 @@
 # @mbsks/rspfx-compiler-rspack
 
-Rspack backend of [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite and Rsbuild are supported via [`@mbsks/rspfx-plugin`](https://rspfx.mbsks.me/docs/architecture) (`rspfxVite` / `rspfxRsbuild`). This package is the **Rspack-only** compiler; the triple-bundler toolchain is Vite (default) · Rsbuild · Rspack.
+Rspack backend of [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite and Rsbuild are supported via [`@mbsks/rspfx-plugin`](https://rspfx.mbsks.me/docs/architecture) (`rspfxVite` / `rspfxRsbuild`). This package is the **Rspack-only** compiler; the triple-bundler toolchain is Vite (default) · Rsbuild · Rspack.
 
 A thin, owned configuration factory around **Rspack** (no webpack, Heft, or gulp anywhere): TypeScript via SWC, SCSS, PostCSS/Tailwind, asset handling, dev server, and fast refresh wiring.
 

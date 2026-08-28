@@ -555,8 +555,8 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       // Allowlist only the known safe keys; drop any RSPFX_* or unknown keys to avoid leakage.
       const allowed = new Set(['DEBUG', 'DEPRECATED_UNIT_TEST', 'process.env.NODE_ENV']);
       for (const [k, v] of Object.entries(viteContribs.define)) {
-        if (k.startsWith('RSPFX_') || k.includes('RSPFX')) {
-          logger.warn(`Ignoring disallowed define key '${k}' from vite contributions (RSPFX leakage blocked)`);
+        if (k.startsWith('RSPFX_') || k.includes('RSPFx')) {
+          logger.warn(`Ignoring disallowed define key '${k}' from vite contributions (RSPFx leakage blocked)`);
           continue;
         }
         if (!allowed.has(k)) {

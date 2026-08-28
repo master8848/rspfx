@@ -2,7 +2,7 @@
 
 Run `rspfx dev` in an official SPFx project without changing it. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
 
-Dev uses RSPFX on `https://localhost:4321` (or `http://localhost:4321` for local preview); production stays on Heft/Gulp until `rspfx migrate`.
+Dev uses RSPFx on `https://localhost:4321` (or `http://localhost:4321` for local preview); production stays on Heft/Gulp until `rspfx migrate`.
 
 > Most web parts need no `@microsoft/sp-*` install — externalized by default.
 
@@ -12,7 +12,7 @@ Hybrid mode activates when:
 
 - `config/config.json` exists, and
 - `gulpfile.js` / `gulpfile.mjs` / `heft.json` / `.yo-rc.json` exists, and
-- No RSPFX bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) is found.
+- No RSPFx bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) is found.
 
 If a bundler config exists, detection does not run.
 
@@ -42,7 +42,7 @@ Synthesized config:
 
 Compare dev servers directly: `gulp serve` vs `rspfx dev` — same manifests, same workbench URL shape, same `:4321` port.
 
-## Switch to RSPFX builds
+## Switch to RSPFx builds
 
 ```sh
 rspfx migrate --dry-run   # preview

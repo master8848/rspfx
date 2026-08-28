@@ -12,7 +12,7 @@ Your shadcn-compatible file probably looks like:
 :root { --background: 0 0% 100%; --primary: 221 83% 53%; ... }
 .dark { --background: 240 10% 3.9%; --primary: 217 91% 59%; ... }
 ```
-Wrap it for RSPFX:
+Wrap it for RSPFx:
 ```css
 /* theme-meta: label="My Theme" color="#2563eb" */
 html[data-theme="mytheme"] { --background: ...; --primary: ...; }

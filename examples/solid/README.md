@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-solid
 
-A Solid web part demonstrating the RSPFX framework support.
+A Solid web part demonstrating the RSPFx framework support.
 
 ## What it demonstrates
 

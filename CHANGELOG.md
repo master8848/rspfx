@@ -44,7 +44,7 @@ Covers `89556b8..HEAD` (30 commits since `v0.0.14` plus publish pipeline + READM
 - `packages/compiler-rspack/README.md:1` — header now `Rspack backend of the triple-bundler toolchain (Vite and Rsbuild via @mbsks/rspfx-plugin)` (was misleading triple).
 - `packages/manifest-server/README.md:5` — certs now `Vite · Rsbuild · Rspack dev servers` (was `compiler-rspack` only).
 - `packages/framework-react/README.md:5`, `packages/framework-preact/README.md:5`, `packages/framework-vue/README.md:5`, `packages/framework-svelte/README.md:5` — fast refresh / SFC loaders now list all three bundlers (was rspack-only).
-- `packages/templates/src/index.ts:397` `readme()` scaffold now includes `[RSPFX](https://rspfx.mbsks.me)` + `Vite · Rsbuild · Rspack (bundler: vite|rsbuild|rspack)` + `## Links` to `https://rspfx.mbsks.me`.
+- `packages/templates/src/index.ts:397` `readme()` scaffold now includes `[RSPFx](https://rspfx.mbsks.me)` + `Vite · Rsbuild · Rspack (bundler: vite|rsbuild|rspack)` + `## Links` to `https://rspfx.mbsks.me`.
 
 ### Fixed
 
@@ -106,18 +106,18 @@ Human-readable summary of `4bd4ceb..5410ef7` plus the 9 post-bump commits that s
 
 ### Added
 - Custom framework registry — register any framework via `packages/core` + `packages/plugin-api` + `packages/dev-runtime` without forking core (`0b4725a`, `.agents/notes/implemented/feature/2026-08-23-custom-framework-extensibility.md`).
-- `rspfx migrate` command (`apps/cli`) with `--dry-run`, `--revert`, and `--bundler vite|rspack|rsbuild` to convert Heft/Gulp projects to RSPFX (`6d2a6f7`).
+- `rspfx migrate` command (`apps/cli`) with `--dry-run`, `--revert`, and `--bundler vite|rspack|rsbuild` to convert Heft/Gulp projects to RSPFx (`6d2a6f7`).
 - Vite as default bundler — new projects scaffold `vite.config.ts` via `packages/plugin` vite preset; rspack/rsbuild remain selectable (`b05775b`).
 - Robust styling defaults — SCSS, CSS Modules, PostCSS, and Tailwind wired in `packages/plugin` with zero-config and future-proof helpers (`b05775b`).
 
 ### Changed
-- Docs: RSPFX-only framework matrix — supported frameworks are first-class in `README.md` and `skills/`; non-RSPFX wrappers removed (`d6035e6`).
+- Docs: RSPFx-only framework matrix — supported frameworks are first-class in `README.md` and `skills/`; non-RSPFx wrappers removed (`d6035e6`).
 - Docs: PnPjs guidance for SharePoint lists replaces generic fetch examples (`d6035e6`).
-- Docs: Dual-toolchain interchange explained — same `config.json` + `serve.json` works in Heft/Gulp and RSPFX (`d6035e6`).
+- Docs: Dual-toolchain interchange explained — same `config.json` + `serve.json` works in Heft/Gulp and RSPFx (`d6035e6`).
 - Docs: Human-friendly zero-config and same-manifest guide — `README.md` emphasizes no config needed, manifest parity (`b3836bc`).
 
 ### Fixed
-- Share same manifest between Heft/Gulp and RSPFX — `packages/dev-runtime` + `apps/cli` read one `config.json` source (`1b7fb98`).
+- Share same manifest between Heft/Gulp and RSPFx — `packages/dev-runtime` + `apps/cli` read one `config.json` source (`1b7fb98`).
 - Vite CSS Modules `localsConvention` set to `asIs` to match rspack output (was `camelCaseOnly`) — `packages/plugin/src/vite.ts:127` (`127986a`).
 - Agent Note and reference compliance for custom-framework docs (`b6de572`).
 
@@ -128,7 +128,7 @@ Human-readable summary of `4bd4ceb..5410ef7` plus the 9 post-bump commits that s
 Covers `3fb8c26..4bd4ceb` — 22 changes between the `0.0.11` and `0.0.12` bumps; `4bd4ceb` is the bump commit.
 
 ### Added
-- Hybrid dev mode (`apps/cli` `rspfx dev`) — auto-detects Heft/Gulp vs RSPFX projects and runs the correct pipeline (`adc7f41`, `.agents/notes/implemented/feature/2026-08-23-hybrid-dev-mode.md`).
+- Hybrid dev mode (`apps/cli` `rspfx dev`) — auto-detects Heft/Gulp vs RSPFx projects and runs the correct pipeline (`adc7f41`, `.agents/notes/implemented/feature/2026-08-23-hybrid-dev-mode.md`).
 - FormCustomizer and Library scaffolding + packaging coverage (`0784b37`).
 - Extension close-out and Library component support — `packages/templates` + `packages/sppkg-builder` + `packages/manifest-generator` (`ff7d573`, `6bdf864`).
 
@@ -204,7 +204,7 @@ Covers `bed37f9..0d490c6` — extensions, bundler parity, and standards.
 - SharePoint runtime extension mounting and locale switching in local preview (`51c9c85`).
 - Teams assets and localized `resx` metadata packaged into `sppkg` (`cd3d0c6`).
 - Vite/Rsbuild framework presets + parity suite — M8 bundler parity (`bed37f9`, PR #4).
-- Benchmark harness comparing Heft/Gulp vs RSPFX (`cece838`).
+- Benchmark harness comparing Heft/Gulp vs RSPFx (`cece838`).
 - Solid fast refresh via `solid-refresh/babel` with stub fallback (`601531c`, PR #3).
 
 ### Fixed

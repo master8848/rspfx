@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Convert raw shadcn-compatible css files (`:root` / `.dark`) to RSPFX drop-in themes
+// Convert raw shadcn-compatible css files (`:root` / `.dark`) to RSPFx drop-in themes
 // Usage: node scripts/convert-shadcn-theme.mjs ./raw/*.css --out docs-web/.vitepress/theme/themes/
 //        node scripts/convert-shadcn-theme.mjs --help
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'

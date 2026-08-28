@@ -1,14 +1,14 @@
 # Why you should NOT migrate (yet)
 
-RSPFX is young. It mirrors official SPFx formats, but it's not the official toolchain and doesn't support everything. This is the honest decision guide — if a row matches you, staying on gulp/Heft is lower-risk. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
+RSPFx is young. It mirrors official SPFx formats, but it's not the official toolchain and doesn't support everything. This is the honest decision guide — if a row matches you, staying on gulp/Heft is lower-risk. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
 
 > **Tip:** Try in a branch before deciding: `rspfx migrate --dry-run`, `rspfx doctor`, `rspfx dev`, `rspfx package`. You'll know within an hour if you're in the happy path. See [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
 
 ## Hard blockers — do not migrate if this is you
 
-| Feature | RSPFX status | What to do |
+| Feature | RSPFx status | What to do |
 |---|---|---|
-| **SharePoint 2019 / on-premises** | ❌ Not supported | Stay on official. RSPFX targets SPFx Online only — see [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix). |
+| **SharePoint 2019 / on-premises** | ❌ Not supported | Stay on official. RSPFx targets SPFx Online only — see [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix). |
 | **Other framework without a preset** | ⚠️ Bring your own preset | No built-in preset for other frameworks. Any framework works via `FrameworkPreset` + `BaseWebPart` (see [custom-framework.md](custom-framework.md)). Don't migrate unless you can provide it. |
 
 Everything else is supported or has a workable alternative.
@@ -46,7 +46,7 @@ See [real-tenant-validation.md](real-tenant-validation.md) for verification. See
 - Young toolchain — fewer battle-tested users than `gulp serve` + `spfx-fast-serve`.
 - Framework APIs unstable until M5.
 - No build-extension ecosystem (no PnP CLI build plugins, no Heft rigs; PnPjs libraries still work).
-- Microsoft supports the official pipeline; Stack Overflow won't cover RSPFX.
+- Microsoft supports the official pipeline; Stack Overflow won't cover RSPFx.
 - CI is yours to port (~10 lines, see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md)).
 - `.sppkg` format captured from official packages and validated by tenant install per [real-tenant-validation.md](real-tenant-validation.md) and [reference/FORMATS.md](../reference/FORMATS.md).
 
@@ -70,7 +70,7 @@ See [real-tenant-validation.md](real-tenant-validation.md) for verification. See
 
 ## Comparison vs official
 
-| Aspect | Official (`gulp`/`Heft`) | RSPFX |
+| Aspect | Official (`gulp`/`Heft`) | RSPFx |
 |---|---|---|
 | Web parts + extensions + libraries (Online) | ✅ | ✅ (verified) |
 | On-premises / 2019 | ✅ | ❌ |

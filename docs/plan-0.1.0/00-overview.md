@@ -1,4 +1,4 @@
-# RSPFX 0.1.0 — Breaking Improvements Plan (Expanded, No CI Changes)
+# RSPFx 0.1.0 — Breaking Improvements Plan (Expanded, No CI Changes)
 
 > **Baseline:** `v0.0.13` → **Target:** `0.1.0` (breaking). Breaking API allowed to make base better.
 > **Constraint:** **NO CI CHANGES** — no `.github/workflows`, no CI jobs. Verification is local `pnpm build` + `pnpm test` + `pnpm typecheck` + `node bench/bench.mjs`.

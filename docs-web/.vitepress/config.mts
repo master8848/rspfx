@@ -13,7 +13,7 @@ const docsSidebar = [
     text: 'Getting Started',
     collapsed: false,
     items: [
-      { text: 'Why RSPFX', link: '/docs/why-rspfx' },
+      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
       { text: 'Getting Started', link: '/docs/getting-started' },
       { text: 'Demos', link: '/docs/demos' },
       { text: 'llms.txt', link: '/llms' },
@@ -65,8 +65,8 @@ const docsSidebar = [
 ] as const
 
 export default defineConfig({
-  title: 'RSPFX',
-  titleTemplate: ':title — RSPFX',
+  title: 'RSPFx',
+  titleTemplate: ':title — RSPFx',
   description: 'SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack ready — same manifests, same .sppkg.',
   lang: 'en-US',
   cleanUrls: true,
@@ -200,21 +200,21 @@ export default defineConfig({
     ['script', {}, `(function(){try{var k='rspfx-pm',v=localStorage.getItem(k);if(v&&['npm','pnpm','yarn','bun','deno'].includes(v)){document.documentElement.setAttribute('data-pm',v);window.__RSPFX_PM=v;}}catch(e){}} )()`],
     ['script', {}, `(function(){function p(){try{var y=new Date().getFullYear();var el=document.querySelector('.VPFooter .copyright');if(!el)return false;if(el.dataset.patched==='1'&&el.querySelector('a[href*="master8848"]'))return true;el.innerHTML='Copyright \\u00A9 '+y+' <a href="https://github.com/master8848" target="_blank" rel="noopener noreferrer">master8848</a>';el.dataset.patched='1';return true}catch(e){return false}}p();document.addEventListener('DOMContentLoaded',p);var t=setInterval(function(){if(p())clearInterval(t)},250);setTimeout(function(){clearInterval(t)},8000);try{new MutationObserver(p).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}window.addEventListener('popstate',p);window.addEventListener('hashchange',p);document.addEventListener('visibilitychange',p);})()`],
 
-    ['meta', { name: 'author', content: 'RSPFX contributors' }],
+    ['meta', { name: 'author', content: 'RSPFx contributors' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:site_name', content: 'RSPFX' }],
-    ['meta', { property: 'og:title', content: 'RSPFX — SPFx-compatible build toolchain' }],
+    ['meta', { property: 'og:site_name', content: 'RSPFx' }],
+    ['meta', { property: 'og:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
     ['meta', { property: 'og:description', content: 'No Heft, no webpack, no gulp. Vite default — Rsbuild & Rspack ready. Same manifests, same .sppkg.' }],
     ['meta', { property: 'og:image', content: '/hero.svg' }],
-    ['meta', { property: 'og:image:alt', content: 'RSPFX' }],
+    ['meta', { property: 'og:image:alt', content: 'RSPFx' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'RSPFX — SPFx-compatible build toolchain' }],
+    ['meta', { name: 'twitter:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
     ['meta', { name: 'twitter:description', content: 'Build SharePoint web parts without the old toolchain. Vite by default — Rsbuild & Rspack ready.' }],
     ['meta', { name: 'twitter:image', content: '/hero.svg' }],
   ],
   themeConfig: {
     logo: '/logo.svg',
-    siteTitle: 'RSPFX',
+    siteTitle: 'RSPFx',
     // Copy-markdown button: theme-level flag, defaults to true when omitted.
     // Set `copyMarkdown: false` here to hide globally. Per-page `frontmatter.copyMarkdown`
     // (auto-set for /llm and /llms via transformPageData) overrides this.

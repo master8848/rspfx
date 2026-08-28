@@ -11,11 +11,11 @@ npm i -g @mbsks/rspfx-cli   # or pnpm add -g @mbsks/rspfx-cli / yarn global add 
 rspfx --version
 ```
 
-> **Tip:** You don't need `@microsoft/sp-*` for most web parts — RSPFX externalizes them. Install only if you import that runtime (e.g. `@microsoft/sp-http`).
+> **Tip:** You don't need `@microsoft/sp-*` for most web parts — RSPFx externalizes them. Install only if you import that runtime (e.g. `@microsoft/sp-http`).
 
 ## 2. Create a project
 
-RSPFX is a plugin — scaffold with your favorite starter, then add the plugin. Vite is the default (most popular), Rsbuild/Rspack also work. Any Vite starter is fine (`create-vite`, `better-t-stack`, TanStack Router, etc.) — just add `rspfxVite()`.
+RSPFx is a plugin — scaffold with your favorite starter, then add the plugin. Vite is the default (most popular), Rsbuild/Rspack also work. Any Vite starter is fine (`create-vite`, `better-t-stack`, TanStack Router, etc.) — just add `rspfxVite()`.
 
 **Recommended — bring your own scaffold (Vite):**
 
@@ -75,7 +75,7 @@ Port `4321` is the single dev port. Mode is picked by whether a tenant is config
 
 Local preview: browse `http://localhost:4321/` — lists every web part, mock `/_api` from `local/data.json`, bundles at `/dist/*`, manifests at `/temp/manifests.js`.
 
-Workbench: RSPFX prints `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — SharePoint loads bundles from `https://localhost:4321/dist/*`. See Microsoft docs: [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
+Workbench: RSPFx prints `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — SharePoint loads bundles from `https://localhost:4321/dist/*`. See Microsoft docs: [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
 
 Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or `rspfx dev --tenant https://contoso.sharepoint.com`. See [commands.md#rspfx-dev](commands.md#rspfx-dev).
 

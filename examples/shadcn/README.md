@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-shadcn
 
-A React 18 web part demonstrating shadcn/ui components with Tailwind CSS v4, built with RSPFX (no Fluent UI).
+A React 18 web part demonstrating shadcn/ui components with Tailwind CSS v4, built with RSPFx (no Fluent UI).
 
 ## What it demonstrates
 

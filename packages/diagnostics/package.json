@@ -24,7 +24,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*"
   },
-  "description": "RSPFX diagnostics: logger, typed errors, benchmarks, formatting",
+  "description": "RSPFx diagnostics: logger, typed errors, benchmarks, formatting",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

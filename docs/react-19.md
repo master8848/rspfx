@@ -1,18 +1,18 @@
 # React 19
 
-React 19 works with RSPFX — each web part bundles its own React — but Fluent UI is the limiter. See [frameworks.md](frameworks.md) and [compatibility.md](compatibility.md). See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
+React 19 works with RSPFx — each web part bundles its own React — but Fluent UI is the limiter. See [frameworks.md](frameworks.md) and [compatibility.md](compatibility.md). See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
 
 ## Status
 
 | Layer | React 19 | Notes |
 |---|---|---|
-| RSPFX (`@mbsks/rspfx-framework-react`) | ✅ | `packages/framework-react/src/headless.ts:1` uses `react-dom/client` `createRoot` — same API in React 19. Bundles per web part; no Shared SPFx React. |
+| RSPFx (`@mbsks/rspfx-framework-react`) | ✅ | `packages/framework-react/src/headless.ts:1` uses `react-dom/client` `createRoot` — same API in React 19. Bundles per web part; no Shared SPFx React. |
 | Official SPFx (`@microsoft/sp-*`) | ❌ | SPFx 1.20–1.24 ships React 17 (generator pins `react@17.0.1`, `react-dom@17.0.1`). SharePoint does not provide React 19 at runtime. |
 | `@fluentui/react` v8 (`@mbsks/rspfx-fluent-adapter` peer `^8.0.0`) | ⚠️ | Peer `react >=16.8.0 <19.0.0` — install fails or types break on React 19. Source `packages/fluent-adapter/src/index.ts:5` imports `ThemeProvider` from `@fluentui/react`. |
 | `@fluentui/react-components` v9 (Fluent v9) | ⚠️ | All v9 packages peer `react >=16.8.0 <19.0.0` / `>=16.14.0 <19.0.0` (see `pnpm-lock.yaml` entries for `@fluentui/react-*`). No official React 19 support yet. |
 | Other UI libs (shadcn, Tailwind, Radix) | ✅ | No React version ceiling — use instead of Fluent on React 19. See [styling.md](styling.md) and `examples/shadcn`. |
 
-RSPFX `peerDependencies` in `packages/framework-react/package.json:47` is `react ^18.0.0` / `react-dom ^18.0.0` today. React 19 still runs — override the peer — but Fluent UI is the blocker, not RSPFX.
+RSPFx `peerDependencies` in `packages/framework-react/package.json:47` is `react ^18.0.0` / `react-dom ^18.0.0` today. React 19 still runs — override the peer — but Fluent UI is the blocker, not RSPFx.
 
 ## When to use React 19
 
@@ -20,9 +20,9 @@ Use React 19 when you don't need `@fluentui/react` v8 or need React 19 features 
 
 If you need both Fluent UI and React 19, track Fluent's React 19 milestone and test in a branch — don't ship to production until Fluent's peers allow `>=19.0.0`.
 
-## 1. Getting React 19 working with RSPFX (SPFx 1.23)
+## 1. Getting React 19 working with RSPFx (SPFx 1.23)
 
-RSPFX externalizes none of `react` / `react-dom` — each web part bundles its own copy (`frameworks.md:108` tip). No SharePoint-provided React is used.
+RSPFx externalizes none of `react` / `react-dom` — each web part bundles its own copy (`frameworks.md:108` tip). No SharePoint-provided React is used.
 
 SPFx `1.23` is the target for all React 19 examples here — `spfxVersion: '1.23'` in `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` and matching `@microsoft/sp-*@~1.23.0`.
 
@@ -51,7 +51,7 @@ Or `pnpm add` / `npm i` / `yarn add` — same spec.
 
 Overrides silence the peer error but don't fix runtime breakage inside Fluent — test manually.
 
-4. Keep `tsconfig.json` `jsx: "react-jsx"` (scaffold default) — no change needed. RSPFX's SWC transform (`packages/framework-react/src/index.ts` preset `jsc.transform.react.runtime: 'automatic'`) works with React 19 JSX.
+4. Keep `tsconfig.json` `jsx: "react-jsx"` (scaffold default) — no change needed. RSPFx's SWC transform (`packages/framework-react/src/index.ts` preset `jsc.transform.react.runtime: 'automatic'`) works with React 19 JSX.
 
 5. Pin SPFx 1.23 deps:
 
@@ -75,7 +75,7 @@ Fast refresh (`rspfx dev --refresh`) still uses `@vitejs/plugin-react` / `@rspac
 
 `@mbsks/rspfx-fluent-adapter` (`packages/fluent-adapter/package.json:30` peer `@fluentui/react ^8.0.0`) and `@fluentui/react` v8 itself have never declared React 19 support. Installing React 19 alongside `@fluentui/react@8.122.7` yields `EBADENGINE` / `ERESOLVE` or type errors (`Property 'children' is missing` from legacy `React.FC`).
 
-Fluent v9 (`@fluentui/react-components@9.74.4` and all `@fluentui/react-*@9.x`) also caps peers at `<19.0.0` today — check `pnpm-lock.yaml:1857` (`@fluentui/react-calendar-compat` `react >=16.8.0 <19.0.0`) and siblings. This is not RSPFX-specific — upstream has not shipped a React 19-compatible release.
+Fluent v9 (`@fluentui/react-components@9.74.4` and all `@fluentui/react-*@9.x`) also caps peers at `<19.0.0` today — check `pnpm-lock.yaml:1857` (`@fluentui/react-calendar-compat` `react >=16.8.0 <19.0.0`) and siblings. This is not RSPFx-specific — upstream has not shipped a React 19-compatible release.
 
 What breaks:
 
@@ -135,7 +135,7 @@ bun add -D @rolldown/plugin-babel babel-plugin-react-compiler
 ### Configure `vite.config.ts` — Vite 8 (Rust)
 
 ```ts
-// vite.config.ts — RSPFX + React 19 + Compiler (Vite 8, SPFx 1.23)
+// vite.config.ts — RSPFx + React 19 + Compiler (Vite 8, SPFx 1.23)
 import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
 import react from '@vitejs/plugin-react';
@@ -155,7 +155,7 @@ If two `react()` instances conflict (preset `4.7` vs project `6.1`), pin `@vitej
 ### Configure `vite.config.ts` — Vite 7 fallback (Babel)
 
 ```ts
-// vite.config.ts — RSPFX + React 19 + Compiler (Vite 7)
+// vite.config.ts — RSPFx + React 19 + Compiler (Vite 7)
 import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -246,7 +246,7 @@ Package map — why each package:
 | `@tanstack/react-form` `^1.19.0` | `dependencies` | Headless form state — `useForm` + `form.Field` — no UI coupling, works with Tailwind. |
 | `@pnp/sp` / `@pnp/logging` / `@pnp/queryable` `^4.0.0` | `dependencies` | PnPjs v4 — `spfi().using(SPFx(context)).web.lists.getByTitle().items.add()` — handles digest, headers, batching. |
 | `tailwindcss` `^4.1.12` / `@tailwindcss/postcss` `^4.1.12` / `postcss` `^8.5.0` | `devDependencies` | Tailwind v4 — `postcss.config.mjs:2` `@tailwindcss/postcss` — CSS inlined via `vite.config.ts:8` `rspfxVite` (`build.cssCodeSplit: false` + `packages/plugin/src/vite.ts:282` `assetFileNames`). |
-| `vite` `^8.0.0` / `@vitejs/plugin-react` `^6.1.0` with `react({ compiler: true })` | `devDependencies` | Vite 8 + Rust compiler (Oxc) — fast refresh + React Compiler in one pass. Vite 8 uses Rolldown; RSPFX converts ES to AMD via `packages/plugin/src/vite.ts:314` `esToAmd`. |
+| `vite` `^8.0.0` / `@vitejs/plugin-react` `^6.1.0` with `react({ compiler: true })` | `devDependencies` | Vite 8 + Rust compiler (Oxc) — fast refresh + React Compiler in one pass. Vite 8 uses Rolldown; RSPFx converts ES to AMD via `packages/plugin/src/vite.ts:314` `esToAmd`. |
 | `typescript` `^7.0.0` | `devDependencies` | `tsc --noEmit` — `rspfx build` also runs `swc` via `packages/compiler-rspack/src/config.ts:149`. |
 
 Tailwind setup — `postcss.config.mjs` and `src/app.css` already in `examples/vite-react19`:

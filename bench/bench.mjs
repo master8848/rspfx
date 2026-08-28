@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSPFX benchmark harness — no dependencies beyond Node (ESM).
+ * RSPFx benchmark harness — no dependencies beyond Node (ESM).
  *
  * Usage:
  *   node bench/bench.mjs                 # default: examples/shadcn
@@ -336,7 +336,7 @@ function printParseable(coldStartMs, recompileMs, buildMs) {
 }
 
 async function main() {
-  console.log(`RSPFX benchmark\n  node ${process.version} — ${process.platform} ${process.arch}\n  project: ${projectDir}\n`);
+  console.log(`RSPFx benchmark\n  node ${process.version} — ${process.platform} ${process.arch}\n  project: ${projectDir}\n`);
   // Optional native timing: cargo bench -p rspfx-sppkg --bench package when Rust package bench exists (local only, no CI)
   try {
     if (fs.existsSync(path.join(ROOT, 'crates', 'rspfx-sppkg', 'benches', 'package.rs'))) {

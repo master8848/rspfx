@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: vanilla TypeScript web part built with the Vite plugin (rspfxVite)",
+  "description": "RSPFx example: vanilla TypeScript web part built with the Vite plugin (rspfxVite)",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

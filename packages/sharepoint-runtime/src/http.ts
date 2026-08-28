@@ -211,7 +211,7 @@ export function createMockMSGraphClientFactory(data: MockGraphData = LOCAL_GRAPH
     return data[normalized];
   };
   const fail = (path: string): { error: { code: string; message: string } } => ({
-    error: { code: 'BadRequest', message: `RSPFX local mock: unknown Graph endpoint "${path}"` }
+    error: { code: 'BadRequest', message: `RSPFx local mock: unknown Graph endpoint "${path}"` }
   });
 
   const client: MockMSGraphClient = {

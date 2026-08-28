@@ -1,4 +1,4 @@
-# Contributing to RSPFX
+# Contributing to RSPFx
 
 This guide covers local development, the per-version changelog rule, and the tagging and publishing workflow. For documentation standards see `docs/AGENTS.md`; for project layout see `docs/architecture.md#package-map` and `docs/project-structure.md`.
 

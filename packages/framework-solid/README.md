@@ -1,6 +1,6 @@
 # @mbsks/rspfx-framework-solid
 
-Solid framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
+Solid framework package for [RSPFx](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Provides the `SolidWebPart` base class with `babel-preset-solid` compilation.
 

@@ -1,23 +1,23 @@
 # Framework Support
 
-RSPFX is framework-agnostic — the core knows nothing about React or Vue. Each framework is a pluggable package with a compiler preset and a web part base class. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Working with web part manifests](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-web-part-manifests).
+RSPFx is framework-agnostic — the core knows nothing about React or Vue. Each framework is a pluggable package with a compiler preset and a web part base class. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Working with web part manifests](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-web-part-manifests).
 
 > **Tip:** Pick your bundler by ranking Vite > Rsbuild > Rspack. Vite gives the simplest CSS and fastest loop for every framework. See [styling.md](styling.md).
 
 ## Choosing a framework
 
-| Framework | Official SPFx | RSPFX | Fast refresh |
+| Framework | Official SPFx | RSPFx | Fast refresh |
 |---|---|---|---|
 | React / Vanilla TS | ✅ | ✅ | ✅ / — |
 | Preact / Vue / Svelte / Solid | ❌ | ✅ | ✅ |
 
-Official templates ship React only. RSPFX adds the rest as first-class presets (`@mbsks/rspfx-framework-*`) with loaders and base classes (`ReactWebPart`, `VueWebPart`, …). Solid is available via Rspack (`examples/solid`) and Rsbuild (`examples/rsbuild-solid`, `@mbsks/rspfx-example-rsbuild-solid`).
+Official templates ship React only. RSPFx adds the rest as first-class presets (`@mbsks/rspfx-framework-*`) with loaders and base classes (`ReactWebPart`, `VueWebPart`, …). Solid is available via Rspack (`examples/solid`) and Rsbuild (`examples/rsbuild-solid`, `@mbsks/rspfx-example-rsbuild-solid`).
 
-> **Tip:** Scaffold with any starter first (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest`, `better-t-stack`, TanStack Router, etc.), then add `rspfxVite()` — framework deps come from your starter, not from RSPFX pins. `packages/templates/src/index.ts:62` `FRAMEWORK_RUNTIME_DEPS` is only the `rspfx new` shortcut.
+> **Tip:** Scaffold with any starter first (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest`, `better-t-stack`, TanStack Router, etc.), then add `rspfxVite()` — framework deps come from your starter, not from RSPFx pins. `packages/templates/src/index.ts:62` `FRAMEWORK_RUNTIME_DEPS` is only the `rspfx new` shortcut.
 
 > **Tip:** For new parts, use React if your org already does; for small or interactive parts, Solid and Preact give smaller bundles with full HMR. See [fast-refresh.md](fast-refresh.md).
 
-| Aspect | Official | RSPFX |
+| Aspect | Official | RSPFx |
 |---|---|---|
 | Other frameworks | Community webpack loaders | `rspfx new --framework vue\|svelte\|solid\|preact` |
 | JSX / compiler | Heft rig + `ts-loader` | SWC, per-framework preset contributions |
@@ -87,7 +87,7 @@ See [custom-framework.md](custom-framework.md).
 
 ## Looking for Angular, Lit or Qwik?
 
-RSPFX ships React, Vue, Svelte, Solid, Preact and vanilla. Other frameworks — Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril, Inferno — work via [Custom Framework](custom-framework.md); create a FrameworkPreset and register it with `definePlugin`/`registerPlugin`.
+RSPFx ships React, Vue, Svelte, Solid, Preact and vanilla. Other frameworks — Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril, Inferno — work via [Custom Framework](custom-framework.md); create a FrameworkPreset and register it with `definePlugin`/`registerPlugin`.
 
 | Framework | Path |
 |---|---|

@@ -36,7 +36,7 @@
     "@mbsks/rspfx-plugin-api": "workspace:*",
     "@mbsks/rspfx-webpart-base": "workspace:*"
   },
-  "description": "RSPFX vanilla JS framework preset and web part base class",
+  "description": "RSPFx vanilla JS framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

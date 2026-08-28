@@ -480,7 +480,7 @@ export function readProjectWithEnsure(
  * Maps `config.json` `localizedResources` entries (the official SPFx mechanism
  * for localized string modules such as `import strings from 'XxxWebPartStrings'`)
  * to the default-locale resource file. Official projects point these at the
- * Heft output convention `lib/.../{locale}.js`; RSPFX resolves them to source
+ * Heft output convention `lib/.../{locale}.js`; RSPFx resolves them to source
  * (`src/.../en-us.js`/`.ts`), where the Rspack resolver then bundles the module.
  * `node_modules/...` patterns (third-party localized resources) are kept as-is.
  */

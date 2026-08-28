@@ -1,4 +1,4 @@
-# RSPFX Internal API Contract
+# RSPFx Internal API Contract
 
 Single source of truth for package public surfaces. Subagents implement EXACTLY
 these signatures — no invented names, no scope creep. Read `reference/FORMATS.md`

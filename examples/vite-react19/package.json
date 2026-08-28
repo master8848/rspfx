@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: React 19 + Vite + Tailwind + Valibot + TanStack Form → SharePoint list, with optional Ox React Compiler",
+  "description": "RSPFx example: React 19 + Vite + Tailwind + Valibot + TanStack Form → SharePoint list, with optional Ox React Compiler",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

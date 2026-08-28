@@ -33,7 +33,7 @@ function inlineStyleCode(css: string): string {
  *
  * SPFx loads only JS bundles (`[name].js` via `loaderConfig.scriptResources` `type: "path"`).
  * No external `.css` is fetched, so CSS must be injected by JS.
- * RSPFX inlines by default (`cssCodeSplit: false` / `output.injectStyles: true` / `style-loader`),
+ * RSPFx inlines by default (`cssCodeSplit: false` / `output.injectStyles: true` / `style-loader`),
  * but when that handling fails (e.g. custom `assetFileNames`, merged Vite config, or
  * extraction enabled) this plugin guarantees inlining by collecting `.css` assets,
  * deleting them, and injecting a `<style>` into every entry chunk.

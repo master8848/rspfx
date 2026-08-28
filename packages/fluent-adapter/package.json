@@ -41,7 +41,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "description": "RSPFX Fluent UI web part base (React)",
+  "description": "RSPFx Fluent UI web part base (React)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

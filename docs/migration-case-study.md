@@ -1,6 +1,6 @@
 # Migration case study: PnP Modern Search
 
-Play-by-play of migrating [PnP Modern Search](https://github.com/microsoft-search/pnp-modern-search) (v4.23.3) from the official SPFx toolchain to RSPFX — the exercise behind `examples/modern-search` and [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
+Play-by-play of migrating [PnP Modern Search](https://github.com/microsoft-search/pnp-modern-search) (v4.23.3) from the official SPFx toolchain to RSPFx — the exercise behind `examples/modern-search` and [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
 
 ## Why this project
 
@@ -13,7 +13,7 @@ One of the largest open-source SPFx solutions — ≈42k lines, 4 web parts, 178
 - 16 Graph scopes in `webApiPermissionRequests`.
 - `pkg:@fluentui/...` SCSS import (sass-loader ≥16.5 syntax).
 
-Web parts only — no extensions or libraries — which is RSPFX's core surface (extensions/libraries are also supported now, but this case predates them).
+Web parts only — no extensions or libraries — which is RSPFx's core surface (extensions/libraries are also supported now, but this case predates them).
 
 ## The migration
 
@@ -71,7 +71,7 @@ Web parts only — no extensions or libraries — which is RSPFX's core surface 
 
 ## Comparison vs official
 
-| Area | Official (Heft) | RSPFX |
+| Area | Official (Heft) | RSPFx |
 |---|---|---|
 | Full production build | Minutes | ~2 s |
 | Config files | Heft rig + webpack customizer | One `rspack.config.ts` (or Vite/Rsbuild, or zero-config) |
@@ -90,7 +90,7 @@ bun install
 rspfx build && rspfx package
 ```
 
-Or use `examples/modern-search` directly — same source, RSPFX toolchain.
+Or use `examples/modern-search` directly — same source, RSPFx toolchain.
 
 ## Takeaway
 

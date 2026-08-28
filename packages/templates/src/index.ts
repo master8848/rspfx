@@ -397,8 +397,8 @@ function npmrc(): string {
 function readme(vars: TemplateVars): string {
   const bundler = vars.bundler ?? 'vite';
   const build = isExtension(vars) || isLibrary(vars)
-    ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFX](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (bundler: ${bundler}).`
-    : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFX](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (${vars.framework}, ${vars.language}, bundler: ${bundler}).`;
+    ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFx](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (bundler: ${bundler}).`
+    : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFx](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (${vars.framework}, ${vars.language}, bundler: ${bundler}).`;
   return [
     `# ${vars.namePascal}`,
     '',

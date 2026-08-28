@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="RSPFX hero">
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="RSPFx hero">
   <defs>
     <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0078d4"/>
@@ -30,7 +30,7 @@
   <!-- SPFx S -->
   <g transform="translate(92,188)">
     <rect x="0" y="0" width="136" height="52" rx="10" fill="white" opacity="0.96"/>
-    <text x="68" y="36" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="800" fill="#0078d4" letter-spacing="-0.03em">RSPFX</text>
+    <text x="68" y="36" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="800" fill="#0078d4" letter-spacing="-0.03em">RSPFx</text>
   </g>
   <!-- subtle grid -->
   <g opacity="0.06" stroke="white" stroke-width="1">

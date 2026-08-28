@@ -76,7 +76,7 @@ Deployment steps (catalog, CDN, permissions, Teams): [deployment.md](deployment.
 
 ## Comparison vs official
 
-| Area | Official | RSPFX |
+| Area | Official | RSPFx |
 |---|---|---|
 | Build output | `dist/` + `temp/` (Heft) | `dist/` + `release/manifests/` + `release/assets/` |
 | Bundle format | AMD `define('<id>_<version>', …)` | Same — byte-compatible (see [compatibility.md](compatibility.md)) |

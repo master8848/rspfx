@@ -334,7 +334,7 @@ describe('startServe local mode', () => {
       const items = (await (
         await fetch(`${handle.url}/_api/web/lists/getbytitle('Announcements')/items`)
       ).json()) as { value: { Id: number; Title: string }[] };
-      expect(items.value[0]!.Title).toBe('Welcome to RSPFX');
+      expect(items.value[0]!.Title).toBe('Welcome to RSPFx');
 
       const contextinfo = (await (
         await fetch(`${handle.url}/_api/contextinfo`, { method: 'POST' })

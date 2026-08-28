@@ -183,7 +183,7 @@ Cache `node_modules` and `.rspack-cache` between runs.
 
 ## Comparison vs official
 
-| Area | Official | RSPFX |
+| Area | Official | RSPFx |
 |---|---|---|
 | Package path | `paths.zippedPackage` in `package-solution.json` | Same — read directly |
 | CDN | `deploy-azure-storage.json` + `cdnBasePath` | `write-manifests.json` `cdnBasePath` only — simpler |

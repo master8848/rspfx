@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * migrate-to-rspfx.mjs — migrate an existing SPFx project off gulp/Heft/webpack
- * onto the RSPFX toolchain.
+ * onto the RSPFx toolchain.
  *
  * Usage:
  *   node scripts/migrate-to-rspfx.mjs <project-dir>
@@ -13,7 +13,7 @@
  *      add `rspfx` scripts, relax the engines range.
  *   2. config/config.json — rewrite bundle entrypoints from the Heft output
  *      convention (`./lib/...WebPart.js`) to source (`./src/...WebPart.ts`) and
- *      rename bundle keys to match web part folder names (RSPFX requires the
+ *      rename bundle keys to match web part folder names (RSPFx requires the
  *      bundle name to equal the `src/webparts/<name>` folder).
  *   3. SCSS — rewrite `@import 'pkg:<pkg>/<path>'` (sass-loader ≥16.5 syntax)
  *      to a plain relative `node_modules` path so the bundled sass-loader
@@ -23,7 +23,7 @@
  *   5. Write rspack.config.ts (RspfxPlugin-based; no dependency on @mbsks/rspfx-core
  *      required) and a plain tsconfig.json if the old one extends a rig.
  *
- * Note: `localizedResources` in config.json are handled natively — RSPFX maps
+ * Note: `localizedResources` in config.json are handled natively — RSPFx maps
  * each string module (e.g. `import strings from 'XxxWebPartStrings'`) to the
  * default-locale source file. No import rewrites are needed. Multi-locale is
  * preserved in the manifest only if the source manifest already declares

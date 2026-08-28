@@ -1,4 +1,4 @@
-# RSPFX 0.1.0 — Breaking Improvements Plan (Expanded, No CI Changes)
+# RSPFx 0.1.0 — Breaking Improvements Plan (Expanded, No CI Changes)
 
 > Split from [`docs/plan-0.1.0.md`](../plan-0.1.0.md) by phase. Each file is a standalone phase document; the original file remains as the single-file source.
 

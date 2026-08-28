@@ -1,6 +1,6 @@
 # Roadblocks
 
-What keeps RSPFX pre-1.0. For current behavior see [architecture.md](architecture.md), [compatibility.md](compatibility.md), [commands.md](commands.md).
+What keeps RSPFx pre-1.0. For current behavior see [architecture.md](architecture.md), [compatibility.md](compatibility.md), [commands.md](commands.md).
 
 ## Real-tenant gate
 

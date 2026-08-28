@@ -4,7 +4,7 @@ Short orientation. Full plan is [`ARCHITECTURE.md`](../ARCHITECTURE.md).
 
 ## Overview
 
-RSPFX replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbuild, or Rspack. No bundler config needed for standard layouts; the CLI builds options from `config/config.json` + `package.json`. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain).
+RSPFx replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbuild, or Rspack. No bundler config needed for standard layouts; the CLI builds options from `config/config.json` + `package.json`. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain).
 
 `crates/*` are optional Rust with JS fallback.
 
@@ -137,7 +137,7 @@ sp-* is `externals` + `"type": "component"`. Wrapper is `define('<id>_<version>'
 
 ## Same manifest
 
-`config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` work for both Heft/Gulp and RSPFX. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
+`config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` work for both Heft/Gulp and RSPFx. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
 
 ## Security
 

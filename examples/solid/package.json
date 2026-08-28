@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: Solid web part",
+  "description": "RSPFx example: Solid web part",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

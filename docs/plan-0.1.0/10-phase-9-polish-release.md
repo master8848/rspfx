@@ -8,7 +8,7 @@
 
 **Rationale:**
 
-* RSPFX 0.0.13 → 0.1.0 is breaking (Phases 1–8). Without a single `CHANGELOG.md` history home + annotated tag linked to changelog section, consumers cannot `git diff v0.0.13..v0.1.0` or `npm view @mbsks/rspfx-core dist-tags`. `scripts/publish.mjs:17` `--tag` + `--dry-run` workflow must be exercised locally with `pnpm publish:dry`.
+* RSPFx 0.0.13 → 0.1.0 is breaking (Phases 1–8). Without a single `CHANGELOG.md` history home + annotated tag linked to changelog section, consumers cannot `git diff v0.0.13..v0.1.0` or `npm view @mbsks/rspfx-core dist-tags`. `scripts/publish.mjs:17` `--tag` + `--dry-run` workflow must be exercised locally with `pnpm publish:dry`.
 * Docs drift is the top support cost: `docs/AGENTS.md` tier taxonomy + fact homes + one-line-per-paragraph + slop checklist must be enforced now, or `docs/internal-api.md` re-narrates history (`previously...`) that belongs only in `CHANGELOG.md`.
 * Performance numbers are currently anecdotal (`bench/bench.mjs:59` `633ms/68ms/315ms` comments). Phase 9 must capture median over `BENCH_RUNS=3` on pinned fixtures (`examples/shadcn`, `examples/svelte`, `templates`) into `reference/baseline-0.1.0.json` + `.rspfx/benchmarks.jsonl` and publish treemap (`solid ~15kB / react ~90kB` from `docs/performance.md`).
 * `examples/*` + `apps/playground` must stay private (never published) — `AGENTS.md` publishing rule — but must be `pnpm build && pnpm test` green on Node 20+.

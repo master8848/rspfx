@@ -1,12 +1,12 @@
 # Security — Dependencies and Supply-Chain Hardening
 
-RSPFX treats supply-chain security as a first-class architecture property: minimal dependencies, zero-dependency core, deterministic lockfiles, and blast-radius isolation. This page is the single home for the dependency inventory, what each installed dependency is and why it is in the project, what servers run in this project, and the mitigations for recent npm/Rust supply-chain attacks.
+RSPFx treats supply-chain security as a first-class architecture property: minimal dependencies, zero-dependency core, deterministic lockfiles, and blast-radius isolation. This page is the single home for the dependency inventory, what each installed dependency is and why it is in the project, what servers run in this project, and the mitigations for recent npm/Rust supply-chain attacks.
 
 ## Threat model — recent supply-chain attacks (2024–2025)
 
 Recent incidents relied on the same pattern: a popular transitive dependency is compromised via stolen maintainer credentials or typosquatting, a patch release injects a postinstall or lifecycle script, and `npm install` with floating ranges pulls the malicious version before a lockfile or audit catches it. Notable cases include `event-stream` (2018), `ua-parser-js` / `coa` / `rc` (2021), `colors` (2022), and the September 2025 Shai-Hulud worm that spread through 100+ npm packages via compromised maintainer tokens and self-propagating publish actions (`eslint-config-prettier`, `chalk`, `debug` families).
 
-RSPFX mitigates this class with three controls: (1) pinning every resolved version in a committed lockfile with integrity hashes, (2) minimizing the number and privilege of dependencies that run install-time code, and (3) keeping the critical path (`@mbsks/rspfx-core`, `@mbsks/rspfx-manifest-generator`, `@mbsks/rspfx-sppkg-builder`) free of third-party runtime code.
+RSPFx mitigates this class with three controls: (1) pinning every resolved version in a committed lockfile with integrity hashes, (2) minimizing the number and privilege of dependencies that run install-time code, and (3) keeping the critical path (`@mbsks/rspfx-core`, `@mbsks/rspfx-manifest-generator`, `@mbsks/rspfx-sppkg-builder`) free of third-party runtime code.
 
 ## Dependency inventory — complete list
 
@@ -71,7 +71,7 @@ All eight are build-time only; none are bundled into `dist/` output or `.sppkg`.
 
 ### Framework adapters — scoped per framework, peer-externalized
 
-Each framework package depends only on its own compiler bridge; the UI framework itself is a `peerDependency` and is never installed by RSPFX:
+Each framework package depends only on its own compiler bridge; the UI framework itself is a `peerDependency` and is never installed by RSPFx:
 
 - `@mbsks/rspfx-framework-react` (`packages/framework-react/package.json:22`): `@babel/core` `^7.26.0`, `@babel/preset-react` `^7.26.0`, `@babel/preset-typescript` `^7.26.0`, `babel-loader` `^9.2.1`, `@rspack/plugin-react-refresh` `^1.0.0`, `@vitejs/plugin-react` `^4.7.0`, `react-refresh` `^0.16.0`; peers `react` `^18.0.0`, `react-dom` `^18.0.0`.
 
@@ -143,7 +143,7 @@ Rust crates (`Cargo.toml:5`): `zip` + `flate2` mirror `fflate` for native ZIP, `
 
 ## Servers in this project — what serves what
 
-RSPFX has no production server. All servers below run only on the developer machine during `rspfx dev` or `bun run docs:dev`. No server is bundled into `dist/` or `.sppkg`, and no server phones home.
+RSPFx has no production server. All servers below run only on the developer machine during `rspfx dev` or `bun run docs:dev`. No server is bundled into `dist/` or `.sppkg`, and no server phones home.
 
 ### 1. Bundler dev server on `:4321` — the single dev port
 
@@ -191,7 +191,7 @@ Zero-dependency core (`packages/core/package.json:1` has no `dependencies`) is t
 
 Minimal transitive closure: `sppkg-builder` has one pure-JS dep (`fflate`), `manifest-server` has one dev-only dep (`selfsigned`), `cli` has two (`commander`, `jiti`). The default install without a framework adapter touches <10 external packages plus Rspack. See `docs/architecture.md#dependency-graph` for the full graph.
 
-Peer externalization: UI frameworks (`react`, `vue`, `svelte`, `solid-js`, `preact`) and SharePoint packages (`@microsoft/sp-*`) are `peerDependencies` or `externals` (`packages/core/src/versions.ts:1` and `packages/compiler-rspack/src/externals.ts:1`); they are never bundled or fetched by RSPFX itself. A compromised `react` release does not affect vanilla or Vue projects.
+Peer externalization: UI frameworks (`react`, `vue`, `svelte`, `solid-js`, `preact`) and SharePoint packages (`@microsoft/sp-*`) are `peerDependencies` or `externals` (`packages/core/src/versions.ts:1` and `packages/compiler-rspack/src/externals.ts:1`); they are never bundled or fetched by RSPFx itself. A compromised `react` release does not affect vanilla or Vue projects.
 
 Dev vs prod separation: `sass`, `sass-loader`, `css-loader`, `postcss`, `selfsigned`, `@rspack/dev-server`, and all framework Babel/Vite plugins run only in `rspfx dev` or `rspfx build` on the developer machine; none are included in `dist/` bundles or `.sppkg` output. Production artifacts contain only user code plus the SharePoint loader.
 

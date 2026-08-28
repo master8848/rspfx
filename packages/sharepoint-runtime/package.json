@@ -52,7 +52,7 @@
     "@microsoft/sp-page-context": "1.23.2",
     "@microsoft/sp-webpart-base": "1.23.2"
   },
-  "description": "RSPFX shims/bridges for @microsoft/sp-* packages",
+  "description": "RSPFx shims/bridges for @microsoft/sp-* packages",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"

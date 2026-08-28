@@ -1,6 +1,6 @@
 # @mbsks/rspfx-example-svelte
 
-A Svelte web part demonstrating the RSPFX framework support.
+A Svelte web part demonstrating the RSPFx framework support.
 
 ## What it demonstrates
 

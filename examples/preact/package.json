@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "RSPFX example: Preact web part",
+  "description": "RSPFx example: Preact web part",
   "license": "MIT",
   "scripts": {
     "dev": "rspfx dev",

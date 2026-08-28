@@ -1,6 +1,6 @@
 # Hello
 
-An SPFx 1.22 web part scaffolded with [RSPFX](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (solid, typescript, bundler: rsbuild).
+An SPFx 1.22 web part scaffolded with [RSPFx](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (solid, typescript, bundler: rsbuild).
 
 Replaces Heft + webpack + gulp. Docs at https://rspfx.mbsks.me — `rspfxVite` / `rspfxRsbuild` / `RSpfxPlugin` share one config.
 
