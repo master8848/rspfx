@@ -16,6 +16,18 @@ export function getLocalMarkdownUrl(routePath: string): string {
   return `${path}.md`
 }
 
+/**
+ * Best Practice: raw markdown is published at `/md/<path>.md` on the same origin
+ * (see `config.mts#buildEnd` which copies every public `.md` to `dist/md/<rel>`).
+ * This is token-efficient — no DOM→markdown conversion — and mirrors
+ * `/docs/building-packages` → `/md/docs/building-packages.md`.
+ */
+export function getMdUrl(routePath: string): string {
+  const local = getLocalMarkdownUrl(routePath)
+  if (!local) return ''
+  return `/md${local}`
+}
+
 /** GitHub raw URL — kept for reference / fallback comment, not used for fetch by default. */
 export function getMarkdownUrl(routePath: string): string {
   const rel = getRel(routePath)
@@ -25,10 +37,16 @@ export function getMarkdownUrl(routePath: string): string {
 
 /**
  * Candidates to try when fetching published markdown.
- * Since `config.mts#buildEnd` now publishes every `.md` alongside HTML
- * (and under `/markdown/` alias), local fetch is sufficient. GitHub raw is
- * not tried by default to avoid CORS/rate-limit; keep it documented here
- * if a secondary fallback is ever desired.
+ * Since `config.mts#buildEnd` now publishes every public `.md` alongside HTML
+ * (under `/markdown/` legacy alias and `/md/` same-origin alias), local fetch
+ * is sufficient. GitHub raw is not tried by default to avoid CORS/rate-limit;
+ * keep it documented here if a secondary fallback is ever desired.
+ *
+ * Best Practice: markdown at `/md/<path>.md` on same origin — e.g.
+ * `/docs/building-packages` → `/md/docs/building-packages.md`.  Candidates
+ * include both `/md/` (new, token-efficient) and `/markdown/` (legacy)
+ * alongside direct `.md` and `/index.md` variants. No DOM→markdown
+ * conversion needed.
  */
 export function getMarkdownCandidates(
   routePathOrRel: string,
@@ -45,6 +63,8 @@ export function getMarkdownCandidates(
   const effectiveLocal = local || (localPath ?? '')
   if (!effectiveLocal) return []
   const idxVariant = effectiveLocal.replace(/\.md$/, '/index.md')
+  const mdAlias = `/md${effectiveLocal}`
+  const mdAliasIdx = `/md${idxVariant}`
   const markdownAlias = `/markdown${effectiveLocal}`
   const markdownAliasIdx = `/markdown${idxVariant}`
   const resolvedOrigin =
@@ -53,10 +73,12 @@ export function getMarkdownCandidates(
   if (resolvedOrigin) {
     candidates.push(`${resolvedOrigin}${effectiveLocal}`)
     candidates.push(`${resolvedOrigin}${idxVariant}`)
+    candidates.push(`${resolvedOrigin}${mdAlias}`)
+    candidates.push(`${resolvedOrigin}${mdAliasIdx}`)
     candidates.push(`${resolvedOrigin}${markdownAlias}`)
     candidates.push(`${resolvedOrigin}${markdownAliasIdx}`)
   } else {
-    candidates.push(effectiveLocal, idxVariant, markdownAlias, markdownAliasIdx)
+    candidates.push(effectiveLocal, idxVariant, mdAlias, mdAliasIdx, markdownAlias, markdownAliasIdx)
   }
   return candidates
 }

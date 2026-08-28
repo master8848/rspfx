@@ -1,6 +1,12 @@
 export interface HumanizeOptions {
   baseUrl?: string
   sourceUrl?: string
+  /**
+   * Fence style for code blocks.
+   * - 'single' (default): use single backtick + lang (e.g. `yaml ... `) — saves ~2 tokens per fence vs ``` in many LLM tokenizers
+   * - 'triple': keep original ``` / ~~~ fences
+   */
+  fence?: 'single' | 'triple'
 }
 
 type LinkRef = { text: string; href: string }
@@ -115,6 +121,7 @@ function stripLinks(
  * - Headings: h1-h3 → `#`, h4-h6 → `##` (2 levels only)
  * - Tables → bullets (`- h1: v1 · h2: v2`)
  * - Links → reference list with Base + relative hrefs (token-saving)
+ * - Code fences → single-backtick + lang (e.g. `yaml ... `) instead of ``` (saves ~2 tokens per fence in many LLM tokenizers)
  * Input is a markdown string; output is also markdown but compact for humans/agents.
  */
 export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): string {
@@ -125,23 +132,32 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
   let inFence = false
   let fenceMarker = ''
 
+  const useSingleFence = opts.fence !== 'triple'
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? ''
     const trimmed = line.trim()
 
-    // fence detection
-    const fenceMatch = trimmed.match(/^(```|~~~)/)
+    // fence detection — convert ``` / ~~~ to single-backtick fences for token saving
+    // ``` is ~3 tokens in many LLM tokenizers, ` is 1
+    const fenceMatch = trimmed.match(/^(```|~~~)(.*)$/)
     if (fenceMatch) {
       const marker = fenceMatch[1]!
+      const info = (fenceMatch[2] ?? '').trim()
       if (!inFence) {
         inFence = true
         fenceMarker = marker
-        out.push(line)
+        if (useSingleFence) {
+          const lang = info.split(/\s+/)[0] ?? ''
+          out.push('`' + lang)
+        } else {
+          out.push(line)
+        }
         continue
       } else if (trimmed.startsWith(fenceMarker)) {
         inFence = false
         fenceMarker = ''
-        out.push(line)
+        out.push(useSingleFence ? '`' : line)
         continue
       }
     }
@@ -220,21 +236,39 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
   const baseUrl = opts.baseUrl
   const baseOrigin = (baseUrl ? getOrigin(baseUrl) : null) ?? (sourceUrl ? getOrigin(sourceUrl) : null)
 
-  if (refs.length > 0) {
-    if (sourceUrl) {
-      out.push('', '---', `Source: ${sourceUrl}`)
-      if (baseOrigin) out.push(`Base: ${baseOrigin}`)
-    } else if (baseOrigin) {
-      out.push('', '---', `Base: ${baseOrigin}`)
+  // Derive markdown route for /md alias: /docs/foo.html or /docs/foo/ → /md/docs/foo
+  // Keep dot-md variant as fallback hint (origin+pathname+'.md') but primary is token-efficient /md path.
+  let mdUrl: string | null = null
+  let mdPath: string | null = null
+  if (sourceUrl) {
+    try {
+      const u = new URL(sourceUrl)
+      let pathname = u.pathname
+      if (pathname.endsWith('.html')) pathname = pathname.slice(0, -5)
+      if (pathname.length > 1 && pathname.endsWith('/')) pathname = pathname.slice(0, -1)
+      mdPath = `/md${pathname}`
+      mdUrl = u.origin + mdPath
+    } catch {
+      // sourceUrl not absolute — no MD derivation
     }
-    out.push('', 'References:')
-    for (const r of refs) {
-      const t = r.text.replace(/\s+/g, ' ').trim()
-      const h = r.href.trim()
-      out.push(`- ${t} → ${h}`)
+  }
+
+  // Always emit Base (origin) and current location so relative links like `../` or next-page can be resolved.
+  // Previously this only emitted Base when refs existed and sourceUrl present — losing location when 0 refs.
+  if (sourceUrl || baseOrigin || refs.length > 0) {
+    out.push('', '---')
+    if (sourceUrl) out.push(`Source: ${sourceUrl}`)
+    if (mdUrl) out.push(`MD: ${mdUrl}`)
+    if (baseOrigin) out.push(`Base: ${baseOrigin}`)
+    if (mdPath) out.push(`Tip: fetch markdown via ${mdPath} or append .md to any path`)
+    if (refs.length > 0) {
+      out.push('', 'References:')
+      for (const r of refs) {
+        const t = r.text.replace(/\s+/g, ' ').trim()
+        const h = r.href.trim()
+        out.push(`- ${t} → ${h}`)
+      }
     }
-  } else if (sourceUrl) {
-    out.push('', '---', `Source: ${sourceUrl}`)
   }
 
   // collapse excessive blank lines to max 1

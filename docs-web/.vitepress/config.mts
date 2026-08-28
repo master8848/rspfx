@@ -70,8 +70,9 @@ export default defineConfig({
   appearance: true,
   srcDir: '.',
   outDir: './.vitepress/dist',
-  // Publish raw markdown alongside HTML so LLMs / curl can fetch e.g. /docs/why-rspfx.md
-  // and user-requested alias /markdown/docs/*.md. Runs at build end after VitePress emits HTML.
+  // Publish raw markdown alongside HTML so LLMs / curl can fetch e.g. /docs/why-rspfx.md,
+  // /markdown/docs/*.md (legacy alias) and /md/docs/*.md (token-efficient same-origin alias).
+  // Runs at build end after VitePress emits HTML.
   buildEnd: async (siteConfig) => {
     const srcDir = siteConfig.srcDir
     const outDir = siteConfig.outDir
@@ -109,16 +110,22 @@ export default defineConfig({
     let count = 0
     for (const src of mdFiles) {
       const rel = relative(srcDir, src)
+      // Disabled pages (llm.md / llms.md / any llm* prefix) must NOT be published
+      // as raw markdown — mirrors transformPageData disabling copyMarkdown.
+      if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
       // Primary: same path as route + .md  (e.g. docs/why-rspfx.md -> dist/docs/why-rspfx.md)
       // Alias:   /markdown/<rel>            (e.g. docs/why-rspfx.md -> dist/markdown/docs/why-rspfx.md)
-      const dests = [join(outDir, rel), join(outDir, 'markdown', rel)]
+      // New:    /md/<rel>                  (e.g. docs/why-rspfx.md -> dist/md/docs/why-rspfx.md)
+      //         Same-origin, token-efficient: /docs/building-packages -> /md/docs/building-packages.md
+      //         Canonical is with .md extension; candidates fallback handles /index.md variants.
+      const dests = [join(outDir, rel), join(outDir, 'markdown', rel), join(outDir, 'md', rel)]
       for (const dest of dests) {
         fs.mkdirSync(dirname(dest), { recursive: true })
         fs.copyFileSync(src, dest)
       }
       count++
     }
-    console.log(`[markdown-publish] Published ${count} markdown file(s) to ${outDir} (+ markdown/ alias)`)
+    console.log(`[markdown-publish] Published ${count} markdown file(s) to ${outDir} (+ markdown/ and md/ aliases)`)
   },
   // Disable copy-markdown button on llm routes (llm.md / llms.md) via frontmatter.
   // Per-page override: frontmatter `copyMarkdown: false` hides the button.
@@ -212,6 +219,96 @@ export default defineConfig({
     lineNumbers: true,
   },
   vite: {
+    // Dev: pure markdown dump for /md/* — no HTML / docs UI, universal fallback so 404 is never thrown for valid markdown.
+    // Production: buildEnd publishes to dist/md/*.md and dist/<rel>.md as static files; hosts must serve /md/* as static
+    // and must NOT rewrite /md/* to 404.html / index.html SPA fallback. Dev middleware below mirrors that behavior.
+    plugins: [
+      {
+        name: 'rspfx-md-pure',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            try {
+              if (!req.url || !req.method) return (next as any)()
+              if (req.method !== 'GET' && req.method !== 'HEAD') return (next as any)()
+              let url = req.url.split('?')[0] ?? ''
+              url = url.split('#')[0] ?? url
+              try {
+                url = decodeURIComponent(url)
+              } catch {
+                // keep raw url if decode fails
+              }
+              if (url !== '/md' && !url.startsWith('/md/')) return (next as any)()
+              // Strip leading /md
+              let rel = url.slice(3)
+              if (rel.startsWith('/')) rel = rel.slice(1)
+              if (!rel) {
+                res.statusCode = 404
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+                res.end('Not found')
+                return
+              }
+              const isDisabled = (r: string) => r === 'llm.md' || r === 'llms.md' || r.startsWith('llm')
+              if (isDisabled(rel) || isDisabled(rel + '.md')) {
+                res.statusCode = 404
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+                res.end('Not found')
+                return
+              }
+              const srcDirAbs = docsWebRoot
+              const candidates: string[] = []
+              if (rel.endsWith('.md')) {
+                candidates.push(join(srcDirAbs, rel))
+              } else {
+                candidates.push(join(srcDirAbs, `${rel}.md`))
+                candidates.push(join(srcDirAbs, join(rel, 'index.md')))
+                candidates.push(join(srcDirAbs, rel))
+              }
+              let found: string | null = null
+              let content: string | null = null
+              for (const cand of candidates) {
+                const resolved = resolve(cand)
+                if (!resolved.startsWith(srcDirAbs)) continue
+                const candRel = relative(srcDirAbs, resolved)
+                if (isDisabled(candRel)) {
+                  res.statusCode = 404
+                  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+                  res.end('Not found')
+                  return
+                }
+                try {
+                  const stat = fs.statSync(resolved)
+                  if (!stat.isFile()) continue
+                  // Pure markdown — no VitePress transform, no HTML wrapper
+                  content = fs.readFileSync(resolved, 'utf8')
+                  found = resolved
+                  break
+                } catch {
+                  continue
+                }
+              }
+              if (found && content !== null) {
+                res.statusCode = 200
+                res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+                if (req.method === 'HEAD') {
+                  res.setHeader('Content-Length', Buffer.byteLength(content, 'utf8'))
+                  res.end()
+                } else {
+                  res.end(content)
+                }
+                return
+              }
+              // Not found — plain text 404, never docs UI
+              res.statusCode = 404
+              res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+              res.end('Not found')
+              return
+            } catch {
+              return (next as any)()
+            }
+          })
+        },
+      },
+    ],
     resolve: {
       preserveSymlinks: true,
       alias: [

@@ -14,6 +14,8 @@ export function useMarkdownCopy(
     try {
       if (!localMarkdownUrl.value) return null
       const origin = typeof window !== 'undefined' ? window.location.origin : undefined
+      // Candidates now include /md alias (same-origin, token-efficient) — see markdownUrl.ts
+      // No DOM→markdown conversion needed when /md/<path>.md is available.
       const candidates = getMarkdownCandidates(route.path, origin)
       for (const url of candidates) {
         const controller = new AbortController()
@@ -30,7 +32,7 @@ export function useMarkdownCopy(
         }
       }
       // GitHub raw fallback intentionally not attempted — markdown is now published
-      // locally via `config.mts#buildEnd` (see `markdownUrl.getMarkdownUrl` for reference).
+      // locally via `config.mts#buildEnd` at both /markdown/ (legacy) and /md/ (new).
       // Keeping fetch local avoids CORS/rate-limit and works offline in preview.
       return null
     } catch {
@@ -40,6 +42,7 @@ export function useMarkdownCopy(
 
   async function copyMarkdown(): Promise<string> {
     let md = await fetchRawMarkdown()
+    // DOM fallback is legacy; markdown route /md makes it unnecessary, kept for offline preview only.
     if (!md) md = domToMarkdownFromDocument(title.value)
     if (!md || !md.trim()) {
       const doc = typeof document !== 'undefined' ? document.querySelector('.vp-doc') : null
@@ -50,6 +53,7 @@ export function useMarkdownCopy(
 
   async function getHumanizedMarkdown(): Promise<string> {
     let md = await fetchRawMarkdown()
+    // DOM fallback is legacy; markdown route /md makes it unnecessary, kept for offline preview only.
     if (!md) md = domToMarkdownFromDocument(title.value)
     if (!md || !md.trim()) {
       const doc = typeof document !== 'undefined' ? document.querySelector('.vp-doc') : null
