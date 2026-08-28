@@ -80,7 +80,7 @@ export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxV
 ```
 :::
 
-> Switch SPFx versions with one line — `spfxVersion: '1.20'` → `'1.24'` — then `bun update`. See [Compatibility](/docs/compatibility) and [Upgrading SPFx](/docs/upgrading-spfx-version).
+> Switch SPFx versions with one line — `spfxVersion: '1.20'` → `'1.24'` — then update your package. See [Compatibility](/docs/compatibility) and [Upgrading SPFx](/docs/upgrading-spfx-version).
 
 </div>
 
@@ -96,7 +96,7 @@ export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxV
 | Frameworks | React, vanilla | React, Vue, Svelte, Solid, Preact + custom presets |
 | SPFx switch | new project / pin updates | one line `spfxVersion` + package manager update |
 | Dev server | `gulp serve` :4321 | `rspfx dev` :4321 — tenant optional |
-| Package manager | npm / yarn / pnpm | bun · pnpm · npm · yarn |
+| Package manager | npm / yarn / pnpm | npm · pnpm · yarn · bun · deno |
 | Config required | rig + gulpfile required | zero-config from `config/config.json` + manifests |
 
 </div>

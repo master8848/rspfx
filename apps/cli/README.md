@@ -38,7 +38,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 
 - **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte, plus any other framework via one-file `FrameworkPreset` (`docs/custom-framework.md`)
 - **SPFx targets:** 1.20, 1.21, 1.22, 1.23, 1.24
-- **Node:** 20+; **bun · pnpm · npm · yarn** (priority: bun > pnpm > npm > yarn)
+- **Node:** 20+; **bun · pnpm · npm · yarn · deno**
 
 ## Ecosystem
 

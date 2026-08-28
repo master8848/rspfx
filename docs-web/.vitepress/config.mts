@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import { resolve, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as fs from 'node:fs'
+import { detectPM } from './theme/utils/pmTransform.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const docsWebRoot = resolve(__dirname, '..')
@@ -193,6 +194,7 @@ export default defineConfig({
     ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#059669' }],
     ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v){document.documentElement.setAttribute('data-accent','emerald');return;}if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);}else if(v){document.documentElement.setAttribute('data-theme',v);} }catch(e){}} )()`],
+    ['script', {}, `(function(){try{var k='rspfx-pm',v=localStorage.getItem(k);if(v&&['npm','pnpm','yarn','bun','deno'].includes(v)){document.documentElement.setAttribute('data-pm',v);window.__RSPFX_PM=v;}}catch(e){}} )()`],
     ['script', {}, `(function(){function p(){try{var y=new Date().getFullYear();var el=document.querySelector('.VPFooter .copyright');if(!el)return false;if(el.dataset.patched==='1'&&el.querySelector('a[href*="master8848"]'))return true;el.innerHTML='Copyright \\u00A9 '+y+' <a href="https://github.com/master8848" target="_blank" rel="noopener noreferrer">master8848</a>';el.dataset.patched='1';return true}catch(e){return false}}p();document.addEventListener('DOMContentLoaded',p);var t=setInterval(function(){if(p())clearInterval(t)},250);setTimeout(function(){clearInterval(t)},8000);try{new MutationObserver(p).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}window.addEventListener('popstate',p);window.addEventListener('hashchange',p);document.addEventListener('visibilitychange',p);})()`],
 
     ['meta', { name: 'author', content: 'RSPFX contributors' }],
@@ -262,6 +264,24 @@ export default defineConfig({
       dark: 'github-dark',
     },
     lineNumbers: true,
+    config(md) {
+      const origFence = md.renderer.rules.fence?.bind(md.renderer.rules) ?? ((tokens: any, idx: number, opts: any, env: any, slf: any) => slf.renderToken(tokens, idx, opts))
+      md.renderer.rules.fence = (tokens: any, idx: number, options: any, env: any, slf: any) => {
+        const token = tokens[idx] as any
+        const info = (token.info || '').trim()
+        const content: string = token.content || ''
+        // only transform sh/shell/bash blocks that contain pm patterns, not ts/js/json etc.
+        const lang = info.split(/\s+/)[0]?.toLowerCase() ?? ''
+        const isShell = !lang || ['sh', 'shell', 'bash', 'zsh', 'yaml', 'yml'].includes(lang)
+        // also handle yaml CI blocks that contain pm install
+        if (isShell || lang === 'yaml' || lang === 'yml') {
+          const repl = detectPM(content)
+          if (repl) return repl
+        }
+        // fallback to original
+        return (origFence as any)(tokens, idx, options, env, slf)
+      }
+    },
   },
   vite: {
     // Dev: pure markdown dump for /md/* — no HTML / docs UI, universal fallback so 404 is never thrown for valid markdown.

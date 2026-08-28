@@ -1389,6 +1389,136 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 }
 .rspfx-tip code { font-size: 13px; }
 
+/* ── Package Manager Tabs (like rsbuild create) ── */
+.rspfx-pm {
+  margin: 16px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f0f0f;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+}
+.dark .rspfx-pm {
+  border-color: rgba(255,255,255,0.10);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.rspfx-pm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 8px 8px 10px;
+  background: #161616;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rspfx-pm-tabs::-webkit-scrollbar { display: none; }
+.rspfx-pm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,0.62);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+.rspfx-pm-tab:hover {
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.06);
+}
+.rspfx-pm-tab.is-active {
+  background: #2a2a2a;
+  color: #fff;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2) inset, 0 0 0 1px rgba(255,255,255,0.06);
+}
+.rspfx-pm-tab:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.22);
+}
+.rspfx-pm-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rspfx-pm-tab-label {
+  letter-spacing: -0.01em;
+}
+.rspfx-pm-code-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 14px 44px 14px 16px;
+  background: #0f0f0f;
+  min-height: 44px;
+}
+.rspfx-pm-code {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  color: #e6e6e6;
+  font-family: var(--vp-font-family-mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.rspfx-pm-code code {
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+.rspfx-pm-cmd-head {
+  color: #c084fc;
+  font-weight: 600;
+}
+.rspfx-pm-cmd-rest {
+  color: #fdba74;
+}
+.rspfx-pm-copy {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.72);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+.rspfx-pm-copy:hover {
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border-color: rgba(255,255,255,0.16);
+}
+.rspfx-pm-copy.copied {
+  color: #4ade80;
+  border-color: rgba(74,222,128,0.30);
+  background: rgba(74,222,128,0.12);
+}
+.rspfx-pm-copy:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.16);
+}
+
 /* ── Reduce motion ── */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

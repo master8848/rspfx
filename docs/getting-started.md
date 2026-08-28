@@ -4,7 +4,7 @@ Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. S
 
 ## 1. Install
 
-Node 20+ and your package manager — bun · pnpm · npm · yarn (priority: bun > pnpm > npm > yarn).
+Node 20+ and your package manager — bun, pnpm, npm, yarn, or deno.
 
 ```sh
 npm i -g @mbsks/rspfx-cli
