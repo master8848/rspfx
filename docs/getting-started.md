@@ -15,35 +15,49 @@ rspfx --version
 
 ## 2. Create a project
 
+RSPFX is a plugin — scaffold with your favorite starter, then add the plugin. Vite is the default (most popular), Rsbuild/Rspack also work. Any Vite starter is fine (`create-vite`, `better-t-stack`, TanStack Router, etc.) — just add `rspfxVite()`.
+
+**Recommended — bring your own scaffold (Vite):**
+
+```sh
+npm create vite@latest my-app -- --template react-ts
+cd my-app
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli
+```
+
+Add the plugin to `vite.config.ts`:
+
+```ts
+import { defineConfig } from 'vite';
+import { rspfxVite } from '@mbsks/rspfx-plugin';
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] });
+```
+
+Then add SPFx manifests (`src/webparts/<name>/<name>.manifest.json`, `src/webparts/<name>/<name>WebPart.ts`, `config/package-solution.json`). See [project-structure.md](project-structure.md).
+
+**Other starters:** same idea — scaffold with `better-t-stack`, `create-rsbuild`, or any Vite/Rsbuild/Rspack starter, then add the corresponding plugin:
+
+```ts
+// Rsbuild: rsbuild.config.ts
+import { rspfxRsbuild } from '@mbsks/rspfx-plugin';
+export default { plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
+// Rspack: rspack.config.ts
+import { RspfxPlugin } from '@mbsks/rspfx-plugin';
+export default { plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
+```
+
+See [commands.md#bundler-plugin](commands.md#bundler-plugin) and [project-structure.md](project-structure.md).
+
+**Shortcut — CLI scaffold:**
+
 ```sh
 rspfx new my-app                # interactive
 rspfx new my-app --framework react --spfx-version 1.22 --yes  # CI
 ```
 
-Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--no-install` skips install, `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
+`rspfx new` is a convenience wrapper that does the same (writes `vite.config.ts` + manifests). Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
 
-Layout (defaults, override via `paths` in plugin options):
-
-```
-my-app/
-├── vite.config.ts              # optional — omit for zero-config
-├── src/webparts/<name>/<name>.manifest.json
-├── src/webparts/<name>/<name>WebPart.ts
-├── config/package-solution.json
-└── local/data.json             # optional — mock REST data
-```
-
-See [project-structure.md](project-structure.md).
-
-Bundler config is optional — without it the CLI builds config from manifests and runs the bundler directly. When you need control, add one plugin:
-
-```ts
-// vite.config.ts — optional
-import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
-```
-
-> **Tip:** `rspfx new` already writes the config. For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
+For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
 
 ## 3. Dev server on :4321
 

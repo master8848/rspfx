@@ -234,6 +234,62 @@ function inlineStyleCode(css: string): string {
   );
 }
 
+function inlineRemainingCssFiles(root: string, outDir: string, entryNames: string[]): void {
+  const distDir = path.join(root, outDir);
+  if (!fs.existsSync(distDir)) return;
+  const cssFiles: string[] = [];
+  const collect = (dir: string): void => {
+    try {
+      for (const entry of fs.readdirSync(dir)) {
+        const full = path.join(dir, entry);
+        const stat = fs.statSync(full);
+        if (stat.isDirectory()) {
+          // vite emits to assets/ subdirectory
+          if (entry === 'assets' || !entry.startsWith('.')) collect(full);
+        } else if (entry.endsWith('.css')) {
+          cssFiles.push(full);
+        }
+      }
+    } catch {}
+  };
+  collect(distDir);
+  if (cssFiles.length === 0) return;
+  let combinedCss = '';
+  for (const file of cssFiles) {
+    try {
+      combinedCss += fs.readFileSync(file, 'utf8') + '\n';
+    } catch {}
+  }
+  if (!combinedCss.trim()) {
+    for (const f of cssFiles) try { fs.rmSync(f, { force: true }); } catch {}
+    return;
+  }
+  // Inline the same CSS into each entry's JS (SPFx loads one bundle per web part, each needs its styles)
+  for (const entryName of entryNames) {
+    const jsPath = path.join(distDir, `${entryName}.js`);
+    if (!fs.existsSync(jsPath)) continue;
+    let js = fs.readFileSync(jsPath, 'utf8');
+    // Avoid double-inlining if generateBundle already inlined (check for first 200 chars of css)
+    if (combinedCss.length > 200 && js.includes(combinedCss.slice(0, 200))) continue;
+    // Preserve sourcemap comment
+    const sourceMapUrlRegex = /\/\/# sourceMappingURL=.*(?:\r?\n)?$/;
+    const match = js.match(sourceMapUrlRegex);
+    const sourceMapComment = match ? match[0] : '';
+    const codeWithoutMap = sourceMapComment ? js.slice(0, -sourceMapComment.length) : js;
+    js = codeWithoutMap + inlineStyleCode(combinedCss) + (sourceMapComment || '');
+    fs.writeFileSync(jsPath, js);
+  }
+  // Delete the now-inlined CSS files
+  for (const f of cssFiles) {
+    try { fs.rmSync(f, { force: true }); } catch {}
+  }
+  // Remove empty assets dir if needed
+  try {
+    const assetsDir = path.join(distDir, 'assets');
+    if (fs.existsSync(assetsDir) && fs.readdirSync(assetsDir).length === 0) fs.rmdirSync(assetsDir);
+  } catch {}
+}
+
 /**
  * Byte-compat with the Rspack/official-SPFx bundle header: rollup quotes the
  * AMD id with double quotes (`define("id", …)`) while the official form is
@@ -793,6 +849,14 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           })
         )
       );
+      // Vite 7 with cssCodeSplit:false may still emit a lone CSS asset to dist/assets/*.css
+      // outside of Rollup's bundle map (not visible in generateBundle). Inline any leftover
+      // CSS files from disk into each entry's JS so SPFx loads styles via a single AMD bundle.
+      try {
+        inlineRemainingCssFiles(root, resolved.build.outDir ?? 'dist', project.webParts.entries.map((e) => e.name));
+      } catch (error) {
+        logger.warn(`Failed to inline CSS from disk: ${error instanceof Error ? error.message : String(error)}`);
+      }
       await assembleRelease({
         projectRoot: root,
         config: resolved,

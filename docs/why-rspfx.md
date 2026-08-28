@@ -77,6 +77,6 @@ RSPFX: change `spfxVersion: '1.24'` in your bundler config and run `bun update @
 | App catalog deploy | Manual / CI scripts | `rspfx deploy` or manual |
 | Fast refresh | — | `rspfx dev --refresh` (react/preact/vue/svelte/solid) |
 | Bundle analysis | Manual `webpack-bundle-analyzer` | `rspfx analyze` |
-| Scaffolding | `yo @microsoft/sharepoint` | `rspfx new` |
-| Migrate existing project | Manual edits | `rspfx migrate --dry-run` → `rspfx migrate` |
+| Scaffolding | `yo @microsoft/sharepoint` | `npm create vite@latest` + `rspfxVite()` (or `rspfx new` shortcut); also `better-t-stack`, TanStack Router, Rsbuild/Rspack starters |
+| Migrate existing project | Manual edits | `rspfx migrate --dry-run` → `rspfx migrate` (or BYOS plugin for greenfield) |
 | Switch SPFx version | Update generator + rig + Heft + every `sp-*` | Change `spfxVersion` + `bun update` / `pnpm update` |

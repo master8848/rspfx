@@ -22,6 +22,9 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       forks: { singleFork: true }
-    }
+    },
+    // examples builds are heavy (Vite/Rsbuild/Rspack + Tailwind) - allow per-test override via { timeout: 180000 }
+    // but keep global at 60s for fast unit tests; the examples file sets its own timeout.
+    exclude: [],
   }
 });

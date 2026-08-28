@@ -57,12 +57,15 @@ features:
 
 ::: code-group
 
-```sh [new project]
-npm i -g @mbsks/rspfx-cli
-rspfx new my-app
+```sh [new project — plugin]
+npm create vite@latest my-app -- --template react-ts
 cd my-app
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli
+# add rspfxVite() to vite.config.ts + manifests, then
 rspfx dev          # http://localhost:4321 — no tenant needed
 rspfx package      # → sharepoint/solution/my-app.sppkg
+# any starter works: better-t-stack, TanStack Router, etc. — just add the plugin
+# shortcut: rspfx new my-app
 ```
 
 ```sh [existing project]
@@ -73,10 +76,12 @@ bun install               # or pnpm / npm / yarn
 rspfx dev                 # same manifests, no config required
 ```
 
-```ts [only when you need control]
-// vite.config.ts — optional
+```ts [plugin — Vite default]
+// vite.config.ts — add to any Vite starter (create-vite, better-t-stack, TanStack Router…)
+import { defineConfig } from 'vite'
 import { rspfxVite } from '@mbsks/rspfx-plugin'
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] }
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] })
+// Rsbuild: rspfxRsbuild() in rsbuild.config.ts, Rspack: new RSpfxPlugin() in rspack.config.ts
 ```
 :::
 

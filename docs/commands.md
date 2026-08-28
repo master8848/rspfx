@@ -10,7 +10,7 @@ Pick bundler at scaffold/migrate: `--bundler vite` (default), `rsbuild`, or `rsp
 
 ## `rspfx new <name>`
 
-Create a project and initialize git (no dependency install — run your package manager manually).
+Create a project and initialize git (no dependency install — run your package manager manually). Convenience wrapper — recommended path is bring-your-own scaffold (`npm create vite@latest` + add `@mbsks/rspfx-plugin`).
 
 | Flag | Values |
 |---|---|
@@ -27,6 +27,8 @@ Create a project and initialize git (no dependency install — run your package 
 rspfx new my-app --framework vue --yes
 rspfx new my-extension --component applicationcustomizer --yes
 ```
+
+Prefer `npm create vite@latest my-app -- --template react-ts` (or `better-t-stack`, TanStack Router, etc.) then `npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli` and add `rspfxVite()` to `vite.config.ts` — see [getting-started.md#2-create-a-project](getting-started.md#2-create-a-project). `rspfx new` does the same but hides the starter choice. No codebase changes needed for other starters — `packages/plugin/src/vite.ts`/`rsbuild.ts`/`rspack.ts` already support Vite/Rsbuild/Rspack.
 
 ## `rspfx migrate`
 
@@ -136,13 +138,14 @@ Removes `dist/`, `release/`, `temp/`, `.rspfx`, `node_modules/.cache`, `sharepoi
 
 ## Bundler plugin
 
-Config lives in the bundler file via `@mbsks/rspfx-plugin` — file is optional.
+RSPFX is a plugin for any Vite/Rsbuild/Rspack starter — scaffold with `npm create vite@latest`, `better-t-stack`, TanStack Router, `create-rsbuild`, etc., then add the plugin. Config file is optional (CLI synthesizes from manifests if missing).
 
-Vite `vite.config.ts`:
+Vite `vite.config.ts` — recommended default:
 
 ```ts
+import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] });
 ```
 
 Rsbuild `rsbuild.config.ts`:
@@ -160,7 +163,7 @@ import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';
 export default { resolve: rspfxResolve(), plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react' })] };
 ```
 
-For all three, `rspfx build` gives the same output as native `vite build` / `rspack build` / `rsbuild build`. Without a config file, `rspfx build` synthesizes it.
+For all three, `rspfx build` gives the same output as native `vite build` / `rspack build` / `rsbuild build`. No codebase changes needed for new starters — `packages/plugin/src/vite.ts`, `packages/plugin/src/rsbuild.ts`, `packages/plugin/src/rspack.ts` already cover Vite/Rsbuild/Rspack; routers (TanStack Router etc.) are just dependencies inside the Vite project.
 
 ### Options
 
