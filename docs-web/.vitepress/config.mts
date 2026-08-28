@@ -125,6 +125,51 @@ export default defineConfig({
       }
       count++
     }
+    // Production fallback for extensionless /md/* (e.g. /md/docs/getting-started -> /md/docs/getting-started.md)
+    // Dev middleware handles this via candidates; static hosting needs rewrites + headers.
+    // Generate _redirects (Cloudflare Pages/Workers) and _headers so VitePress 404.html never intercepts /md/*.
+    try {
+      const redirectLines: string[] = []
+      const seenNoExt = new Set<string>()
+      for (const src of mdFiles) {
+        const rel = relative(srcDir, src)
+        if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
+        const noExt = rel.replace(/\.md$/, '')
+        const from = `/md/${noExt}`
+        const to = `/md/${rel}`
+        if (seenNoExt.has(from)) continue
+        seenNoExt.add(from)
+        redirectLines.push(`${from} ${to} 200`)
+        // Also handle trailing-slash variant for index-like files (e.g. /md/docs/ -> /md/docs/index.md handled via explicit file, but add alias for safety)
+        if (noExt.endsWith('/index')) {
+          const dir = noExt.slice(0, -'/index'.length)
+          const fromDir = dir ? `/md/${dir}` : '/md'
+          const dirKey = `${fromDir}/`
+          if (!seenNoExt.has(dirKey)) {
+            seenNoExt.add(dirKey)
+            redirectLines.push(`${fromDir} ${to} 200`)
+            redirectLines.push(`${fromDir}/ ${to} 200`)
+          }
+        }
+      }
+      // Ensure /md -> /md/index.md
+      if (!seenNoExt.has('/md')) {
+        redirectLines.unshift('/md /md/index.md 200')
+      }
+      if (redirectLines.length) {
+        const redirectsPath = join(outDir, '_redirects')
+        fs.writeFileSync(redirectsPath, redirectLines.join('\n') + '\n', 'utf8')
+        console.log(`[markdown-publish] Wrote ${redirectLines.length} redirect(s) to ${redirectsPath}`)
+      }
+      const headersPath = join(outDir, '_headers')
+      // Minimal: /*.md covers all raw markdown (dist/*.md, dist/md/*.md, dist/markdown/*.md).
+      // Extensionless /md/* served via _redirects rewrite or Worker already sets header, so avoid duplicate.
+      const headersContent = `/*.md\n  Content-Type: text/markdown; charset=utf-8\n  X-Content-Type-Options: nosniff\n`
+      fs.writeFileSync(headersPath, headersContent, 'utf8')
+      console.log(`[markdown-publish] Wrote headers to ${headersPath}`)
+    } catch (e) {
+      console.warn('[markdown-publish] Failed to write _redirects/_headers', e)
+    }
     console.log(`[markdown-publish] Published ${count} markdown file(s) to ${outDir} (+ markdown/ and md/ aliases)`)
   },
   // Disable copy-markdown button on llm routes (llm.md / llms.md) via frontmatter.
