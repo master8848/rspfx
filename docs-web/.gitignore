@@ -1,0 +1,17 @@
+# vitepress build output
+.vitepress/dist
+.vitepress/cache
+dist
+
+# dependencies
+node_modules
+
+# env & OS
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+npm-debug.log*
+.cache
+temp

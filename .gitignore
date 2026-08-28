@@ -40,5 +40,11 @@ crates/*/*.node
 /target/
 Cargo.lock
 
+# vitepress
+.vitepress/dist
+.vitepress/cache
+**/.vitepress/dist
+**/.vitepress/cache
+
 # test-generated fixtures (dev-runtime tests scaffold these in beforeAll)
 tests/fixtures/

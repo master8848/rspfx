@@ -18,7 +18,10 @@
     "test:watch": "vitest",
     "publish": "node scripts/publish.mjs",
     "publish:dry": "node scripts/publish.mjs --dry-run",
-    "bench": "node bench/bench.mjs"
+    "bench": "node bench/bench.mjs",
+    "docs:dev": "bun run --filter docs-web dev",
+    "docs:build": "bun run --filter docs-web build",
+    "docs:preview": "bun run --filter docs-web preview"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
@@ -31,6 +34,7 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "examples/*"
+    "examples/*",
+    "docs-web"
   ]
 }
