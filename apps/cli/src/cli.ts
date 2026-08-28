@@ -163,9 +163,9 @@ export function configureProgram(): void {
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
     .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
-    .option('--pm <pnpm|npm|yarn>', 'package manager')
+    .option('--pm <pnpm|npm|yarn|bun>', 'package manager (pnpm, npm, yarn, bun)')
     .option('--bundler <vite|rsbuild|rspack>', 'bundler (default: vite)')
-    .option('--no-install', 'skip dependency installation')
+    .option('--no-install', 'skip dependency installation (default: no auto-install; kept for compatibility)')
     .option('--tenant <url>', 'tenant URL for the dev workbench')
     .option('--yes', 'skip all prompts and use defaults')
     .action((name: string, options: Record<string, unknown>) => {

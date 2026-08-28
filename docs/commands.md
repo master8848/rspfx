@@ -10,7 +10,7 @@ Pick bundler at scaffold/migrate: `--bundler vite` (default), `rsbuild`, or `rsp
 
 ## `rspfx new <name>`
 
-Create a project and install.
+Create a project and initialize git (no dependency install — run your package manager manually).
 
 | Flag | Values |
 |---|---|
@@ -19,8 +19,8 @@ Create a project and install.
 | `--bundler <id>` | `vite` (default), `rsbuild`, `rspack` |
 | `--language <lang>` | `ts`, `js` (web parts) |
 | `--spfx-version <v>` | See [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23) |
-| `--pm <pm>` | `pnpm`, `npm`, `yarn` |
-| `--no-install` | Skip install |
+| `--pm <pm>` | `pnpm`, `npm`, `yarn`, `bun` |
+| `--no-install` | Kept for compatibility; install never runs automatically |
 | `--yes` | Accept defaults, no prompts |
 
 ```sh

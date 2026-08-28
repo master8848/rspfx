@@ -282,7 +282,7 @@ async function checkCertExists(): Promise<DoctorCheck> {
     return {
       name: 'dev cert exists (~/.rspfx/certs/cert.pem)',
       ok: false,
-      detail: `${status.detail} — run rspfx doctor --fix or rspfx dev to generate. Without it SharePoint workbench shows CORS / NET::ERR_CERT_AUTHORITY_INVALID`
+      detail: `${status.detail} — run 'rspfx doctor --fix' or 'rspfx dev' to generate. After generation see ${path.join(certsDir, 'cert.pem.trust.txt')} and ${formatTrustInstructions(certsDir)} — without trust SharePoint workbench shows CORS / NET::ERR_CERT_AUTHORITY_INVALID`
     };
   }
   return { name: 'dev cert exists (~/.rspfx/certs/cert.pem)', ok: true, detail: 'found' };
@@ -323,7 +323,7 @@ async function checkCertTrusted(): Promise<DoctorCheck> {
       return {
         name: 'dev cert trusted (OS store)',
         ok: false,
-        detail: `${result.detail} — browsers block https://localhost:4321 until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). See ~/.rspfx/certs/cert.pem.trust.txt`
+        detail: `${result.detail} — browsers block https://localhost:4321 until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). ${formatTrustInstructions(certsDir)} — then restart browser. See ${path.join(certsDir, 'cert.pem.trust.txt')}`
       };
     }
     return {

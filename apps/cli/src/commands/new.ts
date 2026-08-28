@@ -19,7 +19,7 @@ import {
 const logger = createLogger('rspfx');
 
 const LANGUAGES = ['ts', 'js'] as const;
-const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn'] as const;
+const PACKAGE_MANAGERS = ['pnpm', 'npm', 'yarn', 'bun'] as const;
 
 export interface NewOptions {
   name: string;
@@ -133,12 +133,16 @@ export async function runNew(opts: NewOptions): Promise<string> {
   const files = await scaffoldProject(vars, destDir);
   logger.success(`Scaffolded ${files.length} files into ${destDir}`);
 
-  if (opts.install !== false) {
+  await initGit(destDir);
+
+  if (opts.install === true) {
+    logger.warn('--install is deprecated: dependencies are no longer auto-installed. Run install manually.');
     await installWith(pm, destDir);
   }
 
   logger.info('Next steps:');
   logger.info(`  cd ${opts.name}`);
+  logger.info(`  ${pm} install`);
   logger.info('  rspfx dev');
   return destDir;
 }
@@ -153,6 +157,25 @@ function toPascalCase(name: string): string {
 
 function toCamelCase(namePascal: string): string {
   return `${namePascal.charAt(0).toLowerCase()}${namePascal.slice(1)}`;
+}
+
+async function initGit(cwd: string): Promise<void> {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('git', ['init'], { cwd, stdio: 'ignore' });
+      child.once('error', (error) => reject(error));
+      child.once('exit', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`git init exited with code ${code}`));
+        }
+      });
+    });
+    logger.info('Initialized git repository');
+  } catch (error) {
+    logger.warn(`Failed to initialize git repository: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function installWith(pm: string, cwd: string): Promise<void> {
