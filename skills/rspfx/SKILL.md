@@ -7,7 +7,7 @@ description: Build SharePoint Framework (SPFx) web parts, libraries, and extensi
 
 Builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp. Vite is the default bundler.
 
-Supports SPFx 1.20–1.24 (default 1.24), Node 20+, React/Vue/Solid and more.
+Supports SPFx 1.20, 1.21, 1.22, 1.23, 1.24 (default 1.23), Node 20+, React/Vue/Solid and more.
 
 Any other framework works via `FrameworkPreset` — see `docs/custom-framework.md`.
 
