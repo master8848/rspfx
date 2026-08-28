@@ -2,6 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { localeToCultureName } from './lcid.js';
 
+// Lazy import to avoid hard circular; fallback to regex if core not available.
+let _getSpfxVersions: (() => readonly { target: string; isDomainIsolatedDeprecated?: boolean }[]) | undefined;
+try {
+  const req = createRequire(import.meta.url);
+  const core = req('@mbsks/rspfx-core') as { getSpfxVersions?: typeof _getSpfxVersions };
+  _getSpfxVersions = core.getSpfxVersions;
+} catch {}
+
 let native: {
   serializeXml?: (n: unknown, p: boolean) => string;
   buildRelsXml?: (r: unknown, p: boolean) => string;
@@ -254,6 +262,8 @@ export interface AppManifestOptions {
   isDomainIsolated?: boolean;
   /** SPFx target that produced this manifest — 1.24+ ignores IsDomainIsolated (deprecated). */
   spfxVersion?: string;
+  /** Override deprecation check: when set, forces IsDomainIsolated handling regardless of version metadata. */
+  isDomainIsolatedDeprecatedOverride?: boolean;
   developer?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   localizedStrings?: { locale: string; values: Record<string, string> }[];
@@ -263,15 +273,36 @@ export interface AppManifestOptions {
 
 const DEVELOPER_PROPERTY_NAMES: string[] = ['name', 'websiteUrl', 'privacyUrl', 'termsOfUseUrl', 'mpnId'];
 
-function isDomainIsolatedDeprecated(spfxVersion?: string): boolean {
+export function isDomainIsolatedDeprecated(spfxVersion?: string): boolean {
   if (!spfxVersion) return false;
-  const m = /^1\.(\d+)$/.exec(spfxVersion.trim());
+  const trimmed = spfxVersion.trim();
+  // Consult registered version metadata first
+  try {
+    if (_getSpfxVersions) {
+      const found = _getSpfxVersions().find((v) => v.target === trimmed);
+      if (found && typeof found.isDomainIsolatedDeprecated === 'boolean') {
+        return found.isDomainIsolatedDeprecated;
+      }
+    } else {
+      const req = createRequire(import.meta.url);
+      const core = req('@mbsks/rspfx-core') as { getSpfxVersions?: () => readonly { target: string; isDomainIsolatedDeprecated?: boolean }[] };
+      const versions = core.getSpfxVersions?.();
+      const found = versions?.find((v) => v.target === trimmed);
+      if (found && typeof found.isDomainIsolatedDeprecated === 'boolean') {
+        return found.isDomainIsolatedDeprecated;
+      }
+    }
+  } catch {}
+  const m = /^1\.(\d+)$/.exec(trimmed);
   if (!m) return false;
   return Number(m[1]) >= 24;
 }
 
-export function buildAppManifestXml(options: AppManifestOptions): string {
-  const effectiveIsDomainIsolated = isDomainIsolatedDeprecated(options.spfxVersion) ? undefined : options.isDomainIsolated;
+function buildAppManifestXmlBase(options: AppManifestOptions): string {
+  const deprecated = options.isDomainIsolatedDeprecatedOverride !== undefined
+    ? options.isDomainIsolatedDeprecatedOverride
+    : isDomainIsolatedDeprecated(options.spfxVersion);
+  const effectiveIsDomainIsolated = deprecated ? undefined : options.isDomainIsolated;
   const effectiveOptions = effectiveIsDomainIsolated === options.isDomainIsolated ? options : { ...options, isDomainIsolated: effectiveIsDomainIsolated };
   if (native?.buildAppManifestXml) { try { return native.buildAppManifestXml(effectiveOptions); } catch {} }
   const rawProductId = options.productId.trim();
@@ -354,6 +385,25 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
 
   const root: XmlNode = { name: 'App', attrs, children };
   return `${XML_DECLARATION}\n${serializeXml(root, options.pretty)}`;
+}
+
+export function buildAppManifestXml(options: AppManifestOptions): string {
+  try {
+    const req = createRequire(import.meta.url);
+    const api = req('@mbsks/rspfx-plugin-api') as { getPlugins: () => { patches?: { buildAppManifestXml?: (args: AppManifestOptions, next: (args: AppManifestOptions) => string) => string } }[] };
+    const plugins = api.getPlugins();
+    const patches = plugins.map((p) => p.patches?.buildAppManifestXml).filter((f): f is NonNullable<typeof f> => !!f);
+    if (patches.length === 0) return buildAppManifestXmlBase(options);
+    let idx = 0;
+    const next = (a: AppManifestOptions): string => {
+      if (idx < patches.length) {
+        const fn = patches[idx++]!;
+        return fn(a, next);
+      }
+      return buildAppManifestXmlBase(a);
+    };
+    return next(options);
+  } catch { return buildAppManifestXmlBase(options); }
 }
 
 function localizedElement(name: string, locales: Record<string, unknown>): XmlNode {

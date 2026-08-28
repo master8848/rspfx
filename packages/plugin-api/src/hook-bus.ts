@@ -14,9 +14,12 @@ import type {
   HookPhase,
   HookResult,
   OnHookError,
-  RspfxExtension
+  RspfxExtension,
+  RspfxPatches,
+  ComponentIdsPatch,
+  SpfxVersionPatch
 } from './types.js';
-import type { ZipPath } from '@mbsks/rspfx-core';
+import type { ZipPath, SpfxVersionInfo } from '@mbsks/rspfx-core';
 
 export function sortedPlugins(plugins: readonly RspfxExtension[]): readonly RspfxExtension[] {
   return [...plugins].sort((a, b) => {
@@ -42,6 +45,49 @@ export function composeHooks<T>(...hooks: Array<(ctx: T) => HookResult<T> | void
   };
 }
 
+export function getMergedSpfxVersions(plugins: readonly RspfxExtension[]): readonly (SpfxVersionPatch | SpfxVersionInfo)[] {
+  const out: (SpfxVersionPatch | SpfxVersionInfo)[] = [];
+  for (const p of plugins) {
+    if (p.spfxVersion) out.push(p.spfxVersion);
+    if (p.spfxVersions) out.push(...p.spfxVersions);
+  }
+  return out;
+}
+
+export function getMergedComponentIds(plugins: readonly RspfxExtension[]): ComponentIdsPatch {
+  const merged: ComponentIdsPatch = {};
+  for (const p of plugins) {
+    if (p.componentIds) Object.assign(merged, p.componentIds);
+  }
+  return merged;
+}
+
+export function applySpfxVersionPatches(plugins: readonly RspfxExtension[]): {
+  versions: readonly (SpfxVersionPatch | SpfxVersionInfo)[];
+  componentIds: ComponentIdsPatch;
+} {
+  return { versions: getMergedSpfxVersions(plugins), componentIds: getMergedComponentIds(plugins) };
+}
+
+export function createPatchedFunction<T extends (...args: any[]) => unknown>(
+  plugins: readonly RspfxExtension[],
+  patchName: keyof RspfxPatches,
+  original: T
+): T {
+  const sorted = sortedPlugins(plugins);
+  const patches = sorted
+    .map((p) => p.patches?.[patchName])
+    .filter((fn): fn is NonNullable<typeof fn> => typeof fn === 'function');
+  if (patches.length === 0) return original;
+  // middleware chain: each patch receives (...args, next)
+  const chained = patches.reduceRight(
+    (next: (...a: any[]) => unknown, patch: (...a: any[]) => unknown) =>
+      (...args: any[]) => (patch as (...a: any[]) => unknown)(...args, next),
+    original as (...a: any[]) => unknown
+  );
+  return chained as unknown as T;
+}
+
 export interface HookBus {
   readonly plugins: readonly RspfxExtension[];
   readonly onError: OnHookError | undefined;
@@ -54,6 +100,11 @@ export interface HookBus {
   emitAfterStart(ctx: { readonly url: string }): Promise<void>;
   emitBeforePackage(ctx: { readonly manifests: readonly ComponentManifest[]; readonly files: ReadonlyMap<ZipPath, Uint8Array> }): Promise<HookResult<ReadonlyMap<ZipPath, Uint8Array>>>;
   emitAfterPackage(ctx: { readonly sppkgPath: ZipPath }): Promise<void>;
+  hasPatch(name: keyof RspfxPatches): boolean;
+  getPatch<K extends keyof RspfxPatches>(name: K): RspfxPatches[K] | undefined;
+  callWithPatch<T>(name: keyof RspfxPatches, args: unknown, next: (args: unknown) => T | Promise<T>): Promise<T>;
+  getMergedSpfxVersions(): readonly (SpfxVersionPatch | SpfxVersionInfo)[];
+  getMergedComponentIds(): ComponentIdsPatch;
 }
 
 function toRspfxError(e: unknown, phase: HookPhase, pluginName: string): RspfxError {
@@ -332,6 +383,39 @@ export function createHookBus(plugins: readonly RspfxExtension[], opts?: { logge
           if (decision === 'throw') throw err;
         }
       }
+    },
+
+    hasPatch(name): boolean {
+      return sorted.some((p) => typeof p.patches?.[name] === 'function');
+    },
+
+    getPatch<K extends keyof RspfxPatches>(name: K): RspfxPatches[K] | undefined {
+      for (const p of sorted) {
+        const fn = p.patches?.[name];
+        if (typeof fn === 'function') return fn as RspfxPatches[K];
+      }
+      return undefined;
+    },
+
+    async callWithPatch<T>(name: keyof RspfxPatches, args: unknown, next: (args: unknown) => T | Promise<T>): Promise<T> {
+      const patches = sorted
+        .map((p) => p.patches?.[name])
+        .filter((fn): fn is NonNullable<typeof fn> => typeof fn === 'function');
+      if (patches.length === 0) return await next(args);
+      const chain = patches.reduceRight(
+        (nxt: (a: unknown) => Promise<T>, patchFn: unknown) =>
+          (a: unknown) => Promise.resolve((patchFn as (arg: unknown, nxt2: (arg: unknown) => Promise<T>) => T | Promise<T>)(a, nxt)),
+        (a: unknown) => Promise.resolve(next(a))
+      );
+      return chain(args);
+    },
+
+    getMergedSpfxVersions(): readonly (SpfxVersionPatch | SpfxVersionInfo)[] {
+      return getMergedSpfxVersions(sorted);
+    },
+
+    getMergedComponentIds(): ComponentIdsPatch {
+      return getMergedComponentIds(sorted);
     }
   };
 }

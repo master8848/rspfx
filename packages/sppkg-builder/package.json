@@ -24,6 +24,7 @@
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
     "fflate": "^0.8.2"
   },
   "description": "RSPFX .sppkg package assembly (AppManifest, features, assets)",

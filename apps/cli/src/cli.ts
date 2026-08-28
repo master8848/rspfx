@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { program } from 'commander';
 import { AggregateRspfxError, createDiagnosticFormatter, createLogger, isAggregateRspfxError, isRspfxError, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
-import { SPFX_TARGETS } from '@mbsks/rspfx-core';
+import { getSpfxVersions } from '@mbsks/rspfx-core';
 import { version } from './version.js';
 import { runNew, type NewOptions } from './commands/new.js';
 import { runDev } from './commands/dev.js';
@@ -162,7 +162,7 @@ export function configureProgram(): void {
     .option('--component <webpart|applicationcustomizer|fieldcustomizer|listviewcommandset|formcustomizer|library>', 'component type (default: webpart); extensions/libraries scaffold as vanilla TypeScript and reject --framework/--language')
     .option('--framework <id>', 'framework (vanilla|react|solid|preact|vue|svelte)')
     .option('--language <ts|js>', 'language')
-    .option(`--spfx-version <${SPFX_TARGETS.join('|')}>`, 'SPFx target version')
+    .option(`--spfx-version <${getSpfxVersions().map((v) => v.target).join('|')}>`, 'SPFx target version')
     .option('--pm <pnpm|npm|yarn|bun>', 'package manager (pnpm, npm, yarn, bun)')
     .option('--bundler <vite|rsbuild|rspack>', 'bundler (default: vite)')
     .option('--no-install', 'skip dependency installation (default: no auto-install; kept for compatibility)')

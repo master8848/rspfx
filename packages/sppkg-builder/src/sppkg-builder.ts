@@ -4,10 +4,11 @@ import path from 'node:path';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { ZipPath } from '@mbsks/rspfx-core';
+import { createRequire } from 'node:module';
 import { globFiles } from './glob.js';
 import { parseResx } from './resx.js';
 import {
-  buildAppManifestXml,
+  buildAppManifestXml as buildAppManifestXmlBase,
   buildAppPartConfigXml,
   buildContentTypesXml,
   buildElementsXml,
@@ -16,6 +17,57 @@ import {
   type Relationship
 } from './xml.js';
 import { writeZip, type ZipFileEntry } from './zip.js';
+
+function getActivePluginsSafe(): readonly { patches?: { buildAppManifestXml?: (opts: unknown, next: (opts: unknown) => string | Promise<string>) => string | Promise<string>; buildPackage?: (opts: unknown, next: (opts: unknown) => Promise<unknown>) => Promise<unknown> } }[] {
+  try {
+    const req = createRequire(import.meta.url);
+    const api = req('@mbsks/rspfx-plugin-api') as { getPlugins?: () => readonly unknown[]; getActivePlugins?: () => readonly unknown[] };
+    if (api?.getActivePlugins) {
+      try {
+        const active = api.getActivePlugins();
+        if (active.length > 0) return active as ReturnType<typeof getActivePluginsSafe>;
+      } catch {}
+    }
+    return getPlugins() as ReturnType<typeof getActivePluginsSafe>;
+  } catch { return []; }
+}
+
+function collectAppManifestPatches(): Array<(opts: Parameters<typeof buildAppManifestXmlBase>[0], next: (opts: Parameters<typeof buildAppManifestXmlBase>[0]) => string | Promise<string>) => string | Promise<string>> {
+  const patches: Array<(opts: Parameters<typeof buildAppManifestXmlBase>[0], next: (opts: Parameters<typeof buildAppManifestXmlBase>[0]) => string | Promise<string>) => string | Promise<string>> = [];
+  try {
+    for (const p of getActivePluginsSafe()) {
+      const fn = (p as { patches?: { buildAppManifestXml?: typeof patches[number] } }).patches?.buildAppManifestXml;
+      if (typeof fn === 'function') patches.push(fn);
+    }
+  } catch {}
+  return patches;
+}
+
+async function patchedBuildAppManifestXml(opts: Parameters<typeof buildAppManifestXmlBase>[0]): Promise<string> {
+  const patches = collectAppManifestPatches();
+  if (patches.length === 0) return buildAppManifestXmlBase(opts);
+  let idx = 0;
+  const next = (a: typeof opts): string | Promise<string> => {
+    if (idx < patches.length) {
+      const fn = patches[idx++]!;
+      return fn(a, next);
+    }
+    return buildAppManifestXmlBase(a);
+  };
+  const res = next(opts);
+  return res instanceof Promise ? await res : res;
+}
+
+function collectBuildPackagePatches(): Array<(opts: BuildPackageOptions, next: (opts: BuildPackageOptions) => Promise<BuildPackageResult>) => Promise<BuildPackageResult>> {
+  const patches: Array<(opts: BuildPackageOptions, next: (opts: BuildPackageOptions) => Promise<BuildPackageResult>) => Promise<BuildPackageResult>> = [];
+  try {
+    for (const p of getActivePluginsSafe()) {
+      const fn = (p as { patches?: { buildPackage?: typeof patches[number] } }).patches?.buildPackage;
+      if (typeof fn === 'function') patches.push(fn);
+    }
+  } catch {}
+  return patches;
+}
 
 export interface PackageConfig {
   solution: Record<string, unknown>;
@@ -117,6 +169,22 @@ function assertUuid(value: string, label: string): string {
 }
 
 export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPackageResult> {
+  const patches = collectBuildPackagePatches();
+  if (patches.length > 0) {
+    let idx = 0;
+    const next = (o: BuildPackageOptions): Promise<BuildPackageResult> => {
+      if (idx < patches.length) {
+        const fn = patches[idx++]!;
+        return fn(o, next);
+      }
+      return buildPackageInternal(o);
+    };
+    return next(opts);
+  }
+  return buildPackageInternal(opts);
+}
+
+async function buildPackageInternal(opts: BuildPackageOptions): Promise<BuildPackageResult> {
   const projectRoot = path.resolve(opts.projectRoot);
   const { solution, zippedPackage } = await loadSolutionConfig(projectRoot, opts.solutionConfigPath);
 
@@ -225,7 +293,7 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
     });
   }
 
-  const appManifest = buildAppManifestXml({
+  const appManifest = await patchedBuildAppManifestXml({
     name: String(solution.name),
     title: typeof (solution as Record<string, unknown>).title === 'string' ? String((solution as Record<string, unknown>).title) : undefined,
     productId: String(solution.id),

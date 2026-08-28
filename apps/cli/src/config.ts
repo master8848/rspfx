@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createJiti } from 'jiti';
-import { tryResolveConfig, RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS, type RspfxConfig } from '@mbsks/rspfx-core';
+import { tryResolveConfig, RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS, type RspfxConfig, installSpfxVersionExtensions } from '@mbsks/rspfx-core';
 import type { Issue, RspfxBundlerPluginLike } from '@mbsks/rspfx-core';
 import { createLogger, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
 import type { Logger } from '@mbsks/rspfx-diagnostics';
-import { createHookBus, createRSPFX } from '@mbsks/rspfx-plugin-api';
+import { createHookBus, createRSPFX, setActivePlugins } from '@mbsks/rspfx-plugin-api';
 import type { HookBus, RspfxInstance, RspfxExtension } from '@mbsks/rspfx-plugin-api';
 
 export type BundlerId = 'rspack' | 'vite' | 'rsbuild';
@@ -129,8 +129,11 @@ export async function loadConfig(projectRoot: string, opts?: { jitiCache?: boole
   }
   const userModuleRules = (bundlerConfig as { module?: { rules?: unknown[] } })?.module?.rules;
   const logger = createLogger('cli');
-  const hookBus = createHookBus([], { logger });
-  const rspfx = createRSPFX({ plugins: discoverPlugins(bundlerConfig), logger });
+  const extensions = discoverPlugins(bundlerConfig);
+  try { installSpfxVersionExtensions(extensions as unknown as Parameters<typeof installSpfxVersionExtensions>[0]); } catch {}
+  try { setActivePlugins(extensions); } catch {}
+  const hookBus = createHookBus(extensions, { logger });
+  const rspfx = createRSPFX({ plugins: extensions, logger });
   return {
     config: parsed.value,
     bundler: found.bundler,

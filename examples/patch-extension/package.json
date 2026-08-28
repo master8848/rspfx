@@ -1,0 +1,27 @@
+{
+  "name": "@mbsks/rspfx-patch-extension-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RSPFX patch extension example — adds SPFx 1.25 and patches findSpDependencies",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*"
+  }
+}

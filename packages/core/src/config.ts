@@ -1,4 +1,4 @@
-import { SPFX_DEFAULT_TARGET, SPFX_TARGETS } from './versions.js';
+import { SPFX_DEFAULT_TARGET, getSpfxVersions } from './versions.js';
 import type { SpfxTarget } from './versions.js';
 
 export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
@@ -98,8 +98,11 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
   if (cfg.framework !== undefined && (typeof cfg.framework !== 'string' || cfg.framework.length === 0)) {
     issues.push({ path: ['framework'], message: 'framework must be a non-empty string', code: 'CONFIG_VALIDATION_FAILED' });
   }
-  if (cfg.spfxVersion !== undefined && !(SPFX_TARGETS as readonly string[]).includes(cfg.spfxVersion as string)) {
-    issues.push({ path: ['spfxVersion'], message: `spfxVersion must be one of ${SPFX_TARGETS.join(', ')}`, code: 'CONFIG_VALIDATION_FAILED' });
+  if (cfg.spfxVersion !== undefined) {
+    const allowed = getSpfxVersions().map((v) => v.target);
+    if (!allowed.includes(cfg.spfxVersion as string)) {
+      issues.push({ path: ['spfxVersion'], message: `spfxVersion must be one of ${allowed.join(', ')}`, code: 'CONFIG_VALIDATION_FAILED' });
+    }
   }
   if (cfg.version !== undefined && typeof cfg.version === 'string' && !/^\d+\.\d+\.\d+/.test(cfg.version)) {
     issues.push({ path: ['version'], message: 'version must be semver', code: 'CONFIG_VALIDATION_FAILED' });

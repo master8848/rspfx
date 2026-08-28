@@ -19,6 +19,47 @@ function stripPreReleaseVersion(version: string): string {
   return index >= 0 ? version.slice(0, index) : version;
 }
 
+function getComponentIdsOverlay(): Map<string, { id: string; version: string; preloadComponents?: string[] }> {
+  const overlay = new Map<string, { id: string; version: string; preloadComponents?: string[] }>();
+  try {
+    const req = createRequire(import.meta.url);
+    const api = req('@mbsks/rspfx-plugin-api') as {
+      getPlugins?: () => readonly { componentIds?: Record<string, { id: string; version: string; preloadComponents?: string[] }> }[];
+      getActivePlugins?: () => readonly { componentIds?: Record<string, { id: string; version: string; preloadComponents?: string[] }> }[];
+      getComponentIdsOverlay?: () => ReadonlyMap<string, { id: string; version: string; preloadComponents?: string[] }>;
+    };
+    if (api?.getComponentIdsOverlay) for (const [k, v] of api.getComponentIdsOverlay()) overlay.set(k, v);
+    if (overlay.size > 0) return overlay;
+    if (api?.getActivePlugins) for (const p of api.getActivePlugins()) if (p.componentIds) for (const [k, v] of Object.entries(p.componentIds)) if (!overlay.has(k)) overlay.set(k, v);
+    if (api?.getPlugins) for (const p of api.getPlugins()) if (p.componentIds) for (const [k, v] of Object.entries(p.componentIds)) if (!overlay.has(k)) overlay.set(k, v);
+  } catch {}
+  return overlay;
+}
+
+function getMergedComponentIds(): Record<string, { id: string; version: string; preloadComponents?: string[] }> {
+  const overlay = getComponentIdsOverlay();
+  if (overlay.size === 0) return SP_COMPONENT_IDS;
+  return { ...SP_COMPONENT_IDS, ...Object.fromEntries(overlay) };
+}
+
+function collectGeneratePatches(): Array<(ctx: ManifestContext, next: (ctx: ManifestContext) => Promise<ComponentManifest[]>) => Promise<ComponentManifest[]>> {
+  const patches: Array<(ctx: ManifestContext, next: (ctx: ManifestContext) => Promise<ComponentManifest[]>) => Promise<ComponentManifest[]>> = [];
+  try {
+    const req = createRequire(import.meta.url);
+    const api = req('@mbsks/rspfx-plugin-api') as { getPlugins?: () => readonly unknown[]; getActivePlugins?: () => readonly unknown[] };
+    const seen = new Set<unknown>();
+    const collect = (plugins: readonly unknown[]) => {
+      for (const p of plugins as readonly { patches?: { generateComponentManifests?: unknown } }[]) {
+        const fn = p.patches?.generateComponentManifests;
+        if (typeof fn === 'function' && !seen.has(fn)) { seen.add(fn); patches.push(fn as typeof patches[number]); }
+      }
+    };
+    if (api?.getActivePlugins) { try { collect(api.getActivePlugins()); } catch {} }
+    if (api?.getPlugins) { try { collect(api.getPlugins()); } catch {} }
+  } catch {}
+  return patches;
+}
+
 function findNonSpExternalManifest(
   projectRoot: string,
   pkgName: string
@@ -49,7 +90,7 @@ function findNonSpExternalManifest(
   return undefined;
 }
 
-export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
+async function generateComponentManifestsBase(ctx: ManifestContext): Promise<ComponentManifest[]> {
   if (native?.generateComponentManifests) {
     try { return await native.generateComponentManifests(ctx); } catch {}
   }
@@ -75,6 +116,20 @@ export async function generateComponentManifests(ctx: ManifestContext): Promise<
   scanComponentsDir(ctx, manifests, spDependencies, extensionsDir);
   scanComponentsDir(ctx, manifests, spDependencies, librariesDir);
   return manifests;
+}
+
+export async function generateComponentManifests(ctx: ManifestContext): Promise<ComponentManifest[]> {
+  const patches = collectGeneratePatches();
+  if (patches.length === 0) return generateComponentManifestsBase(ctx);
+  let idx = 0;
+  const next = (a: ManifestContext): Promise<ComponentManifest[]> => {
+    if (idx < patches.length) {
+      const fn = patches[idx++]!;
+      return fn(a, next);
+    }
+    return generateComponentManifestsBase(a);
+  };
+  try { return await next(ctx); } catch { return generateComponentManifestsBase(ctx); }
 }
 
 function scanComponentsDir(
@@ -139,7 +194,8 @@ function scanComponentsDir(
       }
       const nonSpDependency = findNonSpExternalManifest(ctx.projectRoot, externalName);
       if (!nonSpDependency) {
-        const fallback = SP_COMPONENT_IDS[externalName];
+        const mergedIds = getMergedComponentIds();
+        const fallback = (mergedIds as Record<string, { id: string; version: string }>)[externalName];
         if (fallback) {
           scriptResources[externalName] = {
             type: 'component',

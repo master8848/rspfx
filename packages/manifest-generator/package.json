@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*"
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*"
   },
   "description": "RSPFX component manifest generation (manifests, manifests.js, sp-* deps)",
   "repository": {

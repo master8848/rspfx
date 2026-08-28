@@ -21,7 +21,7 @@ export {
   unsafeComponentId,
   unsafeZipPath
 } from './newtypes.js';
-export { SPFX_DEFAULT_TARGET, SPFX_TARGETS, SPFX_VERSIONS, isSpfxTarget, spfxNpmVersion } from './versions.js';
+export { SPFX_DEFAULT_TARGET, SPFX_TARGETS, SPFX_VERSIONS, getSpfxVersions, isSpfxTarget, registerSpfxVersion, spfxNpmVersion, __clearRegisteredSpfxVersionsForTests, installSpfxVersionExtensions } from './versions.js';
 export type { SpfxReleaseStatus, SpfxTarget, SpfxToolchain, SpfxVersionInfo } from './versions.js';
 export { RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS } from './marker.js';
 export type { RspfxBundlerPluginLike } from './marker.js';

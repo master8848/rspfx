@@ -31,6 +31,17 @@ export type {
   RsbuildContribs,
   ViteContribs,
   RspfxExtension,
+  RspfxPatches,
+  PatchRegistry,
+  InternalHooks,
+  SpfxVersionPatch,
+  ComponentIdsPatch,
+  ComponentIdEntry,
+  SpDependencyEntry,
+  SpDependencyMap,
+  FindSpDependenciesArgs,
+  GenerateComponentManifestsArgs,
+  BuildAppManifestXmlArgs,
   Stats,
   WebPartEntry
 } from './types.js';
@@ -38,4 +49,14 @@ export { definePlugin, HOOK_PHASES } from './types.js';
 export { getPlugins, registerPlugin, __clearRegistryForTests } from './registry.js';
 export { createRSPFX } from './instance.js';
 export type { HookBus, RspfxInstance } from './instance.js';
-export { createHookBus, sortedPlugins, composeHooks } from './hook-bus.js';
+export {
+  createHookBus,
+  sortedPlugins,
+  composeHooks,
+  getMergedSpfxVersions,
+  getMergedComponentIds,
+  applySpfxVersionPatches,
+  createPatchedFunction
+} from './hook-bus.js';
+export { getPatchedSpfxVersions, getPatchedComponentIds, applyFindSpDependencies, applyGenerateComponentManifests, applyBuildAppManifestXml } from './patches.js';
+export { setActivePlugins, getActivePlugins, getComponentIdsOverlay, clearPatchRegistryForTests } from './patch-registry.js';

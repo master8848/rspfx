@@ -1,6 +1,6 @@
 import type { Result } from '@mbsks/rspfx-diagnostics';
 import type { RspfxError, AggregateRspfxError } from '@mbsks/rspfx-diagnostics';
-import type { RspfxConfig } from '@mbsks/rspfx-core';
+import type { RspfxConfig, SpfxVersionInfo } from '@mbsks/rspfx-core';
 import type { ZipPath } from '@mbsks/rspfx-core';
 
 export type { Result } from '@mbsks/rspfx-diagnostics';
@@ -180,6 +180,66 @@ export interface PackageHooks {
   afterPackage?: AfterPackage;
 }
 
+export interface SpfxVersionPatch {
+  readonly target: string;
+  readonly npmVersion: string;
+  readonly toolchain: 'gulp' | 'heft';
+  readonly status: 'ga' | 'preview';
+  readonly notes?: string;
+}
+
+export type ComponentIdsPatch = Record<string, { id: string; version: string; preloadComponents?: string[] }>;
+export type ComponentIdEntry = { id: string; version: string; preloadComponents?: string[] };
+export type SpDependencyEntry = { id: string; version: string; manifestPath: string };
+export type SpDependencyMap = Map<string, SpDependencyEntry>;
+
+export type FindSpDependenciesArgs = { projectRoot: string };
+export type GenerateComponentManifestsArgs = { projectRoot: string; production: boolean; baseUrls: { debug: string; release: string[] }; packageVersion: string; bundleFiles: Map<string, string>; externals: string[]; webpartsDir?: string; entryModuleIds?: Record<string, string>; localizedResources?: { name: string; locales: string[] }[] };
+export type BuildAppManifestXmlArgs = { name: string; productId: string; version?: string; skipFeatureDeployment: boolean; isDomainIsolated?: boolean; spfxVersion?: string; developer?: Record<string, unknown>; metadata?: Record<string, unknown>; localizedStrings?: { locale: string; values: Record<string, string> }[]; webApiPermissionRequests?: { resource: string; scope: string }[]; pretty: boolean };
+
+export interface RspfxPatches {
+  readonly findSpDependencies?: (
+    args: FindSpDependenciesArgs | string,
+    next: (args: FindSpDependenciesArgs | string) => SpDependencyMap | Promise<SpDependencyMap>
+  ) => SpDependencyMap | Promise<SpDependencyMap>;
+  readonly generateComponentManifests?: (
+    args: GenerateComponentManifestsArgs | unknown,
+    next: (args: GenerateComponentManifestsArgs | unknown) => Promise<ComponentManifest[]>
+  ) => Promise<ComponentManifest[]> | ComponentManifest[];
+  readonly generateManifestsJs?: (
+    manifests: ComponentManifest[],
+    metadata: unknown,
+    next: (manifests: ComponentManifest[], metadata: unknown) => Promise<string>
+  ) => Promise<string>;
+  readonly buildPackage?: (
+    opts: unknown,
+    next: (opts: unknown) => Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>
+  ) => Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>;
+  readonly buildAppManifestXml?: (
+    args: BuildAppManifestXmlArgs | unknown,
+    next: (args: BuildAppManifestXmlArgs | unknown) => string
+  ) => string | Promise<string>;
+  readonly collectResx?: (
+    resxDir: string | { resxDir: string },
+    next: (resxDir: string | { resxDir: string }) => Promise<unknown[]>
+  ) => Promise<unknown[]>;
+  readonly resolveSpfxVersion?: (
+    target: string,
+    next: (target: string) => SpfxVersionInfo | undefined
+  ) => SpfxVersionInfo | undefined;
+  readonly getComponentIds?: (
+    next: () => Record<string, ComponentIdEntry>
+  ) => Record<string, ComponentIdEntry>;
+}
+
+/** Alias for RspfxPatches — historical name from spec */
+export type PatchRegistry = RspfxPatches;
+
+export interface InternalHooks {
+  beforeManifestGenerate?: (ctx: unknown) => void | Promise<void>;
+  afterManifestGenerate?: (ctx: { readonly manifests: readonly ComponentManifest[] }) => void | Promise<void>;
+}
+
 export interface RspfxExtension {
   readonly name: string;
   readonly frameworkPreset?: FrameworkPreset;
@@ -189,6 +249,12 @@ export interface RspfxExtension {
   readonly packageHooks?: PackageHooks;
   readonly onError?: OnHookError;
   readonly priority?: number;
+  readonly spfxVersions?: readonly (SpfxVersionPatch | SpfxVersionInfo)[];
+  /** Single version shorthand — merged with spfxVersions via applySpfxVersionPatches */
+  readonly spfxVersion?: SpfxVersionPatch | SpfxVersionInfo;
+  readonly componentIds?: ComponentIdsPatch;
+  readonly patches?: RspfxPatches;
+  readonly internalHooks?: InternalHooks;
 }
 
 export function composeHooks<T>(...hooks: Array<(ctx: T) => HookResult<T> | void | Promise<HookResult<T> | void>>): (ctx: T) => Promise<HookResult<T>> {

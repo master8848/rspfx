@@ -188,6 +188,15 @@ export interface CompilerHooks { beforeCompile?: BeforeCompile; afterStats?: Aft
 export interface ReleaseHooks { beforeGenerate?: BeforeGenerate; afterGenerate?: AfterGenerate; }
 export interface DevHooks { beforeStart?: (ctx: { readonly mode: 'local'|'sharepoint'; readonly port?: number }) => HookResult<typeof ctx>|void | Promise<...> ; afterStart?: (ctx: { readonly url: string }) => void | Promise<void>; }
 export interface PackageHooks { beforePackage?: BeforePackage; afterPackage?: AfterPackage; }
+export interface SpfxVersionPatch { readonly target: string; readonly npmVersion: string; readonly toolchain: 'gulp' | 'heft'; readonly status: 'ga' | 'preview'; readonly notes?: string; }
+export type ComponentIdsPatch = Record<string, { id: string; version: string; preloadComponents?: string[] }>;
+export interface RspfxPatches {
+  readonly findSpDependencies?: (args: { projectRoot: string } | string, next: (args: { projectRoot: string } | string) => Map<string, { id: string; version: string; manifestPath: string }>) => Map<string, { id: string; version: string; manifestPath: string }> | Promise<Map<string, { id: string; version: string; manifestPath: string }>>;
+  readonly generateComponentManifests?: (args: { projectRoot: string; production: boolean; baseUrls: { debug: string; release: string[] }; packageVersion: string; bundleFiles: Map<string, string>; externals: string[]; webpartsDir?: string; entryModuleIds?: Record<string, string> }, next: (args: typeof args) => Promise<ComponentManifest[]>) => Promise<ComponentManifest[]>;
+  readonly buildAppManifestXml?: (args: { name: string; productId: string; version?: string; skipFeatureDeployment: boolean; isDomainIsolated?: boolean; spfxVersion?: string; developer?: Record<string, unknown>; metadata?: Record<string, unknown>; localizedStrings?: { locale: string; values: Record<string, string> }[]; webApiPermissionRequests?: { resource: string; scope: string }[]; pretty: boolean }, next: (args: typeof args) => string) => string | Promise<string>;
+  readonly generateManifestsJs?: (manifests: ComponentManifest[], metadata: unknown, next: (manifests: ComponentManifest[], metadata: unknown) => Promise<string>) => Promise<string>;
+  readonly buildPackage?: (opts: unknown, next: (opts: unknown) => Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>) => Promise<{ outputPath: string; zipEntries: string[]; appManifest: string }>;
+}
 export interface RspfxExtension {
   readonly name: string;
   readonly frameworkPreset?: FrameworkPreset;
@@ -197,10 +206,16 @@ export interface RspfxExtension {
   readonly packageHooks?: PackageHooks;
   readonly onError?: OnHookError;
   readonly priority?: number;
+  readonly spfxVersions?: readonly (SpfxVersionPatch | import('@mbsks/rspfx-core').SpfxVersionInfo)[];
+  readonly spfxVersion?: SpfxVersionPatch | import('@mbsks/rspfx-core').SpfxVersionInfo;
+  readonly componentIds?: ComponentIdsPatch;
+  readonly patches?: RspfxPatches;
 }
 export function definePlugin(plugin: RspfxExtension): RspfxExtension;
 export function registerPlugin(plugin: RspfxExtension): void;      // global registry; read by the CLI before each build/package
 export function getPlugins(): RspfxExtension[];
+export function getPatchedSpfxVersions(base: readonly SpfxVersionPatch[], plugins: readonly RspfxExtension[]): readonly SpfxVersionPatch[]; // merges base SPFX_VERSIONS with extension spfxVersions in packages/plugin-api/src/patches.ts:3
+export function getPatchedComponentIds(base: Record<string, { id: string; version: string }>, plugins: readonly RspfxExtension[]): Record<string, { id: string; version: string }>; // merges SP_COMPONENT_IDS with extension componentIds in packages/plugin-api/src/patches.ts:12
 export interface HookBus {
   readonly plugins: readonly RspfxExtension[];
   emitBeforeCompile(ctx: CompileContext): Promise<HookResult<CompileContext>>;
@@ -211,6 +226,11 @@ export interface HookBus {
   emitAfterStart(ctx: { readonly url: string }): Promise<void>;
   emitBeforePackage(ctx: { readonly manifests: readonly ComponentManifest[]; readonly files: ReadonlyMap<ZipPath,Uint8Array> }): Promise<HookResult<ReadonlyMap<ZipPath,Uint8Array>>>;
   emitAfterPackage(ctx: { readonly sppkgPath: ZipPath }): Promise<void>;
+  hasPatch(name: keyof RspfxPatches): boolean;
+  getPatch<K extends keyof RspfxPatches>(name: K): RspfxPatches[K] | undefined;
+  callWithPatch<T>(name: keyof RspfxPatches, args: unknown, next: (args: unknown) => T | Promise<T>): Promise<T>;
+  getMergedSpfxVersions(): readonly (SpfxVersionPatch | import('@mbsks/rspfx-core').SpfxVersionInfo)[];
+  getMergedComponentIds(): ComponentIdsPatch;
 }
 export function createHookBus(plugins: readonly RspfxExtension[], opts?: { logger?: Logger; onError?: OnHookError }): HookBus;
 export function composeHooks<T>(...hooks: Array<(ctx: T) => HookResult<T>|void>): (ctx: T) => Promise<HookResult<T>>;
