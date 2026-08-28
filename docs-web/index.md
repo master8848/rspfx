@@ -5,7 +5,7 @@ titleTemplate: false
 hero:
   name: RSPFX
   text: Ship SharePoint web parts without the legacy toolchain
-  tagline: Vite by default — Rsbuild and Rspack when you need them. Reads config/config.json and your manifests, emits the same .sppkg. No Heft, no gulp, no webpack.
+  tagline: SPFx development shouldn't be frustrating. RSPFX dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack.
   image:
     src: /hero.svg
     alt: RSPFX — build SharePoint web parts with Vite
