@@ -15,6 +15,7 @@ const docsSidebar = [
     items: [
       { text: 'Why RSPFX', link: '/docs/why-rspfx' },
       { text: 'Getting Started', link: '/docs/getting-started' },
+      { text: 'Demos', link: '/docs/demos' },
       { text: 'llms.txt', link: '/llms' },
     ],
   },
@@ -29,6 +30,7 @@ const docsSidebar = [
       { text: 'Teams & Outlook Install', link: '/docs/teams-outlook-install' },
       { text: 'Multi-webpart', link: '/docs/multi-webpart' },
       { text: 'Frameworks', link: '/docs/frameworks' },
+      { text: 'React 19', link: '/docs/react-19' },
       { text: 'Custom Framework', link: '/docs/custom-framework' },
       { text: 'Styling', link: '/docs/styling' },
       { text: 'Favicon & Assets', link: '/docs/favicon-and-assets' },

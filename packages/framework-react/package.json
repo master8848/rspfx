@@ -39,13 +39,25 @@
     "@mbsks/rspfx-plugin-api": "workspace:*",
     "@mbsks/rspfx-webpart-base": "workspace:*",
     "@rspack/plugin-react-refresh": "^1.0.0",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^4.7.0 || ^6.1.0",
     "babel-loader": "^9.2.1",
     "react-refresh": "^0.16.0"
   },
   "peerDependencies": {
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "vite": "^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "react": "^18.3.1",

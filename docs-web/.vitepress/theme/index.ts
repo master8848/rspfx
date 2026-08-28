@@ -3,6 +3,7 @@ import type { Theme } from 'vitepress'
 import { h } from 'vue'
 import AccentSwitcher from './components/AccentSwitcher.vue'
 import CopyMarkdown from './components/CopyMarkdown.vue'
+import HeroPrompt from './components/HeroPrompt.vue'
 import PackageManagerTabs from './components/PackageManagerTabs.vue'
 import './style.css'
 
@@ -17,6 +18,7 @@ export default {
       'nav-bar-content-after': () => h(AccentSwitcher),
       // Center: above doc content (Bun-style split button, always visible on docs pages)
       'doc-before': () => h(CopyMarkdown),
+      'home-hero-actions-after': () => h(HeroPrompt),
     })
   },
   enhanceApp({ app }) {

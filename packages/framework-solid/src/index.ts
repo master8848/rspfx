@@ -6,9 +6,18 @@ import type {
 } from '@mbsks/rspfx-plugin-api';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import solidPlugin from 'vite-plugin-solid';
 
 const require = createRequire(import.meta.url);
+
+function loadSolidPlugin(): ((opts?: unknown) => unknown) | undefined {
+  try {
+    const mod = require('vite-plugin-solid') as { default?: unknown } & Record<string, unknown>;
+    const fn = (mod as { default?: (o?: unknown) => unknown }).default ?? (mod as unknown as (o?: unknown) => unknown);
+    return typeof fn === 'function' ? (fn as (o?: unknown) => unknown) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function tryResolveFromProject(name: string, projectRoot: string): string | undefined {
   try {
@@ -63,9 +72,10 @@ export const preset = {
     return { rules: solidBabelRule(opts.fastRefresh, process.cwd()) };
   },
   vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    const solidPlugin = loadSolidPlugin();
     return {
-      plugins: [solidPlugin()],
-      resolveExtensions: ['.tsx', '.jsx']
+      plugins: solidPlugin ? [solidPlugin()] : [],
+      resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.json']
     };
   },
   rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {

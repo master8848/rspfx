@@ -1,4 +1,18 @@
 export { RspfxPlugin } from './rspack.js';
+export {
+  rspfxInlineCss,
+  rspfxViteInlineCss,
+  rspfxVite7InlineCss,
+  rspfxVite8InlineCss,
+  rspfxRsbuildInlineCss,
+  rspfxRspackInlineCss,
+  spfxInlineCss,
+  spfxInlineCssPlugin,
+  createInlineCssPlugin,
+  rspfxCssInlineRule,
+  rspfxSassRule
+} from './inline-css.js';
+export type { RspfxInlineCssOptions } from './inline-css.js';
 export { createKernel } from './kernel.js';
 export type { Kernel, KernelOpts } from './kernel.js';
 export { rspfxVite, VITE_ENV } from './vite.js';

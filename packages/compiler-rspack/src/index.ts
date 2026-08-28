@@ -24,3 +24,15 @@ export { build } from './build.js';
 export { watch } from './watch.js';
 export { startDevServer } from './dev-server.js';
 export { rspfxCssInlineRule, rspfxSassRule } from './helpers/css.js';
+export {
+  rspfxInlineCss,
+  rspfxViteInlineCss,
+  rspfxVite7InlineCss,
+  rspfxVite8InlineCss,
+  rspfxRsbuildInlineCss,
+  rspfxRspackInlineCss,
+  spfxInlineCss,
+  spfxInlineCssPlugin,
+  createInlineCssPlugin
+} from './helpers/inline-css.js';
+export type { RspfxInlineCssOptions } from './helpers/inline-css.js';

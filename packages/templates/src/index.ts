@@ -184,7 +184,7 @@ function packageJson(vars: TemplateVars): string {
   const bundler = vars.bundler ?? 'vite';
   const bundlerDevDeps: Record<string, string> =
     bundler === 'vite'
-      ? { vite: '^7.0.0' }
+      ? { vite: '^8.0.0' }
       : bundler === 'rsbuild'
         ? { '@rsbuild/core': '^2.1.9' }
         : { '@rspack/cli': '^1.2.0' };
@@ -211,7 +211,7 @@ function packageJson(vars: TemplateVars): string {
         '@mbsks/rspfx-plugin': `^${TOOLCHAIN_VERSION}`,
         '@mbsks/rspfx-cli': `^${TOOLCHAIN_VERSION}`,
         ...bundlerDevDeps,
-        typescript: '^5.7.0',
+        typescript: '^7.0.0',
         ...(vars.framework === 'svelte' ? { 'svelte-check': '^4.0.0' } : {})
       }
     },

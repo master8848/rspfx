@@ -33,3 +33,15 @@ export { EnvironmentType, PropertyPaneFieldType } from './environment.js';
 export { Version } from './version.js';
 export type { ISpfxTheme, ThemeProvider, WebPartContextLike } from './context.js';
 export type { HeadlessAdapter, HeadlessContext, HeadlessWebPartOptions, PropsSelector } from './headless.js';
+export {
+  rspfxInlineCss,
+  rspfxViteInlineCss,
+  rspfxVite7InlineCss,
+  rspfxVite8InlineCss,
+  rspfxRsbuildInlineCss,
+  rspfxRspackInlineCss,
+  spfxInlineCss,
+  spfxInlineCssPlugin,
+  createInlineCssPlugin
+} from './inline-css.js';
+export type { RspfxInlineCssOptions } from './inline-css.js';

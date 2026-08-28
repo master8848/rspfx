@@ -42,6 +42,55 @@ const logger = createLogger('rspfx');
 
 const viteAls = new AsyncLocalStorage<BundleEntry>();
 
+// ---------------------------------------------------------------------------
+// Vite version detection – dual Vite 7 (Rollup) / Vite 8 (Rolldown) support
+// ---------------------------------------------------------------------------
+/**
+ * Resolve the installed Vite version string (e.g. "7.1.0" or "8.0.0") by
+ * reading `vite/package.json` via the project's resolver first (project-local
+ * Vite), then falling back to the rspfx installation's Vite. Returns
+ * undefined when Vite is not installed or version cannot be read.
+ */
+function getViteVersion(root: string): string | undefined {
+  const tryRead = (pkgPath: string): string | undefined => {
+    try {
+      const raw = fs.readFileSync(pkgPath, 'utf8');
+      const pkg = JSON.parse(raw) as { version?: string };
+      return typeof pkg.version === 'string' ? pkg.version : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  // 1) project-local vite
+  try {
+    const requireFromProject = createRequire(path.join(root, 'package.json'));
+    const pkgPath = requireFromProject.resolve('vite/package.json');
+    const v = tryRead(pkgPath);
+    if (v) return v;
+  } catch {}
+  // 2) fallback to this package's vite
+  try {
+    const basePath = decodeIfEncoded(import.meta.url);
+    const fallbackRequire = createRequire(basePath);
+    const pkgPath = fallbackRequire.resolve('vite/package.json');
+    const v = tryRead(pkgPath);
+    if (v) return v;
+  } catch {}
+  return undefined;
+}
+
+function getViteMajor(root: string): number | undefined {
+  const v = getViteVersion(root);
+  if (!v) return undefined;
+  const major = Number(v.split('.')[0] ?? '');
+  return Number.isFinite(major) ? major : undefined;
+}
+
+function isVite8OrLater(root: string): boolean {
+  const major = getViteMajor(root);
+  return major !== undefined && major >= 8;
+}
+
 // Eager patch for Vite's loadAndTransform which does `fsp.readFile(file)` where
 // `file` may be "/Volumes/New%20Volume/..." when the workspace path contains a
 // space (pathToFileURL encodes it, Vite's cleanUrl leaves %20). Decode %20
@@ -146,6 +195,8 @@ interface ViteStatsJson {
   moduleCounts?: Record<string, number>;
 }
 
+const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'];
+
 const presetCache = new Map<string, Promise<FrameworkPreset>>();
 
 function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPreset> {
@@ -197,9 +248,90 @@ function amdBundleTransform(entryName: string, code: string): string {
   return scriptUrlCaptureLine(entryName) + out;
 }
 
+/**
+ * Vite 8 (Rolldown) does not support `output.format:'amd'`. We build as `es`
+ * and post-process the ES chunk into an AMD `define('id', [...deps], factory)`
+ * wrapper. External imports (e.g. `@microsoft/sp-webpart-base`) are converted
+ * to `require` calls inside the factory so the SPFx loader's AMD path is
+ * preserved.
+ */
+function esToAmd(entryName: string, esCode: string, amdId: string, externals: string[]): string {
+  let code = esCode;
+  if (code.includes(SPFX_PUBLIC_PATH_SENTINEL)) {
+    code = code.split('"' + SPFX_PUBLIC_PATH_SENTINEL + '"').join(scriptUrlPublicPathExpression(entryName));
+  }
+  const externalSet = new Set(externals);
+  const depsInUse = new Set<string>();
+  // Convert `import ... from 'dep'` where dep is external (all imports in the
+  // ES chunk are externals – local modules are already bundled).
+  // Supports: `import Foo from 'dep'`, `import * as Foo from 'dep'`,
+  // `import { a, b as c } from 'dep'`, `import Foo, { a } from 'dep'`,
+  // `import 'dep'` (side-effect)
+  code = code.replace(/import\s+([^;]*?)\s+from\s+['"]([^'"]+)['"]\s*;?/g, (_m, clause: string, source: string) => {
+    const src = source.trim();
+    // Local relative imports should have been bundled – keep if not external, but
+    // Rolldown shouldn't emit them for externals-only; treat unknown as external.
+    if (!externalSet.has(src) && !src.startsWith('.')) {
+      // Not a known external – likely still external, keep tracking
+    }
+    depsInUse.add(src);
+    const trimmed = clause.trim();
+    // `* as NS`
+    const nsMatch = /^\*\s+as\s+(\w+)$/.exec(trimmed);
+    if (nsMatch) {
+      return `const ${nsMatch[1]} = require('${src}');`;
+    }
+    // `Default, { ... }` or `Default` or `{ ... }`
+    const braceIdx = trimmed.indexOf('{');
+    if (braceIdx !== -1) {
+      const beforeBrace = trimmed.slice(0, braceIdx).trim().replace(/,$/, '');
+      const bracePart = trimmed.slice(braceIdx).trim();
+      // Extract named imports inside braces
+      const inner = bracePart.replace(/^\{/, '').replace(/\}$/, '').trim();
+      const lines: string[] = [];
+      if (beforeBrace) {
+        const defaultName = beforeBrace.split(',')[0]!.trim();
+        if (defaultName) lines.push(`const ${defaultName} = require('${src}').default || require('${src}');`);
+      }
+      if (inner) {
+        // Keep `a as b` mapping as `a: b` for destructuring
+        const mapped = inner.replace(/\s+as\s+/g, ': ');
+        lines.push(`const { ${mapped} } = require('${src}');`);
+      }
+      return lines.join('\n');
+    }
+    // Plain default import: `import Foo from 'dep'`
+    if (trimmed) {
+      return `const ${trimmed} = require('${src}').default || require('${src}');`;
+    }
+    return '';
+  });
+  // Side-effect only: `import 'dep';`
+  code = code.replace(/import\s+['"]([^'"]+)['"]\s*;?/g, (_m, source: string) => {
+    depsInUse.add(source);
+    return `require('${source}');`;
+  });
+  // Strip remaining export keywords – SPFx entry is side-effectful; exports are not consumed.
+  code = code.replace(/\bexport\s+default\s+/g, '');
+  code = code.replace(/\bexport\s+\{\s*[^}]*\}\s*;?/g, '');
+  code = code.replace(/\bexport\s+(const|let|var|function|class|async\s+function)\s+/g, '$1 ');
+  // Build AMD define with deps that were actually imported (preserve order of externals for stability)
+  const deps = externals.filter((e) => depsInUse.has(e));
+  // Also include any depsInUse that weren't in externals (e.g. css side-effects)
+  for (const d of depsInUse) if (!deps.includes(d)) deps.push(d);
+  const depsArray = deps.map((d) => `'${d}'`).join(', ');
+  const depsHeader = deps.length > 0 ? `'${amdId}', [${depsArray}], function(require, exports${deps.map((_, i) => `, dep${i}`).join('')}) {\n` : `'${amdId}', [], function(require, exports) {\n`;
+  // Map deps to variable names for the factory args – we already emitted `const X = require('dep')` above,
+  // but the AMD `require` inside factory shadows Node require; the emitted requires will resolve via AMD's require.
+  // For simplicity we keep the emitted `require` calls; they will be resolved by the AMD loader's require.
+  const wrapped = `define(${depsHeader}${code}\n});`;
+  return scriptUrlCaptureLine(entryName) + wrapped;
+}
+
 function transformEntryBundle(
   entryName: string,
-  bundle: Record<string, { type: string; code?: string; map?: unknown; source?: unknown }>
+  bundle: Record<string, { type: string; code?: string; map?: unknown; source?: unknown }>,
+  opts: { isVite8?: boolean; amdId?: string; externals?: string[] } = {}
 ): void {
   const chunk = bundle[`${entryName}.js`] as
     | { type: string; code?: string; map?: { mappings: string } | null; source?: unknown }
@@ -213,7 +345,13 @@ function transformEntryBundle(
   const sourceMapComment = match ? match[0] : '';
   let codeWithoutMap = sourceMapComment ? chunk.code.slice(0, -sourceMapComment.length) : chunk.code;
 
-  codeWithoutMap = amdBundleTransform(entryName, codeWithoutMap);
+  if (opts.isVite8) {
+    const amdId = opts.amdId ?? entryName;
+    const externals = opts.externals ?? [];
+    codeWithoutMap = esToAmd(entryName, codeWithoutMap, amdId, externals);
+  } else {
+    codeWithoutMap = amdBundleTransform(entryName, codeWithoutMap);
+  }
   for (const key of Object.keys(bundle)) {
     const asset = bundle[key];
     if (!asset || asset.type !== 'asset' || !key.endsWith('.css')) {
@@ -261,7 +399,11 @@ function transformEntryBundle(
  * id quoting, and inline the emitted CSS asset into the JS bundle (SPFx never
  * loads separate .css files).
  */
-function createEntryPlugins(entryName: string, root: string): unknown[] {
+function createEntryPlugins(
+  entryName: string,
+  root: string,
+  opts: { isVite8?: boolean; amdId?: string; externals?: string[] } = {}
+): unknown[] {
   let moduleCount = 0;
   return [
     {
@@ -270,7 +412,7 @@ function createEntryPlugins(entryName: string, root: string): unknown[] {
         _options: unknown,
         bundle: Record<string, { type: string; code?: string; source?: unknown }>
       ) {
-        transformEntryBundle(entryName, bundle);
+        transformEntryBundle(entryName, bundle, opts);
       }
     },
     {
@@ -331,6 +473,14 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         : (process.env[VITE_ENV.amdId] ?? `${entry.componentIds[0]}_${entry.version}`);
     const externals = collectExternals(root, project.externals, project.localizedResources);
 
+    // Dual Vite 7 (Rollup) / Vite 8 (Rolldown) support.
+    // Vite 7 uses Rollup which natively supports AMD (`output.format: 'amd'`).
+    // Vite 8 uses Rolldown which does NOT support AMD (https://github.com/rolldown/rolldown/issues/2528).
+    // For Vite 8 we output ES via Rolldown and post-process to AMD in `transformEntryBundle`.
+    const viteVersion = getViteVersion(root);
+    const viteMajor = viteVersion ? Number(viteVersion.split('.')[0] ?? '') : undefined;
+    const isVite8 = viteMajor !== undefined && Number.isFinite(viteMajor) && viteMajor >= 8;
+
     const certs =
       mode === 'development' && settings.https
         ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname)
@@ -361,12 +511,44 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       }
     }
 
+    // Shared Rollup/Rolldown options.
+    // Vite 7 (Rollup) natively supports AMD – use `rollupOptions` with `format:'amd'`.
+    // Vite 8 (Rolldown) does not support AMD – use `rolldownOptions` with `format:'es'`
+    // and convert to AMD post-bundle in `transformEntryBundle` (see `wrapEsAsAmd`).
+    const rollupOptions = isVite8
+      ? {
+          input: { [entry.name]: entry.import },
+          external: externals,
+          output: {
+            format: 'es',
+            entryFileNames: '[name].js',
+            chunkFileNames: 'chunk.[name].js',
+            assetFileNames: 'assets/[hash][extname]'
+          }
+        }
+      : {
+          input: { [entry.name]: entry.import },
+          external: externals,
+          preserveEntrySignatures: true,
+          output: {
+            format: 'amd',
+            amd: { id: amdId },
+            entryFileNames: '[name].js',
+            chunkFileNames: 'chunk.[name].js',
+            assetFileNames: 'assets/[hash][extname]',
+            exports: 'named'
+          }
+        };
+
     return {
       root,
       base: './',
       define,
       esbuild: viteContribs?.esbuild,
-      plugins: [...createEntryPlugins(entry.name, root), ...(viteContribs?.plugins ?? [])],
+      plugins: [
+        ...createEntryPlugins(entry.name, root, { isVite8, amdId, externals }),
+        ...(viteContribs?.plugins ?? [])
+      ],
       css: {
         modules: {
           localsConvention: 'asIs',
@@ -375,7 +557,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       },
       resolve:
         viteContribs?.resolveExtensions && viteContribs.resolveExtensions.length > 0
-          ? { extensions: viteContribs.resolveExtensions }
+          ? { extensions: [...new Set([...VITE_BASE_EXTENSIONS, ...viteContribs.resolveExtensions])] }
           : undefined,
       optimizeDeps: {
         cacheDir: path.join(root, '.vite'),
@@ -387,6 +569,17 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         https: certs ? { key: certs.key, cert: certs.cert } : settings.https ? true : false,
         open: false
       },
+      // Future-proof experimental flag: Vite 7 ignores unknown keys, Vite 8
+      // currently has no Rollup fallback – this is a no-op today but documents
+      // intent and will take effect if a future Vite 8.x re-introduces a
+      // `rolldown: false` / `builder: 'rollup'` escape hatch.
+      // See https://vite.dev/guide/migration and https://github.com/vitejs/vite/discussions/22820
+      experimental: {
+        // `rolldown: false` is the hypothetical flag discussed for Vite 8 to
+        // force Rollup. It is ignored on Vite 7 and currently not implemented
+        // on Vite 8, but including it makes the config forward-compatible.
+        rolldown: false
+      } as unknown as Record<string, unknown>,
       build: {
         outDir: resolved.build.outDir,
         emptyOutDir: overrides.emptyOutDir ?? false,
@@ -406,20 +599,10 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
             : resolved.build.sourcemap
               ? { sourcemap: mode === 'production' ? 'hidden' : true }
               : {}),
-        rollupOptions: {
-          input: { [entry.name]: entry.import },
-          external: externals,
-          preserveEntrySignatures: true,
-          output: {
-            format: 'amd',
-            amd: { id: amdId },
-            entryFileNames: '[name].js',
-            chunkFileNames: 'chunk.[name].js',
-            assetFileNames: 'assets/[hash][ext][query]',
-            exports: 'named'
-          }
-        }
-      }
+        rollupOptions,
+        // Vite 8 alias – same object, Rolldown reads this key preferentially
+        rolldownOptions: rollupOptions
+      } as Record<string, unknown>
     };
   };
 

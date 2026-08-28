@@ -1,6 +1,22 @@
 import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import ReactRefreshRspackPlugin from '@rspack/plugin-react-refresh';
-import reactPlugin from '@vitejs/plugin-react';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+function loadReactPlugin(): ((opts?: unknown) => unknown) | undefined {
+  // Lazy-load so the preset works with both Vite 7 (plugin-react@^4) and
+  // Vite 8 (plugin-react@^6 / oxc path). Vite 8 docs: plugin-react v6 uses
+  // Oxc and drops Vite 7 support; v4–v5 still work on Vite 8 via the
+  // compatibility layer, so either may be installed.
+  try {
+    const mod = require('@vitejs/plugin-react') as { default?: unknown } & Record<string, unknown>;
+    const fn = (mod as { default?: (o?: unknown) => unknown }).default ?? (mod as unknown as (o?: unknown) => unknown);
+    return typeof fn === 'function' ? (fn as (o?: unknown) => unknown) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const preset = {
   name: 'react' as const,
@@ -21,8 +37,9 @@ export const preset = {
     };
   },
   vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    const reactPlugin = loadReactPlugin();
     return {
-      plugins: opts.fastRefresh ? [reactPlugin({ jsxRuntime: 'automatic' })] : [],
+      plugins: opts.fastRefresh && reactPlugin ? [reactPlugin({ jsxRuntime: 'automatic' })] : [],
       esbuild: { jsx: 'automatic' }
     };
   },

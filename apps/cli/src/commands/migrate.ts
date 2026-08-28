@@ -445,21 +445,8 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
     plan.push(`write ${existingBundlerFile} with ${bundler} plugin (framework: ${framework}, styling: ${styling}, spfx: ${spfxLabel})`);
   } else plan.push(`overwrite ${existingBundlerFile} (force)`);
 
-  // tsconfig
-  const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
-  let tsconfigWillReplace = false;
-  if (fs.existsSync(tsconfigPath)) {
-    try {
-      const raw = fs.readFileSync(tsconfigPath, 'utf8');
-      const jsonc = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:\\])\/\/.*$/gm, '$1');
-      const tsconfig = JSON.parse(jsonc) as { extends?: string };
-      if (typeof tsconfig.extends === 'string' && tsconfig.extends.includes('rig')) tsconfigWillReplace = true;
-    } catch {
-      // ignore
-    }
-  }
-  if (tsconfigWillReplace) plan.push('replace rig-based tsconfig.json with plain config');
-  else plan.push('leave tsconfig.json as-is');
+  // tsconfig — always respect user's config (scaffold defaults to TS7, migrate keeps existing)
+  plan.push('leave tsconfig.json as-is (user config respected)');
 
   // codemod diffs for existing bundler config
   let codemodDiffs: string[] = [];
@@ -641,7 +628,7 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
     logger.info(`✓ removed Heft-only files: ${heftFilesToDelete.join(', ')}`);
   }
 
-  // 5. bundler config + tsconfig
+  // 5. bundler config (tsconfig is always left as-is)
   const bundlerContent = buildBundlerConfigContent(bundler, projectName, framework, spfxVersion, styling);
   const bundlerPath = path.join(projectRoot, existingBundlerFile);
   if (!existingConfigExists) {
@@ -664,30 +651,6 @@ export async function runMigrate(cwd: string, opts: MigrateOptions = {}): Promis
         logger.info(`✓ overwrote ${existingBundlerFile}`);
       }
     }
-  }
-
-  if (tsconfigWillReplace) {
-    fs.writeFileSync(
-      tsconfigPath,
-      JSON.stringify(
-        {
-          compilerOptions: {
-            target: 'es2020',
-            module: 'esnext',
-            moduleResolution: 'bundler',
-            jsx: 'react-jsx',
-            lib: ['dom', 'es2021'],
-            strict: false,
-            skipLibCheck: true,
-            types: []
-          },
-          include: ['src']
-        },
-        null,
-        2
-      ) + '\n'
-    );
-    logger.info('✓ replaced rig-based tsconfig.json');
   }
 
   logger.success('Migration complete. Next steps: pnpm install, rspfx dev, rspfx package');

@@ -600,6 +600,67 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   border-radius: 24px;
 }
 
+/* ── Hero — Copy RSPFX Prompt (TanStack Start parity) ── */
+.rspfx-hero-prompt {
+  padding-top: 24px;
+}
+@media (min-width: 640px) {
+  .rspfx-hero-prompt { padding-top: 32px; }
+}
+.rspfx-hero-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  border: 1.5px solid hsl(var(--primary));
+  background: transparent;
+  color: hsl(var(--primary));
+  font-family: var(--vp-font-family-base);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  outline: none;
+  user-select: none;
+}
+.rspfx-hero-copy:hover {
+  background: hsl(var(--primary) / 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px hsl(var(--primary) / 0.14);
+}
+.rspfx-hero-copy:active { transform: translateY(0); }
+.rspfx-hero-copy:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.40);
+}
+.rspfx-hero-copy.copied {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.rspfx-hero-copy.failed {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.dark .rspfx-hero-copy.failed { color: #f87171; border-color: #f87171; }
+.dark .rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.14); }
+/* When injected into .VPHero .actions, the outer .action wrapper already provides 6px padding — match VPButton spacing */
+.VPHero .actions .rspfx-hero-copy { height: 40px; }
+/* Fallback slot sits after .actions; pull it inline visually when JS hasn't injected yet (flex fallback) */
+.rspfx-hero-prompt--fallback-slot {
+  display: inline-flex;
+}
+/* Hide fallback if injected button exists — handled via inline style in JS, but CSS safety */
+.VPHero .actions:has([data-rspfx-hero-prompt-injected]) ~ .rspfx-hero-prompt { display: none; }
+@media (min-width: 640px) {
+  .VPHero.has-image .rspfx-hero-prompt { text-align: left; }
+}
+
 /* ── Features — minimal modern cards ── */
 .VPFeatures {
   padding-top: 28px;

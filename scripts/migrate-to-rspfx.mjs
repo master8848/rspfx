@@ -318,37 +318,7 @@ if (!fs.existsSync(configTsPath)) {
   log(`✓ wrote rspack.config.ts with RspfxPlugin (framework: ${framework}, styling: ${styling}, spfx: ${spfxLabel}) — edit dev.tenantUrl`);
 }
 
-const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
-if (fs.existsSync(tsconfigPath)) {
-  const raw = fs.readFileSync(tsconfigPath, 'utf8');
-  const jsonc = raw
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:\\])\/\/.*$/gm, '$1');
-  const tsconfig = JSON.parse(jsonc);
-  if (typeof tsconfig.extends === 'string' && tsconfig.extends.includes('rig')) {
-    fs.writeFileSync(
-      tsconfigPath,
-      JSON.stringify(
-        {
-          compilerOptions: {
-            target: 'es2020',
-            module: 'esnext',
-            moduleResolution: 'bundler',
-            jsx: 'react-jsx',
-            lib: ['dom', 'es2021'],
-            strict: false,
-            skipLibCheck: true,
-            types: []
-          },
-          include: ['src']
-        },
-        null,
-        2
-      ) + '\n'
-    );
-    log('✓ replaced rig-based tsconfig.json with a plain config');
-  }
-}
+// tsconfig is always left as-is — user's config is respected (scaffold defaults to TS7, migrate keeps existing)
 
 // ─── report ──────────────────────────────────────────────────────────────────
 log('');

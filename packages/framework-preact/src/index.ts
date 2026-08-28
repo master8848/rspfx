@@ -1,9 +1,18 @@
 import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
 import { createRequire } from 'node:module';
-import prefresh from '@prefresh/vite';
 import PreactRefreshRspackPlugin from '@rspack/plugin-preact-refresh';
 
 const require = createRequire(import.meta.url);
+
+function loadPrefresh(): ((opts?: unknown) => unknown) | undefined {
+  try {
+    const mod = require('@prefresh/vite') as { default?: unknown } & Record<string, unknown>;
+    const fn = (mod as { default?: (o?: unknown) => unknown }).default ?? (mod as unknown as (o?: unknown) => unknown);
+    return typeof fn === 'function' ? (fn as (o?: unknown) => unknown) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 function resolveOrFallback(spec: string): string {
   try {
     return require.resolve(spec);
@@ -45,8 +54,9 @@ export const preset = {
     };
   },
   vite(opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    const prefresh = loadPrefresh();
     return {
-      plugins: opts.fastRefresh ? [prefresh()] : [],
+      plugins: opts.fastRefresh && prefresh ? [prefresh()] : [],
       esbuild: { jsx: 'automatic', jsxImportSource: 'preact' }
     };
   },

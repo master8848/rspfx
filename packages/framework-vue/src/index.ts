@@ -1,6 +1,18 @@
 import type { FrameworkPreset, RspackContribs, FrameworkRsbuildContributions, FrameworkViteContributions } from '@mbsks/rspfx-plugin-api';
-import vuePlugin from '@vitejs/plugin-vue';
 import { VueLoaderPlugin } from 'vue-loader';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+function loadVuePlugin(): ((opts?: unknown) => unknown) | undefined {
+  try {
+    const mod = require('@vitejs/plugin-vue') as { default?: unknown } & Record<string, unknown>;
+    const fn = (mod as { default?: (o?: unknown) => unknown }).default ?? (mod as unknown as (o?: unknown) => unknown);
+    return typeof fn === 'function' ? (fn as (o?: unknown) => unknown) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const preset = {
   name: 'vue' as const,
@@ -12,9 +24,10 @@ export const preset = {
     };
   },
   vite(_opts: { fastRefresh: boolean }): FrameworkViteContributions {
+    const vuePlugin = loadVuePlugin();
     return {
-      plugins: [vuePlugin()],
-      resolveExtensions: ['.vue']
+      plugins: vuePlugin ? [vuePlugin()] : [],
+      resolveExtensions: ['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.json']
     };
   },
   rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {

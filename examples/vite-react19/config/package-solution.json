@@ -1,0 +1,34 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "rspfx-example-vite-react19-client-side-solution",
+    "id": "22222222-2222-4222-8222-222222222211",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-0000"
+    },
+    "metadata": {
+      "shortDescription": { "default": "RSPFX React 19 + Compiler + Tailwind form → SharePoint list" },
+      "longDescription": { "default": "React 19 web part with Valibot + TanStack Form + Tailwind posting to a SharePoint list. Optional Ox React Compiler via Vite." },
+      "categories": [],
+      "screenshotPaths": []
+    },
+    "features": [
+      {
+        "title": "rspfx-example-vite-react19 Feature",
+        "description": "Feedback form web part (React 19)",
+        "id": "33333333-3333-4333-8333-333333333311",
+        "version": "1.0.0.0",
+        "assets": { "elementManifests": [], "elementFiles": [] }
+      }
+    ]
+  },
+  "paths": { "zippedPackage": "sharepoint/solution/rspfx-example-vite-react19.sppkg" }
+}

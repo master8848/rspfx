@@ -105,4 +105,6 @@ See [custom-framework.md](custom-framework.md) for the preset and web part contr
 
 `@mbsks/rspfx-fluent-adapter` is an optional React-only package: `FluentWebPart` extends `ReactWebPart` and syncs the SharePoint theme via `onThemeChanged()`. Install with `bun add @mbsks/rspfx-fluent-adapter @fluentui/react` (or `pnpm add` / `npm i` / `yarn add`).
 
+> **Note:** `@fluentui/react` v8 and `@fluentui/react-components` v9 peer `react >=16.8.0 <19.0.0` — they do not support React 19 yet. See [react-19.md](react-19.md) for the React 19 + Fluent UI caveat and alternatives.
+
 > **Tip:** Bundle React per web part (official behavior) — don't externalize it.

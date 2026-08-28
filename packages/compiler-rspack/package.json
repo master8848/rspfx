@@ -10,6 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./helpers/css": {
+      "types": "./dist/helpers/css.d.ts",
+      "import": "./dist/helpers/css.js",
+      "default": "./dist/helpers/css.js"
+    },
+    "./helpers/inline-css": {
+      "types": "./dist/helpers/inline-css.d.ts",
+      "import": "./dist/helpers/inline-css.js",
+      "default": "./dist/helpers/inline-css.js"
     }
   },
   "files": [

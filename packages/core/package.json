@@ -11,6 +11,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./inline-css": {
+      "types": "./dist/inline-css.d.ts",
+      "import": "./dist/inline-css.js",
+      "default": "./dist/inline-css.js"
+    },
     "./webpart": {
       "types": "./dist/base-web-part.d.ts",
       "import": "./dist/base-web-part.js",

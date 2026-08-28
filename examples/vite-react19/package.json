@@ -1,0 +1,49 @@
+{
+  "name": "@mbsks/rspfx-example-vite-react19",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RSPFX example: React 19 + Vite + Tailwind + Valibot + TanStack Form → SharePoint list, with optional Ox React Compiler",
+  "license": "MIT",
+  "scripts": {
+    "dev": "rspfx dev",
+    "dev:refresh": "rspfx dev --refresh",
+    "build": "rspfx build",
+    "package": "rspfx package",
+    "clean": "rspfx clean",
+    "doctor": "rspfx doctor",
+    "analyze": "rspfx analyze",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@microsoft/sp-component-base": "~1.23.0",
+    "@microsoft/sp-core-library": "~1.23.0",
+    "@microsoft/sp-http": "~1.23.0",
+    "@microsoft/sp-property-pane": "~1.23.0",
+    "@microsoft/sp-webpart-base": "~1.23.0",
+    "@pnp/sp": "^3.23.0",
+    "@pnp/logging": "^3.23.0",
+    "@pnp/queryable": "^3.23.0",
+    "@tanstack/react-form": "^1.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "valibot": "^1.0.0"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-cli": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-framework-react": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@rolldown/plugin-babel": "^0.2.3",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "postcss": "^8.5.0",
+    "typescript": "^5.7.0",
+    "vite": "^7.3.6"
+  }
+}

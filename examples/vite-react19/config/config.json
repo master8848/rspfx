@@ -1,0 +1,12 @@
+{
+  "bundles": {
+    "feedback": {
+      "components": [
+        {
+          "entrypoint": "src/webparts/feedback/feedbackWebPart.ts",
+          "manifest": "src/webparts/feedback/feedback.manifest.json"
+        }
+      ]
+    }
+  }
+}

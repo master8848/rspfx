@@ -5,9 +5,21 @@ import type {
   FrameworkViteContributions
 } from '@mbsks/rspfx-plugin-api';
 import { createRequire } from 'node:module';
-import { svelte as sveltePlugin } from '@sveltejs/vite-plugin-svelte';
 
 const require = createRequire(import.meta.url);
+
+function loadSveltePlugin(): ((opts?: unknown) => unknown) | undefined {
+  try {
+    const mod = require('@sveltejs/vite-plugin-svelte') as { svelte?: unknown; default?: unknown };
+    const fn =
+      (mod as { svelte?: (o?: unknown) => unknown }).svelte ??
+      (mod as { default?: (o?: unknown) => unknown }).default ??
+      (mod as unknown as (o?: unknown) => unknown);
+    return typeof fn === 'function' ? (fn as (o?: unknown) => unknown) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function resolveSvelteConfig(projectRoot: string): {
   preprocess?: unknown;
@@ -67,16 +79,19 @@ export const preset = {
     const major = svelteMajor();
     const compilerOptions: Record<string, unknown> = { css: 'injected' as const };
     if (major >= 5) compilerOptions.runes = undefined;
+    const sveltePlugin = loadSveltePlugin();
     return {
-      plugins: [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        sveltePlugin({
-          hot: opts.fastRefresh,
-          emitCss: false,
-          compilerOptions: compilerOptions as any
-        } as any)
-      ],
-      resolveExtensions: ['.svelte']
+      plugins: sveltePlugin
+        ? [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            sveltePlugin({
+              hot: opts.fastRefresh,
+              emitCss: false,
+              compilerOptions: compilerOptions as any
+            } as any)
+          ]
+        : [],
+      resolveExtensions: ['.svelte', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.json']
     };
   },
   rsbuild(opts: { fastRefresh: boolean }): FrameworkRsbuildContributions {
