@@ -1,0 +1,28 @@
+{
+  "name": "mixed-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rspfx dev",
+    "build": "rspfx build",
+    "package": "rspfx package",
+    "deploy": "rspfx deploy",
+    "analyze": "rspfx analyze",
+    "doctor": "rspfx doctor",
+    "clean": "rspfx clean"
+  },
+  "dependencies": {
+    "@microsoft/sp-core-library": "1.23.0",
+    "@microsoft/sp-webpart-base": "1.23.0",
+    "@microsoft/sp-property-pane": "1.23.0",
+    "@microsoft/sp-application-base": "1.23.0",
+    "@microsoft/decorators": "1.23.0"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-plugin": "^0.0.14",
+    "@mbsks/rspfx-cli": "^0.0.14",
+    "vite": "^7.0.0",
+    "typescript": "^5.7.0"
+  }
+}

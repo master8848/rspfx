@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#111827"/>
+  <!-- Rspack cube -->
+  <path d="M16 5 L22 8.5 L22 13 L16 16.5 L10 13 L10 8.5 Z" fill="#ff3b30" opacity="0.95"/>
+  <path d="M10 13 L16 16.5 L22 13 L16 9.5 Z" fill="#ff6b4a"/>
+  <!-- Vite lightning -->
+  <path d="M17.5 9 L14 16 L16.5 16 L15 23 L20 15 L17 15 Z" fill="#facc15" stroke="#a78bfa" stroke-width="0.4"/>
+  <!-- SPFx -->
+  <circle cx="16" cy="24" r="5.5" fill="#0078d4"/>
+  <text x="16" y="27.2" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="7" fill="#fff">S</text>
+</svg>

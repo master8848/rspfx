@@ -1,0 +1,6 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.1.0.schema.json",
+  "localizedResources": {
+    "HelloWebPartStrings": "src/webparts/hello/loc/{locale}.js"
+  }
+}
