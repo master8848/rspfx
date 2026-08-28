@@ -103,11 +103,12 @@ To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`)
 | Angular and any custom framework | ✅ Angular via Heft | ✅ via custom `FrameworkPreset` plugin — see [docs/custom-framework.md](docs/custom-framework.md) |
 | SPFx version switch (1.20–1.23) | new project / rig + `@microsoft/sp-*` pin updates | ✅ one-line `spfxVersion` in `vite.config.ts` + `bun update` — see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) |
 | Fluent UI | bundled by generator (`@fluentui/react`) | ✅ optional — `@mbsks/rspfx-fluent-adapter` (`packages/fluent-adapter`) — install only if used; `@microsoft/sp-*` externalized |
+| Package manager | npm / yarn / pnpm only — Bun broken in Heft | ✅ npm, yarn, pnpm, Bun, Deno |
 
 Frameworks plug in via `FrameworkPreset` in `@mbsks/rspfx-plugin-api` (`packages/plugin-api/src/types.ts:29`) and `BaseWebPart` in `@mbsks/rspfx-core` (`packages/core/src/base-web-part.ts:10`); built-ins are `@mbsks/rspfx-framework-*`. For a custom framework (including Angular) define a preset and register it with `definePlugin`/`registerPlugin` in your bundler config (`rspack.config.ts`/`vite.config.ts`/`rsbuild.config.ts`) — no CLI fork. See [docs/custom-framework.md](docs/custom-framework.md) and [docs/frameworks.md](docs/frameworks.md).
 
 - **SPFx targets:** `1.20`–`1.23` (default `1.23`) — switch with one line `spfxVersion` in `vite.config.ts` + `bun update`; see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
-- **Node:** 20+; **Bun** recommended for repo development (consumers can use npm/yarn/pnpm/bun)
+- **Node:** 20+; **Bun** recommended for repo development (consumers can use npm/yarn/pnpm/bun/deno — Heft breaks on Bun)
 
 > **Tip:** If you need Vue/Svelte/Solid/Preact or a custom framework (e.g. Angular), use RSPFX — via built-in presets or a custom `FrameworkPreset` plugin ([docs/custom-framework.md](docs/custom-framework.md)). Microsoft's toolchain supports only React/vanilla (and Angular via Heft). For React/vanilla either toolchain works; keep the same manifests and switch via scripts (see [Same manifest for Heft/Gulp and RSPFX](#same-manifest-for-heftgulp-and-rspfx)).
 
