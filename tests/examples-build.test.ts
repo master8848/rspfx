@@ -20,6 +20,7 @@ type ExampleSpec = {
 
 const DEFAULT_EXAMPLES: ExampleSpec[] = [
   { name: 'vite-react19', bundler: 'vite', tailwind: true, framework: 'react19-vite-postcss-tailwind-compiler' },
+  { name: 'rsbuild-solid', bundler: 'rsbuild', tailwind: false, framework: 'solid-rsbuild' },
   { name: 'vite-react', bundler: 'vite', tailwind: false, framework: 'react-vite' },
   { name: 'rsbuild-react', bundler: 'rsbuild', tailwind: false, framework: 'react-rsbuild' },
   { name: 'shadcn', bundler: 'rspack', tailwind: true, framework: 'react-rspack-tailwind' },

@@ -13,12 +13,6 @@ hero:
     - theme: brand
       text: Get started
       link: /docs/getting-started
-    - theme: alt
-      text: Why RSPFX?
-      link: /docs/why-rspfx
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/master8848/rspfx
 
 features:
   - title: Zero-config to start

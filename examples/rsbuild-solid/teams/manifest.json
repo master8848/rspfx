@@ -1,0 +1,62 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.13",
+  "version": "1.0.0",
+  "id": "11111111-1111-4111-8111-111111111108",
+  "packageName": "com.contoso.hello",
+  "developer": {
+    "name": "SPFx + Teams Dev",
+    "websiteUrl": "https://products.office.com/en-us/sharepoint/collaboration",
+    "privacyUrl": "https://privacy.microsoft.com/en-us/privacystatement",
+    "termsOfUseUrl": "https://www.microsoft.com/en-us/servicesagreement"
+  },
+  "name": {
+    "short": "hello",
+    "full": "hello"
+  },
+  "description": {
+    "short": "hello description",
+    "full": "hello description"
+  },
+  "icons": {
+    "outline": "11111111-1111-4111-8111-111111111108_outline.png",
+    "color": "11111111-1111-4111-8111-111111111108_color.png"
+  },
+  "accentColor": "#FFFFFF",
+  "staticTabs": [
+    {
+      "entityId": "11111111-1111-4111-8111-111111111108",
+      "name": "hello",
+      "contentUrl": "https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=11111111-1111-4111-8111-111111111108%26forceLocale={locale}",
+      "websiteUrl": "https://products.office.com/en-us/sharepoint/collaboration",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=11111111-1111-4111-8111-111111111108%26forceLocale={locale}",
+      "canUpdateConfiguration": true,
+      "scopes": [
+        "team"
+      ]
+    }
+  ],
+  "validDomains": [
+    "*.login.microsoftonline.com",
+    "*.sharepoint.com",
+    "*.sharepoint-df.com",
+    "spoppe-a.akamaihd.net",
+    "spoprod-a.akamaihd.net",
+    "*.microsoftonline.com",
+    "*.microsoftonline-p.com",
+    "*.msauth.net",
+    "*.msauthimages.net",
+    "*.msftauth.net",
+    "*.msftauthimages.net",
+    "*.office.com",
+    "*.officeapps.live.com",
+    "*.secure.aadcdn.microsoftonline-p.com"
+  ]
+}

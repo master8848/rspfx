@@ -14,10 +14,12 @@ rspfx deploy    → upload .sppkg to app catalog via REST        (implies packag
 
 | Command | Produces | When |
 |---|---|---|
-| `bun run build` / `pnpm build` / `npm run build` / `rspfx build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, `rspfx analyze` |
-| `bun run package` / `pnpm package` / `rspfx package` | `sharepoint/solution/<name>.sppkg` from `paths.zippedPackage` | Ship |
+| `rspfx build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, `rspfx analyze` |
+| `rspfx package` | `sharepoint/solution/<name>.sppkg` from `paths.zippedPackage` | Ship |
 | `rspfx package --no-build` | Same `.sppkg` from existing `release/` | Incremental |
 | `rspfx deploy` | Packages then `POST` to catalog | Automated upload |
+
+`npm` scripts `build` / `package` proxy to `rspfx build` / `rspfx package` — use your package manager (`pnpm build`, `npm run build`, etc.) as selected elsewhere on this site.
 
 National clouds use the same pipeline — only the catalog hostname differs.
 

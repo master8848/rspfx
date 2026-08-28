@@ -138,3 +138,7 @@ sp-* is `externals` + `"type": "component"`. Wrapper is `define('<id>_<version>'
 ## Same manifest
 
 `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` work for both Heft/Gulp and RSPFX. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
+
+## Security
+
+Dependency inventory, per-dependency detail, servers, and supply-chain hardening are in [security.md](security.md).

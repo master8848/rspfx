@@ -1,0 +1,34 @@
+{
+  "name": "@mbsks/rspfx-example-rsbuild-solid",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RSPFX example: Solid web part built with the Rsbuild plugin (rspfxRsbuild)",
+  "license": "MIT",
+  "scripts": {
+    "dev": "rspfx dev",
+    "dev:refresh": "rspfx dev --refresh",
+    "build": "rspfx build",
+    "package": "rspfx package",
+    "clean": "rspfx clean",
+    "doctor": "rspfx doctor",
+    "analyze": "rspfx analyze",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@microsoft/sp-component-base": "~1.22.0",
+    "@microsoft/sp-core-library": "~1.22.0",
+    "@microsoft/sp-property-pane": "~1.22.0",
+    "@microsoft/sp-webpart-base": "~1.22.0",
+    "solid-js": "^1.9.4"
+  },
+  "devDependencies": {
+    "@mbsks/rspfx-cli": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-framework-solid": "workspace:*",
+    "@mbsks/rspfx-plugin": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
+    "@rsbuild/core": "^2.1.9",
+    "typescript": "^7.0.0"
+  }
+}

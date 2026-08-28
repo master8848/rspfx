@@ -53,6 +53,7 @@ const docsSidebar = [
     collapsed: false,
     items: [
       { text: 'Architecture', link: '/docs/architecture' },
+      { text: 'Security', link: '/docs/security' },
       { text: 'Internal API', link: '/docs/internal-api' },
       { text: 'Compatibility', link: '/docs/compatibility' },
       { text: 'Performance', link: '/docs/performance' },

@@ -612,6 +612,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-sizing: border-box;
   height: 40px;
   padding: 0 20px;
   border-radius: 9999px;
@@ -1284,20 +1285,34 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 /* ── Code blocks ── */
 .vp-doc div[class*="language-"] { border-radius: var(--rspfx-radius-md); }
 
-/* ── Docs tables — primary-tinted, full-width ── */
+/* ── Docs tables — primary-tinted, full-width, horizontally scrollable (never overlap outline) ── */
+/* flex children must be allowed to shrink; otherwise tables force page width */
+.VPDoc,
+.VPDoc .content,
+.VPDoc .content-container,
+.vp-doc {
+  min-width: 0;
+}
 .vp-doc table {
-  display: table;
+  display: block;
   width: 100%;
   max-width: 100%;
   table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
   margin: 20px 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
   border: 1px solid color-mix(in srgb, hsl(var(--primary)) 12%, var(--vp-c-divider));
   border-radius: 10px;
   background: var(--vp-c-bg);
 }
+.vp-doc table::-webkit-scrollbar { height: 6px; }
+.vp-doc table::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.22); border-radius: 9999px; }
 .vp-doc th,
 .vp-doc td {
   border: none;
@@ -1314,6 +1329,18 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 }
 .vp-doc tr:last-child td {
   border-bottom: none;
+}
+/* cells must be allowed to break long unbreakable tokens (e.g. tenantAppCatalog.aspx URL); table itself scrolls, page never does */
+.vp-doc th,
+.vp-doc td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.vp-doc td code {
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 .vp-doc th {
   background: hsl(var(--primary));

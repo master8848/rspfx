@@ -97,84 +97,65 @@ Recommendation:
 
 - On React 18, keep `@mbsks/rspfx-fluent-adapter` + `@fluentui/react@^8.0.0` as documented in [frameworks.md#fluent-ui](frameworks.md#fluent-ui). `bun add @mbsks/rspfx-fluent-adapter @fluentui/react` stays the supported path.
 
-## 3. React Compiler with Vite and Ox (Rust)
+## 3. React Compiler
 
-React Compiler auto-memoizes components and hooks so you can drop manual `memo` / `useMemo` / `useCallback`.
+React Compiler auto-memoizes components and hooks.
 
-Ox (Rust) is the fast path — `oxc-transform-react` vendors the Rust port of `babel-plugin-react-compiler` and runs on Oxc's AST, ~10× faster than Babel in `oxc.rs` benchmarks.
+Use Vite for the Compiler — Rspack and Rsbuild have no Compiler support.
 
-Use Vite for the Compiler — Rspack/Rsbuild have no React Compiler integration.
+### Pick your stack
 
-### Requirements
+| Stack | Vite | TypeScript | Compiler plugin |
+|---|---|---|---|
+| Vite 8 (recommended) | `^8.0.0` | `^7.0.0` | `@vitejs/plugin-react@^6.1.0` with `react({ compiler: true })` — Rust (Oxc), official |
+| Vite 7 (fallback) | `^7.3.0` | `^5.7.0` | `@rolldown/plugin-babel` + `babel-plugin-react-compiler` — Babel |
 
-| Item | Version | Source |
-|---|---|---|
-| `react` / `react-dom` | `^19.0.0` | `packages/framework-react/src/headless.ts:1` `createRoot` |
-| `spfxVersion` | `1.23` | `examples/vite-react19/vite.config.ts:8` `rspfxVite` |
-| `vite` | `^8.0.0` for Ox path, `^7.0.0` for Babel fallback | `examples/vite-react/vite.config.ts:1` `rspfxVite` |
-| Ox path | `@vitejs/plugin-react@^6.1.0` + `oxc-transform-react` | `oxc.rs/blog/2026-08-18-react-compiler-support` / `vitejs/vite-plugin-react#1419` |
-| Babel fallback | `@rolldown/plugin-babel` + `babel-plugin-react-compiler` | `vitejs` discussion `22949` |
+Vite 8 uses the official Rust-based plugin — faster, no Babel. Vite 7 uses the Babel fallback.
 
-`@mbsks/rspfx-framework-react` `vite()` (`packages/framework-react/src/index.ts:23`) injects `@vitejs/plugin-react` for fast refresh.
+`examples/vite-react19` uses Vite 8 + TypeScript 7 + Rust.
 
-To enable the Compiler, add the Compiler transform in `vite.config.ts` alongside `rspfxVite()` — keep the framework preset, don't replace it.
+Requirements: `react`/`react-dom` `^19.0.0` (`packages/framework-react/src/headless.ts:1` `createRoot`), `spfxVersion` `1.23` (`examples/vite-react19/vite.config.ts:8`).
 
-`target: '19'` needs no `react-compiler-runtime` — React 19 ships the runtime in `react`.
+To enable the Compiler, add it in `vite.config.ts` alongside `rspfxVite()` — keep the framework preset.
 
-Omit the transform or set `reactCompiler: false` to disable.
+`reactCompiler: false` disables it. The Compiler must see original JSX before other transforms.
 
-`node_modules` is skipped by default — set `sources` to opt dependencies in.
-
-The Compiler must see original JSX before other JSX rewrites.
-
-Plugins that rewrite JSX first (`@emotion/babel-plugin`, constant-element hoists) break it — keep them off or after the Compiler.
-
-### Install — Ox (recommended, Vite 8)
+### Install — Vite 8 (recommended, Rust)
 
 ```sh
-bun add -D vite@^8.0.0 @vitejs/plugin-react@^6.1.0 oxc-transform-react
+bun add -D vite@^8.0.0 @vitejs/plugin-react@^6.1.0
 ```
 
-Or `pnpm add -D` / `npm i -D` / `yarn add -D`.
-
-If you stay on Vite 7, use the Babel fallback below.
-
-### Install — Babel fallback (Vite 7)
+### Install — Vite 7 fallback (Babel)
 
 ```sh
 bun add -D @rolldown/plugin-babel babel-plugin-react-compiler
 ```
 
-### Configure `vite.config.ts` — Ox (Vite 8)
-
-`oxc-transform-react` owns the Compiler + JSX + fast refresh in one pass when `compiler: true`.
+### Configure `vite.config.ts` — Vite 8 (Rust)
 
 ```ts
-// vite.config.ts — RSPFX + React 19 + Ox React Compiler (Vite 8, SPFx 1.23)
+// vite.config.ts — RSPFX + React 19 + Compiler (Vite 8, SPFx 1.23)
 import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [
-    rspfxVite({
-      name: 'my-app',
-      framework: 'react',
-      spfxVersion: '1.23',
-    }),
+    rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' }),
     react({ compiler: true }),
   ],
 });
 ```
 
-Run `rspfx dev` / `rspfx build` as usual — `packages/plugin/src/vite.ts:299` `rspfxVite` merges the preset's Vite contributions and your extra `react({ compiler: true })` covers the Compiler.
+`react({ compiler: true })` runs Compiler + JSX + fast refresh in one Rust pass.
 
-If two `react()` instances conflict in your tree (preset `4.7` vs project `6.1`), pin `@vitejs/plugin-react` to `^6.1.0` at the project root — `rspfxVite` resolves the preset's import from the project tree via `viteAls` / `loadPreset` (`packages/plugin/src/vite.ts:151`).
+If two `react()` instances conflict (preset `4.7` vs project `6.1`), pin `@vitejs/plugin-react` to `^6.1.0`.
 
-### Configure `vite.config.ts` — Babel fallback (Vite 7)
+### Configure `vite.config.ts` — Vite 7 fallback (Babel)
 
 ```ts
-// vite.config.ts — RSPFX + React 19 + Babel React Compiler (Vite 7)
+// vite.config.ts — RSPFX + React 19 + Compiler (Vite 7)
 import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -189,35 +170,19 @@ export default defineConfig({
 });
 ```
 
-`reactCompilerPreset()` is `@rolldown/plugin-babel` preset that points at `babel-plugin-react-compiler` only — bulk JSX + refresh stay on Vite's Oxc transform, only the Compiler step goes through Babel.
-
 ### Lint and verify
 
 ```sh
 bun add -D eslint-plugin-react-compiler
-```
-
-Add `eslint-plugin-react-compiler` to `eslint.config.js` or use `oxlint` with the `react-compiler` rules from `oxc.rs/blog/2026-08-18-react-compiler-support`.
-
-```sh
 rspfx build
-npx oxlint --react-compiler src/
 npx eslint --ext .ts,.tsx src/
 ```
 
-Remove manual `memo` / `useMemo` / `useCallback` incrementally — check `rspfx build` output and runtime behavior after each file.
+Remove manual `memo`/`useMemo`/`useCallback` after verifying the build still passes.
 
-Fast refresh stays compatible — `@vitejs/plugin-react` with `compiler: true` keeps the `vite:react-babel` HMR path.
+Fast refresh stays compatible.
 
-### Notes
-
-Rspack path has no Compiler integration — use `vite.config.ts` + `rspfxVite()` when you need React Compiler.
-
-`oxc-transform-react` is experimental in `0.144` — pin the version and upgrade together with `@vitejs/plugin-react`.
-
-For strict checking during migration, set `compiler: { compilationMode: 'all', panicThreshold: 'allErrors' }` in dev and relax to `infer`.
-
-See `oxc.rs/docs/guide/usage/transformer/react-compiler.html` and `github.com/vitejs/vite-plugin-react/releases/tag/plugin-react%406.1.0`.
+See `github.com/vitejs/vite-plugin-react/releases/tag/plugin-react%406.1.0`.
 
 ## 4. End-to-end example — Tailwind + Valibot + TanStack Form → SharePoint list (React 19 + Vite + Compiler, SPFx 1.23)
 
@@ -266,23 +231,23 @@ Grant at least `Edit` on the site to users submitting — `sp.web.lists` add nee
 ```sh
 rspfx new feedback-app --framework react --spfx-version 1.23 --bundler vite
 cd feedback-app
-bun add react@^19.0.0 react-dom@^19.0.0 valibot @tanstack/react-form @pnp/sp @pnp/logging @pnp/queryable
-bun add -D @types/react@^19.0.0 @types/react-dom@^19.0.0 tailwindcss @tailwindcss/postcss postcss vite@^7.3.6 @vitejs/plugin-react@^4.7.0 @rolldown/plugin-babel babel-plugin-react-compiler
+bun add react@^19.2.0 react-dom@^19.2.0 valibot@^1.1.0 @tanstack/react-form@^1.19.0 @pnp/sp@^4.0.0 @pnp/logging@^4.0.0 @pnp/queryable@^4.0.0
+bun add -D @types/react@^19.2.0 @types/react-dom@^19.2.0 tailwindcss@^4.1.12 @tailwindcss/postcss@^4.1.12 postcss@^8.5.0 vite@^8.0.0 @vitejs/plugin-react@^6.1.0 typescript@^7.0.0
 ```
 
 Package map — why each package:
 
 | Package | Kind | Why |
 |---|---|---|
-| `react` / `react-dom` `^19.0.0` | `dependencies` | React 19 runtime — bundled per web part via `rspfxVite` (`packages/framework-react/src/headless.ts:1` `createRoot`). |
-| `@types/react` / `@types/react-dom` `^19.0.0` | `devDependencies` | TypeScript types for React 19 — `tsconfig.json:7` `jsx: "react-jsx"` needs matching types. |
+| `react` / `react-dom` `^19.2.0` | `dependencies` | React 19 runtime — bundled per web part via `rspfxVite` (`packages/framework-react/src/headless.ts:1` `createRoot`). |
+| `@types/react` / `@types/react-dom` `^19.2.0` | `devDependencies` | TypeScript types for React 19 — `tsconfig.json:7` `jsx: "react-jsx"` needs matching types. |
 | `@microsoft/sp-core-library` / `sp-webpart-base` / `sp-property-pane` / `sp-component-base` `~1.23.0` | `dependencies` | SPFx 1.23 contracts — externalized (`packages/plugin/src/vite.ts:299` `externals`) — version must match `spfxVersion: '1.23'` (`packages/core/src/versions.ts:13`). |
-| `valibot` | `dependencies` | Lightweight schema validator — `FeedbackSchema` in `examples/vite-react19/src/webparts/feedback/components/FeedbackForm.tsx:7` — runs on submit, no extra runtime. |
-| `@tanstack/react-form` | `dependencies` | Headless form state — `useForm` + `form.Field` — no UI coupling, works with Tailwind. |
-| `@pnp/sp` / `@pnp/logging` / `@pnp/queryable` `^3.26.0` | `dependencies` | PnPjs v3 — `spfi().using(SPFx(context)).web.lists.getByTitle().items.add()` — handles digest, headers, batching — not `SPHttpClient` or `curl`. |
-| `tailwindcss` / `@tailwindcss/postcss` / `postcss` | `devDependencies` | Tailwind v4 — `postcss.config.mjs:2` `@tailwindcss/postcss` — CSS inlined via `vite.config.ts:8` `rspfxVite` (`build.cssCodeSplit: false` + `packages/plugin/src/vite.ts:282` `assetFileNames`). |
-| `vite` `^7.3.6` / `@vitejs/plugin-react` `^4.7.0` / `@rolldown/plugin-babel` + `babel-plugin-react-compiler` | `devDependencies` | Vite bundler + React fast refresh + React Compiler (Babel fallback) — `vite.config.ts:4` `react()` + `babel({ plugins: [['babel-plugin-react-compiler', {}]] })` — Ox Rust path (`@vitejs/plugin-react@^6.1.0` + `oxc-transform-react` + `react({ compiler: true })` on Vite 8) is in `docs/react-19.md:3` — Vite 8 Rolldown currently lacks AMD output, so the runnable demo pins Vite 7. |
-| `typescript` | `devDependencies` | `tsc --noEmit` — `rspfx build` also runs `swc` via `packages/compiler-rspack/src/config.ts:149`. |
+| `valibot` `^1.1.0` | `dependencies` | Schema validator — `FeedbackSchema` in `examples/vite-react19/src/webparts/feedback/components/FeedbackForm.tsx:7` — runs on submit. |
+| `@tanstack/react-form` `^1.19.0` | `dependencies` | Headless form state — `useForm` + `form.Field` — no UI coupling, works with Tailwind. |
+| `@pnp/sp` / `@pnp/logging` / `@pnp/queryable` `^4.0.0` | `dependencies` | PnPjs v4 — `spfi().using(SPFx(context)).web.lists.getByTitle().items.add()` — handles digest, headers, batching. |
+| `tailwindcss` `^4.1.12` / `@tailwindcss/postcss` `^4.1.12` / `postcss` `^8.5.0` | `devDependencies` | Tailwind v4 — `postcss.config.mjs:2` `@tailwindcss/postcss` — CSS inlined via `vite.config.ts:8` `rspfxVite` (`build.cssCodeSplit: false` + `packages/plugin/src/vite.ts:282` `assetFileNames`). |
+| `vite` `^8.0.0` / `@vitejs/plugin-react` `^6.1.0` with `react({ compiler: true })` | `devDependencies` | Vite 8 + Rust compiler (Oxc) — fast refresh + React Compiler in one pass. Vite 8 uses Rolldown; RSPFX converts ES to AMD via `packages/plugin/src/vite.ts:314` `esToAmd`. |
+| `typescript` `^7.0.0` | `devDependencies` | `tsc --noEmit` — `rspfx build` also runs `swc` via `packages/compiler-rspack/src/config.ts:149`. |
 
 Tailwind setup — `postcss.config.mjs` and `src/app.css` already in `examples/vite-react19`:
 
@@ -298,11 +263,11 @@ export default { plugins: { '@tailwindcss/postcss': {} } };
 
 Import once in `src/webparts/feedback/components/FeedbackForm.tsx:6` — `import '../../../app.css'` — `examples/vite-react19/src/app.css:1` is the Tailwind entry.
 
-`vite.config.ts` is `examples/vite-react19/vite.config.ts:1` — `rspfxVite` with `spfxVersion: '1.23'` + `react()` + `babel({ plugins: [['babel-plugin-react-compiler', {}]] })` for the runnable Babel Compiler path.
+`vite.config.ts` is `examples/vite-react19/vite.config.ts:1` — `rspfxVite` with `spfxVersion: '1.23'` + `react({ compiler: true })` (Vite 8 Rust path).
 
-To try the Ox Rust path, bump to `vite@^8.0.0` + `@vitejs/plugin-react@^6.1.0` + `oxc-transform-react@^0.147.0` and use `react({ compiler: true })` — keep `spfxVersion: '1.23'` — see `docs/react-19.md:3` `### Configure vite.config.ts — Ox`.
+Vite 7 fallback: `vite@^7.3.6` + `@vitejs/plugin-react@^4.7.0` + `@rolldown/plugin-babel` + `babel-plugin-react-compiler` with `react()` + `babel({ presets: [reactCompilerPreset()] })` — see `## 3. React Compiler` Vite 7 section.
 
-Set `babel` plugins to `[]` or `compiler: false` to run without Compiler and compare.
+Set `compiler: false` or remove the Babel plugin to run without Compiler and compare.
 
 ### Form code (Valibot + TanStack Form + Tailwind + PnPjs)
 

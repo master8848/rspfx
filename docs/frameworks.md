@@ -11,7 +11,7 @@ RSPFX is framework-agnostic — the core knows nothing about React or Vue. Each 
 | React / Vanilla TS | ✅ | ✅ | ✅ / — |
 | Preact / Vue / Svelte / Solid | ❌ | ✅ | ✅ |
 
-Official templates ship React only. RSPFX adds the rest as first-class presets (`@mbsks/rspfx-framework-*`) with loaders and base classes (`ReactWebPart`, `VueWebPart`, …).
+Official templates ship React only. RSPFX adds the rest as first-class presets (`@mbsks/rspfx-framework-*`) with loaders and base classes (`ReactWebPart`, `VueWebPart`, …). Solid is available via Rspack (`examples/solid`) and Rsbuild (`examples/rsbuild-solid`, `@mbsks/rspfx-example-rsbuild-solid`).
 
 > **Tip:** Scaffold with any starter first (`npm create vite@latest -- --template react-ts`, `better-t-stack`, TanStack Router, etc.), then add `rspfxVite()` — framework deps come from your starter, not from RSPFX pins. `packages/templates/src/index.ts:62` `FRAMEWORK_RUNTIME_DEPS` is only the `rspfx new` shortcut.
 

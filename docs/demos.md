@@ -20,20 +20,22 @@ What it proves for RSPFX: non-React framework at a modern version, ~7 MB WASM as
 
 ## All demos at a glance
 
-| Demo | Framework | Bundler | Path | Highlights |
+| Demo | Framework | Bundler | Path | Description |
 |---|---|---|---|---|
-| hello-react | React 18 | Rspack | [examples/react](https://github.com/master8848/rspfx/tree/main/examples/react) | `ReactWebPart` from `@mbsks/rspfx-framework-react`, `rspack.config.ts` + `RspfxPlugin`, auto `jsx: react-jsx` |
-| hello-react (Vite) | React 18 | Vite | [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react) | Same web part via `rspfxVite()` in `vite.config.ts`, `vite build` per bundle |
-| hello-react (Rsbuild) | React 18 | Rsbuild | [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react) | Same web part via `rspfxRsbuild()` in `rsbuild.config.ts`, `rsbuild build` per bundle |
-| hello-vanilla | Vanilla TS | Rspack | [examples/vanilla](https://github.com/master8848/rspfx/tree/main/examples/vanilla) | No framework, `renderComponent()` returns DOM, `rspack.config.ts` |
-| hello-vanilla (Vite) | Vanilla TS | Vite | [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla) | Same vanilla web part via `vite.config.ts` + `rspfxVite()` |
-| hello-preact | Preact | Rspack | [examples/preact](https://github.com/master8848/rspfx/tree/main/examples/preact) | `PreactWebPart` from `@mbsks/rspfx-framework-preact`, `jsxImportSource: preact` |
-| hello-vue | Vue 3 | Rspack | [examples/vue](https://github.com/master8848/rspfx/tree/main/examples/vue) | `VueWebPart` from `@mbsks/rspfx-framework-vue`, SFC `Hello.vue` with `<script setup lang="ts">` |
-| hello-svelte | Svelte | Rspack | [examples/svelte](https://github.com/master8848/rspfx/tree/main/examples/svelte) | `SvelteWebPart` from `@mbsks/rspfx-framework-svelte`, `Hello.svelte` scoped styles |
-| hello-solid | Solid | Rspack | [examples/solid](https://github.com/master8848/rspfx/tree/main/examples/solid) | `SolidWebPart` from `@mbsks/rspfx-framework-solid`, `jsxImportSource: solid-js` + `babel-preset-solid` |
-| shadcn | React 18 + Tailwind v4 | Rspack | [examples/shadcn](https://github.com/master8848/rspfx/tree/main/examples/shadcn) | `shadcn/ui` components (`components/ui/*`, `cn()` in `components/lib/utils.ts`), `globals.css` with `@theme inline` tokens |
-| mixed | React 18 | Vite | [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed) | Multi-component: web part + application customizer + library, `vite.config.ts` + `rspfxVite()` |
-| modern-search | React 17 · Fluent UI 8 | Rspack | [examples/modern-search](https://github.com/master8848/rspfx/tree/main/examples/modern-search) | PnP Modern Search v4.23.3 migrated from Heft/webpack, 4 web parts, 14 locales, see [migration-case-study.md](migration-case-study.md) |
+| feedback (React 19) | React 19 | Vite 8 | [examples/vite-react19](https://github.com/master8848/rspfx/tree/main/examples/vite-react19) | Form with validation that saves to a SharePoint list |
+| hello-react | React 18 | Rspack | [examples/react](https://github.com/master8848/rspfx/tree/main/examples/react) | Basic hello world |
+| hello-react (Vite) | React 18 | Vite | [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react) | Same hello world, built with Vite |
+| hello-react (Rsbuild) | React 18 | Rsbuild | [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react) | Same hello world, built with Rsbuild |
+| hello-solid | Solid | Rspack | [examples/solid](https://github.com/master8848/rspfx/tree/main/examples/solid) | Reactive hello world |
+| hello-solid (Rsbuild) | Solid | Rsbuild | [examples/rsbuild-solid](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-solid) | Same Solid hello world, built with Rsbuild |
+| hello-vanilla | Vanilla TS | Rspack | [examples/vanilla](https://github.com/master8848/rspfx/tree/main/examples/vanilla) | No framework, plain TypeScript |
+| hello-vanilla (Vite) | Vanilla TS | Vite | [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla) | Plain TypeScript, built with Vite |
+| hello-preact | Preact | Rspack | [examples/preact](https://github.com/master8848/rspfx/tree/main/examples/preact) | Lightweight React alternative |
+| hello-vue | Vue 3 | Rspack | [examples/vue](https://github.com/master8848/rspfx/tree/main/examples/vue) | Vue single-file component |
+| hello-svelte | Svelte | Rspack | [examples/svelte](https://github.com/master8848/rspfx/tree/main/examples/svelte) | Svelte with scoped styles |
+| shadcn | React 18 + Tailwind v4 | Rspack | [examples/shadcn](https://github.com/master8848/rspfx/tree/main/examples/shadcn) | Styled UI with Tailwind and shadcn |
+| mixed | React 18 | Vite | [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed) | Web part plus extension and library |
+| modern-search | React 17 · Fluent UI 8 | Rspack | [examples/modern-search](https://github.com/master8848/rspfx/tree/main/examples/modern-search) | Large real-world search solution |
 
 All `examples/*` share deterministic GUIDs for docs and tests (e.g. `react` and `vite-react` both use component `11111111-1111-4111-8111-111111111101`, solution `22222222-2222-4222-8222-222222222201`). Do not install two variants with overlapping IDs on the same tenant; regenerate with `crypto.randomUUID()`. See [project-structure.md](project-structure.md) and `examples/README.md`.
 
@@ -41,11 +43,11 @@ All `examples/*` share deterministic GUIDs for docs and tests (e.g. `react` and 
 
 Framework is set via `--framework` at scaffold time (`rspfx new --framework vue`) and via `framework:` in plugin options (`@mbsks/rspfx-plugin` / `@mbsks/rspfx-core`). Each framework ships a preset with loaders/SWC options and a `*WebPart` base class plus a headless adapter (`@mbsks/rspfx-framework-<fw>/headless`).
 
-- React: [examples/react](https://github.com/master8848/rspfx/tree/main/examples/react), [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react), [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react), [examples/shadcn](https://github.com/master8848/rspfx/tree/main/examples/shadcn), [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed). See [frameworks.md](frameworks.md) and [custom-framework.md](custom-framework.md).
+- React: [examples/react](https://github.com/master8848/rspfx/tree/main/examples/react), [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react), [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react), [examples/shadcn](https://github.com/master8848/rspfx/tree/main/examples/shadcn), [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed), [examples/vite-react19](https://github.com/master8848/rspfx/tree/main/examples/vite-react19) (React 19). See [frameworks.md](frameworks.md) and [custom-framework.md](custom-framework.md).
 
 - Vanilla: [examples/vanilla](https://github.com/master8848/rspfx/tree/main/examples/vanilla), [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla).
 
-- Vue / Svelte / Solid / Preact: [examples/vue](https://github.com/master8848/rspfx/tree/main/examples/vue), [examples/svelte](https://github.com/master8848/rspfx/tree/main/examples/svelte), [examples/solid](https://github.com/master8848/rspfx/tree/main/examples/solid), [examples/preact](https://github.com/master8848/rspfx/tree/main/examples/preact). External Solid example is the chess demo above.
+- Vue / Svelte / Solid / Preact: [examples/vue](https://github.com/master8848/rspfx/tree/main/examples/vue), [examples/svelte](https://github.com/master8848/rspfx/tree/main/examples/svelte), [examples/solid](https://github.com/master8848/rspfx/tree/main/examples/solid), [examples/rsbuild-solid](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-solid) (Solid + Rsbuild), [examples/preact](https://github.com/master8848/rspfx/tree/main/examples/preact). External Solid example is the chess demo above.
 
 All frameworks support `rspfx dev --refresh` where the preset provides HMR (see [fast-refresh.md](fast-refresh.md)).
 
@@ -53,11 +55,11 @@ All frameworks support `rspfx dev --refresh` where the preset provides HMR (see 
 
 RSPFX exposes one plugin per bundler with the same options shape. Pick the config file, not a different API:
 
-- Vite — `rspfxVite()` in `vite.config.ts`: [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react), [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla), [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed). Vite is the default for new projects.
+- Vite — `rspfxVite()` in `vite.config.ts`: [examples/vite-react](https://github.com/master8848/rspfx/tree/main/examples/vite-react), [examples/vite-vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla), [examples/mixed](https://github.com/master8848/rspfx/tree/main/examples/mixed), [examples/vite-react19](https://github.com/master8848/rspfx/tree/main/examples/vite-react19) (React 19 + Vite 8). Vite is the default for new projects.
 
 - Rspack — `RspfxPlugin` in `rspack.config.ts`: [examples/react](https://github.com/master8848/rspfx/tree/main/examples/react), [examples/preact](https://github.com/master8848/rspfx/tree/main/examples/preact), [examples/vue](https://github.com/master8848/rspfx/tree/main/examples/vue), [examples/svelte](https://github.com/master8848/rspfx/tree/main/examples/svelte), [examples/solid](https://github.com/master8848/rspfx/tree/main/examples/solid), [examples/vanilla](https://github.com/master8848/rspfx/tree/main/examples/vanilla), [examples/shadcn](https://github.com/master8848/rspfx/tree/main/examples/shadcn), [examples/modern-search](https://github.com/master8848/rspfx/tree/main/examples/modern-search). External chess demo also uses Rspack.
 
-- Rsbuild — `rspfxRsbuild()` in `rsbuild.config.ts`: [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react).
+- Rsbuild — `rspfxRsbuild()` in `rsbuild.config.ts`: [examples/rsbuild-react](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-react), [examples/rsbuild-solid](https://github.com/master8848/rspfx/tree/main/examples/rsbuild-solid).
 
 See [architecture.md](architecture.md) for the pipeline and [building-packages.md](building-packages.md) for `rspfx build` / `rspfx package` outputs.
 
