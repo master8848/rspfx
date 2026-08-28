@@ -46,6 +46,79 @@ Set `build: { css: false }` if you take full ownership.
 
 **Vite** — use `css.modules` + `postcss.config.*`, keep `build.cssCodeSplit: false`.
 
+## When default inlining fails
+
+RSPFX inlines CSS by default, but custom `assetFileNames`, merged Vite configs, or extraction can break it and leave `dist/assets/*.css` that never loads in SharePoint.
+
+Use the exported fallback plugin to guarantee inlining — it collects emitted `.css`, deletes the assets, and injects a `<style>` into every entry chunk.
+
+### Vite (Vite 7 Rollup and Vite 8 Rolldown)
+
+One plugin covers both — Vite 7 uses Rollup and Vite 8 uses Rolldown, but both emit the same `generateBundle` shape.
+
+```ts
+// vite.config.ts — Vite 7 and Vite 8, same import
+import { defineConfig } from '@mbsks/rspfx-core';
+import { rspfxVite, rspfxInlineCss } from '@mbsks/rspfx-plugin';
+
+export default {
+  plugins: [rspfxVite(defineConfig({ name: 'my-app', framework: 'react' as const })), rspfxInlineCss()],
+  build: { cssCodeSplit: false }
+};
+```
+
+Aliases are provided for docs separation:
+
+```ts
+import { rspfxVite7InlineCss, rspfxVite8InlineCss, rspfxViteInlineCss } from '@mbsks/rspfx-plugin';
+// all three are the same plugin; pick one, or use rspfxInlineCss
+```
+
+Tool-agnostic import also available:
+
+```ts
+import { rspfxInlineCss } from '@mbsks/rspfx-core/inline-css.js';
+```
+
+For Rspack users who customized with Vite/Rolldown, the same plugin works — add `rspfxInlineCss()` as the last plugin (`enforce: 'post'` is built-in).
+
+### Rsbuild
+
+Keep `output.injectStyles: true` (default via `rspfxRsbuild`).
+
+If extraction was enabled, restore with the Rspack helpers or the fallback plugin:
+
+```ts
+// rsbuild.config.ts — style-loader path (preferred)
+import { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack/helpers/css.js';
+export default { plugins: [rspfxRsbuild(/* ... */)], tools: { rspack: { module: { rules: [rspfxCssInlineRule(), rspfxSassRule()] } } }, output: { injectStyles: true } };
+```
+
+Fallback asset inliner (when `output.injectStyles: false` leaked):
+
+```ts
+import { rspfxRsbuildInlineCss } from '@mbsks/rspfx-plugin';
+export default { plugins: [rspfxRsbuild(/* ... */), rspfxRsbuildInlineCss()] };
+```
+
+### Rspack
+
+Preferred — `style-loader` chain:
+
+```ts
+import { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack/helpers/css.js';
+export default { plugins: [new RspfxPlugin(/* ... */)], module: { rules: [rspfxCssInlineRule(), rspfxSassRule()] } };
+```
+
+Fallback when `CssExtractRspackPlugin` or custom extraction emitted `.css`:
+
+```ts
+import { rspfxRspackInlineCss } from '@mbsks/rspfx-plugin';
+export default { plugins: [new RspfxPlugin(/* ... */), rspfxRspackInlineCss()] };
+```
+
+All helpers are zero-dependency and available from `@mbsks/rspfx-core/inline-css.js`, `@mbsks/rspfx-plugin`, and `@mbsks/rspfx-compiler-rspack/helpers/inline-css.js`.
+
 ## Tailwind and UnoCSS
 
 Tailwind v2/v3/v4 and UnoCSS work via PostCSS — no special RSPFX plugin.

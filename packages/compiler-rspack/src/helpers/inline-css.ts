@@ -8,5 +8,5 @@ export {
   spfxInlineCss,
   spfxInlineCssPlugin,
   createInlineCssPlugin
-} from '@mbsks/rspfx-core/inline-css.js';
-export type { RspfxInlineCssOptions } from '@mbsks/rspfx-core/inline-css.js';
+} from '@mbsks/rspfx-core';
+export type { RspfxInlineCssOptions } from '@mbsks/rspfx-core';

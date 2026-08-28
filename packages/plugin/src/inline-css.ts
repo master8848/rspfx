@@ -8,8 +8,8 @@ export {
   spfxInlineCss,
   spfxInlineCssPlugin,
   createInlineCssPlugin
-} from '@mbsks/rspfx-core/inline-css.js';
-export type { RspfxInlineCssOptions } from '@mbsks/rspfx-core/inline-css.js';
+} from '@mbsks/rspfx-core';
+export type { RspfxInlineCssOptions } from '@mbsks/rspfx-core';
 
 // Re-export Rspack CSS helpers for convenience — single import surface for fallbacks
-export { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack/helpers/css.js';
+export { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack';
