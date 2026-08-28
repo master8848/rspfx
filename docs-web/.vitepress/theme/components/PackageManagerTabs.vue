@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { usePackageManager, type PackageManager } from '../composables/usePackageManager.js'
 import { copyToClipboard } from '../utils/copy.js'
 
@@ -21,25 +21,36 @@ const { pm, init, setPM } = usePackageManager()
 onMounted(init)
 
 type Manager = { id: PackageManager; label: string }
-const managers: Manager[] = [
+const managers: readonly Manager[] = [
   { id: 'pnpm', label: 'pnpm' },
   { id: 'npm', label: 'npm' },
   { id: 'yarn', label: 'yarn' },
   { id: 'bun', label: 'bun' },
   { id: 'deno', label: 'deno' },
-]
+] as const
 
 const copied = ref(false)
 let timer: ReturnType<typeof setTimeout> | null = null
 
+onBeforeUnmount(() => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+})
+
 const selectedCommand = computed(() => {
   // explicit commands map wins
   if (props.commands?.[pm.value]) return props.commands[pm.value]!
-  if (pm.value === 'npm' && props.npm) return props.npm
-  if (pm.value === 'pnpm' && props.pnpm) return props.pnpm
-  if (pm.value === 'yarn' && props.yarn) return props.yarn
-  if (pm.value === 'bun' && props.bun) return props.bun
-  if (pm.value === 'deno' && props.deno) return props.deno
+  const propByPm: Partial<Record<PackageManager, string>> = {
+    npm: props.npm,
+    pnpm: props.pnpm,
+    yarn: props.yarn,
+    bun: props.bun,
+    deno: props.deno,
+  }
+  const direct = propByPm[pm.value]
+  if (direct) return direct
   if (props.command) {
     // handle deno special for npx/dlx style? keep simple: `${pm} ${command}`
     // for deno dlx we expect explicit deno prop, but fallback is naive
@@ -50,6 +61,21 @@ const selectedCommand = computed(() => {
 
 function select(id: PackageManager) {
   setPM(id)
+}
+
+function onTabKeydown(e: KeyboardEvent) {
+  const idx = managers.findIndex(m => m.id === pm.value)
+  if (idx === -1) return
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault()
+    const dir = e.key === 'ArrowRight' ? 1 : -1
+    const next = (idx + dir + managers.length) % managers.length
+    const nextId = managers[next].id
+    setPM(nextId)
+    // move focus to newly selected tab
+    const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    tabs[next]?.focus()
+  }
 }
 
 async function copy() {
@@ -73,12 +99,13 @@ const commandParts = computed(() => {
 
 <template>
   <div class="rspfx-pm">
-    <div class="rspfx-pm-tabs" role="tablist" aria-label="Package manager">
+    <div class="rspfx-pm-tabs" role="tablist" aria-label="Package manager" @keydown="onTabKeydown">
       <button
         v-for="m in managers"
         :key="m.id"
         role="tab"
         :aria-selected="pm === m.id ? 'true' : 'false'"
+        :tabindex="pm === m.id ? 0 : -1"
         class="rspfx-pm-tab"
         :class="{ 'is-active': pm === m.id }"
         @click="select(m.id)"

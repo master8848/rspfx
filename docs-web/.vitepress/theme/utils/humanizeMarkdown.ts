@@ -7,6 +7,7 @@ export interface HumanizeOptions {
 type LinkRef = { text: string; href: string }
 
 const DEFAULT_ORIGIN = 'https://rspfx.mbsks.me'
+const DEFAULT_BASE = `${DEFAULT_ORIGIN}/md/` as const
 
 function getOrigin(url: string): string | null {
   try {
@@ -14,6 +15,14 @@ function getOrigin(url: string): string | null {
   } catch {
     return null
   }
+}
+
+function resolveBaseOrigin(opts: Pick<HumanizeOptions, 'baseUrl' | 'sourceUrl'>): string {
+  return (
+    (opts.baseUrl ? getOrigin(opts.baseUrl) : null) ??
+    (opts.sourceUrl ? getOrigin(opts.sourceUrl) : null) ??
+    DEFAULT_ORIGIN
+  )
 }
 
 function toMdHref(href: string, sourceUrl: string | undefined, baseOrigin: string | null): string {
@@ -75,10 +84,7 @@ function stripLinks(
   seen: Set<string>,
   opts: HumanizeOptions,
 ): string {
-  const baseOrigin =
-    (opts.baseUrl ? getOrigin(opts.baseUrl) : null) ??
-    (opts.sourceUrl ? getOrigin(opts.sourceUrl) : null) ??
-    DEFAULT_ORIGIN
+  const baseOrigin = resolveBaseOrigin(opts)
   const { text: prot, slots } = protectCodeSpans(text)
   let out = prot
   out = out.replace(/!?\[([^\]]*)\]\(([^)]+)\)/g, (match, p1: string, p2: string) => {
@@ -110,7 +116,8 @@ function stripLinks(
 }
 
 export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): string {
-  const lines = markdown.split('\n')
+  const safeMarkdown = typeof markdown === 'string' ? markdown : String(markdown ?? '')
+  const lines = safeMarkdown.split('\n')
   const out: string[] = []
   const refs: LinkRef[] = []
   const seen = new Set<string>()
@@ -208,11 +215,6 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
   while (out.length && out[out.length - 1] === '') out.pop()
 
   const sourceUrl = opts.sourceUrl ?? ''
-  const baseUrl = opts.baseUrl
-  const HARD_ORIGIN = DEFAULT_ORIGIN
-  const HARD_BASE = DEFAULT_ORIGIN + '/md/'
-  const baseOrigin =
-    (baseUrl ? getOrigin(baseUrl) : null) ?? (sourceUrl ? getOrigin(sourceUrl) : null) ?? DEFAULT_ORIGIN
 
   let mdUrl: string | null = null
   let mdPath: string | null = null
@@ -226,17 +228,17 @@ export function humanizeMarkdown(markdown: string, opts: HumanizeOptions = {}): 
       mdUrl = u.origin + mdPath
     } catch {}
   }
-  const sourceDisplay = sourceUrl || HARD_ORIGIN
+  const sourceDisplay = sourceUrl || DEFAULT_ORIGIN
   if (!mdUrl || !mdPath) {
     mdPath = mdPath ?? '/md/'
-    mdUrl = mdUrl ?? HARD_ORIGIN + mdPath
+    mdUrl = mdUrl ?? DEFAULT_ORIGIN + mdPath
   }
 
   // Header at start (replaces footer): Source/MD/Base/Tip before content.
   const header: string[] = [
     `Source: ${sourceDisplay}`,
     `MD: ${mdUrl}`,
-    `Base: ${HARD_BASE}`,
+    `Base: ${DEFAULT_BASE}`,
     `Tip: fetch markdown via Base + relative md path or absolute /md route (${mdPath})`,
     '---',
     '',

@@ -3,15 +3,29 @@ import { ref } from 'vue'
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun' | 'deno'
 
 const STORAGE_KEY = 'rspfx-pm'
+const PM_LIST: readonly PackageManager[] = ['npm', 'pnpm', 'yarn', 'bun', 'deno'] as const
+const PM_SET: ReadonlySet<string> = new Set(PM_LIST)
+
+function isPackageManager(value: unknown): value is PackageManager {
+  return typeof value === 'string' && PM_SET.has(value)
+}
+
+interface RspfxWindow extends Window {
+  __RSPFX_PM?: string
+}
+
+type PmChangeDetail = PackageManager
+type PmChangeEvent = CustomEvent<PmChangeDetail>
+
 const getInitialPM = (): PackageManager => {
   if (typeof window !== 'undefined') {
     try {
-      const w = (window as any).__RSPFX_PM as string | undefined
-      if (w && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(w)) return w as PackageManager
-      const attr = document.documentElement.getAttribute('data-pm') as PackageManager | null
-      if (attr && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(attr)) return attr
-      const saved = localStorage.getItem(STORAGE_KEY) as PackageManager | null
-      if (saved && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(saved)) return saved
+      const w = (window as RspfxWindow).__RSPFX_PM
+      if (isPackageManager(w)) return w
+      const attr = document.documentElement.getAttribute('data-pm')
+      if (isPackageManager(attr)) return attr
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (isPackageManager(saved)) return saved
     } catch {}
   }
   return 'npm'
@@ -25,21 +39,22 @@ export function usePackageManager() {
     initialized = true
     if (typeof window === 'undefined') return
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as PackageManager | null
-      if (saved && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(saved)) {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (isPackageManager(saved)) {
         pm.value = saved
       }
     } catch {}
   }
 
   function setPM(value: PackageManager) {
+    if (!isPackageManager(value)) return
     pm.value = value
     try {
       localStorage.setItem(STORAGE_KEY, value)
     } catch {}
     // dispatch storage event for cross-tab sync
     try {
-      window.dispatchEvent(new CustomEvent('rspfx-pm-change', { detail: value }))
+      window.dispatchEvent(new CustomEvent<PmChangeDetail>('rspfx-pm-change', { detail: value }))
     } catch {}
   }
 
@@ -49,15 +64,15 @@ export function usePackageManager() {
 // listen for external changes (other component or storage event)
 if (typeof window !== 'undefined') {
   try {
-    window.addEventListener('storage', (e) => {
-      if (e.key === STORAGE_KEY && e.newValue && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(e.newValue)) {
-        pm.value = e.newValue as PackageManager
+    window.addEventListener('storage', (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && isPackageManager(e.newValue)) {
+        pm.value = e.newValue
       }
     })
-    window.addEventListener('rspfx-pm-change' as any, (e: any) => {
-      if (e.detail && ['npm', 'pnpm', 'yarn', 'bun', 'deno'].includes(e.detail)) {
-        pm.value = e.detail as PackageManager
+    window.addEventListener('rspfx-pm-change' as keyof WindowEventMap, ((e: PmChangeEvent) => {
+      if (isPackageManager(e.detail)) {
+        pm.value = e.detail
       }
-    })
+    }) as EventListener)
   } catch {}
 }

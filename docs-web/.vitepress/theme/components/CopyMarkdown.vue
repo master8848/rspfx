@@ -14,8 +14,8 @@ const { title, theme, frontmatter } = useData()
 const shouldShow = computed(() => {
   // Frontmatter overrides theme: frontmatter.copyMarkdown ?? theme.copyMarkdown ?? true.
   // transformPageData sets frontmatter.copyMarkdown=false for /llm and /llms routes.
-  const fmFlag = (frontmatter.value as any)?.copyMarkdown
-  const themeFlag = (theme.value as any)?.copyMarkdown ?? true
+  const fmFlag = (frontmatter.value as Record<string, unknown>)?.copyMarkdown as boolean | undefined
+  const themeFlag = (theme.value as Record<string, unknown>)?.copyMarkdown as boolean | undefined ?? true
   const flag = fmFlag ?? themeFlag
   if (flag === false) return false
   // Defensive path checks — keep even when frontmatter is set, for direct .html/.txt hits
@@ -33,7 +33,7 @@ const open = ref(false)
 let resetTimer: ReturnType<typeof setTimeout> | null = null
 
 const { copyPreference, isHumanized, loadPref, savePref } = useCopyPreference()
-const { localMarkdownUrl, copyMarkdown, getHumanizedMarkdown } = useMarkdownCopy(route as any, title as any)
+const { localMarkdownUrl, copyMarkdown, getHumanizedMarkdown } = useMarkdownCopy(route, title)
 
 const copyEl = ref<HTMLElement | null>(null)
 useAttachToTitle(copyEl)
@@ -47,7 +47,10 @@ function setState(state: 'copied' | 'failed' | 'idle') {
       copied.value = false
       failed.value = false
       copying.value = false
+      resetTimer = null
     }, 2000)
+  } else {
+    resetTimer = null
   }
 }
 
@@ -62,21 +65,22 @@ const mainButtonTitle = computed(() => {
   return isHumanized.value ? 'Copy' : 'Copy as Markdown'
 })
 
+function getPageUrl(): string {
+  return typeof window !== 'undefined' ? window.location.href : localMarkdownUrl.value
+}
+
 const chatGptUrl = computed(() => {
-  const url = typeof window !== 'undefined' ? window.location.href : localMarkdownUrl.value
+  const url = getPageUrl()
   return `https://chatgpt.com/?hints=search&q=${encodeURIComponent(`Read ${url} so I can ask questions about it.`)}`
 })
-const claudeUrl = computed(() => {
-  const url = typeof window !== 'undefined' ? window.location.href : localMarkdownUrl.value
-  return `https://claude.ai/new?q=${encodeURIComponent(`Read ${url} so I can ask questions about it.`)}`
-})
+const claudeUrl = computed(() => `https://claude.ai/new?q=${encodeURIComponent(`Read ${getPageUrl()} so I can ask questions about it.`)}`)
 
-async function handleCopy() {
+async function doCopy(getText: () => Promise<string>): Promise<void> {
   if (copying.value) return
   copying.value = true
   failed.value = false
   try {
-    const text = isHumanized.value ? await getHumanizedMarkdown() : await copyMarkdown()
+    const text = await getText()
     await copyToClipboard(text)
     setState('copied')
     open.value = false
@@ -85,26 +89,20 @@ async function handleCopy() {
   } finally {
     copying.value = false
   }
+}
+
+async function handleCopy() {
+  await doCopy(() => (isHumanized.value ? getHumanizedMarkdown() : copyMarkdown()))
 }
 
 async function handleCopyWithPref(pref: Pref) {
   if (copying.value) return
   savePref(pref)
-  copying.value = true
-  failed.value = false
-  try {
-    const text = pref === 'humanized' ? await getHumanizedMarkdown() : await copyMarkdown()
-    await copyToClipboard(text)
-    setState('copied')
-    open.value = false
-  } catch {
-    setState('failed')
-  } finally {
-    copying.value = false
-  }
+  await doCopy(() => (pref === 'humanized' ? getHumanizedMarkdown() : copyMarkdown()))
 }
 
 function handleViewRaw() {
+  if (typeof window === 'undefined') return
   // Open locally published markdown (buildEnd publishes .md alongside HTML)
   const local = getLocalMarkdownUrl(route.path)
   const url = local ? `${window.location.origin}${local}` : ''
@@ -131,6 +129,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside)
   document.removeEventListener('keydown', onKeydown)
   if (resetTimer) clearTimeout(resetTimer)
+  resetTimer = null
 })
 </script>
 

@@ -3,6 +3,13 @@
  * `domToMarkdown` takes a container element so it is testable without querying `document`.
  */
 
+function getTextContent(el: Element): string {
+  const he = el as HTMLElement
+  // innerText is layout-dependent and unavailable in some environments (e.g. JSDOM SSR)
+  if (typeof he.innerText === 'string') return he.innerText
+  return he.textContent ?? ''
+}
+
 export function inlineToMarkdown(el: Element): string {
   let out = ''
   for (const node of Array.from(el.childNodes)) {
@@ -12,7 +19,7 @@ export function inlineToMarkdown(el: Element): string {
       const tag = (node as Element).tagName.toLowerCase()
       const elem = node as HTMLElement
       const inner = inlineToMarkdown(elem)
-      const text = elem.innerText ?? inner
+      const text = getTextContent(elem) || inner
       if (tag === 'code') {
         out += text.includes('`') ? '`` ' + text + ' ``' : '`' + text + '`'
       } else if (tag === 'strong' || tag === 'b') {
@@ -35,7 +42,15 @@ export function inlineToMarkdown(el: Element): string {
   return out
 }
 
-export function domToMarkdown(docElement: Element, pageTitle: string): string {
+const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const
+
+function getHeadingMarkdown(el: Element, level: number): string | null {
+  const t = getTextContent(el).replace(/\s*#\s*$/, '').trim()
+  if (!t) return null
+  return `${'#'.repeat(level)} ${t}`
+}
+
+export function domToMarkdown(docElement: Element | null | undefined, pageTitle: string): string {
   const doc = docElement
   if (!doc) return ''
 
@@ -46,40 +61,35 @@ export function domToMarkdown(docElement: Element, pageTitle: string): string {
     lines.push(`# ${title}`, '')
   }
 
-  const blocks = doc.querySelectorAll(
-    'h1, h2, h3, h4, h5, h6, p, ul, ol, pre, blockquote, table, hr, div[class*="language-"]'
-  )
+  const selector = 'h1, h2, h3, h4, h5, h6, p, ul, ol, pre, blockquote, table, hr, div[class*="language-"]'
+  const blocks = doc.querySelectorAll(selector)
   const seenPres = new Set<Element>()
 
   for (const el of Array.from(blocks)) {
-    const tag = el.tagName.toLowerCase()
-    if (tag === 'pre' && el.parentElement?.className.includes('language-')) {
-      if (seenPres.has(el.parentElement)) continue
-    }
+    // Skip elements inside copy-markdown islands or doc header chrome
     if (el.closest('.rspfx-copy-markdown')) continue
-    if (el.closest('.rspfx-doc-header')) {
+    const headerAncestor = el.closest('.rspfx-doc-header')
+    if (headerAncestor) {
       if (el.classList.contains('rspfx-doc-header')) continue
+      // For descendants of header, skip — header content is chrome, not doc body
+      if (headerAncestor !== el) continue
     }
 
-    if (tag === 'h1') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`# ${t}`, '')
-    } else if (tag === 'h2') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`## ${t}`, '')
-    } else if (tag === 'h3') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`### ${t}`, '')
-    } else if (tag === 'h4') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`#### ${t}`, '')
-    } else if (tag === 'h5') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`##### ${t}`, '')
-    } else if (tag === 'h6') {
-      const t = (el as HTMLElement).innerText.replace(/\s*#\s*$/, '').trim()
-      if (t) lines.push(`###### ${t}`, '')
-    } else if (tag === 'p') {
+    const tag = el.tagName.toLowerCase()
+    if (tag === 'pre' && el.parentElement?.className.includes('language-')) {
+      if (el.parentElement && seenPres.has(el.parentElement)) continue
+    }
+
+    if (tag.startsWith('h') && tag.length === 2) {
+      const level = Number(tag[1])
+      if (HEADING_LEVELS.includes(level as (typeof HEADING_LEVELS)[number])) {
+        const md = getHeadingMarkdown(el, level)
+        if (md) lines.push(md, '')
+        continue
+      }
+    }
+    if (tag === 'p') {
+      // Already filtered by .rspfx-copy-markdown above; re-check for nested <p> inside island
       if (el.closest('.rspfx-copy-markdown')) continue
       const md = inlineToMarkdown(el).trim()
       if (md) lines.push(md, '')
@@ -102,7 +112,7 @@ export function domToMarkdown(docElement: Element, pageTitle: string): string {
       }
       lines.push('')
     } else if (tag === 'blockquote') {
-      const text = (el as HTMLElement).innerText.trim()
+      const text = getTextContent(el).trim()
       if (text) {
         const quoted = text.split('\n').map(l => `> ${l}`).join('\n')
         lines.push(quoted, '')
@@ -120,7 +130,9 @@ export function domToMarkdown(docElement: Element, pageTitle: string): string {
         lines.push(`| ${headerCells.map(() => '---').join(' | ')} |`)
       }
       for (let i = 1; i < rows.length; i++) {
-        const cells = Array.from(rows[i].querySelectorAll('td, th')).map(c =>
+        const rowEl = rows[i]
+        if (!rowEl) continue
+        const cells = Array.from(rowEl.querySelectorAll('td, th')).map(c =>
           inlineToMarkdown(c).trim().replace(/\|/g, '\\|')
         )
         if (cells.length) lines.push(`| ${cells.join(' | ')} |`)
@@ -128,16 +140,16 @@ export function domToMarkdown(docElement: Element, pageTitle: string): string {
       lines.push('')
     } else if (tag === 'pre' || el.className.includes('language-')) {
       const isWrapper = el.className.includes('language-')
-      const preEl = isWrapper ? el.querySelector('pre') ?? el : el
+      const preEl = isWrapper ? (el.querySelector('pre') ?? el) : el
       if (isWrapper) seenPres.add(el)
       const codeEl = preEl.querySelector('code') ?? preEl
-      let code = (codeEl as HTMLElement).innerText ?? codeEl.textContent ?? ''
+      let code = getTextContent(codeEl) || codeEl.textContent || ''
       code = code.replace(/\n+$/, '')
       if (!code.trim()) continue
       let lang = ''
       const cls = isWrapper ? el.className : preEl.className
       const m = cls.match(/language-([a-z0-9_-]+)/i)
-      if (m) lang = m[1]
+      if (m?.[1]) lang = m[1].toLowerCase()
       lines.push(`\`\`\`${lang}`, code, '```', '')
     }
   }

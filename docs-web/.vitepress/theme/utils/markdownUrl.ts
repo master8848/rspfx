@@ -3,14 +3,22 @@
  * Keep import style with `.js` extension for consumers (VitePress convention).
  */
 
+function normalizeRoutePath(input: string): string {
+  return (input ?? '').trim()
+}
+
 export function getRel(routePath: string): string {
-  let rel = routePath.replace(/^\/docs\//, '').replace(/\.html$/, '').replace(/\/$/, '')
+  const normalized = normalizeRoutePath(routePath)
+  if (!normalized) return ''
+  let rel = normalized.replace(/^\/docs\//, '').replace(/\.html$/, '').replace(/\/$/, '')
   if (!rel) return ''
   return rel
 }
 
 export function getLocalMarkdownUrl(routePath: string): string {
-  let path = routePath.replace(/\.html$/, '')
+  const normalized = normalizeRoutePath(routePath)
+  if (!normalized) return ''
+  let path = normalized.replace(/\.html$/, '')
   if (path.endsWith('/')) path = path.slice(0, -1)
   if (!path) return ''
   return `${path}.md`
@@ -35,6 +43,22 @@ export function getMarkdownUrl(routePath: string): string {
   return `https://raw.githubusercontent.com/master8848/rspfx/main/docs/${rel}.md`
 }
 
+function normalizeOrigin(origin: string | undefined): string | undefined {
+  if (!origin) return undefined
+  const trimmed = origin.trim().replace(/\/$/, '')
+  if (!trimmed) return undefined
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    // Allow origin like "https://example.com" without path; fallback to trimmed
+    return trimmed
+  }
+}
+
+function dedupe<T>(arr: T[]): T[] {
+  return [...new Set(arr)]
+}
+
 /**
  * Candidates to try when fetching published markdown.
  * Since `config.mts#buildEnd` now publishes every public `.md` alongside HTML
@@ -56,29 +80,24 @@ export function getMarkdownCandidates(
   // Supports both signatures:
   // - getMarkdownCandidates(routePath, origin)
   // - getMarkdownCandidates(rel, origin, localPath) — spec variant
-  const local = localPath ?? getLocalMarkdownUrl(routePathOrRel)
-  // If caller passed a docs `rel` (e.g. "why-rspfx") and localPath is that rel's .md,
-  // getLocalMarkdownUrl would have mis-handled it; trust explicit localPath in that case.
-  // Fallback: if localPath was given and routePathOrRel doesn't start with '/', use it directly.
-  const effectiveLocal = local || (localPath ?? '')
+  const normalizedInput = normalizeRoutePath(routePathOrRel)
+  const normalizedLocalPath = localPath != null ? normalizeRoutePath(localPath) : undefined
+  const derivedLocal = normalizedLocalPath ?? (normalizedInput ? getLocalMarkdownUrl(normalizedInput) : '')
+  const effectiveLocal = derivedLocal || normalizedLocalPath || ''
   if (!effectiveLocal) return []
   const idxVariant = effectiveLocal.replace(/\.md$/, '/index.md')
   const mdAlias = `/md${effectiveLocal}`
   const mdAliasIdx = `/md${idxVariant}`
   const markdownAlias = `/markdown${effectiveLocal}`
   const markdownAliasIdx = `/markdown${idxVariant}`
-  const resolvedOrigin =
-    origin ?? (typeof window !== 'undefined' ? window.location.origin : undefined)
+  const rawOrigin = origin ?? (typeof window !== 'undefined' ? window.location.origin : undefined)
+  const resolvedOrigin = normalizeOrigin(rawOrigin)
+  const relCandidates = [effectiveLocal, idxVariant, mdAlias, mdAliasIdx, markdownAlias, markdownAliasIdx]
   const candidates: string[] = []
   if (resolvedOrigin) {
-    candidates.push(`${resolvedOrigin}${effectiveLocal}`)
-    candidates.push(`${resolvedOrigin}${idxVariant}`)
-    candidates.push(`${resolvedOrigin}${mdAlias}`)
-    candidates.push(`${resolvedOrigin}${mdAliasIdx}`)
-    candidates.push(`${resolvedOrigin}${markdownAlias}`)
-    candidates.push(`${resolvedOrigin}${markdownAliasIdx}`)
+    for (const rel of relCandidates) candidates.push(`${resolvedOrigin}${rel}`)
   } else {
-    candidates.push(effectiveLocal, idxVariant, mdAlias, mdAliasIdx, markdownAlias, markdownAliasIdx)
+    candidates.push(...relCandidates)
   }
-  return candidates
+  return dedupe(candidates)
 }

@@ -3,14 +3,14 @@ import { ref, computed } from 'vue'
 const PREF_KEY = 'rspfx-copy-preference'
 export type Pref = 'humanized' | 'markdown'
 
-export function useCopyPreference() {
-  const copyPreference = ref<Pref>('humanized')
-  const isHumanized = computed(() => copyPreference.value === 'humanized')
+const copyPreference = ref<Pref>('humanized')
+const isHumanized = computed(() => copyPreference.value === 'humanized')
 
+export function useCopyPreference() {
   function loadPref() {
     try {
       const v = localStorage.getItem(PREF_KEY)
-      if (v === 'markdown' || v === 'humanized') copyPreference.value = v as Pref
+      if (v === 'markdown' || v === 'humanized') copyPreference.value = v
     } catch {}
   }
 

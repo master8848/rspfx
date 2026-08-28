@@ -2,12 +2,17 @@ import { onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useRoute, onContentUpdated } from 'vitepress'
 
-function debounce<T extends (...args: any[]) => void>(fn: T, wait: number): T {
+function debounce<T extends (...args: unknown[]) => void>(fn: T, wait: number): T & { cancel: () => void } {
   let t: ReturnType<typeof setTimeout> | null = null
-  return ((...args: any[]) => {
+  const debounced = ((...args: Parameters<T>) => {
     if (t) clearTimeout(t)
-    t = setTimeout(() => fn(...(args as any)), wait)
-  }) as T
+    t = setTimeout(() => fn(...(args as Parameters<T>)), wait)
+  }) as T & { cancel: () => void }
+  debounced.cancel = () => {
+    if (t) clearTimeout(t)
+    t = null
+  }
+  return debounced
 }
 
 export function useAttachToTitle(copyElRef: Ref<HTMLElement | null>) {
@@ -68,8 +73,13 @@ export function useAttachToTitle(copyElRef: Ref<HTMLElement | null>) {
   const debouncedAttach = debounce(() => attachToTitle(), 30)
 
   function scheduleAttach(delays: number[] = [50, 250, 600]) {
+    for (const t of timers) clearTimeout(t)
+    timers = []
     for (const d of delays) {
-      const t = setTimeout(attachToTitle, d)
+      const t = setTimeout(() => {
+        attachToTitle()
+        timers = timers.filter((x) => x !== t)
+      }, d)
       timers.push(t)
     }
   }
@@ -102,6 +112,8 @@ export function useAttachToTitle(copyElRef: Ref<HTMLElement | null>) {
 
   onBeforeUnmount(() => {
     if (mo) mo.disconnect()
+    mo = null
+    debouncedAttach.cancel()
     for (const t of timers) clearTimeout(t)
     timers = []
   })

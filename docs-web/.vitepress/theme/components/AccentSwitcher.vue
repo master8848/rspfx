@@ -64,6 +64,7 @@ function hslTripleToHex(triple: string): string | null {
 }
 
 const rawExtra = import.meta.glob<string>('../themes/*.css', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
+const builtinIdSet = new Set(shadcnThemes.flatMap(x => [x.id, x.dataValue]))
 const extraShadcnThemes: Theme[] = Object.entries(rawExtra)
   .filter(([p]) => {
     const base = p.split('/').pop() ?? ''
@@ -86,8 +87,7 @@ const extraShadcnThemes: Theme[] = Object.entries(rawExtra)
   })
   .filter(t => {
     // ignore if id already exists in built-ins (file named `zinc.css` would duplicate)
-    const builtinIds = new Set(shadcnThemes.map(x => x.id).concat(shadcnThemes.map(x => x.dataValue)))
-    return !builtinIds.has(t.id) && !builtinIds.has(t.dataValue)
+    return !builtinIdSet.has(t.id) && !builtinIdSet.has(t.dataValue)
   })
   .sort((a, b) => a.label.localeCompare(b.label))
 
@@ -127,13 +127,12 @@ const active = ref('emerald')
 const open = ref(false)
 const rootEl = ref<HTMLElement | null>(null)
 
-const current = computed(() => allThemes.find(a => a.id === active.value) ?? allThemes.find(a => a.id === 'emerald') ?? allThemes[0])
+const themeById = new Map(allThemes.map(t => [t.id, t] as const))
+const fallbackTheme = allThemes.find(a => a.id === 'emerald') ?? allThemes[0]
+const current = computed(() => themeById.get(active.value) ?? fallbackTheme)
 
-function applyTheme(id: string) {
-  active.value = id
-  const theme = allThemes.find(t => t.id === id)
+function syncDom(theme: Theme): void {
   const html = document.documentElement
-  if (!theme) return
   if (theme.kind === 'accent') {
     html.removeAttribute('data-theme')
     if (theme.dataValue === 'blue') html.removeAttribute('data-accent')
@@ -142,10 +141,17 @@ function applyTheme(id: string) {
     html.removeAttribute('data-accent')
     html.setAttribute('data-theme', theme.dataValue)
   }
-  try { localStorage.setItem(STORAGE_KEY, id) } catch {}
-  try { localStorage.setItem(LEGACY_KEY, id) } catch {}
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', theme.color)
+}
+
+function applyTheme(id: string): void {
+  const theme = themeById.get(id)
+  if (!theme) return
+  active.value = id
+  syncDom(theme)
+  try { localStorage.setItem(STORAGE_KEY, id) } catch {}
+  try { localStorage.setItem(LEGACY_KEY, id) } catch {}
 }
 
 function select(id: string) {
@@ -167,8 +173,10 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-function attachNearAppearance() {
-  const tryAttach = () => {
+let attachInterval: ReturnType<typeof setInterval> | null = null
+
+function attachNearAppearance(): void {
+  const tryAttach = (): boolean => {
     const appearance = document.querySelector('.VPNavBarAppearance')
     const el = rootEl.value
     if (appearance && el && appearance.parentElement) {
@@ -180,13 +188,15 @@ function attachNearAppearance() {
     }
     return false
   }
-  if (!tryAttach()) {
-    let retries = 0
-    const id = setInterval(() => {
-      retries++
-      if (tryAttach() || retries > 20) clearInterval(id)
-    }, 100)
-  }
+  if (tryAttach()) return
+  let retries = 0
+  attachInterval = setInterval(() => {
+    retries++
+    if (tryAttach() || retries > 20) {
+      if (attachInterval) clearInterval(attachInterval)
+      attachInterval = null
+    }
+  }, 100)
 }
 
 onMounted(() => {
@@ -205,20 +215,8 @@ onMounted(() => {
     if (byData) initial = byData.id
   }
   active.value = initial
-  const theme = allThemes.find(t => t.id === initial)
-  const html = document.documentElement
-  if (theme) {
-    if (theme.kind === 'accent') {
-      html.removeAttribute('data-theme')
-      if (theme.dataValue === 'blue') html.removeAttribute('data-accent')
-      else html.setAttribute('data-accent', theme.dataValue)
-    } else {
-      html.removeAttribute('data-accent')
-      html.setAttribute('data-theme', theme.dataValue)
-    }
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', theme.color)
-  }
+  const theme = themeById.get(initial)
+  if (theme) syncDom(theme)
   document.addEventListener('click', onClickOutside)
   document.addEventListener('keydown', onKeydown)
   attachNearAppearance()
@@ -227,6 +225,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside)
   document.removeEventListener('keydown', onKeydown)
+  if (attachInterval) {
+    clearInterval(attachInterval)
+    attachInterval = null
+  }
 })
 </script>
 

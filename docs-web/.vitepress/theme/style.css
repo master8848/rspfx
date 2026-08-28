@@ -650,14 +650,6 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 }
 .dark .rspfx-hero-copy.failed { color: #f87171; border-color: #f87171; }
 .dark .rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.14); }
-/* When injected into .VPHero .actions, the outer .action wrapper already provides 6px padding — match VPButton spacing */
-.VPHero .actions .rspfx-hero-copy { height: 40px; }
-/* Fallback slot sits after .actions; pull it inline visually when JS hasn't injected yet (flex fallback) */
-.rspfx-hero-prompt--fallback-slot {
-  display: inline-flex;
-}
-/* Hide fallback if injected button exists — handled via inline style in JS, but CSS safety */
-.VPHero .actions:has([data-rspfx-hero-prompt-injected]) ~ .rspfx-hero-prompt { display: none; }
 @media (min-width: 640px) {
   .VPHero.has-image .rspfx-hero-prompt { text-align: left; }
 }

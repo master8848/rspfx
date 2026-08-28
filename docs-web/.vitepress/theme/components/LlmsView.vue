@@ -1,27 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import llmsRaw from '../../../public/llms.txt?raw'
+import { copyToClipboard } from '../utils/copy.js'
 
-const content = ref((llmsRaw as string) || '')
+const content = ref(llmsRaw || '')
 const copied = ref(false)
 const failed = ref(false)
 let timer: ReturnType<typeof setTimeout> | null = null
+let abortController: AbortController | null = null
 
-async function copy() {
+onBeforeUnmount(() => {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+})
+
+async function copy(): Promise<void> {
   const text = content.value
   if (!text) return
   try {
-    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text)
-    else {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    }
+    await copyToClipboard(text)
     copied.value = true
     failed.value = false
     if (timer) clearTimeout(timer)
@@ -33,19 +36,22 @@ async function copy() {
   }
 }
 
-function openRaw() {
+function openRaw(): void {
   window.open('/llms.txt', '_blank', 'noopener')
 }
 
 onMounted(async () => {
   // keep build-time import but try live fetch for freshness (e.g. dev)
+  abortController = new AbortController()
   try {
-    const res = await fetch('/llms.txt', { cache: 'no-cache' })
+    const res = await fetch('/llms.txt', { cache: 'no-cache', signal: abortController.signal })
     if (res.ok) {
       const txt = await res.text()
       if (txt && txt.trim()) content.value = txt
     }
-  } catch {}
+  } catch (e) {
+    if ((e as Error)?.name === 'AbortError') return
+  }
 })
 </script>
 
@@ -60,19 +66,19 @@ onMounted(async () => {
         </p>
       </div>
       <div class="llms-actions">
-        <button class="llms-btn primary" :class="{ copied, failed }" @click="copy">
+        <button class="llms-btn primary" :class="{ copied, failed }" :aria-label="copied ? 'Copied' : failed ? 'Copy failed' : 'Copy llms.txt'" aria-live="polite" @click="copy">
           <svg v-if="!copied && !failed" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M5 15V9a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
           <svg v-else-if="copied" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v6M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           {{ copied ? 'Copied!' : failed ? 'Failed' : 'Copy' }}
         </button>
-        <button class="llms-btn" @click="openRaw">Open raw</button>
-        <a class="llms-btn" href="/llms.txt" download>Download</a>
+        <button class="llms-btn" aria-label="Open raw llms.txt" @click="openRaw">Open raw</button>
+        <a class="llms-btn" href="/llms.txt" download aria-label="Download llms.txt">Download</a>
       </div>
     </div>
 
     <div class="llms-pre-wrap">
-      <button class="llms-copy-float" :class="{ copied }" @click="copy" :title="copied ? 'Copied!' : 'Copy'">
+      <button class="llms-copy-float" :class="{ copied }" :aria-label="copied ? 'Copied' : 'Copy llms.txt'" :title="copied ? 'Copied!' : 'Copy'" aria-live="polite" @click="copy">
         <svg v-if="!copied" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M5 15V9a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
