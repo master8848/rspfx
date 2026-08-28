@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * Publish pipeline: builds, tests, bumps, and publishes every publishable
+ * Publish pipeline: builds, tests, and publishes every publishable
  * rspfx package (packages/* + apps/cli) to npm — NEVER examples.
+ * Does NOT bump versions — version is taken as-is from package.json
+ * (use `node scripts/prepare-publish.mjs` to bump versions before publishing).
  *
  * Split implementation (optimized):
  *   - publish/graph.mjs   — collect set, dependency graph, levels + cycle hint
  *   - publish/cache.mjs   — build cache (no code changes / no new packages)
  *   - publish/registry.mjs — npm view / publish / verify
- *   - publish/git.mjs     — git dirty resume, commit + tag
- *   - publish/utils.mjs   — run / fatal / bumpVersion
+ *   - publish/git.mjs     — git dirty resume helpers
+ *   - publish/utils.mjs   — run / fatal / bumpVersion (bump used only in prepare script)
  *
  * Safety rails:
  *   - hard abort if anything under examples/ or apps/playground is publishable
@@ -17,34 +19,32 @@
  *   - publish order guarantees dependencies before dependents via levels
  *   - gates: clean git tree (resume-tolerant), `bun run build`, `bun run test` (unless --skip-checks)
  *     build step is cached — skipped when fingerprint (HEAD + lockfiles + dist) unchanged
- *   - consistent version bump across the whole set (default: patch)
  *   - publishes in dependency order, one package at a time, skipping already-published versions
  *   - verifies each version lands on the registry (retried); re-runs resume naturally
  *
  * Usage:
- *   node scripts/publish.mjs [--dry-run] [--version 0.2.0] [--patch|--minor|--major]
- *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-commit] [--no-build-cache]
+ *   node scripts/publish.mjs [--dry-run] [--version 0.2.0]
+ *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-build-cache]
+ *   Version is not bumped here — run `node scripts/prepare-publish.mjs [--patch|--minor|--major|--version X]` first if you need a bump.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { flagValue, fatal, run, bumpVersion, writeJson } from './publish/utils.mjs';
+import { flagValue, fatal, run } from './publish/utils.mjs';
 import { assertNoExamplePackages, collectPublishSet, getPublishOrder, formatLevels } from './publish/graph.mjs';
 import { cachePath, readBuildCache, writeBuildCache, checkDistExists, getFingerprint } from './publish/cache.mjs';
 import { isPublished, verifyPublished, countPublished, publishPackage } from './publish/registry.mjs';
-import { dirtyRaw, isResumeDirtyAllowed, commitAndTag } from './publish/git.mjs';
+import { dirtyRaw, isResumeDirtyAllowed } from './publish/git.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 
 const DRY_RUN = args.includes('--dry-run');
 const SKIP_CHECKS = args.includes('--skip-checks');
-const NO_COMMIT = args.includes('--no-commit');
 const NO_BUILD_CACHE = args.includes('--no-build-cache');
 const versionFlag = flagValue(args, '--version');
-const bumpKind = args.includes('--major') ? 'major' : args.includes('--minor') ? 'minor' : 'patch';
 const explicitNpmTag = flagValue(args, '--tag');
 const otp = flagValue(args, '--otp') ?? process.env.RSPFX_NPM_OTP ?? process.env.npm_config_otp ?? process.env.NPM_OTP;
 if (flagValue(args, '--otp')) {
@@ -69,11 +69,13 @@ console.log(`\nPublish graph: ${set.size} packages, ${levels.length} level(s) (d
 console.log(formatLevels(levels));
 console.log(`\nPublish order (dependencies always before dependents):\n  ${order.join(' → ')}\n`);
 
-// Resume detection (after graph validation — network work comes after the cheap graph check)
-const liveAtCurrent = countPublished(set, currentVersion);
-const resumed = liveAtCurrent > 0 && liveAtCurrent < set.size;
-const targetVersion = versionFlag ?? (resumed ? currentVersion : bumpVersion(currentVersion, bumpKind));
+// Target version is current version as-is (no auto bump). Use --version to override.
+// Keep live check only for logging / resume hint, but do NOT auto bump.
+const _liveAtCurrent = (() => { try { return countPublished(set, currentVersion); } catch { return 0; } })();
+const _resumed = _liveAtCurrent > 0 && _liveAtCurrent < set.size;
+const targetVersion = versionFlag ?? currentVersion;
 const npmTag = explicitNpmTag ?? (targetVersion.includes('-') ? 'next' : 'latest');
+const resumed = _resumed;
 
 console.log(`Publishing ${set.size} packages (${DRY_RUN ? 'DRY RUN — nothing will be published' : 'LIVE'})`);
 console.log(`  current: ${currentVersion} → target: ${targetVersion} (npm tag: ${npmTag})${resumed ? ' (resume — version already on the registry)' : ''}\n`);
@@ -169,25 +171,13 @@ if (!SKIP_CHECKS) {
   }
 }
 
-// ─── 2. version bump (all publishable packages + root) ───────────────────────
-console.log('─ version bump ─────────────────────────────────────────────────────');
-const changedFiles = [];
-for (const pkg of set.values()) {
-  const pkgJsonPath = path.join(pkg.dir, 'package.json');
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-  pkgJson.version = targetVersion;
-  writeJson(pkgJsonPath, pkgJson);
-  changedFiles.push(pkgJsonPath);
-  console.log(`  ${pkg.name}: ${currentVersion} → ${targetVersion}`);
-}
-const rootPkgPath = path.join(ROOT, 'package.json');
-const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf8'));
-rootPkg.version = targetVersion;
-writeJson(rootPkgPath, rootPkg);
-changedFiles.push(rootPkgPath);
-console.log(`  rspfx (root): ${currentVersion} → ${targetVersion}`);
+// ─── 2. publish in dependency order (dependencies guaranteed before dependents) ─
+// Version is NOT bumped here — run `node scripts/prepare-publish.mjs` to bump before publishing.
+console.log(`─ version ──────────────────────────────────────────────────────────`);
+console.log(`  Using version from package.json: ${targetVersion} (no auto bump)`);
+console.log('');
 
-// ─── 3. publish in dependency order (dependencies guaranteed before dependents) ─
+// ─── 3. publish (dependencies guaranteed before dependents) ─
 console.log('\n─ publish ──────────────────────────────────────────────────────────');
 console.log(`  Order: ${order.join(' → ')}\n`);
 const published = [];
@@ -233,9 +223,5 @@ if (failed.length > 0) {
   process.exit(1);
 }
 
-// ─── 4. commit the bump + tag ────────────────────────────────────────────────
-if (!NO_COMMIT) {
-  commitAndTag(ROOT, changedFiles, targetVersion, npmTag, run);
-}
-
 console.log(`\n✓ Published ${published.length}/${set.size} packages at v${targetVersion} (tag: ${npmTag}).`);
+console.log('  Note: version was NOT bumped — use prepare-publish to bump next time.');
