@@ -52,7 +52,7 @@ All paths are defaults. Change them via `paths` in the plugin options. See [proj
 
 ### Bundler config is optional
 
-For standard layouts, skip `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`. The CLI builds the config from `config/config.json` + `package.json` and runs Vite or Rspack directly.
+For standard layouts, skip `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`. The CLI builds the config from `config/config.json` + `package.json` and runs Vite, Rsbuild, or Rspack directly.
 
 When you want control, add one plugin:
 

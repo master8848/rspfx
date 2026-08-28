@@ -36,7 +36,7 @@ rspfx dev                 # verify workbench
 rspfx package             # → sharepoint/solution/<name>.sppkg
 ```
 
-`rspfx migrate` writes `vite.config.ts` by default; `--bundler rspack` or `--bundler rsbuild` scaffolds `rspack.config.ts` / `rsbuild.config.ts` instead. After migrate `bun run build` / `rspfx build` runs Vite or Rspack internally — if `vite` or `rspack` is installed it just works.
+`rspfx migrate` writes `vite.config.ts` by default; `--bundler rspack` or `--bundler rsbuild` scaffolds `rspack.config.ts` / `rsbuild.config.ts` instead. After migrate `bun run build` / `rspfx build` runs Vite, Rsbuild, or Rspack internally — if `vite`, `rsbuild`, or `rspack` is installed it just works.
 
 > **Tip:** Commit or stash before migrating. `git diff` shows the exact changes. No `src/` is touched outside the documented rewrites.
 
@@ -93,7 +93,7 @@ Keep runtime deps (your framework, Fluent UI, PnPjs). Keep `@microsoft/sp-*` onl
 
 ### 2. Add the config file (optional — zero-config also works)
 
-For standard layouts you can skip this and run `bun run build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Vite or Rspack internally. If you want an explicit config (Vite default):
+For standard layouts you can skip this and run `bun run build` / `rspfx dev` zero-config — the toolchain synthesizes the config from the manifests and runs Vite, Rsbuild, or Rspack internally. If you want an explicit config (Vite default):
 
 ```ts
 import { rspfxVite } from '@mbsks/rspfx-plugin';

@@ -2,13 +2,13 @@
 
 The official SharePoint Framework toolchain is a chain of four disconnected generations of tooling bolted together: gulp (task runner) orchestrating Heft (build system) driving webpack (bundler) through a config overlay (`sp-build-core-webpack`, `rush-stack-compiler-…`) — plus a maze of JSON config files.
 
-RSPFX replaces all of it with one modern bundler and zero required config files.
+RSPFX replaces all of it with your choice of modern bundler — Vite (default), Rsbuild, or Rspack — and zero required config files.
 
 ## Zero config for standard layouts
 
 Official SPFx projects need `gulpfile.js`, `tsconfig.json` (with Heft extends), `config/config.json`, `config/serve.json`, `config/write-manifests.json`, `config/package-solution.json` and a `.yo-rc.json` — and the build behavior is spread across all of them.
 
-RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `bun run build` synthesize the same options and run Vite or Rspack internally.
+RSPFX: no manual bundler config needed for standard layouts. Your existing `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work as-is — `rspfx build` / `bun run build` synthesize the same options and run Vite, Rsbuild, or Rspack internally.
 
 When you want explicit control, one optional plugin in your bundler config is enough:
 
@@ -61,9 +61,15 @@ The official toolchain only does webpack 5. RSPFX lets you use Vite, Rsbuild, or
 
 Official SPFx templates ship React only; the other frameworks are left to community loaders fighting webpack config. RSPFX has first-class framework presets (`@mbsks/rspfx-framework-*`) that contribute their own loaders, refresh runtimes, and web part base classes (`VueWebPart`, `SolidWebPart`, …).
 
+## Switch SPFx versions in one line
+
+Official: to move `1.20 → 1.23` you update `@microsoft/generator-sharepoint`, `@rushstack/heft`, `@microsoft/rush-stack-compiler-*` rigs, `@microsoft/spfx-heft-plugins` / `sp-build-web`, and every `@microsoft/sp-*` runtime pin — plus `heft.json` / `rig.json` extends — then re-scaffold or hand-patch.
+
+RSPFX: change one field in your bundler config — `spfxVersion: '1.23'` in `vite.config.ts` (`rspfxVite`), `rsbuild.config.ts` (`rspfxRsbuild`), or `rspack.config.ts` (`RspfxPlugin`) — bump `@mbsks/rspfx-*` (`bun update @mbsks/rspfx-plugin` or `bun install` after editing `package.json`), rebuild. Component `version`/`id` values are harvested at build time from `node_modules/@microsoft/sp-*/dist/*.manifest.json` with fallback `reference/sp-component-ids.json`; no rig to sync. Matrix lives in `packages/core/src/versions.ts:13`; consumer steps in [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and maintainer steps in [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md).
+
 ## Faster by construction
 
-- **Vite / Rspack are fast** — 5–10× faster than webpack 5. Rspack caches to `.rspack-cache` between dev runs.
+- **Vite / Rsbuild / Rspack are fast** — 5–10× faster than webpack 5. Rspack caches to `.rspack-cache` between dev runs; Vite/Rsbuild use native esbuild/Rust.
 - **No task runner** — the official chain is gulp → Heft → webpack (three processes). RSPFX is `rspfx` → bundler directly.
 - **SWC** — TypeScript via native SWC, not slow `ts-loader`.
 - **Dev loop** — fast rebuilds, auto reload, fast refresh where supported.
@@ -101,3 +107,4 @@ None of this breaks SharePoint:
 | Bundle analysis | webpack-bundle-analyzer setup | `rspfx analyze` |
 | One-command project creation | `yo @microsoft/sharepoint` | `rspfx new` |
 | Migrate existing project | manual edits | `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` |
+| Switch SPFx version (`1.20 ↔ 1.23`) | update generator + rig + heft + every `sp-*` | change `spfxVersion` in `vite.config.ts` + `bun update` → `rspfx build` |

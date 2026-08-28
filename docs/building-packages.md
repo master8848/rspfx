@@ -13,7 +13,7 @@ What each command produces and how to use it in CI. For daily flow see [getting-
 | `rspfx clean` | Removes `dist/`, `release/`, `.rspfx`, etc. | — |
 | `rspfx doctor` | Checks env/config/ports | Exit 1 on fail, good for CI |
 
-All commands read `config/*` and `src/*/*.manifest.json`. With a bundler config (`vite.config.ts`, `rsbuild.config.ts`, or `rspack.config.ts`) it is loaded via `jiti`. Without it the CLI builds the same config from your manifests and runs Vite or Rspack directly (see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx)). Flags override file options.
+All commands read `config/*` and `src/*/*.manifest.json`. With a bundler config (`vite.config.ts`, `rsbuild.config.ts`, or `rspack.config.ts`) it is loaded via `jiti`. Without it the CLI builds the same config from your manifests and runs Vite, Rsbuild, or Rspack directly (see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx)). Flags override file options.
 
 > No manual `@microsoft/sp-*` install for most web parts. Keep it only if you import that runtime.
 

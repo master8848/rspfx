@@ -1,7 +1,7 @@
 <script>
   export let description = 'Hello from svelte';
 
-  const features = ['Rspack-powered builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
+  const features = ['Vite / Rsbuild / Rspack builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
 </script>
 
 <div class="hello-card">

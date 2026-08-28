@@ -1,6 +1,6 @@
 # @mbsks/rspfx-cli
 
-**rspfx** — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.
+**rspfx** — an SPFx-compatible build toolchain powered by modern tooling. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
 Create, develop, build, and deploy SharePoint Framework client-side web parts without ever touching webpack, Heft, or gulp. Only `@microsoft/sp-*` runtime dependencies are used, exactly as official SPFx.
 
@@ -25,7 +25,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 | Command | What it does |
 |---|---|
 | `rspfx new <name>` | Scaffold a new SPFx project (interactive prompts; flags for non-interactive) |
-| `rspfx dev` | Start the dev environment: Rspack dev server + `:4321` manifest server (HTTPS in sharepoint mode, HTTP in local preview); browser opens only with `--browser` |
+| `rspfx dev` | Start the dev environment: bundler dev server (Vite / Rsbuild / Rspack) + `:4321` manifest server (HTTPS in sharepoint mode, HTTP in local preview); browser opens only with `--browser` |
 | `rspfx dev --refresh` | Dev mode with state-preserving fast refresh where the framework supports it |
 | `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
 | `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |

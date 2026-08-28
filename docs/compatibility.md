@@ -44,8 +44,21 @@ Component IDs for sp-* packages are stable across 1.20–1.23; the `version`
 field of each `"type": "component"` entry is read from the installed
 `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, with the
 `reference/sp-component-ids.json` table as fallback. Pin the target via the
-plugin options (`spfxVersion` in `rspack.config.ts` / `vite.config.ts`) and
+plugin options (`spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`) and
 keep `@microsoft/sp-*` deps in sync.
+
+### Switching targets (consumer)
+
+To move a project between supported SPFx versions (e.g. `1.21 → 1.23`), change one field in your bundler config (`vite.config.ts` with `rspfxVite`, `rsbuild.config.ts` with `rspfxRsbuild`, or `rspack.config.ts` with `RspfxPlugin`): `spfxVersion: '1.23'`.
+
+Then bump the toolchain and rebuild:
+
+```sh
+bun update @mbsks/rspfx-plugin   # or edit package.json and bun install
+rspfx build                       # dist/ + release/ now targets 1.23
+```
+
+Compare official: update `@microsoft/generator-sharepoint`, `@rushstack/heft`, `@microsoft/rush-stack-compiler-*` rigs, `@microsoft/spfx-heft-plugins` / `sp-build-web`, and every `@microsoft/sp-*` pin plus `heft.json` / `rig.json` extends. RSPFX keeps the version in one place (`packages/core/src/versions.ts:13` is the single source of truth; see [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) for the maintainer-side checklist).
 
 SPFx 1.24 is in public preview (beta.1, July 2026; GA expected September 2026)
 and is **not** yet a supported target. The matrix above is defined in

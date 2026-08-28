@@ -31,7 +31,7 @@ export default class DemoWebPart extends VanillaWebPart<IDemoWebPartProps, unkno
 
     const list = document.createElement('ul');
     list.style.cssText = LIST_STYLE;
-    for (const feature of ['Rspack-powered builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp']) {
+    for (const feature of ['Vite / Rsbuild / Rspack builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp']) {
       const item = document.createElement('li');
       item.textContent = feature;
       list.appendChild(item);

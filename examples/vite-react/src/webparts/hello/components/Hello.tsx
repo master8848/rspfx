@@ -10,7 +10,7 @@ export interface IHelloProps {
   spAvailable: boolean;
 }
 
-const FEATURES = ['Rspack-powered builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
+const FEATURES = ['Vite / Rsbuild / Rspack builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
 
 const cardStyle: CSSProperties = {
   maxWidth: 480,

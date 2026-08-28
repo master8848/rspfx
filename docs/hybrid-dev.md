@@ -39,7 +39,7 @@ Synthesized config:
 rspfx migrate --dry-run   # preview
 rspfx migrate             # writes config, backs up to .rspfx/migrate-backup.json
 bun install
-rspfx build               # or bun run build — Vite or Rspack runs directly
+rspfx build               # or bun run build — Vite, Rsbuild, or Rspack runs directly
 ```
 
 Same manifests drive both toolchains — see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx). Revert with `rspfx migrate --revert` or `git restore .`.

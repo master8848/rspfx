@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{ description: string }>();
 
-const features = ['Rspack-powered builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
+const features = ['Vite / Rsbuild / Rspack builds', 'Manifest generation', 'SPFx-compatible output', 'No webpack, no gulp'];
 </script>
 
 <template>

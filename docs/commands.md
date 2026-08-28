@@ -2,7 +2,7 @@
 
 Global: `rspfx --version`, `rspfx --help`.
 
-All commands read `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json`. If a bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) exists it is loaded via `jiti` and the plugin marker is used. If not, the CLI builds it from your manifests and runs Vite or Rspack directly (see [hybrid-dev.md](hybrid-dev.md)). Flags override file options.
+All commands read `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json`. If a bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) exists it is loaded via `jiti` and the plugin marker is used. If not, the CLI builds it from your manifests and runs Vite, Rsbuild, or Rspack directly (see [hybrid-dev.md](hybrid-dev.md)). Flags override file options.
 
 Pick your bundler when scaffolding or migrating: `--bundler vite` (default), `rsbuild`, or `rspack`.
 
@@ -107,7 +107,7 @@ Production compile to `dist/` + `release/` (manifests + assets).
 | `--no-minify` | Disable minify |
 | `--sourcemap` | Emit hidden source maps |
 
-Bundler config is optional — without it the CLI builds from manifests and runs Vite or Rspack directly.
+Bundler config is optional — without it the CLI builds from manifests and runs Vite, Rsbuild, or Rspack directly.
 
 ```sh
 rspfx build

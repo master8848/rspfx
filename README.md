@@ -1,6 +1,6 @@
 # RSPFX
 
-**An SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.**
+**An SPFx-compatible build toolchain powered by modern bundlers — Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.**
 
 RSPFX is a drop-in replacement for the official SPFx toolchain. It builds web parts that load in the SharePoint workbench and install as `.sppkg` — without webpack, Heft, or gulp.
 
@@ -9,6 +9,7 @@ RSPFX is a drop-in replacement for the official SPFx toolchain. It builds web pa
 - **Never webpack / Heft / gulp.** Those strings never appear in build output or generated projects. `@microsoft/sp-*` is externalized — you only install it if your code imports it.
 - **Pick your bundler.** Vite is default. Rsbuild and Rspack also work. No bundler config needed for standard layouts — `config/config.json` and your manifests are enough.
 - **Framework-agnostic core.** `@mbsks/rspfx-core` has zero dependencies. Frameworks plug in via `FrameworkPreset`.
+- **One-line version switches.** Change `spfxVersion` in `vite.config.ts` and `bun update` — `1.20 ↔ 1.23` without regenerating the project; see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix).
 - **Workbench-first.** Same as `gulp serve`: dev server on `:4321`, debug manifests, browser opens only with `--browser`.
 
 ## Quick start
@@ -40,7 +41,7 @@ rspfx migrate --dry-run   # preview changes
 rspfx migrate             # apply: backs up to .rspfx/migrate-backup.json
 bun install
 rspfx dev                 # same manifests work for both toolchains
-bun run build             # or rspfx build — bundler config is optional, Vite/Rspack is used internally
+bun run build             # or rspfx build — bundler config is optional, Vite, Rsbuild, or Rspack is used internally
 ```
 
 > **Tip:** You do not need to manually install `@microsoft/sp-*` for most web parts. The toolchain externalizes them and emits `"type": "component"` manifest entries so SharePoint resolves its built-in copies. Install them only if your code imports a specific `sp-*` runtime (e.g. `@microsoft/sp-http`).
@@ -103,7 +104,7 @@ To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`)
 
 Frameworks plug in via `FrameworkPreset` in `@mbsks/rspfx-core`; see [docs/frameworks.md](docs/frameworks.md).
 
-- **SPFx targets:** see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
+- **SPFx targets:** `1.20`–`1.23` (default `1.23`) — switch with one line `spfxVersion` in `vite.config.ts` + `bun update`; see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
 - **Node:** 20+; **Bun** recommended for repo development (consumers can use npm/yarn/pnpm/bun)
 
 > **Tip:** If you need Vue/Svelte/Solid/Preact, use RSPFX — Microsoft's toolchain supports only React/vanilla (and Angular via Heft). For React/vanilla either toolchain works; keep the same manifests and switch via scripts (see [Same manifest for Heft/Gulp and RSPFX](#same-manifest-for-heftgulp-and-rspfx)).
