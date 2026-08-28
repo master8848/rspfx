@@ -27,32 +27,39 @@ Define `src/framework/my-preset.ts` exporting a preset with a custom `name`:
 
 ```ts
 import type { FrameworkPreset } from '@mbsks/rspfx-plugin-api';
+import ReactRefreshRspackPlugin from '@rspack/plugin-react-refresh';
 
 export const myPreset: FrameworkPreset<'my-framework'> = {
   name: 'my-framework',
-  contributions({ fastRefresh }) {
+  rspack({ fastRefresh }) {
     return {
       rules: [{ test: /\.tsx?$/, use: { loader: 'builtin:swc-loader', options: { jsc: { parser: { syntax: 'typescript', jsx: true } } } } }],
-      swc: { jsc: { transform: { react: { runtime: 'automatic' } } } },
+      swc: { jsc: { transform: { react: { runtime: 'automatic', development: fastRefresh } } } },
+      plugins: fastRefresh ? [new ReactRefreshRspackPlugin()] : [],
       resolve: { extensions: ['.ts', '.tsx', '.js'] }
     };
   },
   vite({ fastRefresh }) {
-    return { plugins: [], esbuild: { jsx: 'automatic' } };
+    return { plugins: fastRefresh ? [myVitePlugin()] : [], esbuild: { jsx: 'automatic' } };
   },
   rsbuild({ fastRefresh }) {
-    return { rules: [], plugins: [], resolve: { extensions: ['.ts', '.tsx'] } };
-  }
+    return { rules: [], plugins: fastRefresh ? [new ReactRefreshRspackPlugin()] : [], resolve: { extensions: ['.ts', '.tsx'] } };
+  },
+  /** @deprecated use rspack() */
+  contributions(opts) { return this.rspack(opts); }
 };
+
+function myVitePlugin() { return { name: 'my-framework-hmr' }; }
 ```
 
 | Method | Return type | Required | Fallback |
 |---|---|---|---|
-| `contributions({ fastRefresh })` | `FrameworkRspackContributions` (`packages/plugin-api/src/types.ts:3`) | yes | — |
+| `rspack({ fastRefresh })` | `FrameworkRspackContributions` (`packages/plugin-api/src/types.ts:3`) | yes | — |
+| `contributions({ fastRefresh })` | `FrameworkRspackContributions` (`packages/plugin-api/src/types.ts:3`) | no | deprecated alias for `rspack()` |
 | `vite({ fastRefresh })` | `FrameworkViteContributions` (`packages/plugin-api/src/types.ts:12`) | no | `rspfxVite` (`packages/plugin/src/vite.ts:299`) warns and runs without Vite contributions |
-| `rsbuild({ fastRefresh })` | `FrameworkRsbuildContributions` (`packages/plugin-api/src/types.ts:21`) | no | `rspfxRsbuild` (`packages/plugin/src/rsbuild.ts:354`) falls back to `contributions()` minus `swc` |
+| `rsbuild({ fastRefresh })` | `FrameworkRsbuildContributions` (`packages/plugin-api/src/types.ts:21`) | no | `rspfxRsbuild` (`packages/plugin/src/rsbuild.ts:354`) falls back to `rspack()` minus `swc` |
 
-`fastRefresh` reflects `dev.fastRefresh` or `RSPFX_FAST_REFRESH=1` / `rspfx dev --refresh` and is merged by `@mbsks/rspfx-compiler-rspack`, `rspfxVite`, and `rspfxRsbuild`.
+`fastRefresh` reflects `dev.fastRefresh` (`packages/core/src/config.ts:138`) or `RSPFX_FAST_REFRESH=1` / `rspfx dev --refresh` (`apps/cli/src/commands/dev.ts:80`) and is merged by `@mbsks/rspfx-compiler-rspack`, `rspfxVite`, and `rspfxRsbuild`.
 
 Bare loader strings in `rules[].use` that are not `builtin:` are resolved against the framework module via `resolveContributionLoaders` (`packages/dev-runtime/src/project.ts:759`).
 
@@ -123,7 +130,7 @@ No CLI change is required.
 
 | Config | Plugin | Preset method |
 |---|---|---|
-| `rspack.config.ts` | `RspfxPlugin` (`@mbsks/rspfx-plugin`) | `contributions()` |
+| `rspack.config.ts` | `RspfxPlugin` (`@mbsks/rspfx-plugin`) | `rspack()` (alias `contributions()`) |
 | `vite.config.ts` | `rspfxVite` (`@mbsks/rspfx-plugin`) | `vite()` then `resolveContributionLoaders` |
 | `rsbuild.config.ts` | `rspfxRsbuild` (`@mbsks/rspfx-plugin`) | `rsbuild()` then `resolveContributionLoaders` |
 
@@ -146,6 +153,32 @@ registerPlugin(definePlugin({ name: 'my-framework-ext', frameworkPreset: myPrese
 export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework: 'my-framework' as const })] });
 ```
 
+## Hot reload
+
+Gate HMR plugins and compiler flags on `fastRefresh` so prod builds stay clean; the pipeline passes `fastRefresh: true` only for `rspfx dev --refresh` or `dev.fastRefresh: true` (`packages/dev-runtime/src/serve.ts:167`, `packages/plugin/src/vite.ts:545`, `packages/plugin/src/rsbuild.ts:445`).
+
+| Bundler | Preset method | What to return when `fastRefresh: true` | Builtin reference |
+|---|---|---|---|
+| `rspack` | `rspack({ fastRefresh })` | `plugins: [new ReactRefreshRspackPlugin()]` and `swc.jsc.transform.react.development: true` | `packages/framework-react/src/index.ts:23` |
+| `rspack` (Preact) | `rspack({ fastRefresh })` | `plugins: [new PreactRefreshRspackPlugin()]` via `@rspack/plugin-preact-refresh` | `packages/framework-preact/src/index.ts:28` |
+| `rspack` (Svelte) | `rspack({ fastRefresh })` | `svelte-loader` with `{ hotReload: true, compilerOptions: { dev: true } }` | `packages/framework-svelte/src/index.ts:51` |
+| `rspack` (Solid) | `rspack({ fastRefresh })` | `babel-loader` with `solid-refresh/babel` plugin or `builtin:swc-loader` with `rspackExperiments.swcPlugins` | `packages/framework-solid/src/index.ts:33` |
+| `rspack` (Vue) | `rspack()` | `vue-loader` + `VueLoaderPlugin` (HMR is always on; ignore `fastRefresh`) | `packages/framework-vue/src/index.ts:19` |
+| `vite` | `vite({ fastRefresh })` | Vite plugin: `@vitejs/plugin-react` / `@prefresh/vite` / `@sveltejs/vite-plugin-svelte { hot: true }` / `@vitejs/plugin-vue` | `packages/framework-react/src/index.ts:39`, `packages/framework-preact/src/index.ts:56`, `packages/framework-svelte/src/index.ts:78` |
+| `rsbuild` | `rsbuild({ fastRefresh })` | Same as rspack (`babel-loader` + refresh `plugins`); missing `rsbuild()` falls back to `rspack()` minus `swc` | `packages/framework-react/src/index.ts:46`, `packages/plugin/src/rsbuild.ts:445` |
+
+Missing peers do not break the build; `@mbsks/rspfx-compiler-rspack` stubs `@rspack/plugin-react-refresh`, `@rspack/plugin-preact-refresh`, `vue-loader`, `svelte-loader` via `BUILD_TIME_ALIASES` (`packages/compiler-rspack/src/config.ts:16`) and logs a warning with fallback to full reload (see [fast-refresh.md](fast-refresh.md)).
+
+`RefreshRuntime` (`packages/dev-runtime/src/refresh.ts:21`) is framework-agnostic; it suppresses the full reload when `fastRefresh` is on and the framework is not `vanilla`, otherwise the dev server falls back to reload (`packages/dev-runtime/src/serve.ts:335`).
+
+## Source maps
+
+Presets do not set `devtool` or `sourcemap`; the pipeline owns it.
+
+`createRspackConfig` sets `devtool: 'source-map'` for dev/serve and `devtool: hidden-source-map` only when `build.sourcemap: true` in production (`packages/compiler-rspack/src/config.ts:143`); `rspfxVite` (`packages/plugin/src/vite.ts:648`) and `rspfxRsbuild` (`packages/plugin/src/rsbuild.ts:436`) mirror the same rule.
+
+Enable prod maps with `build.sourcemap: true` in the plugin config (`packages/core/src/config.ts:18`) or `rspfx build --sourcemap` (`apps/cli/src/commands/build.ts:223`); dev maps need no config.
+
 ## Resolution flow
 
 `loadFrameworkPreset` (`packages/dev-runtime/src/project.ts:737`) resolves in order: `createRequire(projectRoot/package.json)` for `@mbsks/rspfx-framework-<id>` (records `__rspfxModuleUrl` for loader resolution), then in-memory registry from `registerPlugin`, then a no-op preset with a warning.
@@ -167,6 +200,4 @@ This guide is the entry point for Angular, Lit, Qwik, Astro, Ember, Stencil, Alp
 - `rspfx new --help`, `rspfx doctor`, and CLI prompts cover builtin ids only; `rspfx doctor` reports the framework package as missing when the preset comes from the registry, but the build succeeds via the registry fallback.
 
 - `resolveContributionLoaders` rewrites only `rules[].use` and Babel strings; `swc`, `define`, and `resolve` are merged without path rewriting.
-
-- Fast refresh requires the preset to return refresh plugins/loaders for the active bundler; `RefreshRuntime` (`packages/dev-runtime`) is framework-agnostic.
 
