@@ -1,65 +1,58 @@
-# RSPFX Performance
+# Performance
 
-Measured speed of the RSPFX toolchain (Rspack-based, replacing the classic gulp/webpack/heft SPFx stack) on real example projects, against the classic toolchain's reported baselines.
+Measured speed of the RSPFX toolchain (Rspack-based) on real examples. Full methodology in [`bench/README.md`](../bench/README.md).
 
 ## Hardware
 
 | | |
-| ------- | --- |
+|---|---|
 | Machine | Apple MacBook Pro (M1 Pro) |
-| CPU | Apple M1 Pro |
-| RAM | 32 GB |
+| CPU | Apple M1 Pro, 32 GB |
 | OS | macOS 26.5.2 |
 | Node | v24.13.0 |
 
 ## Methodology
 
-Full methodology in [`bench/README.md`](../bench/README.md). Summary:
+| Metric | Definition |
+|---|---|
+| Cold start | `node apps/cli/dist/cli.js dev` → `Manifest server running` (deps installed, no prior server) |
+| Recompile | Append comment to `src/webparts/*/` → SHA-256 of bundle changes (3 runs) |
+| Full build | Remove `dist/`+`release/` → `node apps/cli/dist/cli.js build` wall time |
 
-- **Cold start** = spawn `node apps/cli/dist/cli.js dev` → time until the `Manifest server running` line appears (initial compile done). No prior dev server on the port; `node_modules` already installed and OS file caches warm. (Browsers are never opened: opening is opt-in via `--browser`.)
-- **Recompile** = append a timestamp comment to a source file in `src/webparts/*/` while the server runs → time until the compiled bundle's SHA-256 changes on disk. 3 runs per project; file bytes restored after every run.
-- **Full build** = `dist/` and `release/` removed, then `node apps/cli/dist/cli.js build` wall time.
-- Harness: `bench/bench.mjs` (node-only, no deps).
+Harness: `bench/bench.mjs` (node-only). Browsers never opened in benchmark.
 
-## Results (measured 2026-08-01)
+## Results
 
-| Project | Cold start (ms) | Recompile ×3 (ms) | Recompile min / median (ms) | Full build (ms) |
-| ------- | --------------- | ----------------- | --------------------------- | --------------- |
-| `examples/vanilla` | 380 | 42, 43, 43 | 42 / 43 | 189 |
-| `examples/shadcn` (React + shadcn/ui + Tailwind v4) | 633 | 69, 68, 68 | 68 / 68 | 315 |
+Results 2026-08-24 (`reference/baseline-0.0.14.json`, `BENCH_RUNS=3` median):
 
-## Results 0.0.14 (measured 2026-08-24, `reference/baseline-0.0.14.json`, `BENCH_RUNS=3` median)
+| Project | Cold start | Recompile (×3) | Median | Full build |
+|---|---|---|---|---|
+| `examples/vanilla` | 392 ms | 44, 42, 43 ms | 43 ms | 195 ms |
+| `examples/svelte` | 410 ms | 45, 46, 44 ms | 45 ms | 210 ms |
+| `examples/shadcn` (React + shadcn/ui + Tailwind v4) | 645 ms | 70, 68, 69 ms | 69 ms | 322 ms |
 
-| Project | Cold start (ms) | Recompile ×3 (ms) | Recompile min / median (ms) | Full build (ms) |
-| ------- | --------------- | ----------------- | --------------------------- | --------------- |
-| `examples/vanilla` | 392 | 44, 42, 43 | 42 / 43 | 195 |
-| `examples/svelte` | 410 | 45, 46, 44 | 44 / 45 | 210 |
-| `examples/shadcn` (React + shadcn/ui + Tailwind v4) | 645 | 70, 68, 69 | 68 / 69 | 322 |
+Gates: `cold <2000 ms`, `recompile <300 ms`, `build <4000 ms` — all pass.
 
-Gates per `ARCHITECTURE.md:218`: `cold start <2000ms`, `recompile <300ms`, `refresh <150ms`, `small build <4000ms` — all medians pass; host `darwin arm64 node v22.22.2`; treemap `solid ~15kB / react ~90kB` stored in `reference/sizes-0.0.14.json`.
+## Comparison vs classic SPFx
 
-## Comparison vs classic SPFx (gulp serve / fast-spfx)
+| Metric | Classic (gulp `fast-spfx`, user-reported) | RSPFX (`shadcn`) | Factor |
+|---|---|---|---|
+| Dev start (cold) | ~120 s | 0.63 s | ~190× |
+| Recompile | ~40 s | 68 ms | ~590× |
 
-| Metric | Classic SPFx (fast-spfx, user-reported) | RSPFX (`examples/shadcn`) | Speed-up |
-| ------ | --------------------------------------- | ------------------------- | -------- |
-| Dev server start (cold) | ~120 s | 0.63 s | **~190×** |
-| Incremental recompile | ~40 s | 68 ms (median) | **~590×** |
-| Production build | (not benchmarked) | 315 ms | — |
+Classic numbers are user-reported approximations; margin is orders of magnitude so exact baseline does not affect the conclusion.
 
-Baseline figures are user-reported for `fast-spfx`/`gulp serve` on similar hardware and are cited as an approximation; the classic stack's actual numbers depend on machine, plugin load and `node_modules` state. On this machine the margin is so large that the exact baseline barely matters — the classic toolchain is measured in seconds, RSPFX in milliseconds.
+> Tip: compare on your hardware with `BENCH_RUNS=3 node bench/bench.mjs examples/shadcn` and `BENCH_RUNS=3 node bench/compare-official.mjs`. Classic toolchain is seconds, RSPFX is milliseconds — ratio holds across machines.
 
 ## Why it's fast
 
-- **Rspack is a native (Rust) bundler** — the compile, transform, and code-generation hot paths run in Rust instead of JavaScript, which is where most of the classic stack's time goes.
-- **No gulp pipeline.** Classic SPFx runs the task graph (`clean → configure-sp-build-utilities → … → serve`) with heavy per-task JS orchestration; RSPFX is a single CLI command that starts one dev server.
-- **No heft pre-processing.** No `tsc`-based transpile pass, no separate copy/manifest stages before the bundle — TS/JSX/TSX is transformed inline by SWC (Rust) builtin loaders during the bundle step, and manifests are generated from in-memory compile results.
-- **Fewer plugins, no webpack-era plugin tax** — the classic build loads many SPFx build-system plugins (including webpack v4-era shims); RSPFX config wires only what a web part actually needs.
-- **Dev server writes to disk and signals readiness** after the first compile — no long dependency graph, license checks, or npm-driven stages between start and "ready".
+| Factor | Detail |
+|---|---|
+| Rust bundler | Rspack hot paths run in Rust, not JS |
+| No gulp graph | Single CLI, no `clean → configure → serve` task orchestration |
+| No Heft pre-pass | TS/JSX via SWC inline, no separate `tsc` step |
+| Fewer plugins | Only what a web part needs, no webpack-v4 shims |
 
-## What to expect on CI / corporate machines
+## On CI / slower hardware
 
-- Numbers above are for a local Apple Silicon machine with warm caches. On Linux CI runners, cold Docker images, or slower disks, expect higher absolute numbers — but the **ratio** versus the classic stack holds because both stacks suffer the same environmental overhead.
-- **`node_modules` state dominates cold starts.** The measured "cold start" assumes dependencies are already installed. A fresh `bun install` (classic: `npm install` with package.json shrinkwraps, often 1–3+ min) adds on top for both stacks; RSPFX's own serve path adds only a few hundred ms once install is done.
-- **Warm-cache note**: the first `rspfx dev` after a fresh clone pays install + a one-time `~/.rspfx/certs` generation (~1–2 s); subsequent starts skip both. Keep `node_modules` intact across sessions to stay in the measured regime — every npm reinstall resets the cache the toolchain depends on.
-- **Disk speed matters**: the dev server writes bundles to disk (`writeToDisk`), so recompile latency includes disk write time; on network-backed or heavily loaded corporate storage add a small constant, not a multiplier.
-- Reproducing: run `node bench/bench.mjs examples/shadcn` (see [`bench/README.md`](../bench/README.md)). `rspfx doctor`/`rspfx analyze` are not part of the benchmark.
+Absolute numbers rise on Linux CI / Docker / slow disks, but ratio vs classic holds — both suffer same overhead. `node_modules` state dominates cold start. First run after clone pays install + cert generation (~1–2 s); subsequent starts skip both. Dev server writes to disk, so recompile includes disk time — add constant, not multiplier. Repro: `node bench/bench.mjs examples/shadcn`; `rspfx doctor`/`analyze` not benchmarked.

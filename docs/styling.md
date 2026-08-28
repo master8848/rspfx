@@ -1,73 +1,54 @@
 # Styling
 
-How CSS and SCSS are handled for SPFx. For the build pipeline see [building-packages.md](building-packages.md).
+How CSS and SCSS are handled for SPFx. For the build pipeline see [building-packages.md](building-packages.md). See Microsoft docs: [CSS guidance](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/guidance/css-guidance).
+
+> **Tip:** Use Vite for the simplest CSS — PostCSS, CSS Modules, and SCSS work out of the box with no extra config. Rank: Vite > Rsbuild > Rspack.
 
 ## Why CSS is inlined
 
-SPFX loads only JS bundles (`[name].js` via `loaderConfig.scriptResources` `type: "path"`). No external `.css` is fetched, so all CSS must be injected by JS.
+SPFx loads only JS bundles (`[name].js` via `loaderConfig.scriptResources` `type: "path"`). No external `.css` is fetched, so CSS must be injected by JS. All three bundlers inline by default — never extract CSS for `.sppkg` or styles won't ship.
 
-Keep CSS inlined:
-
-- Rspack: `style-loader` (`packages/compiler-rspack/src/config.ts:182`)
-- Rsbuild: `output.injectStyles: true` (`packages/plugin/src/rsbuild.ts:319`)
-- Vite: `build.cssCodeSplit: false` (`packages/plugin/src/vite.ts:340`)
-
-Never use `type: "css"` or `CssExtractRspackPlugin`. The only extract is `RSPFX_EXTRACT_CSS=1` (`packages/compiler-rspack/src/config.ts:176`) — not for `.sppkg`.
+> **Tip:** Blank or unstyled parts in the workbench usually mean CSS extraction was enabled — keep inlining on.
 
 ## Defaults
 
-All three bundlers handle `.css`, `.scss`, `.sass`, and `*.module.*` out of the box.
+All three bundlers handle `.css`, `.scss`, `.sass`, and `*.module.*` out of the box:
 
-- SCSS: install `sass` (`bun add -D sass`). `sass-loader` `api: "modern"` compiles it.
-- PostCSS: add any `postcss.config.*` file (`js`, `cjs`, `mjs`, `ts`, `cts`, `mts`, or `json`) at the project root. Applied via `postcss-loader` only when the file exists (`packages/compiler-rspack/src/config.ts:37`).
-- CSS Modules: `*.module.css` and `*.module.scss` are local (hashed names, import returns mapping). Plain `.css`/`.scss` are global. Config is `modules: { auto: /\.module\.\w+$/i, namedExport: false, exportLocalsConvention: 'asIs' }`.
+- **SCSS:** `bun add -D sass` — picked up automatically.
+- **PostCSS:** add any `postcss.config.*` at the project root — applied automatically when present.
+- **CSS Modules:** `*.module.css` / `*.module.scss` are local (hashed, import returns mapping). Plain `.css`/`.scss` are global.
 
 ## Pick your bundler
 
-Vite is recommended. Rsbuild is second. Rspack is for full control only.
+| Bundler | When to use | CSS inlining |
+|---|---|---|
+| **Vite** (recommended) | Default for new projects | Automatic (`cssCodeSplit: false`) |
+| **Rsbuild** | Rspack compat with simpler config | Keep `output.injectStyles: true` |
+| **Rspack** | Full bundler control | Keep `style-loader` |
 
-All three give the same `dist/*.js` + `release/` + `.sppkg`.
-
-Ranking: Vite > Rsbuild > Rspack (see `skills/rspfx/SKILL.md`). Switch with `rspfx new --bundler vite|rsbuild|rspack` or `rspfx migrate --bundler vite`.
+Switch with `rspfx new --bundler vite|rsbuild|rspack` or `rspfx migrate --bundler vite`.
 
 ## Customize
 
-Your bundler file owns styling. RSPFX doesn't overwrite `css`/`tools`.
+Your bundler file owns styling — RSPFX doesn't overwrite `css`/`tools`.
 
-**Rspack** — add `module.rules`. Prefer helpers over hand-written rules:
+**Rspack** — prefer helpers:
 
 ```ts
 import { RspfxPlugin } from '@mbsks/rspfx-plugin';
 import { rspfxCssInlineRule, rspfxSassRule } from '@mbsks/rspfx-compiler-rspack/helpers/css.js';
-export default {
-  plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react' })],
-  module: { rules: [rspfxCssInlineRule(), rspfxSassRule()] }
-};
+export default { plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react' })], module: { rules: [rspfxCssInlineRule(), rspfxSassRule()] } };
 ```
 
 Set `build: { css: false }` if you take full ownership.
 
 **Rsbuild** — use `tools.postcss`/`tools.sass`, keep `output.injectStyles: true`.
 
-```ts
-import { defineConfig } from '@rsbuild/core';
-import { rspfxRsbuild } from '@mbsks/rspfx-plugin';
-export default defineConfig({
-  plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react' })],
-  output: { injectStyles: true }
-});
-```
+**Vite** — use `css.modules` + `postcss.config.*`, keep `build.cssCodeSplit: false`.
 
-**Vite** — use `css.modules` + `postcss.config.*`. Keep `build.cssCodeSplit: false`.
+## Tailwind and UnoCSS
 
-```ts
-import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react' })] };
-```
-
-## Tailwind v4
-
-Via PostCSS only. No special plugin.
+Tailwind v2/v3/v4 and UnoCSS work via PostCSS — no special RSPFX plugin.
 
 ```sh
 bun add -D tailwindcss @tailwindcss/postcss postcss
@@ -83,15 +64,14 @@ export default { plugins: { '@tailwindcss/postcss': {} } };
 @import "tailwindcss";
 ```
 
-Import `src/app.css` from a web part entry. Tailwind v3: use `content`, not `purge`.
+Import `src/app.css` from a web part entry. For Tailwind v3 use `content`, not `purge`. UnoCSS is similar — add its PostCSS or Vite plugin and keep inlining enabled.
 
 ## CSS Modules vs global
 
 ```scss
-/* Hello.module.scss — hashed, import returns { hello } */
+/* Hello.module.scss — hashed */
 .hello { color: var(--helloColor); }
-
-/* app.css — global, no mapping */
+/* app.css — global */
 ```
 
 ```ts
@@ -99,8 +79,6 @@ import styles from './Hello.module.scss';
 <div className={styles.hello} />
 ```
 
-SCSS needs `sass`. Plain CSS doesn't.
-
 ## Opt-out
 
-`build: { css: false }` disables built-in handling. Add your own rules but keep inlining (`style-loader` / `output.injectStyles: true` / `build.cssCodeSplit: false`) — otherwise styles won't ship in the `.sppkg`.
+`build: { css: false }` disables built-in handling. If you take over, keep inlining enabled — otherwise styles won't ship in the `.sppkg`.

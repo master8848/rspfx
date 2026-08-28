@@ -1,0 +1,61 @@
+# RSPFX
+
+> SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack ready — same manifests, same .sppkg.
+
+RSPFX builds SharePoint Framework web parts, extensions, and libraries without Heft/webpack/gulp. It reads `config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` and produces AMD bundles + `.sppkg` identical to official tooling. See `README.md` for quick start and `ARCHITECTURE.md` for the full plan. Repo: https://github.com/master8848/rspfx — npm: `@mbsks/rspfx-cli`.
+
+## Getting Started
+
+- [Why RSPFX](https://github.com/master8848/rspfx/blob/main/docs/why-rspfx.md) (/docs/why-rspfx): Why a drop-in toolchain — same manifests/outputs, faster builds, no Heft rig.
+- [Getting Started](https://github.com/master8848/rspfx/blob/main/docs/getting-started.md) (/docs/getting-started): Install, scaffold with `rspfx new`, `rspfx dev` on :4321, `rspfx package` to .sppkg.
+
+## Guide
+
+- [Command Reference](https://github.com/master8848/rspfx/blob/main/docs/commands.md) (/docs/commands): `rspfx new|migrate|dev|build|package|deploy|doctor|analyze|clean` flags, env vars (`RSPFX_LOG_LEVEL`, `SPFX_SERVE_TENANT_DOMAIN`, `RSPFX_ACCESS_TOKEN`, `RSPFX_APP_CATALOG_URL`), bundler config loading.
+- [Project Structure](https://github.com/master8848/rspfx/blob/main/docs/project-structure.md) (/docs/project-structure): File-path reference for CLI — tree, config, manifests, outputs.
+- [Building and Packaging](https://github.com/master8848/rspfx/blob/main/docs/building-packages.md) (/docs/building-packages): What `rspfx build`/`package` produce (`dist/`, `release/`, `sharepoint/solution/*.sppkg`), ZIP layout.
+- [Deployment Guide](https://github.com/master8848/rspfx/blob/main/docs/deployment.md) (/docs/deployment): App catalog upload, page install, Teams/Outlook, CDN.
+- [Teams and Outlook Install](https://github.com/master8848/rspfx/blob/main/docs/teams-outlook-install.md) (/docs/teams-outlook-install): `teams/manifest.json` + icons bundled under `ClientSideAssets/teams/` in .sppkg.
+- [Multi-webpart Projects](https://github.com/master8848/rspfx/blob/main/docs/multi-webpart.md) (/docs/multi-webpart): Multiple web parts/extensions/libraries in one .sppkg.
+- [Framework Support](https://github.com/master8848/rspfx/blob/main/docs/frameworks.md) (/docs/frameworks): Framework-agnostic core via `FrameworkPreset` — React/Vue/Svelte/Solid/Preact built-in, custom via `registerPlugin`.
+- [Custom Framework Extensibility](https://github.com/master8848/rspfx/blob/main/docs/custom-framework.md) (/docs/custom-framework): One-file `FrameworkPreset` + `definePlugin`/`registerPlugin` (`packages/plugin-api/src/registry.ts:5`) for any other framework.
+- [Styling](https://github.com/master8848/rspfx/blob/main/docs/styling.md) (/docs/styling): CSS/SCSS handling — Vite preferred, PostCSS/CSS Modules/SCSS out of the box.
+- [Favicon and Assets](https://github.com/master8848/rspfx/blob/main/docs/favicon-and-assets.md) (/docs/favicon-and-assets): `assets/favicon.svg` for `localhost:4321` preview, per-webpart assets.
+- [Fast Refresh](https://github.com/master8848/rspfx/blob/main/docs/fast-refresh.md) (/docs/fast-refresh): State-preserving HMR via `rspfx dev --refresh`, fallback to reload.
+
+## Migration
+
+- [Migrating an Existing SPFx Project](https://github.com/master8848/rspfx/blob/main/docs/migration-from-spfx.md) (/docs/migration-from-spfx): Conventions carry over as-is; entry to detailed migration.
+- [Migrating off gulp + Heft](https://github.com/master8848/rspfx/blob/main/docs/migrating-from-gulp-heft.md) (/docs/migrating-from-gulp-heft): Definitive guide — `rspfx migrate --dry-run`, backup `.rspfx/migrate-backup.json`, `--revert`.
+- [Migration Case Study — PnP Modern Search](https://github.com/master8848/rspfx/blob/main/docs/migration-case-study.md) (/docs/migration-case-study): Real 4-webpart, 178-file Fluent UI 8 + PnPjs migration with zero web part code changes.
+- [Hybrid Dev Mode](https://github.com/master8848/rspfx/blob/main/docs/hybrid-dev.md) (/docs/hybrid-dev): `rspfx dev` on official SPFx projects without migration — synth config, production stays on Heft/Gulp.
+- [Upgrading the SPFx Target Version](https://github.com/master8848/rspfx/blob/main/docs/upgrading-spfx-version.md) (/docs/upgrading-spfx-version): One-line `spfxVersion` in `vite.config.ts` + `bun update` for 1.20↔1.23.
+- [Why You Should NOT Migrate (yet)](https://github.com/master8848/rspfx/blob/main/docs/why-not-to-migrate.md) (/docs/why-not-to-migrate): Honest decision guide — stay on gulp/Heft if blockers match.
+
+## Reference
+
+- [Architecture](https://github.com/master8848/rspfx/blob/main/docs/architecture.md) (/docs/architecture): Pipeline overview, package map (`@mbsks/rspfx-core` zero-deps), bundler flow.
+- [Internal API Contract](https://github.com/master8848/rspfx/blob/main/docs/internal-api.md) (/docs/internal-api): Exact public surfaces for `packages/*` — ESM only, strict TS.
+- [Compatibility](https://github.com/master8848/rspfx/blob/main/docs/compatibility.md) (/docs/compatibility): Same artifact formats as official SPFx; SPFx version matrix 1.20–1.23, Node 20+, all package managers.
+- [Supporting a New SPFx Version — Maintainer Only](https://github.com/master8848/rspfx/blob/main/docs/supporting-a-new-spfx-version.md) (/docs/supporting-a-new-spfx-version): Checklist harvesting formats byte-for-byte from official npm packages.
+- [Performance](https://github.com/master8848/rspfx/blob/main/docs/performance.md) (/docs/performance): Benchmark methodology and Rspack-based speed on real examples (`bench/README.md`).
+- [Real-tenant Validation](https://github.com/master8848/rspfx/blob/main/docs/real-tenant-validation.md) (/docs/real-tenant-validation): Manual tenant gate — scaffold→package→catalog→workbench no errors (passed 2026-08-22).
+- [Roadmap](https://github.com/master8848/rspfx/blob/main/docs/roadmap.md) (/docs/roadmap): Phases M0–M1 complete; links to roadblocks.
+- [Roadblocks](https://github.com/master8848/rspfx/blob/main/docs/roadblocks.md) (/docs/roadblocks): Pre-1.0 blockers, real-tenant gate status.
+
+## Project Docs (repo root)
+
+- [README — RSPFX overview + quick start](https://github.com/master8848/rspfx/blob/main/README.md): Principles, quick start, `rspfx` commands, same-manifest for Heft/Gulp, supported targets.
+- [ARCHITECTURE — full plan](https://github.com/master8848/rspfx/blob/main/ARCHITECTURE.md): Package map and design rationale.
+- [CONTRIBUTING — publishing & tagging](https://github.com/master8848/rspfx/blob/main/CONTRIBUTING.md): `scripts/publish.mjs`, `CHANGELOG.md` `## [X.Y.Z]` per version, `vX.Y.Z` tags, dist-tags.
+- [CHANGELOG — version history](https://github.com/master8848/rspfx/blob/main/CHANGELOG.md): One `## [X.Y.Z] - YYYY-MM-DD` per version.
+
+## Internal (not in sidebar, for contributors/agents)
+
+- `docs/AGENTS.md` — Documentation standards (tier taxonomy, fact homes, writing rules, word budgets, slop checklist, Agent Note verification). Kept in repo, hidden from VitePress sidebar. See `llms.txt`/`llm.txt` for LLM-friendly index.
+
+## Notes
+
+- Docs site sidebar: `/docs/` — `docs-web/docs` is a symlink to `../docs`; `docs/AGENTS.md` remains servable at `/docs/AGENTS` if visited directly but is not linked in nav.
+- Agent skill: `skills/rspfx/SKILL.md` — `npx skills add master8848/rspfx`.
+- Install CLI: `npm i -g @mbsks/rspfx-cli` then `rspfx new <name>` → `rspfx dev` → `rspfx package`.

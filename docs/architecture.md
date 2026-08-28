@@ -4,7 +4,7 @@ Short orientation. Full plan is [`ARCHITECTURE.md`](../ARCHITECTURE.md).
 
 ## Overview
 
-RSPFX replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbuild, or Rspack. No bundler config needed for standard layouts; the CLI builds the same options from `config/config.json` + `package.json`.
+RSPFX replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbuild, or Rspack. No bundler config needed for standard layouts; the CLI builds options from `config/config.json` + `package.json`. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain).
 
 `crates/*` are optional Rust with JS fallback.
 
@@ -59,7 +59,7 @@ RSPFX replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbu
 
 `@microsoft/sp-*` is externalized — no manual install for most web parts. Ids come from `node_modules` or `reference/sp-component-ids.json`.
 
-Framework loaders (`vue-loader`, `@rspack/plugin-react-refresh`) are aliased to stubs by `createRspackConfig` so they never ship to the browser.
+Framework loaders (`vue-loader`, `@rspack/plugin-react-refresh`) are aliased to stubs so they never ship to the browser.
 
 ## Dependency graph
 
@@ -113,15 +113,17 @@ Validated via `tryResolveConfig` before the cache version is computed.
 Save → rebuild → tick /__rspfx_hot.json → reload.
 ```
 
-Local (no tenant): HTTP `:4321` — preview at `/` + mock `/_api` (no cert).
+Local (no tenant): `http://localhost:4321/` — preview at `/` + mock `/_api`, HTTP, no cert.
 
-SharePoint (tenant set): HTTPS `:4321` — `/temp/manifests.js`, `/dist/*.js`, `node_modules/*` via `packages/manifest-server/src/index.ts:121` `ensureCertificates()` (`~/.rspfx/certs`, 825-day self-signed).
+SharePoint (tenant set): `https://localhost:4321` — `/temp/manifests.js`, `/dist/*.js`, `node_modules/*` via `ensureCertificates()` (`~/.rspfx/certs`, 825-day self-signed).
 
-Workbench loads `…/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
+Workbench loads `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — see Microsoft docs: [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench) and [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench).
 
 `rspfx dev` warns if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
 
 `manifests.js` is regenerated each rebuild. Bundle names are stable `[name].js`.
+
+> Tip: `:4321` is the single dev port. Local preview is `http://localhost:4321/` (no tenant, no cert). Workbench mode is `https://localhost:4321/temp/manifests.js` (tenant set, cert required). The workbench URL is printed by `rspfx dev` — open it directly.
 
 ## Production
 

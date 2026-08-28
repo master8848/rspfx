@@ -1,6 +1,6 @@
 # Getting Started
 
-Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster.
+Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
 
 ## 1. Install
 
@@ -11,50 +11,31 @@ npm i -g @mbsks/rspfx-cli
 rspfx --version
 ```
 
-> You don't need `@microsoft/sp-*` for most web parts. They are externalized — SharePoint loads its copies. Install only if you import that runtime (e.g. `@microsoft/sp-http`).
+> **Tip:** You don't need `@microsoft/sp-*` for most web parts — RSPFX externalizes them. Install only if you import that runtime (e.g. `@microsoft/sp-http`).
 
 ## 2. Create a project
 
 ```sh
-rspfx new my-app
+rspfx new my-app                # interactive
+rspfx new my-app --framework react --spfx-version 1.22 --yes  # CI
 ```
 
-Picks framework, language, SPFx version, then installs.
+Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--no-install` skips install, `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
 
-CI / non-interactive:
-
-```sh
-rspfx new my-app --framework react --spfx-version 1.22 --yes
-rspfx new my-app --framework react --bundler vite --yes
-```
-
-`--no-install` skips install. `--bundler vite|rsbuild|rspack` picks the bundler (default `vite`).
-
-### Layout
+Layout (defaults, override via `paths` in plugin options):
 
 ```
 my-app/
 ├── vite.config.ts              # optional — omit for zero-config
-├── package.json
-├── src/webparts/<name>/
-│   ├── <name>.manifest.json
-│   ├── <name>WebPart.ts
-│   ├── components/
-│   └── styles/
-├── config/
-│   ├── package-solution.json
-│   ├── serve.json
-│   └── write-manifests.json
-└── local/data.json             # optional — mock REST data for preview
+├── src/webparts/<name>/<name>.manifest.json
+├── src/webparts/<name>/<name>WebPart.ts
+├── config/package-solution.json
+└── local/data.json             # optional — mock REST data
 ```
 
-All paths are defaults. Change them via `paths` in the plugin options. See [project-structure.md](project-structure.md).
+See [project-structure.md](project-structure.md).
 
-### Bundler config is optional
-
-For standard layouts, skip `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts`. The CLI builds the config from `config/config.json` + `package.json` and runs Vite, Rsbuild, or Rspack directly.
-
-When you want control, add one plugin:
+Bundler config is optional — without it the CLI builds config from manifests and runs the bundler directly. When you need control, add one plugin:
 
 ```ts
 // vite.config.ts — optional
@@ -62,89 +43,59 @@ import { rspfxVite } from '@mbsks/rspfx-plugin';
 export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
 ```
 
-If the file is missing, the same manifests drive the build. Run `rspfx migrate` to write it, or stay zero-config. See [hybrid-dev.md](hybrid-dev.md). To move between targets (`1.20 ↔ 1.23`) change that one `spfxVersion` field and `bun update @mbsks/rspfx-plugin` — see [upgrading-spfx-version.md](upgrading-spfx-version.md).
+> **Tip:** `rspfx new` already writes the config. For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
 
-> `rspfx new` already writes the config. For an existing Heft/Gulp project run `rspfx migrate --dry-run` first.
-
-## 3. Dev
+## 3. Dev server on :4321
 
 ```sh
 rspfx dev
+rspfx dev --refresh   # state-preserving refresh where supported
 ```
 
-No tenant: `http://localhost:4321` — preview at `/`, bundles at `/dist/*`, manifests at `/temp/manifests.js`, mock `/_api`.
+Port `4321` is the single dev port. Mode is picked by whether a tenant is configured:
 
-With tenant (`dev.tenantUrl`, `SPFX_SERVE_TENANT_DOMAIN`, or `--tenant`): `https://localhost:4321` + workbench.
+| Mode | When | URL | Cert |
+|---|---|---|---|
+| **Local preview** | No tenant | `http://localhost:4321/` | None (HTTP) |
+| **SharePoint workbench** | Tenant set | `https://localhost:4321` | Self-signed in `~/.rspfx/certs` |
 
-`rspfx dev --refresh` enables fast refresh where supported. See [commands.md](commands.md) and [fast-refresh.md](fast-refresh.md).
+Local preview: browse `http://localhost:4321/` — lists every web part, mock `/_api` from `local/data.json`, bundles at `/dist/*`, manifests at `/temp/manifests.js`.
 
-### Workbench URL
+Workbench: RSPFX prints `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — SharePoint loads bundles from `https://localhost:4321/dist/*`. See Microsoft docs: [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
 
-```
-<tenantUrl>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>
-```
+Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or `rspfx dev --tenant https://contoso.sharepoint.com`. See [commands.md#rspfx-dev](commands.md#rspfx-dev).
 
-SharePoint loads bundles from `https://localhost:4321/dist/*`.
+> **Tip:** Put `tenantUrl` in `vite.config.ts` (`dev: { tenantUrl: 'https://contoso.sharepoint.com' }`) so teammates don't need flags.
 
-Tell RSPFX your tenant via `dev.tenantUrl` in the config, `SPFX_SERVE_TENANT_DOMAIN`, or `rspfx dev --tenant https://contoso.sharepoint.com`.
+> **Tip:** Use local preview for rapid UI work (no cert, no tenant). Switch to workbench only for real SharePoint APIs, property pane, or theme.
 
 ### Cert trust (SharePoint mode only)
 
-Local preview (`http://localhost:4321`, no tenant) needs no cert.
+Workbench mode needs HTTPS. `rspfx dev` auto-generates a cert in `~/.rspfx/certs` on first run. If untrusted, the workbench shows `NET::ERR_CERT_AUTHORITY_INVALID` or a blank page.
 
-Workbench mode (`https://localhost:4321` when a tenant is configured) uses a self-signed cert in `~/.rspfx/certs` (825-day, 2048-bit, SAN `localhost` + `127.0.0.1` + `::1`) generated by `ensureCertificates()` (`packages/manifest-server/src/index.ts:121`) and `rspfx dev` warns if it is missing or untrusted.
+Trust once per machine, then restart the browser:
 
-If the cert is not trusted, the workbench shows CORS errors, `NET::ERR_CERT_AUTHORITY_INVALID`, `Failed to fetch https://localhost:4321/temp/manifests.js`, or a blank page — not a code bug.
+- macOS: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.rspfx/certs/cert.pem`
+- Windows: `certutil -addstore -user Root %USERPROFILE%\.rspfx\certs\cert.pem`
+- Linux: import `~/.rspfx/certs/cert.pem` into the browser store.
 
-Trust it once per machine and restart the browser:
-
-- macOS: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.rspfx/certs/cert.pem` (or Keychain Access → System → import `cert.pem` → Always Trust).
-- Windows: `certutil -addstore -user Root %USERPROFILE%\.rspfx\certs\cert.pem` (or `certlm.msc` → Trusted Root → import).
-- Linux: import `~/.rspfx/certs/cert.pem` into the browser or system trust store (e.g. `certutil -d sql:$HOME/.pki/nssdb -A -t C -n localhost -i ~/.rspfx/certs/cert.pem` for NSS, or Chrome `Settings → Privacy and security → Security → Manage certificates`).
-
-Chrome 142+ also prompts for Local Network Access — allow it when prompted.
-
-Verify with `rspfx doctor` (checks `cert exists`, `cert valid >7d`, `key.pem 0600`, `cert trusted`) and `rspfx doctor --fix` (regenerates missing/expiring certs).
-
-Details are in `~/.rspfx/certs/cert.pem.trust.txt` (written on first generation).
-
-If the Load debug scripts dialog reappears every reload, check cert trust or Chrome Local Network Access.
-
-### Load debug scripts
-
-SharePoint shows it once per session (`sessionStorage` key `spfx-debug`). RSPFX reloads in the same tab so it doesn't reappear. Clear with `?reset=true` or close the tab.
-
-If it shows every reload, check cert trust or Chrome Local Network Access.
+Chrome 142+ also prompts for Local Network Access — allow it. Verify with `rspfx doctor` / fix with `rspfx doctor --fix`. See [commands.md#rspfx-doctor](commands.md#rspfx-doctor).
 
 ### Editing
 
-Save → rebuild → auto reload. Dev builds are unminified. `rspfx build` minifies.
+Save → rebuild → auto-reload. Dev builds are unminified; `rspfx build` minifies. See [fast-refresh.md](fast-refresh.md).
+
+> **Tip:** If `Load debug scripts` reappears every reload, check cert trust or Local Network Access — it should show once per session.
 
 ## 4. Build and package
 
 ```sh
 rspfx build      # → dist/ + release/
 rspfx package    # → sharepoint/solution/<name>.sppkg
-bun run build    # also works — same manifests
 ```
 
-Upload the `.sppkg` to the app catalog, deploy, add to a site. `rspfx deploy` automates it; without a token it prints manual steps. See [deployment.md](deployment.md).
+Upload the `.sppkg` to the app catalog or use `rspfx deploy` (needs token). See [deployment.md](deployment.md) and Microsoft docs: [Package and deploy SPFx solutions](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/package-and-deploy).
 
-## 5. Same manifest for both toolchains
+`config/config.json`, `config/package-solution.json`, and manifests work for both toolchains — revert with `rspfx migrate --revert` or `git restore`. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
 
-`config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json` work for Heft/Gulp and RSPFX. Switch with `rspfx migrate --revert` or `git restore`. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
-
-## 6. Doctor
-
-```sh
-rspfx doctor
-rspfx doctor --fix
-```
-
-Checks Node 20+, manifests, framework, sp-* externals, bundles, port, outDir, and cert (`cert exists`, `cert valid >7d`, `key.pem 0600`, `cert trusted` from `packages/manifest-server/src/index.ts:8` and `apps/cli/src/commands/doctor.ts:252`).
-
-`--fix` regenerates missing/expiring certs and missing `config/*` files, then re-validates.
-
-Exit 1 on fail — use in CI.
-
-If SharePoint workbench shows CORS or `NET::ERR_CERT_AUTHORITY_INVALID`, run `rspfx doctor` first — an untrusted or missing `~/.rspfx/certs/cert.pem` is the most common first-run cause (see [getting-started.md#cert-trust](getting-started.md#cert-trust)).
+Run `rspfx doctor` to validate Node 20+, manifests, `sp-*` externals, and cert. See [commands.md#rspfx-doctor](commands.md#rspfx-doctor).

@@ -7,45 +7,47 @@ const docsWebRoot = resolve(__dirname, '..')
 
 export default defineConfig({
   title: 'RSPFX',
-  description: 'SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.',
+  titleTemplate: ':title — RSPFX',
+  description: 'SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack ready — same manifests, same .sppkg.',
   lang: 'en-US',
   cleanUrls: true,
   ignoreDeadLinks: true,
+  appearance: true,
   srcDir: '.',
   outDir: './.vitepress/dist',
+  sitemap: { hostname: 'https://github.com/master8848/rspfx' },
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#0078d4' }],
+    ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v)return;if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);} }catch(e){}} )()`],
+
+    ['meta', { name: 'author', content: 'RSPFX contributors' }],
     ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'RSPFX' }],
     ['meta', { property: 'og:title', content: 'RSPFX — SPFx-compatible build toolchain' }],
-    ['meta', { property: 'og:description', content: 'Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack supported.' }],
+    ['meta', { property: 'og:description', content: 'No Heft, no webpack, no gulp. Vite default — Rsbuild & Rspack ready. Same manifests, same .sppkg.' }],
+    ['meta', { property: 'og:image', content: '/hero.svg' }],
+    ['meta', { property: 'og:image:alt', content: 'RSPFX' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'RSPFX — SPFx-compatible build toolchain' }],
+    ['meta', { name: 'twitter:description', content: 'Build SharePoint web parts without the old toolchain. Vite by default — Rsbuild & Rspack ready.' }],
+    ['meta', { name: 'twitter:image', content: '/hero.svg' }],
   ],
   themeConfig: {
     logo: '/logo.svg',
     siteTitle: 'RSPFX',
-    nav: [
-      { text: 'Guide', link: '/docs/getting-started' },
-      { text: 'Commands', link: '/docs/commands' },
-      { text: 'Architecture', link: '/docs/architecture' },
-      { text: 'Migration', link: '/docs/migrating-from-gulp-heft' },
-      {
-        text: 'Resources',
-        items: [
-          { text: 'GitHub', link: 'https://github.com/master8848/rspfx' },
-          { text: 'Changelog', link: 'https://github.com/master8848/rspfx/blob/main/CHANGELOG.md' },
-          { text: 'npm — rspfx-cli', link: 'https://www.npmjs.com/package/@mbsks/rspfx-cli' },
-        ],
-      },
-    ],
+    // Minimal nav: sidebar holds all docs navigation; socialLinks + footer already expose GitHub/npm/Changelog.
+    // Keeping top bar clean (logo left, search middle, appearance+accent+social right) avoids clutter and prevents outline overlap.
+    nav: [],
     sidebar: {
       '/docs/': [
         {
           text: 'Getting Started',
           collapsed: false,
           items: [
-            { text: 'Introduction — Why RSPFX', link: '/docs/why-rspfx' },
+            { text: 'Why RSPFX', link: '/docs/why-rspfx' },
             { text: 'Getting Started', link: '/docs/getting-started' },
-            { text: 'Why Not Migrate (Yet)', link: '/docs/why-not-to-migrate' },
           ],
         },
         {
@@ -83,12 +85,12 @@ export default defineConfig({
             { text: 'Architecture', link: '/docs/architecture' },
             { text: 'Internal API', link: '/docs/internal-api' },
             { text: 'Compatibility', link: '/docs/compatibility' },
-            { text: 'Supporting a New SPFx Version', link: '/docs/supporting-a-new-spfx-version' },
+            { text: 'Supporting a New SPFx Version (Maintainer only)', link: '/docs/supporting-a-new-spfx-version' },
             { text: 'Performance', link: '/docs/performance' },
             { text: 'Real-tenant Validation', link: '/docs/real-tenant-validation' },
             { text: 'Roadmap', link: '/docs/roadmap' },
+            { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
             { text: 'Roadblocks', link: '/docs/roadblocks' },
-            { text: 'Documentation Standards', link: '/docs/AGENTS' },
           ],
         },
       ],
@@ -99,13 +101,14 @@ export default defineConfig({
     ],
     search: {
       provider: 'local',
+      options: { detailedView: true },
     },
     outline: {
       level: [2, 3],
       label: 'On this page',
     },
     editLink: {
-      pattern: 'https://github.com/master8848/rspfx/edit/main/docs/:path',
+      pattern: 'https://github.com/master8848/rspfx/edit/main/docs-web/:path',
       text: 'Edit this page on GitHub',
     },
     lastUpdated: {

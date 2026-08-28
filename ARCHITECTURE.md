@@ -4,7 +4,7 @@
 
 RSPFX replaces Heft + webpack + gulp. Vite is the default bundler. Rsbuild and Rspack also work. No bundler config is required for standard layouts — `config/config.json` and your manifests are enough.
 
-Angular is not supported. See `docs/roadmap.md`.
+No built-in preset for other frameworks. Any framework ships as a `FrameworkPreset` (`packages/plugin-api/src/types.ts:29`) + `BaseWebPart` (`packages/core/src/base-web-part.ts:10`) registered with `definePlugin`/`registerPlugin` (`packages/plugin-api/src/registry.ts:5`) — see `docs/custom-framework.md`.
 
 ---
 
@@ -190,7 +190,7 @@ Phase 9  Benchmarks + docs (0.0.14)                       ✅
 | M3 Dev mode | ✅ |
 | M4 Fast refresh | ✅ |
 | M5 All frameworks + Fluent | ✅ |
-| M6 Angular | Removed |
+| M6 Custom framework extensibility | Done — `FrameworkPreset` + `registerPlugin` (`packages/plugin-api/src/registry.ts:5`), see `docs/custom-framework.md` |
 | M7 Benchmarks | ✅ `reference/baseline-0.0.14.json` |
 | M8 Vite/Rsbuild parity | ✅ |
 | M9 Refresh for all frameworks | ✅ |

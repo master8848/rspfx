@@ -9,7 +9,7 @@ RSPFX builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp, using `Vit
 
 Supports SPFx `1.20`, `1.21`, `1.22`, `1.23` (default 1.23, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
 
-> Not Microsoft-supported. Need support/Angular/`<1.20`/on-prem → use Heft (bottom).
+> Not Microsoft-supported. Need support/`<1.20`/on-prem → use Heft (bottom). Any other framework works via one-file `FrameworkPreset` — see [docs/custom-framework.md](docs/custom-framework.md).
 
 ## Source & inspection (AI-first)
 
@@ -27,14 +27,15 @@ Skill + `docs/` is enough for all workflows; drill into `docs/` or code only whe
 | Need | Use |
 |---|---|
 | Speed, any framework, `1.20`–`1.23` | **RSPFX** |
-| Microsoft support, Angular, `<1.19`, on-prem | **Heft** |
+| Microsoft support, `<1.19`, on-prem | **Heft** |
 
 ## Framework support
 
 | Framework | RSPFX | Heft |
 |---|---|---|
 | React, vanilla | ✓ | ✓ |
-| Vue, Svelte, Solid, Preact | ✓ | — |
+| Vue, Svelte, Solid, Preact | ✓ built-in | — |
+| Other frameworks | ✓ via one-file `FrameworkPreset` (`docs/custom-framework.md`) | — manual setup |
 
 ## Install
 

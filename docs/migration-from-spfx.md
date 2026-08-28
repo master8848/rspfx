@@ -1,68 +1,103 @@
 # Migrating an existing SPFx project to RSPFX
 
-RSPFX intentionally mirrors official SPFx project conventions, so most of an existing project carries over as-is.
+RSPFX mirrors official SPFx conventions, so most of an existing project carries over as-is. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
 
-> **Guides:** for the full step-by-step see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md); a real migration of the PnP Modern Search solution is documented in [migration-case-study.md](migration-case-study.md); read [why-not-to-migrate.md](why-not-to-migrate.md) before you start — extensions, Angular, and library components are not supported yet.
+> For the full step-by-step see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md); for a real example see [migration-case-study.md](migration-case-study.md); for blockers see [why-not-to-migrate.md](why-not-to-migrate.md).
 
 ## What's reused
 
 | Item | Notes |
 |---|---|
-| `src/` | `src/webparts/<name>/` — web part classes, `*.manifest.json` component manifests, components, styles — moved unchanged |
-| `config/package-solution.json` | Solution metadata: id, version, features, `includeClientSideAssets`, `paths.zippedPackage` — read directly |
-| `config/serve.json` | `initialPage` (with `{tenantdomain}` token), `https`, `port`, `hostname` — read directly |
-| `config/config.json` | `bundles` (entrypoint + manifest per web part) and `externals` maps are honored by the dev runtime |
-| `sharepoint/` | Solution assets, including the `sharepoint/solution/` output location |
-| `@microsoft/sp-*` dependencies | Externalized and handled internally for most web parts — install only if your code imports that runtime |
+| `src/` | `src/webparts/<name>/` — classes, `*.manifest.json`, components, styles — unchanged |
+| `config/package-solution.json` | `id`, `version`, `features`, `includeClientSideAssets`, `paths.zippedPackage` — read directly |
+| `config/serve.json` | `initialPage` (with `{tenantdomain}`), `https`, `port`, `hostname` — read directly |
+| `config/config.json` | `bundles`, `externals`, `localizedResources` — honored by dev and build |
+| `sharepoint/` | Solution assets — unchanged |
+| `@microsoft/sp-*` | Externalized — install only if your code imports that runtime |
 
 ## What's removed
 
-- **`gulpfile.js`** — no more `gulp serve` / `gulp bundle` / `gulp package-solution`.
-- **Heft rig** — `@microsoft/rush-stack-compiler-*`, `heft.json`, rig `tsconfig` extends; `tsconfig.json` becomes a plain Rspack/swc-driven config.
-- **spfx-heft-* / sp-build-* dev dependencies** — `@microsoft/spfx-heft-plugins`, `@microsoft/sp-build-web`, `gulp`, `gulp-*` plugins, `webpack`/`webpack-*` if present.
-- **`config/deploy-azure-storage.json`** (CDN deploy) — replaced by `config/write-manifests.json` `cdnBasePath` for release base URLs.
+- `gulpfile.js` — `gulp serve` / `bundle` / `package-solution` gone.
+- Heft rig — `@rushstack/heft`, `heft.json`, rig `tsconfig` extends; `tsconfig.json` becomes plain swc config.
+- Build devDependencies — `@microsoft/spfx-heft-plugins`, `@microsoft/sp-build-web`, `gulp`, `webpack` and loaders.
+- `config/deploy-azure-storage.json` — replaced by `config/write-manifests.json` `cdnBasePath`.
 
 ## Same manifest for Heft/Gulp and RSPFX
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` are identical for both toolchains. See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx) for switching and revert (`rspfx migrate --revert` or `git restore` / `.rspfx/migrate-backup.json`).
+`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` are identical for Heft/Gulp and RSPFX.
+
+See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx) and [hybrid-dev.md](hybrid-dev.md) for switching and revert.
 
 ## Steps
 
-1. **Install the CLI**
+### 1. Preview and migrate
 
-   ```sh
-   npm i -g @mbsks/rspfx-cli
-   ```
+```sh
+npm i -g @mbsks/rspfx-cli   # or bun add -g @mbsks/rspfx-cli
+rspfx migrate --dry-run     # preview
+rspfx migrate               # or --bundler vite | rspack | rsbuild — writes bundler config, backs up to .rspfx/migrate-backup.json
+bun install
+```
 
-2. **Migrate** — preview then apply (backs up to `.rspfx/migrate-backup.json`):
+Bundler config is optional — without it `rspfx dev` and `rspfx build` synthesize config from manifests and run Vite, Rsbuild, or Rspack directly.
 
-   ```sh
-   rspfx migrate --dry-run
-   rspfx migrate             # or rspfx migrate --bundler vite
-   bun install
-   ```
+> **Tip:** No manual `@microsoft/sp-*` install for most web parts — externalized as `"type": "component"` so SharePoint resolves its built-in copies.
 
-   Bundler config is optional — `rspfx migrate` writes `vite.config.ts` by default (or `rspack.config.ts` / `rsbuild.config.ts` with `--bundler rspack|rsbuild`), but you can also run zero-config where `bun run build` / `rspfx dev` synthesize the config from the manifests and run Vite, Rsbuild, or Rspack internally.
+> **Tip:** Commit first so `git diff` shows exact changes; dry-run is safe to repeat.
 
-> **Quick way:** `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` → `rspfx dev`. No hand-editing of configs.
+### 2. Dev
 
-> **Tip:** No manual `@microsoft/sp-*` install is needed for most web parts — the toolchain externalizes them and emits `"type": "component"` entries so SharePoint resolves its built-in copies. Install `sp-*` only if your code imports that runtime.
+```sh
+rspfx dev   # workbench at https://localhost:4321 (SharePoint mode) or http://localhost:4321 (local preview)
+```
 
-3. **Dev** — `rspfx dev`, trust the `~/.rspfx/certs` cert once, and iterate in the workbench exactly as with `gulp serve`. Fix any drift found:
+Trust the cert at `~/.rspfx/certs` once — see [getting-started.md#cert-trust](getting-started.md#cert-trust).
 
-   - **Externals drift:** if a sp-* package isn't in `config/config.json` `externals`, add it; production output must never bundle sp-* code (externalization is automatic — no manual install needed for it to take effect).
-   - **Config drift:** `spfxVersion` must match any installed `@microsoft/sp-*` versions; component-manifest `version: "*"` is replaced by the `package.json` version, and sp-* dependency ids/versions are harvested from `node_modules` when present with fallback to `reference/sp-component-ids.json`.
-   - **Localization/assets:** `localizedPath` resources and `assets/` folders are picked up from the manifest as before.
+Fix any drift:
 
-4. **Package** — `rspfx package` → `sharepoint/solution/<name>.sppkg` → upload to the app catalog → add to a page. See [building-packages.md](building-packages.md) for the artifact anatomy and CI usage. `bun run build` works identically zero-config.
+- **Externals:** `sp-*` not in `config.json` `externals` → add it; production must never bundle `sp-*` (automatic, no install needed).
+- **Version:** `spfxVersion` must match any installed `sp-*` pins; `version: "*"` in manifests is replaced by `package.json` version.
+- **Localization:** `localizedPath` resources and `assets/` are picked up from the manifest as before.
 
-5. **Revert if needed** — `rspfx migrate --revert` restores from `.rspfx/migrate-backup.json`, or `git restore .` if the branch was clean.
+### 3. Package
 
-6. **Upgrade SPFx target (optional, after migration)** — change one field `spfxVersion` in the generated `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` and `bun update @mbsks/rspfx-plugin` — see [upgrading-spfx-version.md](upgrading-spfx-version.md) for the step-by-step, zero-install notes, and what RSPFX handles per version; verify with `rspfx doctor` / `rspfx build` / `rspfx package`.
+```sh
+rspfx package   # → sharepoint/solution/<name>.sppkg → upload to app catalog → add to page
+```
+
+See [building-packages.md](building-packages.md) for outputs and [deployment.md](deployment.md) for catalog steps.
+
+`bun run package` works identically (zero-config).
+
+### 4. Revert if needed
+
+```sh
+rspfx migrate --revert   # or git restore . && git clean -fd .rspfx && bun install
+```
+
+### 5. Upgrade SPFx target (optional)
+
+Change one field in the generated config and update:
+
+```sh
+# spfxVersion: '1.23' in vite.config.ts / rspack.config.ts / rsbuild.config.ts
+bun update @mbsks/rspfx-plugin
+```
+
+See [upgrading-spfx-version.md](upgrading-spfx-version.md) — verify with `rspfx doctor`, `rspfx build`, `rspfx package`.
+
+## Comparison vs official
+
+| Area | Official | RSPFX |
+|---|---|---|
+| Config | Heft rig + `gulpfile.js` + webpack | One plugin in `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` (or zero-config) |
+| Dev server | `gulp serve` on `:4321` + spfx-fast-serve | `rspfx dev` on `:4321` — `https://localhost:4321` (workbench) or `http://localhost:4321` (local preview) |
+| Build | `gulp bundle --ship` | `rspfx build` |
+| Package | `gulp package-solution --ship` | `rspfx package` |
+| Manifests | Same files | Same files — no fork |
 
 ## Known gaps
 
-- **No gulp task ecosystem.** Arbitrary gulp tasks (custom bundling pipelines, release automation hooks) have no equivalent. RSPFX exposes compiler/package hooks via `plugin-api` (`compilerHooks`, `packageHooks`) for scriptable extensions.
-- **Extensions deferred.** `ApplicationCustomizer` and `ListViewCommandSet` (application extensions) are out of scope while the web part path matures; the manifest/loaderConfig machinery is designed not to preclude them later.
-- **Angular not supported.** Angular web parts need a separate AOT compiler pipeline; it was removed from the roadmap and is not planned.
-- **React 18/19 dual environment.** Bundle React per web part (official behavior); check for React version conflicts on legacy tenant pages.
+- **No gulp task ecosystem** — arbitrary gulp tasks have no equivalent; use `plugin-api` hooks (`compilerHooks`, `packageHooks`) for scriptable extensions.
+- **Other frameworks** — no built-in preset; any framework works via one-file `FrameworkPreset` + `BaseWebPart` registered with `definePlugin`/`registerPlugin` — no CLI fork — see [custom-framework.md](custom-framework.md).
+- **React 18/19 dual environment** — React bundled per web part (official behavior); check for conflicts on legacy tenant pages.

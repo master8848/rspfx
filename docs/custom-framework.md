@@ -4,6 +4,8 @@ External frameworks extend rspfx without modifying the CLI or built-in packages.
 
 See [frameworks](frameworks.md) for built-in frameworks, [internal-api](internal-api.md) for package surfaces, [architecture](architecture.md) for the pipeline, [commands](commands.md) for CLI flags.
 
+Built-in presets cover React, Vue, Svelte, Solid, Preact and vanilla; Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril and Inferno are implemented as custom frameworks via the FrameworkPreset contract below.
+
 ## Contract
 
 A framework provides two parts that the pipeline consumes separately:
@@ -149,6 +151,10 @@ export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework
 `loadFrameworkPreset` (`packages/dev-runtime/src/project.ts:737`) resolves in order: `createRequire(projectRoot/package.json)` for `@mbsks/rspfx-framework-<id>` (records `__rspfxModuleUrl` for loader resolution), then in-memory registry from `registerPlugin`, then a no-op preset with a warning.
 
 `resolveContributionLoaders` (`packages/dev-runtime/src/project.ts:759`) rewrites `rules[].use` loader and Babel preset/plugin strings via `createRequire(frameworkModuleUrl).resolve`; `builtin:swc-loader` is unchanged.
+
+## Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril, Inferno
+
+This guide is the entry point for Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril and Inferno. Implement FrameworkPreset and a BaseWebPart subclass per Contract, Preset and Web part class above, then register with `definePlugin`/`registerPlugin`. See [frameworks.md](frameworks.md#looking-for-angular-lit-or-qwik) for the comparison table.
 
 ## Scaffolding and limits
 

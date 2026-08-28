@@ -1,69 +1,44 @@
-# Roadblocks — what blocks community takeover
+# Roadblocks
 
-Standing blockers that keep RSPFX pre-1.0 — each row names severity, owning file or env var, and mitigation; for current behavior see the linked fact home instead of duplicating it.
+What keeps RSPFX pre-1.0. For current behavior see [architecture.md](architecture.md), [compatibility.md](compatibility.md), [commands.md](commands.md).
 
 ## Real-tenant gate
 
-M1 acceptance gate from [docs/roadmap.md:21](roadmap.md#real-tenant-validation): scaffold → `rspfx package` → upload `.sppkg` to a real Microsoft 365 app catalog → install to a site → render in the workbench with no console errors — **passed 2026-08-22** for web parts, extensions, and libraries (see [docs/real-tenant-validation.md](real-tenant-validation.md)).
+Gate: scaffold → `rspfx package` → upload `.sppkg` to Microsoft 365 app catalog → install → render in workbench — passed 2026-08-22 for web parts, extensions, and libraries (see [real-tenant-validation.md](real-tenant-validation.md)). Correctness rests on parity checks plus the gate. Remaining is automated CI across SPFx 1.20–1.23 (needs `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL`).
 
-| Blocker | Severity | File / env var | Mitigation |
-|---|---|---|---|
-| M1 gate passed — web part / extension / library `.sppkg` installs and renders (see [real-tenant validation](real-tenant-validation.md)); promote to CI | Low | `docs/roadmap.md:21`, `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` (`zipEntries`) | Keep byte-equal zip checks as regression; add automated CI |
-| Real-tenant CI missing across SPFx 1.20/1.21/1.22/1.23 | High | `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` in `apps/cli/src/commands/deploy.ts:16`, 120s timeout in `apps/cli/src/commands/deploy.ts:62` | Implement CI calling `rspfx deploy` with a bearer token against `https://contoso.sharepoint.com/sites/appcatalog`; manual steps are in [real-tenant validation](real-tenant-validation.md) |
+## Security
 
-Correctness rests on `packages/plugin/tests/parity.test.ts` and `packages/sppkg-builder/tests/sppkg-builder.test.ts:1` zip checks plus the tenant gate — see [docs/compatibility.md](compatibility.md) and [docs/architecture.md](architecture.md).
-
-## Security hardening remaining
-
-Build and packaging work, but dev-server and scaffolding surfaces have hardening gaps for contributor or CI exposure.
-
-| Blocker | Severity | File / env var | Mitigation |
-|---|---|---|---|
-| Template XSS — `local/data.json` seed flows into mock API responses with only `sanitizeString` stripping | Medium | `packages/templates/src/index.ts:638` via `packages/dev-runtime/src/mock-api.ts:176` | Keep `local/data.json` trusted-local; do not expose preview beyond `localhost` — hardening lives in `packages/dev-runtime/src/mock-api.ts:176` (`sanitizeString`, `ALLOWED_CURRENT_USER_KEYS`, `isAllowedOrigin`) |
-| CORS allowlist narrow — `Access-Control-Allow-Origin` reflects only `localhost`, `127.0.0.1`, `::1`, `*.sharepoint.com`, `*.sharepoint-df.com`, `*.sharepoint.cn`; missing header yields no CORS header | Medium | `packages/dev-runtime/src/mock-api.ts:176` (`isAllowedOrigin`, no `*` fallback) | Run local tests with `SPFX_SERVE_TENANT_DOMAIN= bun run test` and keep `RSPFX_APP_CATALOG_URL` separate from preview |
-| Self-signed cert trust is machine-wide — `~/.rspfx/certs/cert.pem` (825-day, 2048-bit) for HTTPS `:4321` | Medium | `packages/manifest-server/src/index.ts:8` (`ensureCertificates`, `selfsigned.generate`) | Dev-machine only; remove via `sudo security remove-trusted-cert ~/.rspfx/certs/cert.pem` (macOS) or `certlm.msc` (Windows); see [docs/commands.md](commands.md) |
-
-Only `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` are implemented in `apps/cli/src/commands/deploy.ts:16` — `RSPFX_TENANT` / `RSPFX_USERNAME` / `RSPFX_PASSWORD` are not implemented; see [docs/commands.md](commands.md#rspfx-deploy).
-
-## Compatibility and bundler limits
-
-The SPFx matrix is centralized; bundler choice is limited by upstream APIs.
-
-| Blocker | Severity | File / env var | Mitigation |
-|---|---|---|---|
-| Turbopack not possible — no webpack plugin API, no standalone CLI outside Next.js | High | `docs/roadmap.md:37` | Tracked as `❌ Not possible today`; use `RspfxPlugin` (Rspack), `rspfxVite` (Vite), or `rspfxRsbuild` (Rsbuild); see [docs/why-rspfx.md](why-rspfx.md) |
-| Local preview only via Rspack — `/_api` mock and `/` page served by `dev-runtime` on Rspack path; Vite/Rsbuild dev is workbench-only | Medium | `docs/roadmap.md:18`, `packages/dev-runtime/src/mock-api.ts:176` | For `/_api` + preview use `rspack.config.ts` + `RspfxPlugin`; for Vite/Rsbuild set `SPFX_SERVE_TENANT_DOMAIN` and validate via workbench; see [docs/commands.md](commands.md#rspfx-dev) |
-| Angular deferred — removed from roadmap, no AOT pipeline | High | `docs/roadmap.md:16` | Do not plan Angular web parts; `src/extensions/` and `src/webparts/` share `loaderConfig` so a future track could layer on without core changes |
-| React 19 not validated — examples/templates ship React 18 on SPFx 1.22/1.23 | Medium | `docs/roadmap.md:42` | Validate React 19 + Fluent 8 peers in a branch; see [docs/compatibility.md](compatibility.md#spfx-version-matrix) |
-| Version literal drift if scattered | Low | `packages/core/src/versions.ts:13` (`SPFX_VERSIONS`, `SPFX_TARGETS`) | Single source of truth; add targets via [docs/supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md); `examples/*` intentionally stay on 1.22 |
-
-Parity for Rspack/Vite/Rsbuild is byte-verified by `packages/plugin/tests/parity.test.ts` — see [docs/compatibility.md](compatibility.md) and [docs/architecture.md](architecture.md).
-
-## Migration and support gaps
-
-Scope boundaries are documented in [docs/why-not-to-migrate.md](why-not-to-migrate.md).
-
-| Gap | Severity | File / env var | Mitigation |
-|---|---|---|---|
-| Extension (`src/extensions/`) | Low | `src/extensions/` in `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` | Verified — compile/discovery + local preview + `.sppkg` + tenant install |
-| Library components (`src/libraries/`) | Low | `src/libraries/` scan `packages/manifest-generator/src/component-manifests.ts:43` + `packages/dev-runtime/src/project.ts:758` + `packages/sppkg-builder/src/xml.ts:181` (`Type="Library"` no Module/Location/Instance) | Verified — compile/package + tenant install; see [real-tenant-validation.md](real-tenant-validation.md) |
-| Performance measured only on M1 Pro — `examples/shadcn` cold 633 ms (`docs/performance.md:24`), no official-tool comparison | Medium | `docs/performance.md:24`, `bench/bench.mjs`, `bench/compare-official.mjs`, `BENCH_RUNS` | Run `node bench/bench.mjs examples/shadcn` and `node bench/compare-official.mjs` with `BENCH_RUNS=3`; methodology in `bench/README.md` and [docs/performance.md](performance.md) |
-| No long-term support / no build-plugin ecosystem (no spfx-fast-serve, PnP build plugins, custom heft rigs); framework presets not final until M5 | Medium | `docs/why-not-to-migrate.md`, `docs/roadmap.md` | Port CI via `rspfx doctor` + `rspfx build` (~10 lines) and scope to web-parts-only on SPFx 1.20–1.23 |
-
-Full migration procedure is in [docs/supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md) and [docs/commands.md](commands.md).
-
-## When to adopt vs wait
-
-Adopt now if the solution is web-parts-only on SPFx 1.20–1.23, the team owns CI, and local preview (`rspack.config.ts` + `RspfxPlugin` on `:4321` HTTP) covers dev — validate once via [real-tenant validation](real-tenant-validation.md) and pin `spfxVersion` via `packages/core/src/versions.ts:13`.
-
-| Your project | Verdict |
+| Area | Detail |
 |---|---|
-| 1 web part, React, standard config, SharePoint Online | Adopt — `rspfx new --framework react --yes`, `rspfx doctor`, `rspfx dev --mode local`, `rspfx package` |
-| 4 web parts, localization, PnP controls | Adopt — `localizedPath` modules and `?locale=` preview work; see [docs/compatibility.md](compatibility.md) |
-| Extension (ApplicationCustomizer / FieldCustomizer / ListViewCommandSet / FormCustomizer) | Adopt — compile/discovery, local preview, and tenant install verified |
-| Library (`src/libraries/` `componentType: Library`) | Adopt — compile/package + tenant install verified (see [real-tenant-validation.md](real-tenant-validation.md)) |
-| Angular, 2019/on-prem, risk-averse enterprise | Wait — hard blockers in [docs/why-not-to-migrate.md](why-not-to-migrate.md) |
-| Need Turbopack or Vite-only `/_api` mock | Wait — see [docs/roadmap.md:37](roadmap.md#feasibility-of-the-open-items) |
+| Mock API | `local/data.json` seed is trusted-local only; do not expose preview beyond localhost |
+| CORS | Allowlist is narrow (`localhost`, `127.0.0.1`, `::1`, `*.sharepoint.com`); keep preview on localhost |
+| Cert | `~/.rspfx/certs/cert.pem` (825-day self-signed, machine-wide if trusted) — dev machines only; remove via OS keychain tools |
 
-Revisit after the M1 gate passes and `bench/compare-official.mjs` is validated on your hardware — both tracked in [docs/roadmap.md](roadmap.md#real-tenant-validation).
+Only `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` are implemented for deploy; no username/password vars.
 
+## Compatibility / bundler
+
+| Limit | Mitigation |
+|---|---|
+| Turbopack not possible | Use `RspfxPlugin` (Rspack), `rspfxVite`, or `rspfxRsbuild` |
+| Local preview (`/_api` + `/`) only on Rspack | For Vite/Rsbuild validate via workbench; see [commands.md#rspfx-dev](commands.md#rspfx-dev) |
+| Other frameworks | No built-in preset — bring a `FrameworkPreset` — see [custom-framework.md](custom-framework.md) |
+
+## Support
+
+| Gap | Detail |
+|---|---|
+| Performance baseline single machine | `examples/shadcn` cold 633 ms on M1 Pro; validate on your hardware via `bench/` |
+| No long-term support / no build-plugin ecosystem | Scope to web-parts on SPFx 1.20–1.23, port CI via `rspfx doctor` + `rspfx build` |
+
+## When to adopt
+
+| Project | Verdict |
+|---|---|
+| 1 web part, React, SharePoint Online | Adopt — `rspfx new --framework react --yes` → `rspfx doctor` → `rspfx dev` → `rspfx package` |
+| Multiple web parts + localization | Adopt — `localizedPath` + `?locale=` preview works |
+| Extension / Library | Adopt — compile, preview, and tenant install verified |
+| Other framework without a preset, 2019/on-prem, risk-averse | Wait — see [why-not-to-migrate.md](why-not-to-migrate.md) |
+| Need Turbopack or Vite-only `/_api` | Wait |
+
+Revisit after tenant CI and official-toolchain bench validation — tracked in [roadmap.md](roadmap.md).

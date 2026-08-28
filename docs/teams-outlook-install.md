@@ -1,36 +1,81 @@
 # Teams and Outlook install
 
-Teams and Outlook share the same Teams app manifest. RSPFX scaffolds `teams/manifest.json` + `teams/<id>_color.png` (192x192) + `teams/<id>_outline.png` (32x32) and `rspfx package` bundles them under `ClientSideAssets/` in the `.sppkg`. SharePoint app catalog syncs the app to Teams and, when the manifest has `personal` scope, to Outlook (new Outlook).
+Teams and Outlook share the same Teams app manifest. See Microsoft docs: [Integrate with Microsoft Teams](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/integrate-with-teams-introduction) and [Build SharePoint Teams apps](https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/build-and-test/sharepoint-teams-apps).
 
-## What the scaffold generates
+RSPFX scaffolds `teams/manifest.json` + `teams/<id>_color.png` (192×192) + `teams/<id>_outline.png` (32×32); `rspfx package` bundles them under `ClientSideAssets/teams/` in the `.sppkg`.
 
-`teams/manifest.json` is Teams schema 1.13: `id` equals the SharePoint component `id` (`packages/templates/src/index.ts:112` `solidPng(192,192,[0,120,212])`), `packageName` `com.contoso.<name>`, `staticTabs` (`personal`, `entityId` = component `id`, `contentUrl` = `https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=<id>%26forceLocale={locale}`) and `configurableTabs` (`team`, `canUpdateConfiguration: true`), `validDomains` includes `*.sharepoint.com`, `*.office.com`, `*.secure.aadcdn.microsoftonline-p.com`, `*.login.microsoftonline.com`, `spoprod-a.akamaihd.net` (`packages/templates/src/index.ts:468`).
+SharePoint's app catalog syncs the app to Teams and, with `personal` scope, to new Outlook.
+
+## What scaffold generates
+
+`teams/manifest.json` — Teams schema 1.13 ([MicrosoftTeams.schema.json](https://developer.microsoft.com/json-schemas/teams/v1.13/MicrosoftTeams.schema.json)):
+
+- `id` equals the SharePoint component `id`.
+- `packageName` like `com.contoso.<name>`.
+- `staticTabs` (`personal`, `entityId` = component `id`, `contentUrl` = `TeamsLogon.aspx?SPFX=true&dest=teamshostedapp.aspx%3F...%26componentId=<id>`) and `configurableTabs` (`team`, `canUpdateConfiguration: true`).
+- `validDomains` includes `*.sharepoint.com`, `*.office.com`, `*.secure.aadcdn.microsoftonline-p.com`, `*.login.microsoftonline.com`, `spoprod-a.akamaihd.net`.
+
+> **Tip:** For reliable Outlook surfacing add `*.outlook.office.com` to `validDomains` manually — scaffold omits it.
+
+> **Tip:** `id` and `staticTabs[0].entityId` must stay equal to the SharePoint web part `id` — regenerating the web part `id` without updating `teams/manifest.json` breaks install.
 
 ## Install to SharePoint + Teams
 
-Build and package: `rspfx package` → `sharepoint/solution/<name>.sppkg` (`docs/building-packages.md:10`).
+Build first:
 
-SharePoint: upload the `.sppkg` to the tenant app catalog (`SharePoint Admin Center → App Catalog → Apps for SharePoint`) → `Deploy` or `skipFeatureDeployment: true` (`config/package-solution.json:355`). On any site: `Add an app` → your solution → `Add`.
+```sh
+rspfx package   # → sharepoint/solution/<name>.sppkg
+```
 
-Teams: in the same app catalog entry, `Sync to Teams` (or `Teams Admin Center → Manage apps → Upload`). The app appears in `Teams → Apps → Built for your org`. The `package-solution.json` `supportedHosts` already includes `TeamsPersonalApp` and `TeamsTab` (`packages/templates/src/index.ts:500`). If `Sync to Teams` is missing, verify `includeClientSideAssets: true` and that `teams/` was present at `rspfx package` time (`packages/sppkg-builder/src/sppkg-builder.ts:86` auto-detects `teams/`).
+SharePoint — upload `.sppkg` to the tenant app catalog (`SharePoint Admin Center → App Catalog → Apps for SharePoint`) → **Deploy** (or `skipFeatureDeployment: true` in `config/package-solution.json`).
+
+On any site: `Add an app` → your solution → **Add**.
+
+Teams — in the same catalog entry click **Sync to Teams** (or Teams Admin Center → Manage apps → Upload).
+
+The app appears in `Teams → Apps → Built for your org`.
+
+The scaffolded `package-solution.json` `supportedHosts` already includes `TeamsPersonalApp` and `TeamsTab`.
+
+If **Sync to Teams** is missing, verify `includeClientSideAssets: true` and that `teams/` existed at `rspfx package` time.
 
 ## Install to Outlook (new Outlook)
 
-Outlook (new) surfaces Teams personal apps (`personal` scope) automatically — no separate Outlook manifest.
+New Outlook surfaces Teams personal apps (`personal` scope) automatically — no separate manifest.
 
-Prerequisites: Teams app synced and approved by admin, user has the app `Allowed` in `Teams Admin Center → Permission policies`, and `Outlook` is `new Outlook` (Monarch) not classic. After sync, wait 10–120 minutes for the Microsoft 365 app sync, then `Outlook → Apps → Apps built for your org` → your app → `Add`. The single Teams `contentUrl` with `SPFX=true&teams&componentId=` loads the web part inside Outlook's Teams host (same `TeamsLogon.aspx` + `teamshostedapp.aspx` path). If the app does not appear in Outlook, confirm `manifest.json` `staticTabs[0].scopes` contains `personal` (`teamsManifest:458`) and `validDomains` includes `*.office.com` and `*.outlook.office.com` (add if missing; current scaffold does not include `*.outlook.office.com` — add manually and repack).
+Prerequisites:
+
+- Teams app synced and admin-approved.
+- User **Allowed** in `Teams Admin Center → Permission policies`.
+- Client is **new Outlook** (Monarch), not classic.
+
+After sync wait 10–120 minutes for Microsoft 365 app sync, then `Outlook → Apps → Apps built for your org` → your app → **Add**.
+
+The same `contentUrl` with `SPFX=true&teams&componentId=` loads the web part inside Outlook's Teams host.
+
+If it does not appear, confirm `staticTabs[0].scopes` includes `personal` and `validDomains` includes `*.office.com` plus `*.outlook.office.com` (add manually and repack).
 
 ## Update and uninstall
 
-Update: bump `package.json` `version` + `config/package-solution.json` `solution.version`, `rspfx package`, re-upload the `.sppkg` to the catalog → `Replace` → `Deploy`; Teams/Outlook pull the new `ClientSideAssets/` on next load (manifest `version` `*` → `1.0.0` mapping in `release/manifests`).
+- **Update:** bump `package.json` `version` + `config/package-solution.json` `solution.version`, `rspfx package`, re-upload → **Replace** → **Deploy**; Teams/Outlook pull new `ClientSideAssets/` on next load.
+- **Uninstall:** `Teams Admin Center → Manage apps → <app> → Block` or catalog → **Remove** (also clear Recycle Bin).
 
-Uninstall: `Teams Admin Center → Manage apps → <app> → Block` or catalog → `Remove` (also remove from `Recycle Bin`). Outlook follows Teams block.
+Outlook follows Teams block.
+
+## Comparison vs official
+
+| Area | Official SPFx + Teams | RSPFX |
+|---|---|---|
+| Teams manifest | Manual `manifest.json` or `yo @microsoft/sharepoint` | Scaffolded — `id`/`entityId` auto-synced to web part |
+| Packaging | `gulp package-solution` embeds `teams/` | `rspfx package` — same, auto-detected |
+| Sync | Catalog **Sync to Teams** | Same |
+| Outlook | `personal` scope surfaces in new Outlook | Same — no extra steps |
 
 ## Troubleshooting
 
-| Symptom | Cause / fix |
+| Symptom | Fix |
 |---|---|
-| App not in Teams Apps | Catalog `Sync to Teams` not clicked, or `teams/` missing at `rspfx package` time — verify `ClientSideAssets/teams/` in the `.sppkg` unzip |
-| `Invalid Teams manifest` on upload | `teams/manifest.json` `id` must match SharePoint `componentId`; `validDomains` must contain `*.sharepoint.com`; `manifestVersion` must be `1.13` |
-| App in Teams but not Outlook | Not yet synced (wait, sign out/in), `scopes` missing `personal`, or Outlook is classic — use new Outlook |
-| White screen in Teams/Outlook | `contentUrl` `forceLocale={locale}` requires `TeamsLogon.aspx` reachable — check `contentUrl` encoding (`%26` not `&`) in `teamsManifest:425` |
+| App not in Teams Apps | **Sync to Teams** not clicked, or `teams/` missing at package time — check `unzip -l` shows `ClientSideAssets/teams/` |
+| `Invalid Teams manifest` | `teams/manifest.json` `id` must match SharePoint component `id`; `validDomains` must contain `*.sharepoint.com`; `manifestVersion` `1.13` |
+| App in Teams but not Outlook | Wait for sync, check `scopes` has `personal`, use new Outlook, add `*.outlook.office.com` |
+| White screen in Teams/Outlook | `contentUrl` encoding — must use `%26` not `&` — check Teams manifest |

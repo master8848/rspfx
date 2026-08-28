@@ -36,7 +36,7 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 
 ## Supported targets
 
-- **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte (Angular deferred)
+- **Frameworks:** vanilla, React, Solid, Preact, Vue, Svelte, plus any other framework via one-file `FrameworkPreset` (`docs/custom-framework.md`)
 - **SPFx targets:** 1.20, 1.21, 1.22, 1.23
 - **Node:** 20+; **pnpm** recommended (pnpm/npm/yarn all supported)
 

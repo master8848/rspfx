@@ -1,25 +1,29 @@
 # Framework Support
 
-Every framework is a pluggable package behind one contract split across two
-entry points: a `FrameworkPreset` (how the compiler is configured for that
-framework) and a self-mounting `<Cap>WebPart` class (how the web part mounts into
-the DOM in the browser). The core is framework-agnostic; nothing in
-`@mbsks/rspfx-core`, `compiler-rspack`, or the packaging pipeline knows about any
-particular framework.
+RSPFX is framework-agnostic — the core knows nothing about React or Vue. Each framework is a pluggable package with a compiler preset and a web part base class. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Working with web part manifests](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/basics/working-with-web-part-manifests).
 
-## Headless adapter contract
+> **Tip:** Pick your bundler by ranking Vite > Rsbuild > Rspack. Vite gives the simplest CSS and fastest loop for every framework. See [styling.md](styling.md).
 
-`HeadlessAdapter<TProps>` (from `@mbsks/rspfx-core/headless`) decouples rendering from the SPFx lifecycle:
+## Choosing a framework
 
-```ts
-interface HeadlessAdapter<TProps extends Record<string, unknown>> {
-  readonly mount: (root: HTMLElement, props: TProps) => void;
-  readonly update: (root: HTMLElement, props: TProps) => void;
-  readonly unmount: (root: HTMLElement) => void;
-}
-```
+| Framework | Official SPFx | RSPFX | Fast refresh |
+|---|---|---|---|
+| React / Vanilla TS | ✅ | ✅ | ✅ / — |
+| Preact / Vue / Svelte / Solid | ❌ | ✅ | ✅ |
 
-Each framework exports a pure factory `createXAdapter` returning this contract. Adapters are testable off-DOM:
+Official templates ship React only. RSPFX adds the rest as first-class presets (`@mbsks/rspfx-framework-*`) with loaders and base classes (`ReactWebPart`, `VueWebPart`, …).
+
+> **Tip:** For new parts, use React if your org already does; for small or interactive parts, Solid and Preact give smaller bundles with full HMR. See [fast-refresh.md](fast-refresh.md).
+
+| Aspect | Official | RSPFX |
+|---|---|---|
+| Other frameworks | Community webpack loaders | `rspfx new --framework vue\|svelte\|solid\|preact` |
+| JSX / compiler | Heft rig + `ts-loader` | SWC, per-framework preset contributions |
+| Fast refresh | — | `rspfx dev --refresh` (react/preact/vue/svelte/solid) |
+
+## Adapter contract
+
+Each framework exports a pure `createXAdapter` factory — testable off-DOM with `jsdom`:
 
 ```ts
 import { createVanillaAdapter } from '@mbsks/rspfx-framework-vanilla/headless';
@@ -29,107 +33,76 @@ adapter.update(root, { name: 'b' });
 adapter.unmount(root);
 ```
 
-SPFx lifecycle is owned by `@mbsks/rspfx-webpart-base`:
+For SPFx, wire it via `defineWebPart`:
 
 ```ts
-import { HeadlessWebPart, defineWebPart } from '@mbsks/rspfx-webpart-base';
+import { defineWebPart } from '@mbsks/rspfx-webpart-base';
 import { createReactAdapter } from '@mbsks/rspfx-framework-react/headless';
 export default defineWebPart<{ name: string }>({
   adapterFactory: () => createReactAdapter((props) => <Hello {...props} />),
 });
 ```
 
+See [custom-framework.md](custom-framework.md).
+
 ## Mount semantics
 
-Adapters implement mount/update/unmount per framework:
-
-| Adapter | mount | update | unmount |
+| Adapter | Mount | Update | Unmount |
 |---|---|---|---|
-| `createReactAdapter` | `createRoot(root).render(vnode)` | `root.render(vnode)` | `root.unmount()` |
-| `createPreactAdapter` | `render(vnode, root)` | `render(vnode, root)` | `render(null, root)` |
-| `createVueAdapter` | `createApp(comp).mount(root)` | unmount + create + mount | `app.unmount()` |
-| `createSvelteAdapter` | `new Component({ target: root, props })` / `mount(component, {target, props})` (Svelte 5) | `$set(props)` preserve, fallback to recreate | `$destroy()` / `unmount()` |
-| `createSolidAdapter` | `render(() => comp, root)` inside `createRoot` + `createSignal` | `setProps` signal preserve | dispose |
-| `createVanillaAdapter` | `replaceChildren(node)` | `replaceChildren(node)` | `replaceChildren()` |
-
-`HeadlessWebPart.render()` calls `adapter.mount(this.domElement, this.getComponentProps())`; `onDispose()` calls `adapter.unmount`. Property-pane updates flow via `adapter.update`.
+| React | `createRoot(root).render` | `root.render` | `root.unmount` |
+| Preact | `render(vnode, root)` | `render(vnode, root)` | `render(null, root)` |
+| Vue | `createApp(comp).mount` | unmount + recreate | `app.unmount` |
+| Svelte | `new Component` / `mount` (Svelte 5) | `$set` or recreate | `$destroy` / `unmount` |
+| Solid | `render` + signal | `setProps` | dispose |
+| Vanilla | `replaceChildren` | `replaceChildren` | `replaceChildren` |
 
 ## Package layout
 
-Each `@mbsks/rspfx-framework-<fw>` package is split into three entry points:
+Each `@mbsks/rspfx-framework-<fw>` has three entry points: **index** (`preset` only, Node-safe), **`/headless`** (`createXAdapter`, browser, no SPFx dep), and **`/webpart`** (thin `HeadlessWebPart` shim, deprecated).
 
-- **Index** (`@mbsks/rspfx-framework-<fw>`) — `preset` only. Node-safe (the CLI imports it to collect compiler contributions); never imports `@mbsks/rspfx-webpart-base`.
-- **`/headless` subpath** (`@mbsks/rspfx-framework-<fw>/headless`) — the `createXAdapter` factory (browser, no SPFx dependency). Testable with `jsdom`.
-- **`/webpart` subpath** (`@mbsks/rspfx-framework-<fw>/webpart`) — thin `HeadlessWebPart` shim (`extends HeadlessWebPart` + `createAdapter()` delegates to `createXAdapter`). Kept for one major as `@deprecated`.
-
-```ts
-import { createReactAdapter } from '@mbsks/rspfx-framework-react/headless';
-import { ReactWebPart } from '@mbsks/rspfx-framework-react/webpart'; // shim, deprecated
-```
-
-## JSX and compiler configuration
-
-All `.ts/.tsx/.jsx/.js` goes through Rspack's `builtin:swc-loader` (parser: jsx,
-decorators, importMeta). Each framework preset contributes its own swc options,
-rules, and plugins via `FrameworkPreset.contributions({ fastRefresh })`:
-
-```ts
-interface FrameworkPreset<F extends string = FrameworkId> {
-  name: F; // F is FrameworkId | (string & {}) — custom frameworks use FrameworkPreset<string> / name: string
-  contributions(opts: { fastRefresh: boolean }): FrameworkRspackContributions;
-}
-```
-
-`FrameworkRspackContributions` may carry `rules`, `plugins`, `resolve` (alias /
-extensions), `swc` (parser/transform overrides), `define`, and `moduleTest`.
-The compiler merges all contributions into the final Rspack config.
-
-## Fast refresh status
+## Fast refresh
 
 | Framework | Fast refresh | Mechanism |
 |---|---|---|
-| React | ✅ full | `@rspack/plugin-react-refresh` contribution |
-| Preact | ✅ full | `@rspack/plugin-preact-refresh` contribution |
-| Vue | ✅ full | `vue-loader` HMR (peer `@vue/compiler-sfc`) |
-| Svelte | ✅ full | `svelte-loader` `hotReload` (`svelte-hmr`) |
-| Solid | ✅ full | babel-loader + `babel-preset-solid` (dev mode) + `solid-refresh/babel` (`bundler: 'rspack-esm'`) |
-| Vanilla | n/a | no runtime; full reload only |
+| React | ✅ | `plugin-react-refresh` |
+| Preact | ✅ | `plugin-preact-refresh` |
+| Vue | ✅ | `vue-loader` HMR |
+| Svelte | ✅ | `svelte-loader` hotReload |
+| Solid | ✅ | `solid-refresh` babel plugin |
+| Vanilla | — | Full reload |
 
-Any failure in a framework runtime falls back to a full page reload automatically.
+Any failure falls back to reload. Enable with `rspfx dev --refresh`. See [fast-refresh.md](fast-refresh.md).
 
 ## Adding a new framework
 
-1. **Create the package** `packages/framework-<name>` (depends on `core` +
-   `plugin-api`; framework libs as peers).
-2. **Export the preset** — `FrameworkPreset` with `name` and `contributions()`
-   returning the loader rules / swc options / plugins the framework needs (JSX
-   transform, HMR plugin, aliases).
-3. **Export the web part class** — `<Cap>WebPart<TProps, TState> extends
-   BaseWebPart<TProps>` implementing `renderInto()` / `disposeFrom()` /
-   `getComponentProps()` (typically returning `this.properties`) using only the
-   framework's own mount API, plus optional per-root WeakMap bookkeeping.
-   Exported from the `@mbsks/rspfx-framework-<fw>/webpart` subpath (it imports
-   `@mbsks/rspfx-core/webpart`, so it must not live in the Node-safe index).
-4. **Register it** — either import the preset in the CLI's framework registry, or
-   ship it as an `RspfxExtension` (via `definePlugin`/`registerPlugin` from
-   `plugin-api`) so projects can opt in without a CLI change.
-5. **Scaffolding** — add a project template to `packages/templates`
-   (`components/<Pascal>.<ext>`, web part class, styles); the web part then
-   appears automatically in the local preview page served by `rspfx dev` at `/`.
+1. Create the framework package (depends on `core` + `plugin-api`; framework libs as peers).
+2. Export a `FrameworkPreset` with `contributions()` (loader rules, SWC options, plugins).
+3. Export a `<Cap>WebPart` class from the `/webpart` subpath.
+4. Register the preset via the CLI registry or `definePlugin`/`registerPlugin`.
+5. Add a scaffold template — it appears automatically at `http://localhost:4321/`.
 
-That's the whole contract: compiler contributions + web part class + template.
-Nothing in the build, packaging, or dev pipeline changes.
+See [custom-framework.md](custom-framework.md).
 
-## Fluent UI adapter
+## Looking for Angular, Lit or Qwik?
 
-`@mbsks/rspfx-fluent-adapter` is a standalone optional package (**React-only**, not enabled via scaffold flags):
+RSPFX ships React, Vue, Svelte, Solid, Preact and vanilla. Other frameworks — Angular, Lit, Qwik, Astro, Ember, Stencil, Alpine, Mithril, Inferno — work via [Custom Framework](custom-framework.md); create a FrameworkPreset and register it with `definePlugin`/`registerPlugin`.
 
-- `FluentWebPart<TProps, TState> extends ReactWebPart` — full web part with Fluent
-  UI boilerplate.
-- `onThemeChanged()` syncs the SharePoint theme (`context.themeProvider` /
-  `ThemeProvider.addChangeListener`) into a Fluent `ThemeProvider`, so web parts
-  track the tenant theme live.
-- Install it explicitly (`bun add @mbsks/rspfx-fluent-adapter @fluentui/react`) and extend `FluentWebPart` in your web part class.
+| Framework | Path |
+|---|---|
+| Angular | Custom — follow [custom-framework.md](custom-framework.md) |
+| Lit | Custom — `lit` element wrapper via adapter |
+| Qwik | Custom — follow [custom-framework.md](custom-framework.md) |
+| Astro | Custom — follow [custom-framework.md](custom-framework.md) |
+| Ember | Custom — follow [custom-framework.md](custom-framework.md) |
+| Stencil | Custom — follow [custom-framework.md](custom-framework.md) |
+| Alpine | Custom — follow [custom-framework.md](custom-framework.md) |
+| Mithril | Custom — follow [custom-framework.md](custom-framework.md) |
+| Inferno | Custom — follow [custom-framework.md](custom-framework.md) |
 
-Notes: bundle React per web part (official SPFx behavior — do not externalize it);
-be aware of React version skew in tenants running an older React on the page.
+See [custom-framework.md](custom-framework.md) for the preset and web part contract.
+
+## Fluent UI
+
+`@mbsks/rspfx-fluent-adapter` is an optional React-only package: `FluentWebPart` extends `ReactWebPart` and syncs the SharePoint theme via `onThemeChanged()`. Install with `bun add @mbsks/rspfx-fluent-adapter @fluentui/react`.
+
+> **Tip:** Bundle React per web part (official behavior) — don't externalize it.

@@ -1,163 +1,55 @@
 # RSPFX
 
-**An SPFx-compatible build toolchain powered by modern bundlers — Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.**
+**SPFx-compatible build toolchain — Vite, Rsbuild, and Rspack. Replaces Heft + webpack + gulp.**
 
-RSPFX is a drop-in replacement for the official SPFx toolchain. It builds web parts that load in the SharePoint workbench and install as `.sppkg` — without webpack, Heft, or gulp.
+Builds web parts that load in the SharePoint workbench and install as `.sppkg` — no webpack, Heft, or gulp.
 
-## Principles
-
-- **Never webpack / Heft / gulp.** Those strings never appear in build output or generated projects. `@microsoft/sp-*` is externalized — you only install it if your code imports it.
-- **Pick your bundler.** Vite is default. Rsbuild and Rspack also work. No bundler config needed for standard layouts — `config/config.json` and your manifests are enough.
-- **Framework-agnostic core.** `@mbsks/rspfx-core` has zero dependencies. Frameworks plug in via `FrameworkPreset`.
-- **One-line version switches.** Change `spfxVersion` in `vite.config.ts` and `bun update` — `1.20 ↔ 1.23` without regenerating the project; see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix).
-- **Workbench-first.** Same as `gulp serve`: dev server on `:4321`, debug manifests, browser opens only with `--browser`.
+📖 **Docs:** https://rspfx.mbsks.me
 
 ## Quick start
 
-From this repository:
-
-```sh
-bun install
-bun run build        # build all @mbsks/rspfx-* packages
-bun run test         # run the vitest suite
-```
-
-Use the CLI in your own projects (installed globally from npm):
+**New project:**
 
 ```sh
 npm i -g @mbsks/rspfx-cli
 rspfx new my-app
 cd my-app
-rspfx dev         # dev server + workbench
-rspfx package     # production build → .sppkg
+rspfx dev        # http://localhost:4321
+rspfx package    # → sharepoint/solution/*.sppkg
 ```
 
-Existing SPFx project (Heft/Gulp) — no manual config needed:
+**Existing SPFx project (Heft/Gulp):**
 
 ```sh
 npm i -g @mbsks/rspfx-cli
 cd my-existing-spfx-app
-rspfx migrate --dry-run   # preview changes
-rspfx migrate             # apply: backs up to .rspfx/migrate-backup.json
+rspfx migrate --dry-run   # preview
+rspfx migrate             # apply
 bun install
-rspfx dev                 # same manifests work for both toolchains
-bun run build             # or rspfx build — bundler config is optional, Vite, Rsbuild, or Rspack is used internally
+rspfx dev
 ```
 
-> **Tip:** You do not need to manually install `@microsoft/sp-*` for most web parts. The toolchain externalizes them and emits `"type": "component"` manifest entries so SharePoint resolves its built-in copies. Install them only if your code imports a specific `sp-*` runtime (e.g. `@microsoft/sp-http`).
+Requires Node 20+.
 
-### Query SharePoint lists — prefer PnPjs
-
-Use `@pnp/sp` over raw `fetch`/`SPHttpClient` for list queries — it handles `select`/`expand`/`filter`/batching and SharePoint REST details for you.
+## Skill for AI agents
 
 ```sh
-bun add @pnp/sp @pnp/graph
+npx skills add https://github.com/master8848/rspfx --skill rspfx
 ```
 
-```ts
-import { spfi } from "@pnp/sp";
-import "@pnp/sp/webs";
-import "@pnp/sp/lists";
-import "@pnp/sp/items";
-import { SPFx } from "@pnp/sp/behaviors/spfx";
+Installs `skills/rspfx/SKILL.md` — the agent guide for building SPFx with RSPFX.
 
-const sp = spfi().using(SPFx(this.context));
-const items = await sp.web.lists.getByTitle("Orders").items.select("Title", "Status").filter(`Status eq 'Active'`)();
-```
+## Agent prompt
 
-`SPHttpClient` from `@microsoft/sp-http` remains available as a fallback for direct REST calls — install it only if you need it.
+Copy-paste to your agent:
 
-## Commands
+> Use RSPFX from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read `skills/rspfx/SKILL.md` and `docs/` in that repo (or https://rspfx.mbsks.me) for all toolchain details (Vite is default, Rsbuild/Rspack only if needed). Check `ARCHITECTURE.md` and `packages/*/src` if docs lag — code is truth. Do not use webpack/Heft/gulp.
 
-| Command | What it does |
-|---|---|
-| `rspfx new <name>` | Scaffold a new project — web part, extension, or library |
-| `rspfx migrate` | Migrate an existing Heft/Gulp project — see [docs/migrating-from-gulp-heft.md](docs/migrating-from-gulp-heft.md) (`--dry-run`, `--bundler`, `--revert`) |
-| `rspfx dev` | Start the dev server — local preview at `http://localhost:4321`, or HTTPS workbench when a tenant is set. Works on official SPFx projects too ([hybrid mode](docs/hybrid-dev.md)) |
-| `rspfx dev --refresh` | Same, with state-preserving fast refresh |
-| `rspfx build` | Production compile to `dist/` + `release/` (manifests + assets) |
-| `rspfx package` | Build + assemble `sharepoint/solution/<name>.sppkg` |
-| `rspfx deploy` | Package + upload to the app catalog (REST creds via `config.deploy` or env vars; prints manual steps if none) |
-| `rspfx doctor` | Environment/config/port/dependency checks; exit code 1 on failures |
-| `rspfx analyze` | Build + bundle size report to `.rspfx/analyze.html` |
-| `rspfx clean` | Remove `dist`, `release`, `temp`, `.rspfx`, `node_modules/.cache`, `sharepoint/solution` |
+## Docs
 
-## Same manifest for Heft/Gulp and RSPFX
+Full docs at **https://rspfx.mbsks.me** — [Getting Started](https://rspfx.mbsks.me/docs/getting-started) · [Commands](https://rspfx.mbsks.me/docs/commands) · [Migration](https://rspfx.mbsks.me/docs/migrating-from-gulp-heft).
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work unchanged for both toolchains — no fork.
-
-Keep both toolchains side-by-side: leave `gulpfile.js` and `config/rig.json` alongside `vite.config.ts` (default) and share the same `config/` and `src/` manifests.
-
-Use dual npm scripts in `package.json` to switch: `"build": "rspfx build"` vs `"build:heft": "heft build --clean"`, `"dev": "rspfx dev"` vs `"dev:heft": "gulp serve"`.
-
-No migration required for dev: `rspfx dev` synthesizes config from the manifests and runs zero-config on an official project (see [docs/hybrid-dev.md](docs/hybrid-dev.md)).
-
-To fully migrate, run `rspfx migrate` (backs up to `.rspfx/migrate-backup.json`); revert with `rspfx migrate --revert` or `git restore . && git clean -fd .rspfx && bun install`, then delete the generated `vite.config.ts`/`rspack.config.ts` — Heft returns as before. See [docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](docs/migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
-
-## Supported targets
-
-| Capability | Heft/Gulp (Microsoft) | RSPFX |
-|---|---|---|
-| React, vanilla | ✅ | ✅ built-in |
-| Vue, Svelte, Solid, Preact | — | ✅ built-in |
-| Other frameworks | — manual setup, no preset | ✅ one-file `FrameworkPreset` + `registerPlugin` (`packages/plugin-api/src/registry.ts:5`) — see [docs/custom-framework.md](docs/custom-framework.md) |
-| SPFx version switch (1.20–1.23) | new project / rig + `@microsoft/sp-*` pin updates | ✅ one-line `spfxVersion` in `vite.config.ts` + `bun update` — see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) |
-| Fluent UI | bundled by generator (`@fluentui/react`) | ✅ optional — `@mbsks/rspfx-fluent-adapter` (`packages/fluent-adapter`) — install only if used; `@microsoft/sp-*` externalized |
-| Package manager | npm / yarn / pnpm only — Bun broken in Heft | ✅ npm, yarn, pnpm, Bun, Deno |
-
-Frameworks plug in via `FrameworkPreset` in `@mbsks/rspfx-plugin-api` (`packages/plugin-api/src/types.ts:29`) and `BaseWebPart` in `@mbsks/rspfx-core` (`packages/core/src/base-web-part.ts:10`); built-ins are `@mbsks/rspfx-framework-*`. For any other framework define a one-file `FrameworkPreset` and register it with `definePlugin`/`registerPlugin` (`packages/plugin-api/src/registry.ts:5`) in your bundler config (`vite.config.ts`/`rsbuild.config.ts`/`rspack.config.ts`) — no CLI fork. See [docs/custom-framework.md](docs/custom-framework.md) and [docs/frameworks.md](docs/frameworks.md).
-
-- **SPFx targets:** `1.20`–`1.23` (default `1.23`) — switch with one line `spfxVersion` in `vite.config.ts` + `bun update`; see [docs/compatibility.md#spfx-version-matrix](docs/compatibility.md#spfx-version-matrix) and `packages/core/src/versions.ts:13`
-- **Node:** 20+; **Bun** recommended for repo development (consumers can use npm/yarn/pnpm/bun/deno — Heft breaks on Bun)
-
-> **Tip:** Vue/Svelte/Solid/Preact are built-in. Any other framework works the same way — add a one-file `FrameworkPreset` (`packages/plugin-api/src/types.ts:29`) and register it with `definePlugin`/`registerPlugin` (`packages/plugin-api/src/registry.ts:5`) (see [docs/custom-framework.md](docs/custom-framework.md)). The official toolchain supports only React/vanilla. For React/vanilla either toolchain works; keep the same manifests and switch via scripts (see [Same manifest for Heft/Gulp and RSPFX](#same-manifest-for-heftgulp-and-rspfx)).
-
-## Project structure
-
-See [docs/architecture.md#package-map](docs/architecture.md#package-map) for the full package map.
-
-Full plan lives in [ARCHITECTURE.md](ARCHITECTURE.md).
-
-`examples/modern-search` is a real production solution — PnP Modern Search (4 web parts, ~178 files, Fluent UI 8, MGT, PnPjs) — migrated from Heft + webpack + gulp to RSPFX with zero web part code changes. See its README and [docs/migration-case-study.md](docs/migration-case-study.md).
-
-## Documentation
-
-The repo ships an installable agent skill for building SPFx with RSPFX (covers both the modern RSPFX toolchain and the official Microsoft Heft toolchain). Install it in any agent project:
-
-```sh
-npx skills add master8848/rspfx
-```
-
-It lives at [`skills/rspfx/SKILL.md`](skills/rspfx/SKILL.md).
-
-[![skills.sh](https://skills.sh/b/master8848/rspfx)](https://skills.sh/master8848/rspfx)
-
-| Topic | Doc |
-|---|---|
-| Why RSPFX (vs the official toolchain) | [docs/why-rspfx.md](docs/why-rspfx.md) |
-| Quick start (new projects) | [docs/getting-started.md](docs/getting-started.md) |
-| Command reference | [docs/commands.md](docs/commands.md) |
-| Hybrid dev on official projects (gulp/Heft) | [docs/hybrid-dev.md](docs/hybrid-dev.md) |
-| Project structure & file paths | [docs/project-structure.md](docs/project-structure.md) |
-| Deployment guide (catalog, Teams/Outlook, CDN) | [docs/deployment.md](docs/deployment.md) |
-| Build, package, deploy, CI | [docs/building-packages.md](docs/building-packages.md) |
-| Move an existing project off gulp/Heft | [docs/migrating-from-gulp-heft.md](docs/migrating-from-gulp-heft.md) |
-| Migration overview | [docs/migration-from-spfx.md](docs/migration-from-spfx.md) |
-| Real-world case study (PnP Modern Search) | [docs/migration-case-study.md](docs/migration-case-study.md) |
-| Why you should NOT migrate (yet) | [docs/why-not-to-migrate.md](docs/why-not-to-migrate.md) |
-| Framework support | [docs/frameworks.md](docs/frameworks.md) |
-| Multi-webpart & extensions | [docs/multi-webpart.md](docs/multi-webpart.md) |
-| Teams & Outlook install | [docs/teams-outlook-install.md](docs/teams-outlook-install.md) |
-| Fast refresh | [docs/fast-refresh.md](docs/fast-refresh.md) |
-| Upgrade SPFx version (zero-install) | [docs/upgrading-spfx-version.md](docs/upgrading-spfx-version.md) |
-| Compatibility guarantees | [docs/compatibility.md](docs/compatibility.md) |
-| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), [docs/architecture.md](docs/architecture.md), [docs/internal-api.md](docs/internal-api.md) |
-| Roadmap | [docs/roadmap.md](docs/roadmap.md) |
-| Contributing & changelog | [CONTRIBUTING.md](CONTRIBUTING.md) (publishing, tags, changelog rule), [CHANGELOG.md](CHANGELOG.md) |
-
-## Status & roadmap
-
-M0 (reference capture) and M1 (foundation + packaging core) are complete; later phases are in progress. See [docs/roadmap.md](docs/roadmap.md).
+Raw markdown also in [`docs/`](docs/) and [`ARCHITECTURE.md`](ARCHITECTURE.md) in this repo.
 
 ## License
 

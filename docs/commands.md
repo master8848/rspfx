@@ -2,95 +2,70 @@
 
 Global: `rspfx --version`, `rspfx --help`.
 
-All commands read `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json`. If a bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) exists it is loaded via `jiti` and the plugin marker is used. If not, the CLI builds it from your manifests and runs Vite, Rsbuild, or Rspack directly (see [hybrid-dev.md](hybrid-dev.md)). Flags override file options.
+All commands read `config/config.json`, `config/package-solution.json`, `src/*/*.manifest.json`. If a bundler config (`vite.config.ts`, `rsbuild.config.ts`, `rspack.config.ts`) exists it is loaded via `jiti` and the plugin marker is used; otherwise the CLI synthesizes it from manifests. Flags override file options.
 
-Pick your bundler when scaffolding or migrating: `--bundler vite` (default), `rsbuild`, or `rspack`.
+Pick bundler at scaffold/migrate: `--bundler vite` (default), `rsbuild`, or `rspack`.
 
-> You don't need `@microsoft/sp-*` for most web parts. They are externalized — install only if you import that runtime.
+> You don't need `@microsoft/sp-*` for most web parts — they are externalized.
 
 ## `rspfx new <name>`
 
 Create a project and install.
 
-| Flag | Description |
+| Flag | Values |
 |---|---|
-| `--component <type>` | `webpart` \| `applicationcustomizer` \| `fieldcustomizer` \| `listviewcommandset` \| `formcustomizer` \| `library` (default `webpart`) |
-| `--framework <id>` | `vanilla` \| `react` \| `solid` \| `preact` \| `vue` \| `svelte` (web parts only) |
-| `--bundler <id>` | `vite` (default) \| `rsbuild` \| `rspack` |
-| `--language <lang>` | `ts` \| `js` (web parts only) |
-| `--spfx-version <v>` | see [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) |
-| `--pm <pm>` | `pnpm` \| `npm` \| `yarn` |
+| `--component <type>` | `webpart` (default), `applicationcustomizer`, `fieldcustomizer`, `listviewcommandset`, `formcustomizer`, `library` |
+| `--framework <id>` | `vanilla`, `react`, `solid`, `preact`, `vue`, `svelte` (web parts) |
+| `--bundler <id>` | `vite` (default), `rsbuild`, `rspack` |
+| `--language <lang>` | `ts`, `js` (web parts) |
+| `--spfx-version <v>` | See [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) and [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23) |
+| `--pm <pm>` | `pnpm`, `npm`, `yarn` |
 | `--no-install` | Skip install |
 | `--yes` | Accept defaults, no prompts |
 
-Also creates `config/config.json` with locales and `teams/` icons for web parts.
-
 ```sh
-rspfx new my-app
-rspfx new my-app --framework vue --bundler vite --yes
-rspfx new my-app --framework react --spfx-version 1.20 --no-install
+rspfx new my-app --framework vue --yes
 rspfx new my-extension --component applicationcustomizer --yes
 ```
 
 ## `rspfx migrate`
 
-Move an existing Heft/Gulp project to RSPFX. Only command that edits files.
+Migrate Heft/Gulp project. Only command that edits files.
 
-| Flag | Description |
+| Flag | Values |
 |---|---|
-| `--to <version>` | Target `0.1` (default) |
+| `--to <version>` | `0.1` (default) |
 | `--dry-run` | Preview without writing |
-| `--bundler <id>` | `vite` (default) \| `rsbuild` \| `rspack` |
+| `--bundler <id>` | `vite` (default), `rsbuild`, `rspack` |
 | `--revert` | Restore from `.rspfx/migrate-backup.json` |
 
 ```sh
 rspfx migrate --dry-run
-rspfx migrate                    # writes vite.config.ts by default
-rspfx migrate --bundler rspack   # writes rspack.config.ts
+rspfx migrate --bundler rspack
 rspfx migrate --revert
-bun install
-rspfx dev
 ```
 
-What it does:
-
-- `package.json` — drops Heft/webpack/gulp deps, adds `rspfx` scripts, adds `@mbsks/rspfx-plugin`.
-- `config/config.json` — rewrites `./lib/...WebPart.js` → `./src/...WebPart.ts`, bundle keys to folder names.
-- SCSS — rewrites `pkg:` imports for `sass-loader` <16.5.
-- Deletes Heft-only files: `config/rig.json`, `config/typescript.json`, `config/sass.json`, `config/deploy-azure-storage.json`, `config/spfx-customize-webpack.js`.
-- Writes bundler config + plain `tsconfig.json` if the old one extended a rig.
-- Backs up to `.rspfx/migrate-backup.json`.
-
-Commit before migrating so `git diff` shows changes. Same manifests work for both — see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
+Edits `package.json` (drops Heft/webpack/gulp, adds `rspfx` scripts), rewrites `config/config.json` `lib` → `src`, rewrites `pkg:` SCSS imports, deletes Heft-only files, writes bundler config + plain `tsconfig.json`, backs up to `.rspfx/migrate-backup.json`. Commit before migrating.
 
 ## `rspfx dev`
 
-Dev server on `:4321` (HTTPS in workbench mode, HTTP in local preview).
+Dev server on `:4321`.
 
-Rebuilds auto-reload via `/__rspfx_hot.json` → `location.reload()` (`packages/dev-runtime/src/reload.ts:57`). Workbench shows Load debug scripts once per session (`sessionStorage` key `spfx-debug`); same-tab reload keeps it.
-
-Hybrid mode: `rspfx dev` works on official projects without a bundler config — see [hybrid-dev.md](hybrid-dev.md).
-
-| Flag | Description |
+| Flag | Values |
 |---|---|
 | `--refresh` | Fast refresh (state-preserving where supported) |
 | `--browser` | Open browser (off by default) |
-| `--port <n>` | Override `dev.port` (default 4321) |
-| `--mode <local\|sharepoint>` | `local` (default) or `sharepoint` when tenant is set |
+| `--port <n>` | Override `dev.port` (default `4321`) |
+| `--mode <local\|sharepoint>` | `local` (default) or `sharepoint` when tenant set |
 | `--tenant <url>` | Tenant URL (else `dev.tenantUrl` or `SPFX_SERVE_TENANT_DOMAIN`) |
 
-Local preview (default, no tenant):
+Local (default, no tenant): `http://localhost:4321/` — preview at `/` + mock `/_api`, HTTP, no cert. Supports `?locale=fr-fr` and `local/data.json` seeding.
 
-- Preview at `/` — lists every web part/extension, mounts via `/dist/local-runtime.js`.
-- Multi-locale: `?locale=fr-fr` (or `?market=`) switches CultureInfo and string modules.
-- Mock `/_api` — OData v4 JSON-light (`/_api/web`, `/web/lists`, `/items`, `X-HTTP-Method` for merge/delete, `/contextinfo`). Seed with `local/data.json`.
-- HTTP, no cert.
+SharePoint (tenant set): `https://localhost:4321` — `/temp/manifests.js`, `/dist/*.js`. Workbench URL printed: `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
 
-SharePoint mode (tenant set): HTTPS with cert in `~/.rspfx/certs` (`packages/manifest-server/src/index.ts:121` `ensureCertificates()`), `Workbench: https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`. Bundles from `https://localhost:4321/dist/*`.
+Cert is auto-generated in `~/.rspfx/certs` (825-day self-signed) and `rspfx dev` warns if missing/expiring/untrusted; `rspfx doctor` verifies. See [getting-started.md#cert-trust](getting-started.md#cert-trust).
 
-`rspfx dev` (and `packages/dev-runtime/src/serve.ts:134` / `apps/cli/src/commands/dev.ts:71` for Vite/Rsbuild) auto-generates the cert on first run and warns if it is missing, expiring (<7d), or not trusted by the OS — untrusted certs surface as CORS, `NET::ERR_CERT_AUTHORITY_INVALID`, or blank workbench (see [getting-started.md#cert-trust](getting-started.md#cert-trust) for trust commands per OS and `~/.rspfx/certs/cert.pem.trust.txt`).
-
-If `rspfx dev` reports a cert warning, run `rspfx doctor` to verify (`cert exists`, `cert valid`, `key.pem 0600`, `cert trusted`).
+Reload via `/__rspfx_hot.json` poll → `location.reload()`.
 
 ```sh
 rspfx dev
@@ -98,19 +73,20 @@ rspfx dev --refresh
 rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 ```
 
+> Tip: `:4321` is HTTP in local preview, HTTPS in SharePoint mode. If the workbench shows blank or CORS errors, run `rspfx doctor` and trust the cert per the printed instructions.
+
 ## `rspfx build`
 
-Production compile to `dist/` + `release/` (manifests + assets).
+Compile to `dist/` + `release/`.
 
-| Flag | Description |
+| Flag | Values |
 |---|---|
 | `--no-minify` | Disable minify |
 | `--sourcemap` | Emit hidden source maps |
 
-Bundler config is optional — without it the CLI builds from manifests and runs Vite, Rsbuild, or Rspack directly.
+Bundler config optional — without it the CLI synthesizes and runs the bundler directly.
 
 ```sh
-rspfx build
 rspfx build --no-minify --sourcemap
 ```
 
@@ -118,60 +94,58 @@ rspfx build --no-minify --sourcemap
 
 Build + assemble `sharepoint/solution/<name>.sppkg` (from `paths.zippedPackage`).
 
-| Flag | Description |
+| Flag | Values |
 |---|---|
 | `--no-build` | Use existing `release/` |
 
 Auto-includes `teams/` and `sharepoint/Resources*.resx` when present.
 
 ```sh
-rspfx package
 rspfx package --no-build
 ```
 
 ## `rspfx deploy`
 
-Package + upload to the app catalog. Needs `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL` (or `config.deploy.appCatalogSiteUrl`). Without a token it prints manual steps. Validates URL, 120s timeout.
+Package + upload to app catalog. Needs `RSPFX_ACCESS_TOKEN` + `RSPFX_APP_CATALOG_URL`. Without token prints manual steps. Validates URL, 120 s timeout.
 
 ```sh
-rspfx deploy
 RSPFX_ACCESS_TOKEN=<token> RSPFX_APP_CATALOG_URL=https://contoso.sharepoint.com/sites/appcatalog rspfx deploy
 ```
 
 ## `rspfx analyze`
 
-Build + report sizes as console table + `.rspfx/analyze.html`. Module counts work for all bundlers (Vite/Rsbuild via `.rspfx/stats.json`).
+Build + console table + `.rspfx/analyze.html`. Module counts work for all bundlers (Vite/Rsbuild via `.rspfx/stats.json`).
 
 ## `rspfx doctor`
 
-Checks Node 20+, manifests, framework, sp-* externals, bundles, port, outDir, and cert (`cert exists` at `~/.rspfx/certs/cert.pem`, `cert valid` expiry >7d via `X509Certificate`, `key.pem 0600`, `cert trusted` via `security verify-cert` on macOS / `certutil -verify` on Windows — `packages/manifest-server/src/index.ts:8` `getCertStatus()` / `isCertTrusted()` / `formatTrustInstructions()` and `apps/cli/src/commands/doctor.ts:252`).
+Checks Node 20+, manifests, framework, sp-* externals, bundles, port, outDir, cert (`exists` / `valid >7d` / `key.pem 0600` / `trusted`).
+
+| Flag | Values |
+|---|---|
+| `--fix` | Fix missing configs/certs then re-validate |
 
 Exit 1 on fail — use in CI.
 
-| Flag | Description |
-|---|---|
-| `--fix` | Fix missing configs/certs then re-validate (`ensureCertificates()` + `ensureProjectConfigs()`) |
-
-On first-run SharePoint mode the most common failure is an untrusted or missing `~/.rspfx/certs/cert.pem` — the workbench then shows CORS or `NET::ERR_CERT_AUTHORITY_INVALID` instead of bundles; `rspfx doctor` reports it with the per-OS trust command and `rspfx dev` warns at startup (see [getting-started.md#cert-trust](getting-started.md#cert-trust)).
+```sh
+rspfx doctor --fix
+```
 
 ## `rspfx clean`
 
 Removes `dist/`, `release/`, `temp/`, `.rspfx`, `node_modules/.cache`, `sharepoint/solution`. Refuses outside a project.
 
-## Project config as a bundler plugin
+## Bundler plugin
 
-Config lives in your bundler file as a plugin from `@mbsks/rspfx-plugin` — but the file is optional.
+Config lives in the bundler file via `@mbsks/rspfx-plugin` — file is optional.
 
-### Vite — `vite.config.ts` (recommended)
+Vite `vite.config.ts`:
 
 ```ts
 import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23', dev: { tenantUrl: 'https://contoso.sharepoint.com' } })] };
+export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
 ```
 
-`rspfx build` spawns one `vite build` per entry, inlines CSS (no `.css` files), writes `.rspfx/stats.json`, handles reload. `rspfx dev` spawns `vite` and serves `/temp/manifests.js`. Fast refresh via `rspfx dev --refresh` or `dev.fastRefresh`. Local preview is Rspack-only for now — Vite dev is workbench-only.
-
-### Rsbuild — `rsbuild.config.ts`
+Rsbuild `rsbuild.config.ts`:
 
 ```ts
 import { defineConfig } from '@rsbuild/core';
@@ -179,32 +153,28 @@ import { rspfxRsbuild } from '@mbsks/rspfx-plugin';
 export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react' })] });
 ```
 
-One `rsbuild build` produces all bundles. Fast refresh via `RSPFX_FAST_REFRESH=1`. Local preview is workbench-only.
-
-### Rspack — `rspack.config.ts`
+Rspack `rspack.config.ts`:
 
 ```ts
 import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';
-export default {
-  mode: 'development',
-  resolve: rspfxResolve(),
-  plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react', spfxVersion: '1.22' })]
-};
+export default { resolve: rspfxResolve(), plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react' })] };
 ```
 
-Keep `resolve: rspfxResolve()` — Rspack builds its resolver from the file, not the plugin. `npx rspack build --mode production` for a direct build.
-
-For all three: `npx vite build` / `npx rspack build` / `npx rsbuild build` works standalone, and `rspfx build` gives the same output through the plugin. Without a config file, `rspfx build` / `bun run build` synthesize it — no manual file needed.
+For all three, `rspfx build` gives the same output as native `vite build` / `rspack build` / `rsbuild build`. Without a config file, `rspfx build` synthesizes it.
 
 ### Options
 
-- **Identity:** `name`, `version`, `spfxVersion`, `framework`
-- **Dev:** `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser` (false), `dev.fastRefresh`, `dev.workbench`/`initialPage`
-- **Build:** `build.outDir` (dist), `build.releaseDir` (release), `build.sourcemap`/`minify`/`splitChunks` (deprecated — use native bundler options; `splitChunks` must stay false)
-- **Layout:** `paths.srcDir`, `paths.webpartsDir`, `paths.extensionsDir`, `paths.librariesDir`, `paths.configDir`
-- **Deploy:** `deploy.appCatalogSiteUrl`
+| Group | Keys |
+|---|---|
+| Identity | `name`, `version`, `spfxVersion`, `framework` |
+| Dev | `dev.port` (4321), `dev.https` (true), `dev.hostname` (localhost), `dev.tenantUrl`, `dev.openBrowser` (false), `dev.fastRefresh`, `dev.workbench`/`initialPage` |
+| Build | `build.outDir` (dist), `build.releaseDir` (release), `build.sourcemap`/`minify`/`splitChunks` (deprecated — use bundler options; `splitChunks` must stay false) |
+| Layout | `paths.srcDir`, `paths.webpartsDir`, `paths.extensionsDir`, `paths.librariesDir`, `paths.configDir` |
+| Deploy | `deploy.appCatalogSiteUrl` |
 
 ### Environment variables
+
+Single home for operator env vars. No other `RSPFX_*` vars are implemented.
 
 | Variable | Use |
 |---|---|

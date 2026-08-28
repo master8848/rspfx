@@ -1,93 +1,86 @@
 # Migration case study: PnP Modern Search
 
-This is the play-by-play of migrating
-[PnP Modern Search](https://github.com/microsoft-search/pnp-modern-search)
-(search web parts, v4.23.3) from the official SPFx toolchain to RSPFX — the
-same exercise that produced `examples/modern-search` and the
-[migrating-from-gulp-heft.md](migrating-from-gulp-heft.md) guide.
+Play-by-play of migrating [PnP Modern Search](https://github.com/microsoft-search/pnp-modern-search) (v4.23.3) from the official SPFx toolchain to RSPFX — the exercise behind `examples/modern-search` and [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md).
 
 ## Why this project
 
-PnP Modern Search is one of the largest, most actively used open-source SPFx
-solutions (≈42k lines of TypeScript/SCSS, 4 web parts, 178 TypeScript files, 24 SCSS modules).
-It is also a brutal stress test:
+One of the largest open-source SPFx solutions — ≈42k lines, 4 web parts, 178 TS files, 24 SCSS modules — and a stress test:
 
-- React 17 + Fluent UI 8 + Microsoft Graph Toolkit + PnPjs + HandleBars
-  templates + Adaptive Cards + react-ace (Code Editor) + dayjs + markdown-it
-- localized resources in 14 locales (`localizedResources` in `config.json`)
-- lazy-loaded chunks (`React.lazy` + `webpackChunkName`)
-- a custom `spfx-customize-webpack.js` (handlebars min build, `process/browser`,
-  `adaptive-expressions` main entry, moment exclusion)
-- `webApiPermissionRequests` (16 Microsoft Graph scopes) in the solution
-- a `pkg:@fluentui/...` SCSS import (sass-loader ≥16.5 syntax)
+- React 17, Fluent UI 8, Graph Toolkit, PnPjs, Handlebars, Adaptive Cards, react-ace, dayjs, markdown-it.
+- 14 locales via `config.json` `localizedResources`.
+- Lazy chunks (`React.lazy` + `webpackChunkName`).
+- Custom `spfx-customize-webpack.js` (handlebars min, `process/browser`, `adaptive-expressions`, moment exclusion).
+- 16 Graph scopes in `webApiPermissionRequests`.
+- `pkg:@fluentui/...` SCSS import (sass-loader ≥16.5 syntax).
 
-Crucially, it is **web parts only** — no extensions, no library components —
-which is exactly RSPFX's supported surface.
+Web parts only — no extensions or libraries — which is RSPFX's core surface (extensions/libraries are also supported now, but this case predates them).
 
-## The migration (as executed)
+## The migration
 
-1. Clone upstream at `search-parts` v4.23.3 (SPFx 1.23.0, Heft rig
-   `@microsoft/spfx-web-build-rig`).
-2. Run `node scripts/migrate-to-rspfx.mjs <dir>` — the mechanical steps:
-   - drop 25 toolchain devDependencies (`@rushstack/heft`, `spfx-heft-plugins`,
-     `spfx-web-build-rig`, webpack, loaders, eslint, node polyfills, …)
-   - rewrite `config/config.json` entrypoints `./lib/...WebPart.js` →
-     `./src/...WebPart.ts`; rename bundle keys to the web part folder names
-     (`modern-search-results-web-part` → `searchResults`, …)
-   - rewrite the one `pkg:` SCSS import to a relative `node_modules` path
-   - delete rig/sass/typescript/customize-webpack config files
-   - write `rspack.config.ts` (with the `RspfxPlugin`) + a plain `tsconfig.json`
-3. `bun install` — 52s from warm cache.
+1. Clone upstream at `search-parts` v4.23.3 (SPFx 1.23.0, Heft rig).
+
+2. Run migration — mechanical steps:
+
+   - Drop 25 toolchain devDependencies (Heft, rig, webpack, loaders, eslint, polyfills).
+   - Rewrite `config/config.json` entrypoints `./lib/...WebPart.js` → `./src/...WebPart.ts`; rename bundle keys to folder names.
+   - Rewrite the one `pkg:` SCSS import to a relative `node_modules` path.
+   - Delete rig/sass/typescript/customize-webpack configs.
+   - Write `rspack.config.ts` with `RspfxPlugin` + plain `tsconfig.json`.
+
+3. `bun install` — ~52s from warm cache.
+
 4. `rspfx build` — handles:
-   - `*.html` template imports via Rspack `asset/source` rule (raw-string module).
-   - Localized string modules (`SearchResultsWebPartStrings`, `CommonStrings`, `ControlStrings`, `PropertyControlStrings`) via `config.json` `localizedResources` mapping to the default-locale source file (including `node_modules` resources from `@pnp/spfx-controls-react`).
-5. `rspfx package` — first try produced a valid `.sppkg`:
-   - 213 zip entries; `AppManifest.xml` (name, version, `SkipFeatureDeployment`,
-     `DeveloperProperties`, **16 `RequestedWebApiPermission` entries**);
-   - 4 `WebPart_<id>.xml` elements under the solution feature;
-   - `ClientSideAssets/` with all bundles + chunks, every manifest rewritten to
-     `HTTPS://SPCLIENTSIDEASSETLIBRARY/`.
-6. `rspfx dev` — workbench debug manifests on `:4321` served the 4 web parts;
-   bundles load over HTTPS with the AMD `define('<id>_4.23.3', [...])` header.
+
+   - `*.html` template imports as `asset/source` (raw string).
+   - Localized strings (`SearchResultsWebPartStrings`, `CommonStrings`, …) via `localizedResources` — default locale `en-us`, including `node_modules` resources from `@pnp/spfx-controls-react`.
+
+5. `rspfx package` — valid `.sppkg` on first try:
+
+   - 213 entries; `AppManifest.xml` with 16 `RequestedWebApiPermission` entries.
+   - 4 `WebPart_<id>.xml` elements.
+   - `ClientSideAssets/` with bundles and chunks, manifests rewritten to `HTTPS://SPCLIENTSIDEASSETLIBRARY/`.
+
+6. `rspfx dev` — workbench at `https://localhost:4321` served 4 web parts; bundles load over HTTPS with AMD `define('<id>_<version>', …)` header.
 
 ## Numbers
 
 | Metric | Value |
 |---|---|
-| Source | 178 TS/TSX files, 24 SCSS, 3.0 MB, ≈42k lines |
+| Source | 178 TS/TSX, 24 SCSS, ~3.0 MB, ≈42k lines |
 | Toolchain devDependencies removed | 25 |
-| Files edited in `src/` by the migration | 0 |
-| Full production build (`rspfx build`, cold, minified) | **≈2.1 s** |
+| `src/` files edited | 0 |
+| Production build (cold, minified) | ~2.1 s |
 | `.sppkg` size | 2.7 MiB (213 entries) |
-| Time from clone to green build | ~1 hour (including two toolchain fixes + tests) |
+| Clone to green build | ~1 hour (including two toolchain fixes) |
 
-## Gaps the exercise surfaced
+## Gaps surfaced
 
-These are the honest limits (tracked in [why-not-to-migrate.md](why-not-to-migrate.md)):
+| Gap | Resolution |
+|---|---|
+| Multi-locale switching | Compiled to per-locale AMD modules (`dist/<name>_<locale>.js`) with `localizedPath` entries; `en-us` fallback, `?locale=` preview — no manual work |
+| `pkg:` SCSS import | One-line rewrite (bundled sass-loader <16.5) |
+| Bundle-name constraint | Bundle keys must equal web part folder names — mechanical rename in `config.json` |
+| `spfx-customize-webpack.js` | All 5 aliases unnecessary under Rspack; custom behavior via `RspfxPlugin` in `rspack.config.ts` or `compilerHooks` |
 
-1. **Multi-locale runtime switching.** `config.json` `localizedResources` are compiled to per-locale AMD modules (`dist/<name>_<locale>.js`) and emitted as `localizedPath` manifest entries (`packages/manifest-generator/src/component-manifests.ts:148`), so string modules swap at runtime with `en-us` fallback and `?locale=` preview support.
-2. **`pkg:` SCSS imports** need a one-line rewrite (bundled sass-loader <16.5).
-3. **Bundle-name constraint.** Bundle keys must equal web part folder names
-   (RSPFX's `entryModuleId` convention) — a mechanical rename in `config.json`.
-4. **No `spfx-customize-webpack.js` equivalent — but an escape hatch now.**
-   All five aliases in the upstream file turned out to be unnecessary under
-   Rspack. For genuinely custom behavior, the project config lives in
-   `rspack.config.ts` as the `RspfxPlugin` from `@mbsks/rspfx-plugin` — the
-   Rspack config is yours to extend (extra loaders, plugins, rule merges) —
-   and `plugin-api` hooks (`beforeCompile`/`afterStats`/`beforePackage`) are
-   wired into the CLI.
+## What did not need changing
 
-## What did NOT need changing
+- `src/webparts/**` — zero edits.
+- `config/package-solution.json`, `config/serve.json`, `config/write-manifests.json` — read as-is.
+- `sharepoint/` assets, `teams/` manifests — untouched.
+- `@microsoft/sp-*` — kept at upstream versions; `sp-*` IDs harvested from `node_modules` (stable across 1.20–1.23).
 
-- `src/webparts/**` — zero edits
-- `config/package-solution.json` — read as-is (including Graph permission
-  requests)
-- `config/serve.json`, `config/write-manifests.json` — read as-is
-- `sharepoint/` assets, `teams/` manifests — untouched
-- `@microsoft/sp-*` dependencies — kept at upstream versions; sp-* manifests
-  harvested from `node_modules` (component IDs stable across 1.20–1.23)
+## Comparison vs official
 
-## Replay it
+| Area | Official (Heft) | RSPFX |
+|---|---|---|
+| Full production build | Minutes | ~2 s |
+| Config files | Heft rig + webpack customizer | One `rspack.config.ts` (or Vite/Rsbuild, or zero-config) |
+| SCSS `pkg:` imports | Supported via sass-loader ≥16.5 | Relative path rewrite (one line) |
+| Packaged artifact | Same `.sppkg` ZIP layout | Same — byte-compatible |
+
+> **Tip:** Replay with `examples/modern-search` (migrated copy in this repo) or run the script against a fresh clone.
+
+## Replay
 
 ```sh
 git clone https://github.com/microsoft-search/pnp-modern-search.git
@@ -97,5 +90,10 @@ bun install
 rspfx build && rspfx package
 ```
 
-Or use the migrated copy directly: `examples/modern-search` (workspace example,
-same source, RSPFX toolchain, full attribution in its README).
+Or use `examples/modern-search` directly — same source, RSPFX toolchain.
+
+## Takeaway
+
+For web-part-only solutions with standard `config/` layout, migration is mechanical — no `src/` edits, one SCSS line, one `config.json` rename — and build times drop an order of magnitude.
+
+The honest limits are in [why-not-to-migrate.md](why-not-to-migrate.md).
