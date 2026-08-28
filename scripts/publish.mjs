@@ -3,25 +3,38 @@
  * Publish pipeline: builds, tests, bumps, and publishes every publishable
  * rspfx package (packages/* + apps/cli) to npm — NEVER examples.
  *
+ * Split implementation (optimized):
+ *   - publish/graph.mjs   — collect set, dependency graph, levels + cycle hint
+ *   - publish/cache.mjs   — build cache (no code changes / no new packages)
+ *   - publish/registry.mjs — npm view / publish / verify
+ *   - publish/git.mjs     — git dirty resume, commit + tag
+ *   - publish/utils.mjs   — run / fatal / bumpVersion
+ *
  * Safety rails:
  *   - hard abort if anything under examples/ or apps/playground is publishable
- *   - gates: clean git tree, `bun run build`, `bun run test` (unless --skip-checks)
+ *   - validates dependency graph is acyclic BEFORE any build/publish work;
+ *     if cycle exists, prints simple hint (cycle path) and aborts
+ *   - publish order guarantees dependencies before dependents via levels
+ *   - gates: clean git tree (resume-tolerant), `bun run build`, `bun run test` (unless --skip-checks)
+ *     build step is cached — skipped when fingerprint (HEAD + lockfiles + dist) unchanged
  *   - consistent version bump across the whole set (default: patch)
- *   - publishes in dependency order, one package at a time
- *   - verifies each version lands on the registry (retried)
- *   - already-published versions are skipped, so re-runs resume naturally
+ *   - publishes in dependency order, one package at a time, skipping already-published versions
+ *   - verifies each version lands on the registry (retried); re-runs resume naturally
  *
  * Usage:
  *   node scripts/publish.mjs [--dry-run] [--version 0.2.0] [--patch|--minor|--major]
- *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-commit]
- *   npm dist-tag defaults to "latest" (prereleases default to "next"); git tag vX.Y.Z is created on success.
- *   Changelog: update CHANGELOG.md with ## [X.Y.Z] - YYYY-MM-DD before publishing (see CONTRIBUTING.md#changelog-rule).
- *   Publishes with `bun publish` (workspace protocol resolved by bun); registry reads use `npm view`.
+ *                            [--tag <dist-tag>] [--skip-checks] [--otp <code>] [--no-commit] [--no-build-cache]
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+import { flagValue, fatal, run, bumpVersion, writeJson } from './publish/utils.mjs';
+import { assertNoExamplePackages, collectPublishSet, getPublishOrder, formatLevels } from './publish/graph.mjs';
+import { cachePath, readBuildCache, writeBuildCache, checkDistExists, getFingerprint } from './publish/cache.mjs';
+import { isPublished, verifyPublished, countPublished, publishPackage } from './publish/registry.mjs';
+import { dirtyRaw, isResumeDirtyAllowed, commitAndTag } from './publish/git.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -29,162 +42,35 @@ const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const SKIP_CHECKS = args.includes('--skip-checks');
 const NO_COMMIT = args.includes('--no-commit');
-const versionFlag = flagValue('--version');
+const NO_BUILD_CACHE = args.includes('--no-build-cache');
+const versionFlag = flagValue(args, '--version');
 const bumpKind = args.includes('--major') ? 'major' : args.includes('--minor') ? 'minor' : 'patch';
-const explicitNpmTag = flagValue('--tag');
-// OTP: prefer env var to avoid leaking via `ps` (argv is visible). `--otp` is
-// still accepted for backwards compat but users should set RSPFX_NPM_OTP.
-// We also check npm_config_otp / NPM_OTP for interop.
-const otp = flagValue('--otp') ?? process.env.RSPFX_NPM_OTP ?? process.env.npm_config_otp ?? process.env.NPM_OTP;
-if (flagValue('--otp')) {
+const explicitNpmTag = flagValue(args, '--tag');
+const otp = flagValue(args, '--otp') ?? process.env.RSPFX_NPM_OTP ?? process.env.npm_config_otp ?? process.env.NPM_OTP;
+if (flagValue(args, '--otp')) {
   console.warn('Warning: --otp exposes the token in `ps` output; prefer RSPFX_NPM_OTP env var.');
 }
-// Guard --skip-checks in CI: it must not bypass gates in automation.
 if (SKIP_CHECKS && process.env.CI) {
   fatal('--skip-checks is not allowed when CI is set (process.env.CI). Remove the flag or unset CI.');
 }
 
-function flagValue(flag) {
-  const eq = args.find((a) => a.startsWith(flag + '='));
-  if (eq) return eq.slice(flag.length + 1);
-  const i = args.indexOf(flag);
-  if (i >= 0 && i + 1 < args.length && !args[i + 1].startsWith('--')) return args[i + 1];
-  return undefined;
-}
-
-function fatal(message) {
-  console.error(`\n✗ ${message}`);
-  process.exit(1);
-}
-
-function run(cmd, argsList, opts = {}) {
-  const result = spawnSync(cmd, argsList, { stdio: 'inherit', ...opts });
-  if (result.status !== 0) {
-    // Redact OTP if present in args to avoid leaking via logs / CI output.
-    const redacted = argsList.map((a, i) => (argsList[i - 1] === '--otp' ? '***' : a)).join(' ');
-    fatal(`command failed: ${cmd} ${redacted} (exit ${result.status ?? 'signal'})`);
-  }
-}
-
-/** Packages under examples/ or apps/playground are NEVER publishable. */
-function assertNoExamplePackages() {
-  const forbiddenRoots = ['examples', path.join('apps', 'playground')];
-  const offenders = [];
-  for (const root of forbiddenRoots) {
-    const dir = path.join(ROOT, root);
-    if (!fs.existsSync(dir)) continue;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const pkgJson = path.join(dir, entry.name, 'package.json');
-      if (!fs.existsSync(pkgJson)) continue;
-      const pkg = JSON.parse(fs.readFileSync(pkgJson, 'utf8'));
-      if (pkg.private !== true) {
-        offenders.push(`${pkg.name} (${path.join(root, entry.name)})`);
-      }
-    }
-  }
-  if (offenders.length > 0) {
-    fatal(
-      `Refusing to publish: example/playground packages are not marked private:\n  ${offenders.join('\n  ')}\n` +
-        'Set "private": true in those package.json files.'
-    );
-  }
-}
-
-function collectPublishSet() {
-  const set = new Map();
-  for (const root of ['packages', 'apps']) {
-    const dir = path.join(ROOT, root);
-    if (!fs.existsSync(dir)) continue;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const pkgJsonPath = path.join(dir, entry.name, 'package.json');
-      if (!fs.existsSync(pkgJsonPath)) continue;
-      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-      if (pkg.private === true) continue;
-      if (typeof pkg.name !== 'string' || !pkg.name.startsWith('@mbsks/rspfx-')) {
-        fatal(`Unexpected publishable package ${pkg.name} in ${dir}/${entry.name}`);
-      }
-      set.set(pkg.name, { name: pkg.name, dir: path.join(dir, entry.name), version: pkg.version });
-    }
-  }
-  if (set.size === 0) {
-    fatal('No publishable packages found.');
-  }
-  return set;
-}
-
-function dependencyOrder(set) {
-  const names = [...set.keys()];
-  const depsOf = (name) => {
-    const pkg = JSON.parse(fs.readFileSync(path.join(set.get(name).dir, 'package.json'), 'utf8'));
-    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.optionalDependencies ?? {}) };
-    return Object.keys(deps).filter((dep) => set.has(dep));
-  };
-  const order = [];
-  const visited = new Set();
-  const visiting = new Set();
-  const visit = (name) => {
-    if (visited.has(name)) return;
-    if (visiting.has(name)) fatal(`Circular dependency detected involving ${name}`);
-    visiting.add(name);
-    for (const dep of depsOf(name)) visit(dep);
-    visiting.delete(name);
-    visited.add(name);
-    order.push(name);
-  };
-  for (const name of names) visit(name);
-  return order;
-}
-
-function bumpVersion(current, kind) {
-  const base = current.split('-')[0].split('+')[0];
-  const [major, minor, patch] = base.split('.').map(Number);
-  if (kind === 'major') return `${major + 1}.0.0`;
-  if (kind === 'minor') return `${major}.${minor + 1}.0`;
-  return `${major}.${minor}.${patch + 1}`;
-}
-
-function writeJson(file, value) {
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function sleepSync(ms) {
-  const sab = new SharedArrayBuffer(4);
-  const view = new Int32Array(sab);
-  Atomics.wait(view, 0, 0, ms);
-}
-
-function isPublished(name, version) {
-  try {
-    const out = execSync(`npm view ${JSON.stringify(name + '@' + version)} version`, {
-      stdio: ['ignore', 'pipe', 'ignore']
-    }).toString().trim();
-    return out === version;
-  } catch {
-    return false;
-  }
-}
-
-function verifyPublished(name, version) {
-  for (let attempt = 0; attempt < 15; attempt++) {
-    if (isPublished(name, version)) return true;
-    sleepSync(2000);
-  }
-  return false;
-}
-
-// ─── 1. safety + gates ───────────────────────────────────────────────────────
-assertNoExamplePackages();
-const set = collectPublishSet();
+// ─── 1. safety: collect + validate graph BEFORE any heavy work ───────────────
+assertNoExamplePackages(ROOT);
+const set = collectPublishSet(ROOT);
 const versions = new Set([...set.values()].map((p) => p.version));
 if (versions.size > 1) {
   fatal(`Publishable packages have inconsistent versions: ${[...versions].join(', ')} — bump them all to one version first.`);
 }
 const currentVersion = [...versions][0];
-// Resume detection: a partially published release (previous run failed
-// halfway) stays on the same version; a fully published one gets bumped.
-const liveAtCurrent = [...set.values()].filter((pkg) => isPublished(pkg.name, currentVersion)).length;
+
+// Data structure: which to publish first (levels) + cycle validation upfront.
+const { order, levels } = getPublishOrder(set);
+console.log(`\nPublish graph: ${set.size} packages, ${levels.length} level(s) (dependencies → dependents)\n`);
+console.log(formatLevels(levels));
+console.log(`\nPublish order (dependencies always before dependents):\n  ${order.join(' → ')}\n`);
+
+// Resume detection (after graph validation — network work comes after the cheap graph check)
+const liveAtCurrent = countPublished(set, currentVersion);
 const resumed = liveAtCurrent > 0 && liveAtCurrent < set.size;
 const targetVersion = versionFlag ?? (resumed ? currentVersion : bumpVersion(currentVersion, bumpKind));
 const npmTag = explicitNpmTag ?? (targetVersion.includes('-') ? 'next' : 'latest');
@@ -198,7 +84,6 @@ console.log(`  Changelog: CHANGELOG.md ## [${targetVersion}] + git tag v${target
 
 if (DRY_RUN) {
   console.log('Dry run complete. Nothing was changed or published.\n');
-  // AI agents work primarily in this repo — remind to update the per-version changelog.
   console.log('┌─ AI AGENT REMINDER ──────────────────────────────────────────────');
   console.log(`│ This was a dry run for v${targetVersion} (npm tag: ${npmTag}).`);
   console.log('│ Before the next real publish, AI agents (and humans) must:');
@@ -208,7 +93,6 @@ if (DRY_RUN) {
   console.log('│   3. Commit the changelog alongside the version bump (scripts/publish.mjs does the bump+commit).');
   console.log('│ See CONTRIBUTING.md#publishing-and-tagging and CHANGELOG.md.');
   console.log('└────────────────────────────────────────────────────────────────');
-  // Changelog gate (advisory on dry-run): warn if entry is missing.
   const changelogPath = path.join(ROOT, 'CHANGELOG.md');
   if (fs.existsSync(changelogPath)) {
     const changelog = fs.readFileSync(changelogPath, 'utf8');
@@ -227,18 +111,50 @@ if (DRY_RUN) {
 
 if (!SKIP_CHECKS) {
   console.log('─ gates ───────────────────────────────────────────────────────────');
-  const dirty = execSync('git status --porcelain', { cwd: ROOT }).toString().trim();
+  const dirty = dirtyRaw(ROOT);
   if (dirty) {
-    fatal(`Working tree is not clean. Commit or stash first:\n${dirty}`);
+    if (resumed && isResumeDirtyAllowed(ROOT, set, targetVersion, dirty)) {
+      console.log('  ! working tree dirty with version bump (resume) — continuing');
+    } else {
+      fatal(`Working tree is not clean. Commit or stash first:\n${dirty}`);
+    }
+  } else {
+    console.log('  ✓ git tree clean');
   }
-  console.log('  ✓ git tree clean');
-  run('bun', ['run', 'build'], { cwd: ROOT });
-  run('bun', ['run', '--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
-  run('bun', ['run', 'test'], { cwd: ROOT });
+
+  if (NO_BUILD_CACHE) {
+    console.log('  ↻ build cache disabled (--no-build-cache)');
+    run('bun', ['run', 'build'], { cwd: ROOT });
+    run('bun', ['run', '--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
+    run('bun', ['run', 'test'], { cwd: ROOT });
+  } else {
+    const fingerprint = getFingerprint(ROOT, set);
+    const cache = readBuildCache(ROOT);
+    const distReady = checkDistExists(set);
+    if (cache && cache.fingerprint === fingerprint && distReady) {
+      console.log(`  ↻ build cache hit (${fingerprint}) — skipping build & test (no code changes, no new packages)`);
+      console.log(`    cache: ${path.relative(ROOT, cachePath(ROOT))}`);
+    } else {
+      if (cache) {
+        if (cache.fingerprint !== fingerprint) {
+          console.log(`  ↻ build cache miss (cached ${cache.fingerprint ?? 'none'} vs ${fingerprint})`);
+        } else if (!distReady) {
+          console.log(`  ↻ build cache miss (dist missing)`);
+        }
+      } else {
+        console.log(`  ↻ build cache miss (no cache)`);
+      }
+      run('bun', ['run', 'build'], { cwd: ROOT });
+      run('bun', ['run', '--filter', '@mbsks/rspfx-cli', 'build'], { cwd: ROOT });
+      run('bun', ['run', 'test'], { cwd: ROOT });
+      writeBuildCache(ROOT, fingerprint);
+      console.log(`  ✓ build cache updated (${fingerprint})`);
+    }
+  }
   console.log('');
 }
 
-// Changelog gate (live run, advisory): warn if CHANGELOG.md lacks the target version.
+// Changelog gate (live run, advisory)
 {
   const changelogPath = path.join(ROOT, 'CHANGELOG.md');
   if (fs.existsSync(changelogPath)) {
@@ -271,9 +187,9 @@ writeJson(rootPkgPath, rootPkg);
 changedFiles.push(rootPkgPath);
 console.log(`  rspfx (root): ${currentVersion} → ${targetVersion}`);
 
-// ─── 3. publish in dependency order ──────────────────────────────────────────
+// ─── 3. publish in dependency order (dependencies guaranteed before dependents) ─
 console.log('\n─ publish ──────────────────────────────────────────────────────────');
-const order = dependencyOrder(set);
+console.log(`  Order: ${order.join(' → ')}\n`);
 const published = [];
 const unverified = [];
 const failed = [];
@@ -285,27 +201,7 @@ for (const name of order) {
     continue;
   }
   console.log(`  → ${name}@${targetVersion} (tag: ${npmTag})`);
-  const publishArgs = ['publish', '--access', 'public', '--tag', npmTag];
-  // OTP via env (npm_config_otp) to avoid `ps` argv visibility and log leakage.
-  // We intentionally do NOT add --otp to publishArgs; bun/npm read npm_config_otp.
-  const publishEnv = otp
-    ? { ...process.env, npm_config_otp: otp, NPM_OTP: otp, RSPFX_NPM_OTP: otp }
-    : process.env;
-  // Pipe stdin so the publisher never shows interactive prompts (OTP) —
-  // a missing OTP surfaces as a hard error instead of a hung prompt.
-  const publishOnce = () =>
-    spawnSync('bun', publishArgs, {
-      cwd: pkg.dir,
-      stdio: ['pipe', 'inherit', 'inherit'],
-      env: publishEnv
-    }).status ?? 1;
-  let status = publishOnce();
-  for (let attempt = 1; status !== 0 && attempt < 4; attempt++) {
-    // npm registry races (E409 packument) are transient — back off and retry.
-    console.log(`    (attempt ${attempt + 1}/4 after exit ${status})`);
-    sleepSync(4000);
-    status = publishOnce();
-  }
+  const status = publishPackage(pkg.dir, npmTag, otp);
   if (status !== 0) {
     failed.push(name);
     console.error(`  ✗ ${name} failed (exit ${status})`);
@@ -315,14 +211,11 @@ for (const name of order) {
   if (verifyPublished(name, targetVersion)) {
     console.log(`  ✓ ${name}@${targetVersion} verified on npm`);
   } else {
-    // npm's read-after-write can lag well past a successful publish —
-    // defer the verdict to the final sweep instead of aborting the run.
     unverified.push(name);
     console.log(`  ~ ${name}@${targetVersion} published (registry visibility lagging — will re-check)`);
   }
 }
 
-// Final sweep: give lagging packuments time to settle before declaring failure.
 for (const name of unverified) {
   if (verifyPublished(name, targetVersion)) {
     console.log(`  ✓ ${name}@${targetVersion} verified on npm (final sweep)`);
@@ -342,35 +235,7 @@ if (failed.length > 0) {
 
 // ─── 4. commit the bump + tag ────────────────────────────────────────────────
 if (!NO_COMMIT) {
-  run('git', ['add', ...changedFiles], { cwd: ROOT });
-  const staged = execSync('git diff --cached --name-only', { cwd: ROOT }).toString().trim();
-  if (staged) {
-    run('git', ['commit', '-m', `chore: bump all publishable packages to v${targetVersion}`], { cwd: ROOT });
-    console.log(`\nCommitted version bump (v${targetVersion}). Run "git push" to share it.`);
-  } else {
-    console.log('\nVersion bump already committed — skipping commit.');
-  }
-  // Create annotated git tag vX.Y.Z linked to CHANGELOG.md section.
-  const tagName = `v${targetVersion}`;
-  const tagExists = (() => {
-    try {
-      execSync(`git rev-parse -q --verify refs/tags/${tagName}`, { cwd: ROOT, stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
-  })();
-  if (!tagExists) {
-    const tagMessage = `${tagName}\n\nSee CHANGELOG.md ## [${targetVersion}] — npm dist-tag: ${npmTag}`;
-    const tagResult = spawnSync('git', ['tag', '-a', tagName, '-m', tagMessage], { cwd: ROOT, stdio: 'inherit' });
-    if (tagResult.status === 0) {
-      console.log(`Created annotated git tag ${tagName} (npm tag: ${npmTag}). Push with: git push --follow-tags`);
-    } else {
-      console.error(`Failed to create git tag ${tagName} (exit ${tagResult.status})`);
-    }
-  } else {
-    console.log(`Git tag ${tagName} already exists — skipping tag creation.`);
-  }
+  commitAndTag(ROOT, changedFiles, targetVersion, npmTag, run);
 }
 
 console.log(`\n✓ Published ${published.length}/${set.size} packages at v${targetVersion} (tag: ${npmTag}).`);

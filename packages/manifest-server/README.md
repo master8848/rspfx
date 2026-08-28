@@ -2,7 +2,7 @@
 
 Development certificates for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
-Generates and caches the self-signed TLS key/cert pair used by the local HTTPS dev server (the compiler-rspack dev server; serving itself is handled there, not here). Certificates live in `~/.rspfx/certs` and are reused across runs.
+Generates and caches the self-signed TLS key/cert pair used by the local HTTPS dev server (Vite · Rsbuild · Rspack dev servers). Certificates live in `~/.rspfx/certs` and are reused across runs.
 
 ## Install
 
@@ -31,5 +31,6 @@ See `docs/getting-started.md#cert-trust` for user-facing trust steps and `rspfx 
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Getting Started](https://rspfx.mbsks.me/docs/getting-started) · [Cert trust](https://rspfx.mbsks.me/docs/getting-started#cert-trust)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

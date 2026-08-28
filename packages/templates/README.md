@@ -41,5 +41,6 @@ await scaffoldProject(vars, 'my-app');
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Getting Started](https://rspfx.mbsks.me/docs/getting-started)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

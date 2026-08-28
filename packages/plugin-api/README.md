@@ -34,6 +34,7 @@ registerPlugin(definePlugin({ name: 'my-framework', frameworkPreset: preset }));
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Custom Framework](https://rspfx.mbsks.me/docs/custom-framework) · [Architecture](https://rspfx.mbsks.me/docs/architecture)
 - [Internal API contract](https://github.com/master8848/rspfx/blob/main/docs/internal-api.md)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

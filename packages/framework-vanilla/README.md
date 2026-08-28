@@ -39,6 +39,7 @@ export default class MyWebPart extends BaseWebPart<IMyProps> {
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
-- [Vanilla example](https://github.com/master8848/rspfx/tree/main/examples/vanilla)
+- [Documentation](https://rspfx.mbsks.me) — [Frameworks](https://rspfx.mbsks.me/docs/frameworks)
+- [Vanilla example](https://github.com/master8848/rspfx/tree/main/examples/vanilla) · [Vite Vanilla](https://github.com/master8848/rspfx/tree/main/examples/vite-vanilla)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

@@ -32,5 +32,6 @@ const context = createMockWebPartContext({ tenantDomain: 'contoso.sharepoint.com
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Local Preview](https://rspfx.mbsks.me/docs/local-preview)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

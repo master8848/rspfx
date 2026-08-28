@@ -36,6 +36,7 @@ export default class MyWebPart extends SolidWebPart<IMyProps> {
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Frameworks](https://rspfx.mbsks.me/docs/frameworks)
 - [Solid example](https://github.com/master8848/rspfx/tree/main/examples/solid)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

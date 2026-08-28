@@ -2,7 +2,7 @@
 
 Preact framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
-Provides the `PreactWebPart` base class with fast refresh via `@rspack/plugin-preact-refresh`.
+Provides the `PreactWebPart` base class with fast refresh: Rspack via `@rspack/plugin-preact-refresh`, Vite and Rsbuild via their Preact refresh plugins — same `FrameworkPreset` for all three bundlers.
 
 ## Install
 
@@ -36,6 +36,7 @@ export default class MyWebPart extends PreactWebPart<IMyProps> {
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Frameworks](https://rspfx.mbsks.me/docs/frameworks)
 - [Preact example](https://github.com/master8848/rspfx/tree/main/examples/preact)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

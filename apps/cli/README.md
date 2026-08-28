@@ -61,10 +61,8 @@ rspfx deploy     # upload to the app catalog (REST creds required)
 
 ## Documentation
 
-- [Getting started](https://github.com/master8848/rspfx/blob/main/docs/getting-started.md)
-- [Commands](https://github.com/master8848/rspfx/blob/main/docs/commands.md)
-- [Architecture](https://github.com/master8848/rspfx/blob/main/docs/architecture.md)
-- [Migration from official SPFx](https://github.com/master8848/rspfx/blob/main/docs/migration-from-spfx.md)
+- [Documentation](https://rspfx.mbsks.me) — [Getting started](https://rspfx.mbsks.me/docs/getting-started) · [Commands](https://rspfx.mbsks.me/docs/commands) · [Architecture](https://rspfx.mbsks.me/docs/architecture) · [Migration from official SPFx](https://rspfx.mbsks.me/docs/migration-from-spfx)
+- [GitHub](https://github.com/master8848/rspfx)
 
 ## License
 

@@ -395,13 +395,16 @@ function npmrc(): string {
 }
 
 function readme(vars: TemplateVars): string {
+  const bundler = vars.bundler ?? 'vite';
   const build = isExtension(vars) || isLibrary(vars)
-    ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (vanilla, TypeScript).`
-    : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with rspfx (${vars.framework}, ${vars.language}).`;
+    ? `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFX](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (bundler: ${bundler}).`
+    : `An SPFx ${vars.spfxVersion} ${componentLabel(vars)} scaffolded with [RSPFX](https://rspfx.mbsks.me) — Vite · Rsbuild · Rspack (${vars.framework}, ${vars.language}, bundler: ${bundler}).`;
   return [
     `# ${vars.namePascal}`,
     '',
     build,
+    '',
+    'Replaces Heft + webpack + gulp. Docs at https://rspfx.mbsks.me — `rspfxVite` / `rspfxRsbuild` / `RSpfxPlugin` share one config.',
     '',
     '## Commands',
     '',
@@ -412,6 +415,11 @@ function readme(vars: TemplateVars): string {
     '- `rspfx analyze` - bundle analysis report',
     '- `rspfx doctor` - environment checks',
     '- `rspfx clean` - remove build output',
+    '',
+    '## Links',
+    '',
+    '- [Documentation](https://rspfx.mbsks.me) — [Getting Started](https://rspfx.mbsks.me/docs/getting-started) · [Commands](https://rspfx.mbsks.me/docs/commands)',
+    '- [GitHub](https://github.com/master8848/rspfx)',
     ''
   ].join('\n');
 }

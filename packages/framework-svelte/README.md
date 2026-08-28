@@ -2,7 +2,7 @@
 
 Svelte framework package for [RSPFX](https://github.com/master8848/rspfx) — an SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack.
 
-Provides the `SvelteWebPart` base class with `svelte-loader` + `svelte-hmr` support.
+Provides the `SvelteWebPart` base class with compilation: Rspack via `svelte-loader` + `svelte-hmr`, Vite via `@sveltejs/vite-plugin-svelte`, Rsbuild via its Svelte plugin.
 
 ## Install
 
@@ -35,6 +35,7 @@ export default class MyWebPart extends SvelteWebPart<IMyProps> {
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Frameworks](https://rspfx.mbsks.me/docs/frameworks)
 - [Svelte example](https://github.com/master8848/rspfx/tree/main/examples/svelte)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

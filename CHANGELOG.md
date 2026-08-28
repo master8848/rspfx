@@ -14,7 +14,7 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 ## [0.0.15] - 2026-08-28
 
-Covers `89556b8..eae7736` (30 commits since `v0.0.14`).
+Covers `89556b8..HEAD` (30 commits since `v0.0.14` plus publish pipeline + README sync — `eae7736..HEAD`).
 
 ### Added
 
@@ -29,6 +29,9 @@ Covers `89556b8..eae7736` (30 commits since `v0.0.14`).
 - Bun/Deno package manager docs — Heft breakage note and `Bun`/`Deno` tabs in `README.md` and `docs/getting-started.md` (`4c92645`).
 - `rspfx new` Bun support, `git init`, manual install — prompts `pnpm|npm|yarn|bun|deno`, runs `git init`, skips auto-install, prints `cd <project> && <pm> install && <pm> run dev`, keeps `--no-install` compat, `doctor` cert hint now shows cert path and restart (`410359b`, `apps/cli/src/commands/new.ts`, `apps/cli/src/commands/doctor.ts`).
 - `sppkg` blackbox harness — `packages/sppkg-builder/tests/blackbox.test.ts` diffs `ZIP` vs official Heft (`OFFICIAL_SPPKG_TEST=1`), `bench/blackbox-compare.mjs` helper (`da876d6`).
+- `@mbsks/rspfx-plugin` README — `packages/plugin/README.md` with Vite (`rspfxVite`) · Rsbuild (`rspfxRsbuild`) · Rspack (`RSpfxPlugin`) usage, kernel API, and links to `https://rspfx.mbsks.me` (closes missing publishable README).
+- `scripts/update-readmes.mjs` — auto-sync for all `packages/*/README.md` + `apps/cli/README.md` to canonical docs `https://rspfx.mbsks.me` and triple-bundler tagline; `node scripts/update-readmes.mjs --check` CI gate.
+- `scripts/publish/` split — `graph.mjs` (collect set + Kahn levels + DFS cycle hint), `cache.mjs` (HEAD + lockfile fingerprint + dist check; `--no-build-cache` to bypass), `registry.mjs` (`isPublished`/`verifyPublished`/`publishPackage`), `git.mjs` (resume-tolerant dirty check, commit+tag), `utils.mjs` (run/bumpVersion); entry `scripts/publish.mjs:1` now validates graph BEFORE build/publish and prints `Level 0..6` + flat order where dependencies always before dependents.
 
 ### Changed
 
@@ -37,6 +40,11 @@ Covers `89556b8..eae7736` (30 commits since `v0.0.14`).
 - Bundler wording — `README.md`, `docs/why-rspfx.md`, `docs/compatibility.md`, `docs/building-packages.md`, `apps/cli/README.md` now state `Vite, Rsbuild, Rspack` (Vite default) (`d93b37f`, `fd50403`, `cd198a5`).
 - Framework table — `README.md` capability matrix marks built-ins, adds `custom FrameworkPreset` via `@mbsks/rspfx-plugin-api`, `spfxVersion` one-line switch, optional `@mbsks/rspfx-fluent-adapter` (`db28e99`).
 - Docs refresh — concise human-first theme, VS-official comparisons, removed impl leaks, searchable `Angular`→custom-framework alias, accent picker, sidebar cleanup (`2840a1a`, `b9c83ba`).
+- All publishable READMEs now point to `https://rspfx.mbsks.me` (not `github.com/.../tree/main/docs`) and show Vite (default) · Rsbuild · Rspack — `packages/core`, `packages/diagnostics`, `packages/plugin-api`, `packages/manifest-generator`, `packages/manifest-server`, `packages/sppkg-builder`, `packages/sharepoint-runtime`, `packages/dev-runtime`, `packages/templates`, `packages/fluent-adapter`, `packages/framework-*` (`react`/`preact`/`vue`/`svelte`/`solid`/`vanilla`), `packages/compiler-rspack`, `apps/cli` (`apps/cli/README.md:63` docs links now `https://rspfx.mbsks.me/docs/*`).
+- `packages/compiler-rspack/README.md:1` — header now `Rspack backend of the triple-bundler toolchain (Vite and Rsbuild via @mbsks/rspfx-plugin)` (was misleading triple).
+- `packages/manifest-server/README.md:5` — certs now `Vite · Rsbuild · Rspack dev servers` (was `compiler-rspack` only).
+- `packages/framework-react/README.md:5`, `packages/framework-preact/README.md:5`, `packages/framework-vue/README.md:5`, `packages/framework-svelte/README.md:5` — fast refresh / SFC loaders now list all three bundlers (was rspack-only).
+- `packages/templates/src/index.ts:397` `readme()` scaffold now includes `[RSPFX](https://rspfx.mbsks.me)` + `Vite · Rsbuild · Rspack (bundler: vite|rsbuild|rspack)` + `## Links` to `https://rspfx.mbsks.me`.
 
 ### Fixed
 
@@ -45,6 +53,8 @@ Covers `89556b8..eae7736` (30 commits since `v0.0.14`).
 - `compiler-rspack` filesystem cache disabled under `VITEST` — `packages/compiler-rspack/src/kernel.ts` guards `experiments.cache` with `!process.env.VITEST` to avoid `rspack_storage` panic `scope not loaded` (`6441784`).
 - `sppkg` parity for `1.20`–`1.24` — `[Content_Types].xml` `txt` now conditional on feature usage, `DeveloperProperties` omits `undefined` (not empty string), `IsDomainIsolated` deprecated for `1.24+`, `crates/rspfx-sppkg/src/xml.rs` Rust map fix; `docs/compatibility.md`, `docs/roadblocks.md`, `docs/roadmap.md`, `docs/supporting-a-new-spfx-version.md` clarify verified gate vs CI matrix and mandate blackbox parity (`da876d6`).
 - `skills/rspfx/SKILL.md` SPFx targets sync — lists `1.20, 1.21, 1.22, 1.23, 1.24` with `default 1.23` to match `packages/core/src/versions.ts:22` and satisfy `versions-doc-sync` guard (`eae7736`).
+- Publish resume was blocked by `Working tree is not clean` after a mid-run fail — `scripts/publish/git.mjs:9` now tolerates dirty that is only version-bump `package.json` at `targetVersion` when `resumed` (`liveAtCurrent >0 && < set.size`), matching `Already-published packages were skipped, so re-running the script resumes automatically`.
+- `npm view` resume skip already robust via `registry.mjs:9` `isPublished` per-package check; next run after `upload fails in between` now correctly ignores already-published `@version` on npm.
 
 > Git tag: `v0.0.15` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.0.15` (single version, `scripts/publish.mjs`). Compare `v0.0.14...v0.0.15`.
 

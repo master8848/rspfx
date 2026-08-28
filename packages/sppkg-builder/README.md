@@ -36,6 +36,7 @@ const { ok, errors } = await validateSppkg(result.outputPath); // zip integrity
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Deploy](https://rspfx.mbsks.me/docs/deployment)
 - [Format ground truth](https://github.com/master8848/rspfx/blob/main/reference/FORMATS.md)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT

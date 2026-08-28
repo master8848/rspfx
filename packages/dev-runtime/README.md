@@ -36,5 +36,6 @@ await handle.close();
 
 ## Links
 
-- [RSPFX documentation](https://github.com/master8848/rspfx/tree/main/docs)
+- [Documentation](https://rspfx.mbsks.me) — [Commands](https://rspfx.mbsks.me/docs/commands) · [Fast Refresh](https://rspfx.mbsks.me/docs/fast-refresh)
+- [GitHub](https://github.com/master8848/rspfx)
 - License: MIT
