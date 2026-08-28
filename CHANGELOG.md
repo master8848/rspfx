@@ -12,21 +12,40 @@ Archive policy: this file keeps the full human-readable history from `0.0.1` thr
 
 > Next publish will promote `Unreleased` into `## [X.Y.Z] - YYYY-MM-DD` and create annotated tag `vX.Y.Z`; push with `git push --follow-tags`.
 
+## [0.0.15] - 2026-08-28
+
+Covers `89556b8..202d0f0` (28 commits since `v0.0.14`).
+
 ### Added
 
 - Dev cert diagnostics — `getCertStatus()`, `isCertTrusted()`, `formatTrustInstructions()`, `getCertsDir()` in `packages/manifest-server/src/index.ts:8` with `X509Certificate` expiry/SAN checks and best-effort OS trust check (`security verify-cert` on macOS, `certutil -verify` on Windows) (`.agents/notes/implemented/fix/2026-08-26-cert-trust-diagnostics.md`).
 - `rspfx doctor` cert checks — `cert exists` (`~/.rspfx/certs/cert.pem`), `cert valid` (>7d), `key.pem 0600`, `cert trusted` (OS store) in `apps/cli/src/commands/doctor.ts:252` with per-OS trust command in detail and CORS/NOT_TRUSTED guidance.
 - `rspfx dev` cert warnings — `packages/dev-runtime/src/serve.ts:134` and `apps/cli/src/commands/dev.ts:71` warn at startup when cert is missing, expiring, or not trusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID` / blank workbench), linking to `~/.rspfx/certs/cert.pem.trust.txt` and `rspfx doctor`.
+- Vite as default bundler — `apps/cli/src/config.ts` prefers `vite.config.ts` over `rspack`/`rsbuild`, zero-config synthesis emits `vite.config.ts` with `rspfxVite()` and auto-detected `spfxVersion` from `@microsoft/sp-core-library`, `rspfx migrate` auto-detects SPFx target with explicit/detected/fallback logging (`59595e9`, `apps/cli/src/commands/migrate.ts`, `scripts/migrate-to-rspfx.mjs`).
+- `examples/mixed` — single project with `HelloWebPart` + `BannerApplicationCustomizer` + `UtilsLibrary` on `Vite + rspfxVite` (`1d65470`, `examples/mixed/`).
+- `docs/upgrading-spfx-version.md` — one-line `spfxVersion` switch, per-version handling, Node matrix, migrate-then-upgrade flow (`b36a50d`).
+- `docs-web` VitePress site — human-first docs with shadcn themes, `Copy as markdown` split button (Copy as Markdown, View as Markdown, Open in ChatGPT/Claude), `/llms` viewer (`docs-web/llm.md`, `docs-web/llms.md`), raw markdown publish to `dist/*.md` + `dist/markdown/*` + `dist/md/*`, extensionless `/md/*` via `docs-web/worker.ts` + `_redirects`/`_headers` + `ASSETS` binding (`e1b3289`, `2840a1a`, `b9c83ba`, `a760cd0`, `2ffbf7b`, `649eb84`, `10f2f95`, `3765b70`, `fe89ee8`, `21cc541`).
+- Build-time package manager switcher — `docs-web/theme/utils/pmTransform.ts` replaces GH-compatible fences with `PackageManagerTabs` pill switcher (`pnpm`/`npm`/`yarn`/`bun`/`deno`) with `rspfx-pm` localStorage persistence and `v-pre` hydration (`69854f4`, `tests/docs-web-pm.test.ts`).
+- Bun/Deno package manager docs — Heft breakage note and `Bun`/`Deno` tabs in `README.md` and `docs/getting-started.md` (`4c92645`).
+- `rspfx new` Bun support, `git init`, manual install — prompts `pnpm|npm|yarn|bun|deno`, runs `git init`, skips auto-install, prints `cd <project> && <pm> install && <pm> run dev`, keeps `--no-install` compat, `doctor` cert hint now shows cert path and restart (`410359b`, `apps/cli/src/commands/new.ts`, `apps/cli/src/commands/doctor.ts`).
+- `sppkg` blackbox harness — `packages/sppkg-builder/tests/blackbox.test.ts` diffs `ZIP` vs official Heft (`OFFICIAL_SPPKG_TEST=1`), `bench/blackbox-compare.mjs` helper (`da876d6`).
 
 ### Changed
 
 - `cert.pem.trust.txt` now notes CORS/`NET::ERR_CERT_AUTHORITY_INVALID` symptom and `rspfx doctor` (`packages/manifest-server/src/index.ts:14`).
 - Docs `getting-started.md#cert-trust`, `commands.md#rspfx-dev` and `commands.md#rspfx-doctor`, `architecture.md#dev-mode`, and `internal-api.md#rspfx-manifest-server` document cert trust per-OS commands, `rspfx doctor` checks, and `rspfx dev` warnings (see `docs/AGENTS.md` fact homes).
+- Bundler wording — `README.md`, `docs/why-rspfx.md`, `docs/compatibility.md`, `docs/building-packages.md`, `apps/cli/README.md` now state `Vite, Rsbuild, Rspack` (Vite default) (`d93b37f`, `fd50403`, `cd198a5`).
+- Framework table — `README.md` capability matrix marks built-ins, adds `custom FrameworkPreset` via `@mbsks/rspfx-plugin-api`, `spfxVersion` one-line switch, optional `@mbsks/rspfx-fluent-adapter` (`db28e99`).
+- Docs refresh — concise human-first theme, VS-official comparisons, removed impl leaks, searchable `Angular`→custom-framework alias, accent picker, sidebar cleanup (`2840a1a`, `b9c83ba`).
 
 ### Fixed
 
 - First-run SharePoint workbench CORS confusion — `rspfx dev` no longer silently serves untrusted `https://localhost:4321`; `rspfx doctor` now surfaces missing/expiring/untrusted cert with actionable `sudo security add-trusted-cert` / `certutil -addstore` command instead of user debugging CORS.
 - `rspfx dev` source maps now ship in dev (was missing/broken) — Vite `transformEntryBundle` in `packages/plugin/src/vite.ts:199` strips/restores `sourceMappingURL` and offsets mappings `';'` for the capture line plus `build.sourcemap:'hidden'` parity, Rspack `SpfxPublicPathPlugin` in `packages/compiler-rspack/src/public-path.ts:97` preserves `SourceMapSource` via `ConcatSource`/`ReplaceSource`, Rsbuild `modifyRspackConfig` in `packages/plugin/src/rsbuild.ts:414` sets `devtool:'source-map'` dev / `'hidden-source-map'` prod (`74427c7`) — breakpoints/file-origin debugging now works (was unusable vs `spfx-fast-serve`).
+- `compiler-rspack` filesystem cache disabled under `VITEST` — `packages/compiler-rspack/src/kernel.ts` guards `experiments.cache` with `!process.env.VITEST` to avoid `rspack_storage` panic `scope not loaded` (`6441784`).
+- `sppkg` parity for `1.20`–`1.24` — `[Content_Types].xml` `txt` now conditional on feature usage, `DeveloperProperties` omits `undefined` (not empty string), `IsDomainIsolated` deprecated for `1.24+`, `crates/rspfx-sppkg/src/xml.rs` Rust map fix; `docs/compatibility.md`, `docs/roadblocks.md`, `docs/roadmap.md`, `docs/supporting-a-new-spfx-version.md` clarify verified gate vs CI matrix and mandate blackbox parity (`da876d6`).
+
+> Git tag: `v0.0.15` · npm dist-tag: `latest` · Packages: `packages/*` + `apps/cli` at `0.0.15` (single version, `scripts/publish.mjs`). Compare `v0.0.14...v0.0.15`.
 
 ## [0.0.14] - 2026-08-25
 
@@ -274,7 +293,8 @@ Initial public line — rebrand `@rspfx → @mbsks`, workspace and examples setu
 - **npm dist-tag:** published via `pnpm publish --tag <dist-tag>` (default `latest`; prereleases default to `next`; override with `node scripts/publish.mjs --tag <dist-tag>`). All 19 publishable packages share the same version and tag in one run.
 - **CHANGELOG.md:** one `## [X.Y.Z] - YYYY-MM-DD` section per version. Link the tag in the section footer. `Unreleased` tracks work since the last tag. On `v1.0.0`, freeze pre-`1.0` entries to `CHANGELOG_ARCHIVE.md`.
 
-[Unreleased]: https://github.com/master8848/rspfx/compare/v0.0.14...HEAD
+[Unreleased]: https://github.com/master8848/rspfx/compare/v0.0.15...HEAD
+[0.0.15]: https://github.com/master8848/rspfx/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/master8848/rspfx/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/master8848/rspfx/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/master8848/rspfx/compare/v0.0.11...v0.0.12
