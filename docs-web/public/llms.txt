@@ -37,9 +37,7 @@ RSPFX builds SharePoint Framework web parts, extensions, and libraries without H
 - [Architecture](https://github.com/master8848/rspfx/blob/main/docs/architecture.md) (/docs/architecture): Pipeline overview, package map (`@mbsks/rspfx-core` zero-deps), bundler flow.
 - [Internal API Contract](https://github.com/master8848/rspfx/blob/main/docs/internal-api.md) (/docs/internal-api): Exact public surfaces for `packages/*` — ESM only, strict TS.
 - [Compatibility](https://github.com/master8848/rspfx/blob/main/docs/compatibility.md) (/docs/compatibility): Same artifact formats as official SPFx; SPFx version matrix 1.20–1.23, Node 20+, all package managers.
-- [Supporting a New SPFx Version — Maintainer Only](https://github.com/master8848/rspfx/blob/main/docs/supporting-a-new-spfx-version.md) (/docs/supporting-a-new-spfx-version): Checklist harvesting formats byte-for-byte from official npm packages.
 - [Performance](https://github.com/master8848/rspfx/blob/main/docs/performance.md) (/docs/performance): Benchmark methodology and Rspack-based speed on real examples (`bench/README.md`).
-- [Real-tenant Validation](https://github.com/master8848/rspfx/blob/main/docs/real-tenant-validation.md) (/docs/real-tenant-validation): Manual tenant gate — scaffold→package→catalog→workbench no errors (passed 2026-08-22).
 - [Roadmap](https://github.com/master8848/rspfx/blob/main/docs/roadmap.md) (/docs/roadmap): Phases M0–M1 complete; links to roadblocks.
 - [Roadblocks](https://github.com/master8848/rspfx/blob/main/docs/roadblocks.md) (/docs/roadblocks): Pre-1.0 blockers, real-tenant gate status.
 
@@ -50,12 +48,14 @@ RSPFX builds SharePoint Framework web parts, extensions, and libraries without H
 - [CONTRIBUTING — publishing & tagging](https://github.com/master8848/rspfx/blob/main/CONTRIBUTING.md): `scripts/publish.mjs`, `CHANGELOG.md` `## [X.Y.Z]` per version, `vX.Y.Z` tags, dist-tags.
 - [CHANGELOG — version history](https://github.com/master8848/rspfx/blob/main/CHANGELOG.md): One `## [X.Y.Z] - YYYY-MM-DD` per version.
 
-## Internal (not in sidebar, for contributors/agents)
+## Internal (not in sidebar — private, for contributors/agents)
 
+- `docs/supporting-a-new-spfx-version.md` — Maintainer-only harvest procedure (`private: true`, `search: false`, `noindex`, sitemap filtered).
+- `docs/real-tenant-validation.md` — Manual tenant gate log (`private: true`, `search: false`, `noindex`, sitemap filtered).
 - `docs/AGENTS.md` — Documentation standards (tier taxonomy, fact homes, writing rules, word budgets, slop checklist, Agent Note verification). Kept in repo, hidden from VitePress sidebar. See `llms.txt`/`llm.txt` for LLM-friendly index.
 
 ## Notes
 
-- Docs site sidebar: `/docs/` — `docs-web/docs` is a symlink to `../docs`; `docs/AGENTS.md` remains servable at `/docs/AGENTS` if visited directly but is not linked in nav.
+- Docs site sidebar: `/docs/` — `docs-web/docs` is a symlink to `../docs`; `docs/AGENTS.md`, `docs/supporting-a-new-spfx-version.md`, `docs/real-tenant-validation.md` remain servable at `/docs/<name>` if visited directly but are hidden from nav/search/sitemap via frontmatter `private`+`search: false`+`noindex` and `sitemap.transformItems`. Raw text index is at `/llm.txt` (and `/llms.txt`) — linked in top nav and via `<link rel=alternate type=text/plain>` for AI agents.
 - Agent skill: `skills/rspfx/SKILL.md` — `npx skills add master8848/rspfx`.
 - Install CLI: `npm i -g @mbsks/rspfx-cli` then `rspfx new <name>` → `rspfx dev` → `rspfx package`.

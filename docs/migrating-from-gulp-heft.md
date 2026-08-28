@@ -39,7 +39,7 @@ Preview, then apply:
 ```sh
 rspfx migrate --dry-run   # preview — no writes
 rspfx migrate             # rewrites configs, writes bundler config, backs up to .rspfx/migrate-backup.json
-bun install               # toolchain deps drop out, @mbsks/rspfx-plugin added
+bun install      # or pnpm install / npm install / yarn — toolchain deps drop out, @mbsks/rspfx-plugin added
 rspfx dev                 # verify workbench at https://localhost:4321
 rspfx package             # → sharepoint/solution/<name>.sppkg
 ```
@@ -48,7 +48,7 @@ rspfx package             # → sharepoint/solution/<name>.sppkg
 
 Use `--bundler rspack` or `--bundler rsbuild` to scaffold `rspack.config.ts` / `rsbuild.config.ts` instead.
 
-After migrate, `bun run build` and `rspfx build` run the chosen bundler internally — no extra setup.
+After migrate, `bun run build` (or `pnpm build` / `npm run build` / `yarn build`) and `rspfx build` run the chosen bundler internally — no extra setup.
 
 > **Tip:** Commit or stash before migrating so `git diff` shows exact changes.
 
@@ -67,7 +67,7 @@ Or with a clean branch:
 ```sh
 git restore .
 git clean -fd .rspfx
-bun install
+bun install      # or pnpm install / npm install / yarn
 ```
 
 Both restore the Heft/Gulp toolchain.
@@ -126,7 +126,7 @@ export default {
     rspfxVite({
       name: 'my-app',
       framework: 'react',      // vanilla | react | solid | preact | vue | svelte
-      spfxVersion: '1.22',     // 1.20 | 1.21 | 1.22 | 1.23
+      spfxVersion: '1.22',     // 1.20 | 1.21 | 1.22 | 1.23 | 1.24
       dev: { tenantUrl: 'https://contoso.sharepoint.com' }
     })
   ]
@@ -192,7 +192,7 @@ See [building-packages.md](building-packages.md) for output details and [referen
 ### 8. Migrate CI
 
 ```yaml
-- run: bun install --frozen-lockfile
+- run: bun install --frozen-lockfile   # or pnpm install --frozen-lockfile / npm ci / yarn --frozen-lockfile
 - run: rspfx doctor
 - run: rspfx package
 - upload: sharepoint/solution/*.sppkg
@@ -214,12 +214,12 @@ See [building-packages.md](building-packages.md) for output details and [referen
 
 Migrate keeps the detected `spfxVersion`.
 
-To change target (e.g. `1.22` → `1.23`), edit one field and update:
+To change target (e.g. `1.22` → `1.24`), edit one field and update:
 
 ```sh
 # in vite.config.ts / rspack.config.ts / rsbuild.config.ts
-# spfxVersion: '1.23'
-bun update @mbsks/rspfx-plugin
+# spfxVersion: '1.24'
+bun update @mbsks/rspfx-plugin   # or pnpm update / npm update / yarn upgrade
 ```
 
 See [upgrading-spfx-version.md](upgrading-spfx-version.md) and [compatibility.md](compatibility.md).
@@ -232,7 +232,7 @@ Full matrix: [compatibility.md#spfx-version-matrix](compatibility.md#spfx-versio
 |---|---|---|
 | Dev | `gulp serve` / `heft start --clean` | `rspfx dev` (workbench at `https://localhost:4321`, local preview at `http://localhost:4321`) |
 | Hot reload | `spfx-fast-serve` | `rspfx dev --refresh` |
-| Build | `gulp bundle --ship` | `rspfx build` (or `bun run build` — zero-config) |
+| Build | `gulp bundle --ship` | `rspfx build` (or `bun` / `pnpm` / `npm` / `yarn` `run build` — zero-config) |
 | Package | `gulp package-solution --ship` | `rspfx package` |
 | Upload | manual / Azure storage script | `rspfx deploy` |
 | Bundle report | `webpack-bundle-analyzer` | `rspfx analyze` |

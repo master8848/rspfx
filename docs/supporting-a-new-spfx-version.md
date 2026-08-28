@@ -1,3 +1,14 @@
+---
+private: true
+search: false
+prev: false
+next: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # Supporting a new SPFx version — maintainer-only
 
 Process for adding a new `spfxVersion` target. Formats are harvested from official npm packages, not docs or memory — verify byte-level. See Microsoft docs: [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility) and [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23).

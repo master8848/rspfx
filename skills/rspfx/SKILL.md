@@ -7,7 +7,7 @@ description: Build SharePoint Framework (SPFx) web parts with RSPFX (community, 
 
 RSPFX builds `sharepoint/solution/*.sppkg` without Heft/webpack/gulp, using `Vite` (default) — covers almost everything. `Rsbuild` only if user insists. `Rspack` only in very niche cases (rarely needed).
 
-Supports SPFx `1.20`, `1.21`, `1.22`, `1.23` (default 1.23, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
+Supports SPFx `1.20`, `1.21`, `1.22`, `1.23`, `1.24` (default 1.23, `packages/core/src/versions.ts:13`), Node `20+`, React/Vue/Svelte/Solid/Preact/vanilla, multi-webpart, Teams/Outlook.
 
 > Not Microsoft-supported. Need support/`<1.20`/on-prem → use Heft (bottom). Any other framework works via one-file `FrameworkPreset` — see [docs/custom-framework.md](docs/custom-framework.md).
 
@@ -26,7 +26,7 @@ Skill + `docs/` is enough for all workflows; drill into `docs/` or code only whe
 
 | Need | Use |
 |---|---|
-| Speed, any framework, `1.20`–`1.23` | **RSPFX** |
+| Speed, any framework, `1.20`–`1.24` | **RSPFX** |
 | Microsoft support, `<1.19`, on-prem | **Heft** |
 
 ## Framework support
@@ -65,10 +65,10 @@ Keep both: `gulpfile.js` + `vite.config.ts` on disk, dual scripts `build:heft` /
 
 ```sh
 rspfx new my-app --yes
-rspfx new my-app --framework react --language ts --spfx-version 1.23 --pm pnpm --yes
+rspfx new my-app --framework react --language ts --spfx-version 1.24 --pm pnpm --yes
 ```
 
-Flags: `--framework vanilla|react|vue|svelte|solid|preact`, `--language ts|js`, `--spfx-version 1.20-1.23`, `--pm pnpm|npm|yarn`, `--component webpart|applicationcustomizer|...|library`, `--no-install`. Layout: `src/webparts/<name>/`, `config/package-solution.json`.
+Flags: `--framework vanilla|react|vue|svelte|solid|preact`, `--language ts|js`, `--spfx-version 1.20-1.24`, `--pm pnpm|npm|yarn`, `--component webpart|applicationcustomizer|...|library`, `--no-install`. Layout: `src/webparts/<name>/`, `config/package-solution.json`.
 
 ## Develop and build
 
@@ -93,7 +93,7 @@ Default Vite. Only deviate with reason.
 // vite.config.ts (default)
 import { defineConfig } from 'vite';
 import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23', dev: { tenantUrl: 'https://contoso.sharepoint.com' } })] });
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24', dev: { tenantUrl: 'https://contoso.sharepoint.com' } })] });
 ```
 
 - `rsbuild.config.ts`: `plugins: [rspfxRsbuild({ ... })]` — if user insists on Rsbuild.

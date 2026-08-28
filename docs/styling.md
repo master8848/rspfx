@@ -14,7 +14,7 @@ SPFx loads only JS bundles (`[name].js` via `loaderConfig.scriptResources` `type
 
 All three bundlers handle `.css`, `.scss`, `.sass`, and `*.module.*` out of the box:
 
-- **SCSS:** `bun add -D sass` — picked up automatically.
+- **SCSS:** `bun add -D sass` (or `pnpm add -D sass` / `npm i -D sass` / `yarn add -D sass`) — picked up automatically.
 - **PostCSS:** add any `postcss.config.*` at the project root — applied automatically when present.
 - **CSS Modules:** `*.module.css` / `*.module.scss` are local (hashed, import returns mapping). Plain `.css`/`.scss` are global.
 
@@ -51,7 +51,7 @@ Set `build: { css: false }` if you take full ownership.
 Tailwind v2/v3/v4 and UnoCSS work via PostCSS — no special RSPFX plugin.
 
 ```sh
-bun add -D tailwindcss @tailwindcss/postcss postcss
+bun add -D tailwindcss @tailwindcss/postcss postcss   # or pnpm add -D / npm i -D / yarn add -D
 ```
 
 ```js

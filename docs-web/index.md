@@ -4,14 +4,14 @@ title: RSPFX — SPFx-compatible build toolchain
 titleTemplate: false
 hero:
   name: RSPFX
-  text: Build SharePoint web parts without the old toolchain
-  tagline: No Heft, no webpack, no gulp. Vite by default — Rsbuild and Rspack ready. Same manifests, same .sppkg.
+  text: Ship SharePoint web parts without the legacy toolchain
+  tagline: Vite by default — Rsbuild and Rspack when you need them. Reads config/config.json and your manifests, emits the same .sppkg. No Heft, no gulp, no webpack.
   image:
     src: /hero.svg
-    alt: RSPFX
+    alt: RSPFX — build SharePoint web parts with Vite
   actions:
     - theme: brand
-      text: Get Started
+      text: Get started
       link: /docs/getting-started
     - theme: alt
       text: Why RSPFX?
@@ -21,55 +21,33 @@ hero:
       link: https://github.com/master8848/rspfx
 
 features:
-  - icon: ⚡
-    title: Vite by default
-    details: No config for standard projects — RSPFX reads config/config.json and your manifests. Add vite.config.ts only when you want more control.
+  - title: Zero-config to start
+    details: No vite.config.ts required. RSPFX reads config/config.json and your manifests — add config only when you need control.
     link: /docs/getting-started
     linkText: Quick start
-  - icon: 🦀
-    title: Rspack & Rsbuild
-    details: Same pipeline, your choice of bundler. Swap the import — rspfxVite, rspfxRsbuild, or the Rspack wrapper — and keep going.
+  - title: One pipeline, three bundlers
+    details: Vite is default. Switch to Rsbuild or Rspack with a single plugin — rspfxVite or rspfxRsbuild, same manifests.
     link: /docs/frameworks
     linkText: Frameworks
-  - icon: 🔄
-    title: Works alongside gulp + Heft
-    details: Keep gulpfile.js next to vite.config.ts. One set of manifests drives both toolchains — no fork, no rewrite.
-    link: /docs/hybrid-dev
-    linkText: Hybrid dev
-  - icon: 🧩
-    title: Any framework
-    details: React, Vue, Svelte, Solid, Preact — or bring your own preset. The core has no dependencies.
+  - title: Any framework
+    details: React, Vue, Svelte, Solid, Preact — or bring your own preset. @mbsks/rspfx-core has zero dependencies.
     link: /docs/frameworks
     linkText: Supported frameworks
-  - icon: 📦
-    title: Real .sppkg, real workbench
-    details: Dev server on http://localhost:4321. Build writes dist + release. Package creates sharepoint/solution/*.sppkg for the app catalog and Teams.
-    link: /docs/building-packages
-    linkText: Packaging
-  - icon: 🩺
-    title: Doctor & deploy
-    details: rspfx doctor checks Node, certs, ports, and manifests. rspfx deploy uploads to the catalog or tells you what to click.
+  - title: Doctor & deploy built in
+    details: rspfx doctor validates Node, certs, ports and manifests. rspfx deploy publishes straight to the catalog.
     link: /docs/commands
     linkText: Commands
-
 ---
 
-<div class="rspfx-home-stats">
-  <div class="rspfx-stat">
-    <div class="rspfx-stat-value">1.20 – 1.23</div>
-    <div class="rspfx-stat-label">SPFx targets</div>
-  </div>
-  <div class="rspfx-stat">
-    <div class="rspfx-stat-value">0 deps</div>
-    <div class="rspfx-stat-label">@mbsks/rspfx-core</div>
-  </div>
-  <div class="rspfx-stat">
-    <div class="rspfx-stat-value">:4321</div>
-    <div class="rspfx-stat-label">Workbench dev server</div>
-  </div>
-  <div class="rspfx-stat">
-    <div class="rspfx-stat-value">1 line</div>
-    <div class="rspfx-stat-label">spfxVersion switch</div>
+<div class="rspfx-proof">
+  <div class="rspfx-proof-inner">
+    <span class="rspfx-proof-item"><strong>1.20 – 1.24</strong> SPFx targets</span>
+    <span class="rspfx-proof-sep" aria-hidden="true">·</span>
+    <span class="rspfx-proof-item"><strong>0 deps</strong> core</span>
+    <span class="rspfx-proof-sep" aria-hidden="true">·</span>
+    <span class="rspfx-proof-item"><strong>Vite · Rsbuild · Rspack</strong></span>
+    <span class="rspfx-proof-sep" aria-hidden="true">·</span>
+    <span class="rspfx-proof-item"><strong>1 line</strong> <code>spfxVersion</code> switch</span>
   </div>
 </div>
 
@@ -77,9 +55,9 @@ features:
 
 ## Start in seconds
 
-New project — one scaffold, one dev server.
+::: code-group
 
-```sh
+```sh [new project]
 npm i -g @mbsks/rspfx-cli
 rspfx new my-app
 cd my-app
@@ -87,24 +65,22 @@ rspfx dev          # http://localhost:4321 — no tenant needed
 rspfx package      # → sharepoint/solution/my-app.sppkg
 ```
 
-Existing SPFx project — RSPFX reads what you already have.
-
-```sh
+```sh [existing project]
+# in your existing Heft/gulp SPFx project
 rspfx migrate --dry-run   # preview
-rspfx migrate             # apply (backup in .rspfx/migrate-backup.json)
-bun install
+rspfx migrate             # apply (backup → .rspfx/migrate-backup.json)
+bun install               # or pnpm / npm / yarn
 rspfx dev                 # same manifests, no config required
 ```
 
-Optional config only when you need it.
-
-```ts
-// vite.config.ts — only when you need control
+```ts [only when you need control]
+// vite.config.ts — optional
 import { rspfxVite } from '@mbsks/rspfx-plugin'
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] }
+export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] }
 ```
+:::
 
-> Tip: switch SPFx versions by changing one line — `spfxVersion: '1.20'` → `'1.23'` — then `bun update`. See [Compatibility](/docs/compatibility) and [Upgrading SPFx](/docs/upgrading-spfx-version).
+> Switch SPFx versions with one line — `spfxVersion: '1.20'` → `'1.24'` — then `bun update`. See [Compatibility](/docs/compatibility) and [Upgrading SPFx](/docs/upgrading-spfx-version).
 
 </div>
 
@@ -112,27 +88,22 @@ export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxV
 
 ## How it compares
 
+<div class="rspfx-compare-table">
+
 | | Official toolchain (Heft / gulp) | RSPFX |
 |---|---|---|
 | Bundler | webpack only | Vite (default), Rsbuild, Rspack |
-| Frameworks | React, vanilla | React, Vue, Svelte, Solid, Preact, plus custom presets |
-| SPFx version switch | new project / pin updates | one line `spfxVersion` + `bun update` |
-| Dev server | `gulp serve` on :4321 | `rspfx dev` on :4321 — tenant optional, browser only with `--browser` |
-| Package manager | npm / yarn / pnpm | npm, yarn, pnpm, Bun, Deno |
+| Frameworks | React, vanilla | React, Vue, Svelte, Solid, Preact + custom presets |
+| SPFx switch | new project / pin updates | one line `spfxVersion` + package manager update |
+| Dev server | `gulp serve` :4321 | `rspfx dev` :4321 — tenant optional |
+| Package manager | npm / yarn / pnpm | bun · pnpm · npm · yarn |
 | Config required | rig + gulpfile required | zero-config from `config/config.json` + manifests |
 
 </div>
 
-<div class="rspfx-tip">
-
-**Tip:** run `rspfx doctor` before your first `rspfx dev` — it catches Node version, cert trust, port 4321 conflicts, and missing manifests in one pass. Keep both toolchains during migration — `rspfx dev` and `gulp serve` share the same `config/` and `src/` manifests.
-
 </div>
 
-<div class="rspfx-home-code" style="margin-top: 28px;">
-
-## Proven on a real app
-
-`examples/modern-search` is PnP Modern Search — 4 web parts, ~178 files, Fluent UI 8 — migrated with no web part code changes. Read the [case study](/docs/migration-case-study).
-
+<div class="rspfx-tip">
+  <span class="rspfx-tip-kicker">Before first dev</span>
+  Run <code>rspfx doctor</code> — it checks Node version, cert trust, port conflicts and missing manifests in one pass.
 </div>

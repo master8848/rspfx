@@ -21,7 +21,9 @@
     "bench": "node bench/bench.mjs",
     "docs:dev": "bun run --filter docs-web dev",
     "docs:build": "bun run --filter docs-web build",
-    "docs:preview": "bun run --filter docs-web preview"
+    "docs:preview": "bun run --filter docs-web preview",
+    "docs:deploy": "bun run --filter docs-web deploy",
+    "docs:deploy:preview": "bun run --filter docs-web deploy:preview"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

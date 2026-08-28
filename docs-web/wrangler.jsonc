@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rspfx-docs",
+  "compatibility_date": "2026-08-28",
+  "assets": {
+    "directory": "./.vitepress/dist",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  "observability": {
+    "enabled": false
+  },
+  "workers_dev": true,
+  "preview_urls": true
+  // Custom domain: rspfx.mbsks.me
+  // Workers custom domains are managed via the Cloudflare dashboard
+  // (Workers & Pages → rspfx-docs → Settings → Custom Domains → Add Custom Domain)
+  // or via `wrangler domains add rspfx.mbsks.me` after first deploy.
+  // Alternatively, use a route (requires zone):
+  // "routes": [{ "pattern": "rspfx.mbsks.me/*", "zone_name": "mbsks.me" }]
+}

@@ -6,7 +6,7 @@ type Theme = { id: string; label: string; color: string; kind: ThemeKind; dataVa
 
 /** Classic accents — applied via html[data-accent] (kept for backwards compat) */
 const accentThemes: Theme[] = [
-  { id: 'blue', label: 'Default', color: '#0078d4', kind: 'accent', dataValue: 'blue' },
+  { id: 'blue', label: 'Blue', color: '#0078d4', kind: 'accent', dataValue: 'blue' },
   { id: 'violet', label: 'Violet', color: '#7c3aed', kind: 'accent', dataValue: 'violet' },
   { id: 'emerald', label: 'Emerald', color: '#059669', kind: 'accent', dataValue: 'emerald' },
   { id: 'coral', label: 'Coral', color: '#ea580c', kind: 'accent', dataValue: 'coral' },
@@ -29,15 +29,105 @@ const shadcnThemes: Theme[] = [
   { id: 'violet-shadcn', label: 'Violet', color: '#7c3aed', kind: 'shadcn', dataValue: 'violet' },
 ]
 
-const allThemes: Theme[] = [...accentThemes, ...shadcnThemes]
+// ── drop-in extra themes ──
+// Any `themes/[^_]*.css` is auto-loaded via `theme/index.ts` (`import.meta.glob` side-effect
+// injects the CSS). Here we also read the raw content to auto-register the theme in the
+// picker with zero extra edits — just drop a file (see themes/README.md).
+function normalizeHex(c: string): string { return c.trim().toLowerCase() }
+function titleCase(id: string): string {
+  return id.replace(/[-_]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+}
+function hslTripleToHex(triple: string): string | null {
+  const m = triple.trim().match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/)
+  if (!m) return null
+  const h = Number(m[1]) / 360
+  const s = Number(m[2]) / 100
+  const l = Number(m[3]) / 100
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1/6) return p + (q - p) * 6 * t
+    if (t < 1/2) return q
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
+    return p
+  }
+  let r: number, g: number, b: number
+  if (s === 0) { r = g = b = l } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    r = hue2rgb(p, q, h + 1/3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1/3)
+  }
+  const toHex = (x: number): string => Math.round(x * 255).toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+const rawExtra = import.meta.glob<string>('../themes/*.css', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
+const extraShadcnThemes: Theme[] = Object.entries(rawExtra)
+  .filter(([p]) => {
+    const base = p.split('/').pop() ?? ''
+    return !base.startsWith('_') && !base.startsWith('.')
+  })
+  .map(([path, raw]) => {
+    const base = (path.split('/').pop() ?? '').replace(/\.css$/i, '')
+    const id = base
+    // label/color from header `/* theme-meta: label="Foo" color="#ff0000" */` if present
+    const labelMatch = raw.match(/label\s*=\s*["']([^"']+)["']/)
+    const colorMatch = raw.match(/color\s*=\s*["'](#[0-9a-fA-F]{3,8})["']/)
+    const label = labelMatch ? labelMatch[1] : titleCase(id)
+    let color: string | null = colorMatch ? colorMatch[1] : null
+    if (!color) {
+      const pm = raw.match(/--primary\s*:\s*([^;]+);/)
+      if (pm) color = hslTripleToHex(pm[1].trim()) ?? null
+    }
+    if (!color) color = '#71717a'
+    return { id, label, color, kind: 'shadcn' as const, dataValue: id }
+  })
+  .filter(t => {
+    // ignore if id already exists in built-ins (file named `zinc.css` would duplicate)
+    const builtinIds = new Set(shadcnThemes.map(x => x.id).concat(shadcnThemes.map(x => x.dataValue)))
+    return !builtinIds.has(t.id) && !builtinIds.has(t.dataValue)
+  })
+  .sort((a, b) => a.label.localeCompare(b.label))
+
+// dedup by color — extra files that reuse an existing primary color are hidden
+// (prevents 20 new themes from flooding the picker with same dot)
+function dedupByColor(themes: Theme[]): Theme[] {
+  const seen = new Set<string>()
+  const out: Theme[] = []
+  for (const t of themes) {
+    const n = normalizeHex(t.color)
+    if (seen.has(n)) continue
+    seen.add(n)
+    out.push(t)
+  }
+  return out
+}
+const dedupedExtra = dedupByColor(extraShadcnThemes)
+
+// shadcn (built-in + extra) deduped together
+const allShadcnThemes: Theme[] = dedupByColor([...shadcnThemes, ...dedupedExtra])
+
+// cross-section dedup: if a shadcn color duplicates an accent color, hide the accent
+// (main dup is violet #7c3aed — keep the shadcn version as canonical)
+const shadcnColorSet = new Set(allShadcnThemes.map(t => normalizeHex(t.color)))
+const filteredAccentThemes: Theme[] = accentThemes.filter(t => !shadcnColorSet.has(normalizeHex(t.color)))
+
+const _rawAllThemes: Theme[] = [...filteredAccentThemes, ...allShadcnThemes]
+// emerald at start of picker
+const allThemes: Theme[] = [
+  ..._rawAllThemes.filter(t => t.id === 'emerald'),
+  ..._rawAllThemes.filter(t => t.id !== 'emerald'),
+]
 
 const STORAGE_KEY = 'rspfx-theme'
 const LEGACY_KEY = 'rspfx-accent'
-const active = ref('blue')
+const active = ref('emerald')
 const open = ref(false)
 const rootEl = ref<HTMLElement | null>(null)
 
-const current = computed(() => allThemes.find(a => a.id === active.value) ?? allThemes[0])
+const current = computed(() => allThemes.find(a => a.id === active.value) ?? allThemes.find(a => a.id === 'emerald') ?? allThemes[0])
 
 function applyTheme(id: string) {
   active.value = id
@@ -60,7 +150,7 @@ function applyTheme(id: string) {
 
 function select(id: string) {
   applyTheme(id)
-  open.value = false
+  // keep picker open for live preview — close only via outside click / Escape
 }
 
 function onClickOutside(e: MouseEvent) {
@@ -106,12 +196,12 @@ onMounted(() => {
   } catch {}
   // migrate legacy plain values: "violet" etc were accent ids; map slate legacy correctly
   const validIds = new Set(allThemes.map(t => t.id))
-  let initial = 'blue'
+  let initial = 'emerald'
   if (saved && validIds.has(saved)) initial = saved
   else if (saved === 'slate') initial = 'slate-accent' // legacy slate was accent
   else if (saved && allThemes.some(t => t.dataValue === saved)) {
     // saved was a raw dataValue like "zinc" from manual edit — map to shadcn id
-    const byData = shadcnThemes.find(t => t.dataValue === saved)
+    const byData = allShadcnThemes.find(t => t.dataValue === saved)
     if (byData) initial = byData.id
   }
   active.value = initial
@@ -147,7 +237,7 @@ onBeforeUnmount(() => {
       :aria-expanded="open ? 'true' : 'false'"
       aria-haspopup="menu"
       aria-label="Select theme"
-      :title="`Theme: ${current.label}`"
+      :data-tooltip="`Theme: ${current.label}`"
       @click.stop="open = !open"
     >
       <span class="rspfx-accent-trigger-dot" :style="{ background: current.color }" aria-hidden="true" />
@@ -159,41 +249,22 @@ onBeforeUnmount(() => {
 
     <Transition name="rspfx-accent-flyout">
       <div v-if="open" class="rspfx-accent-menu" role="menu" aria-label="Theme">
-        <div class="rspfx-accent-section-label">Accents</div>
-        <button
-          v-for="a in accentThemes"
-          :key="a.id"
-          class="rspfx-accent-option"
-          :class="{ 'is-active': active === a.id }"
-          role="menuitemradio"
-          :aria-checked="active === a.id ? 'true' : 'false'"
-          @click.stop="select(a.id)"
-        >
-          <span class="rspfx-accent-option-dot" :style="{ background: a.color }" aria-hidden="true" />
-          <span class="rspfx-accent-option-label">{{ a.label }}</span>
-          <svg v-if="active === a.id" class="rspfx-accent-check" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
-
-        <hr class="rspfx-accent-sep" />
-
-        <div class="rspfx-accent-section-label">Shadcn themes</div>
-        <button
-          v-for="a in shadcnThemes"
-          :key="a.id"
-          class="rspfx-accent-option"
-          :class="{ 'is-active': active === a.id }"
-          role="menuitemradio"
-          :aria-checked="active === a.id ? 'true' : 'false'"
-          @click.stop="select(a.id)"
-        >
-          <span class="rspfx-accent-option-dot" :style="{ background: a.color }" aria-hidden="true" />
-          <span class="rspfx-accent-option-label">{{ a.label }}</span>
-          <svg v-if="active === a.id" class="rspfx-accent-check" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
+        <div class="rspfx-accent-menu-header">Change theme</div>
+        <div class="rspfx-accent-grid">
+          <button
+            v-for="a in allThemes"
+            :key="a.id"
+            class="rspfx-accent-swatch"
+            :class="{ 'is-active': active === a.id }"
+            :data-tooltip="a.label"
+            :aria-label="a.label"
+            role="menuitemradio"
+            :aria-checked="active === a.id ? 'true' : 'false'"
+            @click.stop="select(a.id)"
+          >
+            <span class="rspfx-accent-swatch-dot" :style="{ background: a.color }" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </Transition>
   </div>

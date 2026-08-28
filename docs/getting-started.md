@@ -4,7 +4,7 @@ Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. S
 
 ## 1. Install
 
-Node 20+ and Bun (npm/yarn/pnpm also work).
+Node 20+ and your package manager — bun · pnpm · npm · yarn (priority: bun > pnpm > npm > yarn).
 
 ```sh
 npm i -g @mbsks/rspfx-cli
@@ -40,7 +40,7 @@ Bundler config is optional — without it the CLI builds config from manifests a
 ```ts
 // vite.config.ts — optional
 import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
+export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
 ```
 
 > **Tip:** `rspfx new` already writes the config. For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).

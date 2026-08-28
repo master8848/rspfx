@@ -1,6 +1,6 @@
 # Upgrading the SPFx target version
 
-Move between SPFx targets (`1.20` ↔ `1.23`) by changing one field — same manifests, bundles, and `.sppkg` flow. See Microsoft docs: [Release 1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23) ([1.22](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.22), [1.21](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.21), [1.20](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.20)) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
+Move between SPFx targets (`1.20` ↔ `1.24`) by changing one field — same manifests, bundles, and `.sppkg` flow. See Microsoft docs: [Release 1.24](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.24) ([1.23](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.23), [1.22](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.22), [1.21](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.21), [1.20](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/release-1.20)) and [SPFx compatibility](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/compatibility).
 
 For supported targets and Node ranges see [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix); for the maintainer checklist to add a new target see [supporting-a-new-spfx-version.md](supporting-a-new-spfx-version.md).
 
@@ -21,29 +21,29 @@ Edit the bundler plugin options — the file your project uses:
 ```ts
 // vite.config.ts
 import { rspfxVite } from '@mbsks/rspfx-plugin';
-export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
+export default { plugins: [rspfxVite({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
 ```
 
 ```ts
 // rspack.config.ts
 import { RspfxPlugin, rspfxResolve } from '@mbsks/rspfx-plugin';
-export default { mode: 'development', resolve: rspfxResolve(), plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] };
+export default { mode: 'development', resolve: rspfxResolve(), plugins: [new RspfxPlugin({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] };
 ```
 
 ```ts
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core';
 import { rspfxRsbuild } from '@mbsks/rspfx-plugin';
-export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react', spfxVersion: '1.23' })] });
+export default defineConfig({ plugins: [rspfxRsbuild({ name: 'my-app', framework: 'react', spfxVersion: '1.24' })] });
 ```
 
-Change `'1.22'` → `'1.23'` (must be a value from [compatibility.md](compatibility.md)).
+Change `'1.23'` → `'1.24'` (must be a value from [compatibility.md](compatibility.md)).
 
 Zero-config projects synthesize `spfxVersion` from manifests — add a config file to pin a different target.
 
-`rspfx migrate` writes `spfxVersion` automatically: explicit `--spfx-version` wins, else detected from `@microsoft/sp-core-library`, else default `1.23`.
+`rspfx migrate` writes `spfxVersion` automatically: explicit `--spfx-version` wins, else detected from `@microsoft/sp-core-library`, else default `1.24`.
 
-> **Tip:** One field, one update, one rebuild — `spfxVersion: '1.23'` + `bun update @mbsks/rspfx-plugin` + `rspfx build`.
+> **Tip:** One field, one update, one rebuild — `spfxVersion: '1.24'` + `bun update @mbsks/rspfx-plugin` (or `pnpm update` / `npm update` / `yarn upgrade`) + `rspfx build`.
 
 ## Steps
 
@@ -54,8 +54,8 @@ Change the single field as above.
 ### 2. Update toolchain
 
 ```sh
-bun update @mbsks/rspfx-plugin
-# or: edit package.json then bun install / npm install
+bun update @mbsks/rspfx-plugin   # or pnpm update / npm update / yarn upgrade
+# or: edit package.json then bun install / pnpm install / npm install / yarn
 ```
 
 All `packages/*` + `apps/cli` share one version.
@@ -94,7 +94,7 @@ Details: [compatibility.md](compatibility.md) and [reference/FORMATS.md](../refe
 |---|---|---|
 | SPFx version | Pins in generator + Heft rig + every `sp-*` | One field `spfxVersion` |
 | Node | Switch per target (18 for 1.20–1.22, 20.19+ for 1.23) | Node 20+ for all — see [compatibility.md](compatibility.md) |
-| Upgrade steps | Update generator, rig, compilers, plugins, `sp-*` | `spfxVersion` + `bun update @mbsks/rspfx-plugin` |
+| Upgrade steps | Update generator, rig, compilers, plugins, `sp-*` | `spfxVersion` + `bun update` / `pnpm update` |
 | Manifests | Rewritten by generator | Auto-adjusted |
 
 ## Migrating then upgrading
@@ -106,11 +106,11 @@ npm i -g @mbsks/rspfx-cli
 cd my-existing-spfx-app
 rspfx migrate --dry-run
 rspfx migrate --bundler vite   # or rspack | rsbuild
-bun install
+bun install      # or pnpm install / npm install / yarn
 rspfx dev
 rspfx package
 # then upgrade:
-# edit spfxVersion → '1.23', bun update, rspfx build
+# edit spfxVersion → '1.24', bun update, rspfx build
 ```
 
 Do not edit `spfxVersion` before migrating — let `rspfx migrate` detect it first.
@@ -125,7 +125,7 @@ rspfx package
 
 ## Downgrading and pinning
 
-Downgrade the same way — set `spfxVersion: '1.20'` and `bun update`.
+Downgrade the same way — set `spfxVersion: '1.20'` and `bun update` (or `pnpm update` / `npm update` / `yarn upgrade`).
 
 Pin by committing `spfxVersion` — unknown targets are rejected at `rspfx new` / `migrate`.
 
@@ -135,7 +135,7 @@ Pin by committing `spfxVersion` — unknown targets are rejected at `rspfx new` 
 |---|---|
 | `Unknown spfx version '1.xx'` | Must be from [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix) |
 | `sp-*` version check fails | Align `sp-*` pins to `spfxVersion` prefix or remove `sp-*` deps if not imported |
-| `UNRESOLVED_EXTERNAL` for `sp-*` | `bun install` or remove the `externals` entry |
+| `UNRESOLVED_EXTERNAL` for `sp-*` | `bun install` (or `pnpm` / `npm` / `yarn`) or remove the `externals` entry |
 | `manifestVersion` / loader errors | `rspfx clean` then `rspfx package` |
 | `entryModuleId` 404 in workbench (`https://localhost:4321/dist/...` not found) | Bundle name ≠ `entryModuleId` — folder `src/webparts/<name>` == bundle key — see [project-structure.md](project-structure.md) |
-| Need previous official build | `git restore . && git clean -fd .rspfx && bun install` or `rspfx migrate --revert` |
+| Need previous official build | `git restore . && git clean -fd .rspfx && bun install` (or `pnpm` / `npm` / `yarn`) or `rspfx migrate --revert` |

@@ -15,12 +15,19 @@ export default defineConfig({
   appearance: true,
   srcDir: '.',
   outDir: './.vitepress/dist',
-  sitemap: { hostname: 'https://github.com/master8848/rspfx' },
+  sitemap: {
+    hostname: 'https://rspfx.mbsks.me',
+    transformItems: (items) =>
+      items.filter((i) => !i.url.includes('real-tenant-validation') && !i.url.includes('supporting-a-new-spfx-version')),
+  },
   head: [
+    ['link', { rel: 'alternate', type: 'text/plain', href: '/llm.txt', title: 'LLM index (plain text)' }],
+    ['link', { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'LLM index (detailed)' }],
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
-    ['meta', { name: 'theme-color', content: '#0078d4' }],
-    ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v)return;if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);} }catch(e){}} )()`],
+    ['meta', { name: 'theme-color', content: '#059669' }],
+    ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v){document.documentElement.setAttribute('data-accent','emerald');return;}if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);}else if(v){document.documentElement.setAttribute('data-theme',v);} }catch(e){}} )()`],
+    ['script', {}, `(function(){function p(){try{var y=new Date().getFullYear();var el=document.querySelector('.VPFooter .copyright');if(!el)return false;if(el.dataset.patched==='1'&&el.querySelector('a[href*="master8848"]'))return true;el.innerHTML='Copyright \\u00A9 '+y+' <a href="https://github.com/master8848" target="_blank" rel="noopener noreferrer">master8848</a>';el.dataset.patched='1';return true}catch(e){return false}}p();document.addEventListener('DOMContentLoaded',p);var t=setInterval(function(){if(p())clearInterval(t)},250);setTimeout(function(){clearInterval(t)},8000);try{new MutationObserver(p).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}window.addEventListener('popstate',p);window.addEventListener('hashchange',p);document.addEventListener('visibilitychange',p);})()`],
 
     ['meta', { name: 'author', content: 'RSPFX contributors' }],
     ['meta', { property: 'og:type', content: 'website' }],
@@ -39,7 +46,7 @@ export default defineConfig({
     siteTitle: 'RSPFX',
     // Minimal nav: sidebar holds all docs navigation; socialLinks + footer already expose GitHub/npm/Changelog.
     // Keeping top bar clean (logo left, search middle, appearance+accent+social right) avoids clutter and prevents outline overlap.
-    nav: [],
+    nav: [{ text: 'llm.txt', link: '/llm.txt' }],
     sidebar: {
       '/docs/': [
         {
@@ -85,9 +92,7 @@ export default defineConfig({
             { text: 'Architecture', link: '/docs/architecture' },
             { text: 'Internal API', link: '/docs/internal-api' },
             { text: 'Compatibility', link: '/docs/compatibility' },
-            { text: 'Supporting a New SPFx Version (Maintainer only)', link: '/docs/supporting-a-new-spfx-version' },
             { text: 'Performance', link: '/docs/performance' },
-            { text: 'Real-tenant Validation', link: '/docs/real-tenant-validation' },
             { text: 'Roadmap', link: '/docs/roadmap' },
             { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
             { text: 'Roadblocks', link: '/docs/roadblocks' },
@@ -120,7 +125,7 @@ export default defineConfig({
     },
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2025-present master8848 & RSPFX contributors',
+      copyright: `Copyright © ${new Date().getFullYear()} master8848`,
     },
     returnToTopLabel: 'Return to top',
     sidebarMenuLabel: 'Menu',

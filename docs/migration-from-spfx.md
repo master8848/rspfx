@@ -36,7 +36,7 @@ See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating
 npm i -g @mbsks/rspfx-cli   # or bun add -g @mbsks/rspfx-cli
 rspfx migrate --dry-run     # preview
 rspfx migrate               # or --bundler vite | rspack | rsbuild — writes bundler config, backs up to .rspfx/migrate-backup.json
-bun install
+bun install      # or pnpm install / npm install / yarn
 ```
 
 Bundler config is optional — without it `rspfx dev` and `rspfx build` synthesize config from manifests and run Vite, Rsbuild, or Rspack directly.
@@ -67,12 +67,12 @@ rspfx package   # → sharepoint/solution/<name>.sppkg → upload to app catalog
 
 See [building-packages.md](building-packages.md) for outputs and [deployment.md](deployment.md) for catalog steps.
 
-`bun run package` works identically (zero-config).
+`bun run package` (or `pnpm` / `npm` / `yarn` `run package`) works identically (zero-config).
 
 ### 4. Revert if needed
 
 ```sh
-rspfx migrate --revert   # or git restore . && git clean -fd .rspfx && bun install
+rspfx migrate --revert   # or git restore . && git clean -fd .rspfx && bun install (or pnpm / npm / yarn)
 ```
 
 ### 5. Upgrade SPFx target (optional)
@@ -80,8 +80,8 @@ rspfx migrate --revert   # or git restore . && git clean -fd .rspfx && bun insta
 Change one field in the generated config and update:
 
 ```sh
-# spfxVersion: '1.23' in vite.config.ts / rspack.config.ts / rsbuild.config.ts
-bun update @mbsks/rspfx-plugin
+# spfxVersion: '1.24' in vite.config.ts / rspack.config.ts / rsbuild.config.ts
+bun update @mbsks/rspfx-plugin   # or pnpm update / npm update / yarn upgrade
 ```
 
 See [upgrading-spfx-version.md](upgrading-spfx-version.md) — verify with `rspfx doctor`, `rspfx build`, `rspfx package`.

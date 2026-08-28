@@ -51,7 +51,7 @@ Built-ins are `@mbsks/rspfx-framework-*`. Any other framework works with one fil
 
 Official: update generator, Heft, rigs, `sp-build-web`, every `sp-*` pin, and `heft.json` extends.
 
-RSPFX: change `spfxVersion: '1.23'` in your bundler config and run `bun update @mbsks/rspfx-*`. See [upgrading-spfx-version.md](upgrading-spfx-version.md) and [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix).
+RSPFX: change `spfxVersion: '1.24'` in your bundler config and run `bun update @mbsks/rspfx-*` (or `pnpm update` / `npm update` / `yarn upgrade`). See [upgrading-spfx-version.md](upgrading-spfx-version.md) and [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix).
 
 ## Faster and modern
 
@@ -79,4 +79,4 @@ RSPFX: change `spfxVersion: '1.23'` in your bundler config and run `bun update @
 | Bundle analysis | Manual `webpack-bundle-analyzer` | `rspfx analyze` |
 | Scaffolding | `yo @microsoft/sharepoint` | `rspfx new` |
 | Migrate existing project | Manual edits | `rspfx migrate --dry-run` → `rspfx migrate` |
-| Switch SPFx version | Update generator + rig + Heft + every `sp-*` | Change `spfxVersion` + `bun update` |
+| Switch SPFx version | Update generator + rig + Heft + every `sp-*` | Change `spfxVersion` + `bun update` / `pnpm update` |

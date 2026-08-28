@@ -25,7 +25,7 @@ npm i -g @mbsks/rspfx-cli
 cd my-existing-spfx-app
 rspfx migrate --dry-run   # preview
 rspfx migrate             # apply
-bun install
+bun install      # or pnpm install / npm install / yarn
 rspfx dev
 ```
 

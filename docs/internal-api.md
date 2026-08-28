@@ -21,7 +21,7 @@ unless requested. Zero webpack/heft/gulp dependencies anywhere.
 
 ```ts
 export type FrameworkId = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte' | (string & {});
-export type SpfxTarget = '1.20' | '1.21' | '1.22' | '1.23';
+export type SpfxTarget = '1.20' | '1.21' | '1.22' | '1.23' | '1.24';
 
 export interface DevConfig {
   port?: number;                 // default 4321 (manifest+bundle server, like official serve)

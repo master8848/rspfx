@@ -14,8 +14,8 @@ rspfx deploy    → upload .sppkg to app catalog via REST        (implies packag
 
 | Command | Produces | When |
 |---|---|---|
-| `bun run build` / `rspfx build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, `rspfx analyze` |
-| `bun run package` / `rspfx package` | `sharepoint/solution/<name>.sppkg` from `paths.zippedPackage` | Ship |
+| `bun run build` / `pnpm build` / `npm run build` / `rspfx build` | `dist/<bundle>.js` + `release/manifests/*.manifest.json` + `release/assets/*` | CI intermediate, `rspfx analyze` |
+| `bun run package` / `pnpm package` / `rspfx package` | `sharepoint/solution/<name>.sppkg` from `paths.zippedPackage` | Ship |
 | `rspfx package --no-build` | Same `.sppkg` from existing `release/` | Incremental |
 | `rspfx deploy` | Packages then `POST` to catalog | Automated upload |
 
@@ -26,7 +26,7 @@ National clouds use the same pipeline — only the catalog hostname differs.
 ## 1. Build
 
 ```sh
-bun install --frozen-lockfile
+bun install --frozen-lockfile   # or pnpm install --frozen-lockfile / npm ci / yarn --frozen-lockfile
 rspfx doctor              # Node ≥20, config loads, sp-* versions match, port free
 rspfx build               # minified, no sourcemap by default
 # debuggable:
@@ -44,7 +44,7 @@ See [building-packages.md](building-packages.md).
 ## 2. Package
 
 ```sh
-rspfx package   # or bun run package
+rspfx package   # or bun run package / pnpm package / npm run package
 unzip -l sharepoint/solution/<name>.sppkg | head -20
 ```
 
@@ -169,7 +169,7 @@ Dev server runs at `https://localhost:4321` (SharePoint mode) or `http://localho
 
 ```yaml
 steps:
-  - run: bun install --frozen-lockfile
+  - run: bun install --frozen-lockfile   # or pnpm / npm ci / yarn --frozen-lockfile
   - run: rspfx doctor
   - run: rspfx package
   - upload: sharepoint/solution/*.sppkg

@@ -35,14 +35,13 @@ Single source of truth: `packages/core/src/versions.ts:13` (`SPFX_VERSIONS`, `SP
 | `1.21` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.21.0` |
 | `1.22` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.22.0` |
 | `1.23` | Supported, default | Heft | 20.19+ / 22+ | 20+ | `1.23.0` |
-
-SPFx `1.24` (preview beta.1, July 2026; GA expected Sept 2026) is not yet supported.
+| `1.24` | Preview | Heft | 20.19+ / 22+ | 20+ | `1.24.0` |
 
 Component `version` for `"type": "component"` deps is read from `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, fallback `reference/sp-component-ids.json`.
 
 Pin target via `spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts` and keep `@microsoft/sp-*` prefix equal to `spfxVersion`. See [upgrading-spfx-version.md](upgrading-spfx-version.md).
 
-> Tip: after changing `spfxVersion`, run `bun update @mbsks/rspfx-plugin && rspfx build` — no manifest or bundler patching needed. RSPFX adjusts `loaderConfig`, `chunkLoadingGlobal`, `manifests.js`, and `.sppkg` layout.
+> Tip: after changing `spfxVersion`, run `bun update @mbsks/rspfx-plugin` (or `pnpm update` / `npm update` / `yarn upgrade`) `&& rspfx build` — no manifest or bundler patching needed. RSPFX adjusts `loaderConfig`, `chunkLoadingGlobal`, `manifests.js`, and `.sppkg` layout.
 
 ## RSPFX line support
 
@@ -79,7 +78,7 @@ Most web parts need no `@microsoft/sp-*` — externalized and SharePoint resolve
 
 Upgrading `1.20 → 1.23` needs no new `sp-*` unless your code imports that runtime.
 
-Official upgrades bump generator, Heft rig, and every `sp-*` pin — RSPFX keeps it in one field (`spfxVersion`) and one bump (`bun update @mbsks/rspfx-plugin`).
+Official upgrades bump generator, Heft rig, and every `sp-*` pin — RSPFX keeps it in one field (`spfxVersion`) and one bump (`bun update` / `pnpm update` / `npm update` / `yarn upgrade` `@mbsks/rspfx-plugin`).
 
 Keep `major.minor` of any installed `sp-*` equal to `spfxVersion` — `rspfx doctor` warns on drift.
 
@@ -91,7 +90,7 @@ spfxVersion: '1.23'
 ```
 
 ```sh
-bun update @mbsks/rspfx-plugin
+bun update @mbsks/rspfx-plugin   # or pnpm update / npm update / yarn upgrade
 rspfx build
 ```
 

@@ -22,7 +22,7 @@ See [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating
 
 > **Tip:** No manual `@microsoft/sp-*` install for most web parts — externalized, SharePoint resolves built-in copies.
 
-> **Tip:** `bun run build` and `rspfx build` are the same codepath — use either.
+> **Tip:** `bun run build` (or `pnpm` / `npm` / `yarn` `run build`) and `rspfx build` are the same codepath — use either.
 
 ## Project layout
 
@@ -87,7 +87,7 @@ Deployment steps (catalog, CDN, permissions, Teams): [deployment.md](deployment.
 ## CI
 
 ```yaml
-- run: bun install --frozen-lockfile
+- run: bun install --frozen-lockfile   # or pnpm install --frozen-lockfile / npm ci / yarn --frozen-lockfile
 - run: rspfx doctor
 - run: rspfx package
 - upload: sharepoint/solution/*.sppkg

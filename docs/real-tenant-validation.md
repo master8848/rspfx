@@ -1,3 +1,14 @@
+---
+private: true
+search: false
+prev: false
+next: false
+head:
+  - - meta
+    - name: robots
+      content: noindex
+---
+
 # Real-tenant validation
 
 Reference for the manual tenant gate: scaffold with `rspfx new` → `rspfx package` → upload `.sppkg` to app catalog → install → render in workbench with no console errors. Gate passed 2026-08-22 for web parts, extensions, and libraries.

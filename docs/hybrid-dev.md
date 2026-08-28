@@ -34,7 +34,7 @@ Synthesized config:
 |---|---|
 | `name` | `package.json` `name` |
 | `version` | `package.json` `version` |
-| `spfxVersion` | `@microsoft/sp-core-library` version, else `1.23` (default target) |
+| `spfxVersion` | `@microsoft/sp-core-library` version, else `1.24` (default target) |
 | `framework` | `react` → `vue` → `svelte` → `preact` → `solid-js` → `vanilla` |
 | `language` | `typescript` |
 
@@ -47,8 +47,8 @@ Compare dev servers directly: `gulp serve` vs `rspfx dev` — same manifests, sa
 ```sh
 rspfx migrate --dry-run   # preview
 rspfx migrate             # writes bundler config, backs up to .rspfx/migrate-backup.json
-bun install
-rspfx build               # or bun run build — Vite, Rsbuild, or Rspack runs directly
+bun install      # or pnpm install / npm install / yarn
+rspfx build               # or bun run build / pnpm build / npm run build / yarn build — Vite, Rsbuild, or Rspack
 ```
 
 Same manifests drive both toolchains — see [migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx](migrating-from-gulp-heft.md#same-manifest-for-heftgulp-and-rspfx).
