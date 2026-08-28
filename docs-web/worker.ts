@@ -20,7 +20,18 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     const method = request.method
-    const assetsFetch = env?.ASSETS?.fetch?.bind(env.ASSETS) ?? ((req: Request) => fetch(req))
+    // Prevent recursion when worker fetches assets internally
+    if (request.headers.get('X-Worker-Internal')) {
+      return fetch(request)
+    }
+    const assetsFetch =
+      env?.ASSETS?.fetch?.bind(env.ASSETS) ??
+      // Fallback: direct fetch with internal header to avoid loop (dev without binding)
+      ((req: Request) => {
+        const h = new Headers(req.headers)
+        h.set('X-Worker-Internal', '1')
+        return fetch(new Request(req, { headers: h }))
+      })
     if (method !== 'GET' && method !== 'HEAD') {
       return assetsFetch(request)
     }

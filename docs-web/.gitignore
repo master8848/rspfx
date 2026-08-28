@@ -3,6 +3,12 @@
 .vitepress/cache
 dist
 
+# wrangler
+.wrangler
+.dev.vars
+.dev.vars.*
+.mf/
+
 # dependencies
 node_modules
 

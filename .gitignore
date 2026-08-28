@@ -46,5 +46,12 @@ Cargo.lock
 **/.vitepress/dist
 **/.vitepress/cache
 
+# wrangler
+.wrangler/
+**/.wrangler/
+.dev.vars
+**/.dev.vars
+.mf/
+
 # test-generated fixtures (dev-runtime tests scaffold these in beforeAll)
 tests/fixtures/
