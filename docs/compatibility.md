@@ -15,13 +15,13 @@ RSPFX produces the same artifact formats as official SPFx tooling — tenants, w
 | Workbench URL | `<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` |
 | `config/` files | `package-solution.json`, `serve.json` (`initialPage` with `{tenantdomain}`), `write-manifests.json` (`cdnBasePath`) — official semantics |
 
-## Verified vs verified-by-reference
+## Verification
 
 | Item | Status |
 |---|---|
 | AMD wrapper + CSS inlining + manifest bytes | Verified — parity suite builds same fixture via Rspack/Vite/Rsbuild, asserts capture line + AMD header, byte-equal manifests, no `.css` files |
 | manifests.js / component schema / sppkg layout / Library / Extension | Verified — real tenant install (see [real-tenant-validation.md](real-tenant-validation.md)); provenance in [reference/FORMATS.md](../reference/FORMATS.md) |
-| sp-* ids | Stable 1.20–1.23; fallback `reference/sp-component-ids.json` |
+| sp-* ids | Stable 1.20–1.24; fallback `reference/sp-component-ids.json` |
 
 Never assume a format — on discrepancy verify against an unzipped official `.sppkg`.
 

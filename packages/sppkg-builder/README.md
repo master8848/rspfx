@@ -30,7 +30,7 @@ const { ok, errors } = await validateSppkg(result.outputPath); // zip integrity
 
 ## API
 
-- `buildPackage(opts)` — assemble the `.sppkg` package (`opts: BuildPackageOptions { projectRoot, manifestsDir, solutionConfigPath, assetsDir, production, outDir?, prettyXml?, teamsDir?, resxDir? }`)
+- `buildPackage(opts)` — assemble the `.sppkg` package (`opts: BuildPackageOptions { projectRoot, manifestsDir, solutionConfigPath, assetsDir, production, outDir?, prettyXml?, teamsDir?, resxDir?, spfxVersion? }` — `spfxVersion: '1.24'` suppresses deprecated `IsDomainIsolated`)
 - `validateSppkg(path)` — zip integrity + expected entry validation (`Promise<SppkgValidationResult>`)
 - `BuildPackageResult` — result type (`{ outputPath, zipEntries, appManifest }`)
 

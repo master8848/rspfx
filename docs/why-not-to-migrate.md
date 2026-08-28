@@ -48,7 +48,7 @@ See [real-tenant-validation.md](real-tenant-validation.md) for verification. See
 - No build-extension ecosystem (no PnP CLI build plugins, no Heft rigs; PnPjs libraries still work).
 - Microsoft supports the official pipeline; Stack Overflow won't cover RSPFX.
 - CI is yours to port (~10 lines, see [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md)).
-- `.sppkg` format captured from official packages and validated by tenant install.
+- `.sppkg` format captured from official packages and validated by tenant install per [real-tenant-validation.md](real-tenant-validation.md) and [reference/FORMATS.md](../reference/FORMATS.md).
 
 ## When migration IS the right call
 

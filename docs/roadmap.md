@@ -19,7 +19,7 @@ See [roadblocks.md](roadblocks.md) for adoption blockers and [real-tenant-valida
 
 Tenant gate: scaffold → `rspfx package` → upload `.sppkg` to real app catalog → install → render in workbench with no console errors. Packaging correctness rests on byte-level assertions against `reference/FORMATS.md` + the gate.
 
-Real-tenant CI is planned across SPFx targets (needs tenant credentials in CI secrets; env vars see [commands.md#rspfx-deploy](commands.md#rspfx-deploy)).
+Real-tenant CI matrix is planned across SPFx 1.20–1.24 (needs tenant credentials in CI secrets; env vars see [commands.md#environment-variables](commands.md#environment-variables)).
 
 ## Backlog
 

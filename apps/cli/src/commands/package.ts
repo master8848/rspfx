@@ -44,6 +44,7 @@ export async function runPackage(
         .some((file) => /^Resources.*\.resx$/.test(file))
         ? "sharepoint"
         : undefined,
+    spfxVersion: (config as { spfxVersion?: string }).spfxVersion,
   });
 
   const size = fs.statSync(result.outputPath).size;

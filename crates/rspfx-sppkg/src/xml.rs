@@ -101,12 +101,31 @@ pub fn build_rels_xml(relationships: Vec<(String, String)>, pretty: bool) -> Str
     format!("{XML_DECLARATION}\n{}", serialize_xml(&root, pretty, 0))
 }
 
+fn content_type_for_extension(ext: &str) -> &'static str {
+    match ext {
+        "js" => "application/javascript",
+        "json" => "application/json",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "css" => "text/css",
+        "txt" => "application/octet-stream",
+        "htm" | "html" => "text/html",
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "eot" => "application/vnd.ms-fontobject",
+        _ => "application/octet-stream",
+    }
+}
+
 pub fn build_content_types_xml(extensions: Vec<String>, pretty: bool) -> String {
     let defaults: Vec<(&str, &str)> = vec![
         ("xml", "text/xml"), ("rels", "application/vnd.openxmlformats-package.relationships+xml"),
         ("webpart", "text/xml"), ("htm", "text/html"), ("html", "text/html"), ("aspx", "text/xml"),
         ("resx", "text/xml"), ("js", "application/javascript"), ("json", "application/json"),
-        ("png", "image/png"), ("jpg", "image/jpeg"), ("bmp", "image/bmp"), ("gif", "image/gif"), ("txt", "application/octet-stream"),
+        ("png", "image/png"), ("jpg", "image/jpeg"), ("bmp", "image/bmp"), ("gif", "image/gif"),
     ];
     let mut extra_set = std::collections::HashSet::new();
     for e in extensions.iter().map(|s| s.to_lowercase()) {
@@ -118,7 +137,8 @@ pub fn build_content_types_xml(extensions: Vec<String>, pretty: bool) -> String 
     let mut extra: Vec<String> = extra_set.into_iter().collect();
     extra.sort();
     for ext in extra {
-        ordered.push((Box::leak(ext.into_boxed_str()) as &str, "application/octet-stream"));
+        let ct = content_type_for_extension(&ext);
+        ordered.push((Box::leak(ext.into_boxed_str()) as &str, ct));
     }
     let children: Vec<XmlChild> = ordered.into_iter().map(|(ext, ct)| {
         let mut attrs = HashMap::new();

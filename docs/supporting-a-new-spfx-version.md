@@ -76,6 +76,7 @@ History lives only in `CHANGELOG.md`.
 2. Bundle header starts with capture line then `define('<id>_<version>', …)`
 3. Diff `.sppkg` entry list vs harvested reference
 4. Real-tenant install (app catalog → site → workbench)
+5. Blackbox parity: `bun run test -- --run packages/sppkg-builder/tests/blackbox` (fast, RSPFX invariants only) or `OFFICIAL_SPPKG_TEST=1 bun run test -- --run packages/sppkg-builder/tests/blackbox` with `OFFICIAL_SPPKG_VERSIONS=1.22,1.23,1.24` for full RSPFX vs official ZIP comparison (see `packages/sppkg-builder/tests/blackbox.test.ts:1` and `bench/blackbox-compare.mjs:1`). The harness treats both generators as external ZIP producers and normalizes volatile `AppPartConfig Id`/`Extension Instance Id` before asserting `AppManifest.xml`, `[Content_Types].xml`, `feature_*.xml`, `<featureId>/*_*.xml`, and entry-list equality.
 
 ## Checklist
 
@@ -84,9 +85,10 @@ History lives only in `CHANGELOG.md`.
 - [ ] Packages packed, IDs and formats harvested, provenance recorded
 - [ ] `reference/` and compiled IDs in sync
 - [ ] Entry added to `versions.ts`
-- [ ] Tests + `bun run test` green
+- [ ] Tests + `bun run test` green (must include `packages/sppkg-builder/tests/blackbox.test.ts:1` invariants)
 - [ ] Docs updated
 - [ ] Scaffold build + bundle header + sppkg diff checked
+- [ ] Blackbox parity for new version: `OFFICIAL_SPPKG_TEST=1 OFFICIAL_SPPKG_VERSIONS=<new> bun run test -- --run packages/sppkg-builder/tests/blackbox` and `OFFICIAL_SPPKG_TEST=1 node bench/blackbox-compare.mjs --version <new> --component webpart|extension|library|mixed --official` (see `bench/blackbox-compare.mjs:1`) — both generators treated as ZIP producers, volatile `Id` normalized, `AppManifest.xml`/`[Content_Types].xml`/`feature_*.xml`/`<_>.xml` compared
 - [ ] Real-tenant gate passed
 
 ## Gotchas

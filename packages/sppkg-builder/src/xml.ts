@@ -139,8 +139,7 @@ const DEFAULT_CONTENT_TYPES_ORDERED: [string, string][] = [
   ['png', 'image/png'],
   ['jpg', 'image/jpeg'],
   ['bmp', 'image/bmp'],
-  ['gif', 'image/gif'],
-  ['txt', 'application/octet-stream']
+  ['gif', 'image/gif']
 ];
 
 export function buildContentTypesXml(extensions: string[], pretty: boolean): string {
@@ -253,6 +252,8 @@ export interface AppManifestOptions {
   version?: string;
   skipFeatureDeployment: boolean;
   isDomainIsolated?: boolean;
+  /** SPFx target that produced this manifest — 1.24+ ignores IsDomainIsolated (deprecated). */
+  spfxVersion?: string;
   developer?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   localizedStrings?: { locale: string; values: Record<string, string> }[];
@@ -262,8 +263,17 @@ export interface AppManifestOptions {
 
 const DEVELOPER_PROPERTY_NAMES: string[] = ['name', 'websiteUrl', 'privacyUrl', 'termsOfUseUrl', 'mpnId'];
 
+function isDomainIsolatedDeprecated(spfxVersion?: string): boolean {
+  if (!spfxVersion) return false;
+  const m = /^1\.(\d+)$/.exec(spfxVersion.trim());
+  if (!m) return false;
+  return Number(m[1]) >= 24;
+}
+
 export function buildAppManifestXml(options: AppManifestOptions): string {
-  if (native?.buildAppManifestXml) { try { return native.buildAppManifestXml(options); } catch {} }
+  const effectiveIsDomainIsolated = isDomainIsolatedDeprecated(options.spfxVersion) ? undefined : options.isDomainIsolated;
+  const effectiveOptions = effectiveIsDomainIsolated === options.isDomainIsolated ? options : { ...options, isDomainIsolated: effectiveIsDomainIsolated };
+  if (native?.buildAppManifestXml) { try { return native.buildAppManifestXml(effectiveOptions); } catch {} }
   const rawProductId = options.productId.trim();
   const productId = rawProductId;
   const attrs: XmlAttributes = {
@@ -279,8 +289,8 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
   if (options.skipFeatureDeployment) {
     attrs.SkipFeatureDeployment = 'true';
   }
-  if (options.isDomainIsolated !== undefined) {
-    attrs.IsDomainIsolated = String(options.isDomainIsolated);
+  if (effectiveIsDomainIsolated !== undefined) {
+    attrs.IsDomainIsolated = String(effectiveIsDomainIsolated);
   }
 
   const title = options.title ? String(options.title) : options.name;
@@ -289,7 +299,10 @@ export function buildAppManifestXml(options: AppManifestOptions): string {
   if (options.developer) {
     const developerProperties: Record<string, string> = {};
     for (const key of DEVELOPER_PROPERTY_NAMES) {
-      developerProperties[key] = String(options.developer[key] ?? '');
+      const value = options.developer[key];
+      if (value !== undefined && value !== null) {
+        developerProperties[key] = String(value);
+      }
     }
     properties.push({ name: 'DeveloperProperties', children: [JSON.stringify(developerProperties)] });
   }

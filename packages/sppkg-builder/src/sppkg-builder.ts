@@ -53,6 +53,8 @@ export interface BuildPackageOptions {
   teamsDir?: string;
   resxDir?: string;
   hookBus?: ReturnType<typeof createHookBus>;
+  /** SPFx target version — when 1.24+ IsDomainIsolated is deprecated and suppressed. */
+  spfxVersion?: string;
 }
 
 export interface BuildPackageResult {
@@ -230,6 +232,7 @@ export async function buildPackage(opts: BuildPackageOptions): Promise<BuildPack
     version: typeof solution.version === 'string' && solution.version ? solution.version : undefined,
     skipFeatureDeployment: solution.skipFeatureDeployment === true,
     isDomainIsolated: typeof solution.isDomainIsolated === 'boolean' ? solution.isDomainIsolated : undefined,
+    spfxVersion: opts.spfxVersion,
     developer: isRecord(solution.developer) ? solution.developer : undefined,
     metadata: isRecord(solution.metadata) ? solution.metadata : undefined,
     localizedStrings:

@@ -70,28 +70,30 @@ describe('official parity', () => {
       expect(appPartId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       expect(appPartId).not.toBe(featureId);
 
-      // [Content_Types].xml ordered: xml text/xml first then rels webpart htm html aspx resx js json png jpg bmp gif txt application/octet-stream
+      // [Content_Types].xml ordered: 13 defaults xml→...→gif; txt only when .txt asset exists (blackbox parity)
       const contentTypes = zip.get('[Content_Types].xml')!.toString('utf8');
       expect(contentTypes).toContain('Extension="xml" ContentType="text/xml"');
-      expect(contentTypes).toContain('Extension="txt" ContentType="application/octet-stream"');
-      // Check first entry is xml text/xml
+      expect(contentTypes).toContain('Extension="gif" ContentType="image/gif"');
+      // No .txt asset in fixture → txt must NOT be emitted (official: 13 defaults, txt conditional)
+      expect(contentTypes).not.toContain('Extension="txt"');
+      // Check ordering of defaults
       const xmlIdx = contentTypes.indexOf('Extension="xml"');
       const relsIdx = contentTypes.indexOf('Extension="rels"');
       const webpartIdx = contentTypes.indexOf('Extension="webpart"');
       const jsIdx = contentTypes.indexOf('Extension="js"');
       const pngIdx = contentTypes.indexOf('Extension="png"');
-      const txtIdx = contentTypes.indexOf('Extension="txt"');
+      const gifIdx = contentTypes.indexOf('Extension="gif"');
       expect(xmlIdx).toBeGreaterThan(-1);
       expect(relsIdx).toBeGreaterThan(-1);
       expect(webpartIdx).toBeGreaterThan(-1);
       expect(jsIdx).toBeGreaterThan(-1);
       expect(pngIdx).toBeGreaterThan(-1);
-      expect(txtIdx).toBeGreaterThan(-1);
+      expect(gifIdx).toBeGreaterThan(-1);
       expect(xmlIdx).toBeLessThan(relsIdx);
       expect(relsIdx).toBeLessThan(webpartIdx);
       expect(webpartIdx).toBeLessThan(jsIdx);
       expect(jsIdx).toBeLessThan(pngIdx);
-      expect(pngIdx).toBeLessThan(txtIdx);
+      expect(pngIdx).toBeLessThan(gifIdx);
 
       // relationships all Targets prefixed "/" and stored at _rels/*.rels
       const relsRoot = zip.get('_rels/.rels')!.toString('utf8');
