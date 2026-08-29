@@ -4,6 +4,7 @@ import type { SpfxTarget } from './versions.js';
 
 export const TryComponentSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1)),
+  /** Start location: file or directory. Relative to project root. Fallback is paths.webpartsDir/<name>/ */
   entry: v.optional(v.string()),
   title: v.optional(v.string()),
   description: v.optional(v.string()),

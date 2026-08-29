@@ -657,10 +657,41 @@ export function discoverWebParts(
         entrypoint = resolveEntrypoint(projectRoot, comp.entry);
         if (!entrypoint) {
           const abs = path.resolve(projectRoot, comp.entry);
-          if (fs.existsSync(abs)) entrypoint = abs;
+          if (fs.existsSync(abs)) {
+            try {
+              if (fs.statSync(abs).isDirectory()) {
+                entrypoint = pickEntrypoint(abs, name);
+                if (!entrypoint) {
+                  // directory exists but no conventional file — try index fallback
+                  for (const ext of ['.ts', '.tsx', '.js']) {
+                    const cand = path.join(abs, `index${ext}`);
+                    if (fs.existsSync(cand)) { entrypoint = cand; break; }
+                  }
+                }
+              } else {
+                entrypoint = abs;
+              }
+            } catch {
+              entrypoint = abs;
+            }
+          }
+        }
+        // Allow extensionless entry (e.g. "src/features/hello/HelloWebPart")
+        if (!entrypoint) {
+          const absBase = path.resolve(projectRoot, comp.entry.replace(/\.(js|ts|tsx)$/, ''));
+          for (const ext of ['.ts', '.tsx', '.js']) {
+            const cand = absBase + ext;
+            if (fs.existsSync(cand)) { entrypoint = cand; break; }
+          }
+          if (!entrypoint) {
+            for (const ext of ['.ts', '.tsx']) {
+              const cand = path.join(absBase, `index${ext}`);
+              if (fs.existsSync(cand)) { entrypoint = cand; break; }
+            }
+          }
         }
         if (!entrypoint) {
-          throw new Error(`Try component "${name}" entrypoint not found: ${comp.entry} (resolved from ${path.resolve(projectRoot, comp.entry)})`);
+          throw new Error(`Try component "${name}" entrypoint not found: ${comp.entry} (resolved from ${path.resolve(projectRoot, comp.entry)}). Hint: use paths.webpartsDir for a shared start location, or entry:"src/.../YourWebPart.ts" (file or directory) for per-component override.`);
         }
       } else {
         const resolvedWebpartsDir = rspfxConfig.paths?.webpartsDir ?? webpartsDir;
@@ -683,7 +714,7 @@ export function discoverWebParts(
           }
         }
         if (!entrypoint) {
-          throw new Error(`Try component "${name}" entrypoint not found: expected one of src/webparts/${name}/${name}WebPart.(ts|tsx) or similar in ${path.join(projectRoot, rspfxConfig.paths?.webpartsDir ?? webpartsDir, name)}`);
+          throw new Error(`Try component "${name}" entrypoint not found: expected one of ${rspfxConfig.paths?.webpartsDir ?? webpartsDir}/${name}/${name}WebPart.(ts|tsx) or similar in ${path.join(projectRoot, rspfxConfig.paths?.webpartsDir ?? webpartsDir, name)}. Hint: set paths:{webpartsDir:"src/your/dir"} for shared start location, or tryComponents:[{name, entry:"src/.../File.ts"}] for per-component override.`);
         }
       }
       bundleMap.push({ bundleName: name, entrypoint, manifestPath: '__synthetic__' });
