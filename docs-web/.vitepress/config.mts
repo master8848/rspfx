@@ -7,62 +7,90 @@ import { detectPM } from './theme/utils/pmTransform.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const docsWebRoot = resolve(__dirname, '..')
 
-// Shared sidebar — used for /docs/, /llm and /llms. Keep single source to avoid drift.
-const docsSidebar = [
+// Guide — human-friendly, task-oriented, plain language (TanStack-style Docs)
+const guideSidebar = [
   {
-    text: 'Getting Started',
+    text: 'Get Started',
     collapsed: false,
     items: [
-      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
-      { text: 'Getting Started', link: '/docs/getting-started' },
-      { text: 'Demos', link: '/docs/demos' },
-      { text: 'llms.txt', link: '/llms' },
+      { text: 'Why RSPFx', link: '/docs/guide/why-rspfx' },
+      { text: 'Getting Started', link: '/docs/guide/getting-started' },
+      { text: 'Demos', link: '/docs/guide/demos' },
+      { text: 'Overview', link: '/docs/guide/index' },
     ],
   },
   {
-    text: 'Guide',
+    text: 'Guides',
     collapsed: false,
     items: [
-      { text: 'Command Reference', link: '/docs/commands' },
-      { text: 'Project Structure', link: '/docs/project-structure' },
-      { text: 'Building & Packaging', link: '/docs/building-packages' },
-      { text: 'Deployment', link: '/docs/deployment' },
-      { text: 'Teams & Outlook Install', link: '/docs/teams-outlook-install' },
-      { text: 'Multi-webpart', link: '/docs/multi-webpart' },
-      { text: 'Frameworks', link: '/docs/frameworks' },
-      { text: 'React 19', link: '/docs/react-19' },
-      { text: 'Custom Framework', link: '/docs/custom-framework' },
-      { text: 'Styling', link: '/docs/styling' },
-      { text: 'Favicon & Assets', link: '/docs/favicon-and-assets' },
-      { text: 'Fast Refresh', link: '/docs/fast-refresh' },
+      { text: 'Dev Server', link: '/docs/guide/dev/dev-server' },
+      { text: 'Deployment', link: '/docs/guide/deployment-guide' },
+      { text: 'Styling', link: '/docs/guide/styling/styling' },
+      { text: 'Fast Refresh', link: '/docs/guide/styling/fast-refresh' },
+      { text: 'Favicon & Assets', link: '/docs/guide/project-setup/favicon-and-assets' },
+      { text: 'Multi-webpart', link: '/docs/guide/project-setup/multi-webpart' },
+      { text: 'Teams & Outlook', link: '/docs/guide/project-setup/teams-outlook-install' },
+    ],
+  },
+  {
+    text: 'Frameworks',
+    collapsed: false,
+    items: [
+      { text: 'Choosing a Framework', link: '/docs/guide/frameworks/choosing-a-framework' },
+      { text: 'React 19', link: '/docs/guide/frameworks/react-19' },
+      { text: 'Custom Framework', link: '/docs/guide/frameworks/custom-framework-guide' },
     ],
   },
   {
     text: 'Migration',
-    collapsed: true,
+    collapsed: false,
     items: [
-      { text: 'Migrating from SPFx', link: '/docs/migration-from-spfx' },
-      { text: 'Migrating off gulp + Heft', link: '/docs/migrating-from-gulp-heft' },
-      { text: 'Case Study — PnP Modern Search', link: '/docs/migration-case-study' },
-      { text: 'Hybrid Dev Mode', link: '/docs/hybrid-dev' },
-      { text: 'Upgrading SPFx Version', link: '/docs/upgrading-spfx-version' },
+      { text: 'Overview', link: '/docs/guide/migration/overview' },
+      { text: 'From SPFx', link: '/docs/guide/migration/migration-from-spfx' },
+      { text: 'Off gulp + Heft', link: '/docs/guide/migration/migrating-from-gulp-heft' },
+      { text: 'Case Study', link: '/docs/guide/migration/migration-case-study' },
+      { text: 'Hybrid Dev', link: '/docs/guide/migration/hybrid-dev' },
+      { text: 'Upgrading SPFx Version', link: '/docs/guide/migration/upgrading-spfx-version' },
+      { text: 'Why Not Migrate', link: '/docs/guide/migration/why-not-to-migrate' },
     ],
   },
+] as const
+
+// Reference — exhaustive technical lookup (imports, types, flags, exact behavior)
+const referenceSidebar = [
   {
     text: 'Reference',
     collapsed: false,
     items: [
-      { text: 'Architecture', link: '/docs/architecture' },
-      { text: 'Security', link: '/docs/security' },
-      { text: 'Internal API', link: '/docs/internal-api' },
-      { text: 'Compatibility', link: '/docs/compatibility' },
-      { text: 'Performance', link: '/docs/performance' },
-      { text: 'Roadmap', link: '/docs/roadmap' },
-      { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
-      { text: 'Roadblocks', link: '/docs/roadblocks' },
+      { text: 'Overview', link: '/docs/reference/' },
+      { text: 'Architecture', link: '/docs/reference/architecture' },
+      { text: 'Commands & CLI', link: '/docs/reference/commands' },
+      { text: 'Project Structure', link: '/docs/reference/project-structure' },
+      { text: 'Building & Packaging', link: '/docs/reference/building-packages' },
+      { text: 'Deployment', link: '/docs/reference/deployment-reference' },
+      { text: 'Compatibility', link: '/docs/reference/compatibility' },
+      { text: 'Security', link: '/docs/reference/security' },
+      { text: 'Internal API', link: '/docs/reference/internal-api' },
+      { text: 'Performance', link: '/docs/reference/performance' },
+      { text: 'Roadmap', link: '/docs/reference/roadmap' },
+      { text: 'Roadblocks', link: '/docs/reference/roadblocks' },
+    ],
+  },
+  {
+    text: 'API Details',
+    collapsed: true,
+    items: [
+      { text: 'Frameworks', link: '/docs/reference/frameworks-reference' },
+      { text: 'Styling', link: '/docs/reference/styling-reference' },
+      { text: 'React 19', link: '/docs/reference/react-19-reference' },
+      { text: 'Custom Framework', link: '/docs/reference/custom-framework-reference' },
+      { text: 'Extending Runtime', link: '/docs/reference/extending-runtime' },
     ],
   },
 ] as const
+
+// Legacy flat sidebar for backward compat — keeps old /docs/* URLs in search/nav
+const docsSidebar = [...guideSidebar, ...referenceSidebar] as const
 
 export default defineConfig({
   title: 'RSPFx',
@@ -73,6 +101,14 @@ export default defineConfig({
   ignoreDeadLinks: true,
   appearance: true,
   srcDir: '.',
+  // Hide internal/private docs from VitePress routes, search, and build.
+  srcExclude: [
+    'docs/AGENTS.md',
+    'docs/plan-0.1.0/**',
+    'docs/plans/**',
+    'docs/real-tenant-validation.md',
+    'docs/supporting-a-new-spfx-version.md',
+  ],
   outDir: './.vitepress/dist',
   // Publish raw markdown alongside HTML so LLMs / curl can fetch e.g. /docs/why-rspfx.md,
   // /markdown/docs/*.md (legacy alias) and /md/docs/*.md (token-efficient same-origin alias).
@@ -111,12 +147,20 @@ export default defineConfig({
 
     walk(srcDir)
 
+    const isHiddenDoc = (rel: string) =>
+      rel === 'docs/AGENTS.md' ||
+      rel.startsWith('docs/plan-0.1.0/') ||
+      rel.startsWith('docs/plans/') ||
+      rel === 'docs/real-tenant-validation.md' ||
+      rel === 'docs/supporting-a-new-spfx-version.md'
+
     let count = 0
     for (const src of mdFiles) {
       const rel = relative(srcDir, src)
       // Disabled pages (llm.md / llms.md / any llm* prefix) must NOT be published
       // as raw markdown — mirrors transformPageData disabling copyMarkdown.
       if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
+      if (isHiddenDoc(rel)) continue
       // Primary: same path as route + .md  (e.g. docs/why-rspfx.md -> dist/docs/why-rspfx.md)
       // Alias:   /markdown/<rel>            (e.g. docs/why-rspfx.md -> dist/markdown/docs/why-rspfx.md)
       // New:    /md/<rel>                  (e.g. docs/why-rspfx.md -> dist/md/docs/why-rspfx.md)
@@ -138,6 +182,7 @@ export default defineConfig({
       for (const src of mdFiles) {
         const rel = relative(srcDir, src)
         if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
+        if (isHiddenDoc(rel)) continue
         const noExt = rel.replace(/\.md$/, '')
         const from = `/md/${noExt}`
         const to = `/md/${rel}`
@@ -188,7 +233,14 @@ export default defineConfig({
   sitemap: {
     hostname: 'https://rspfx.mbsks.me',
     transformItems: (items) =>
-      items.filter((i) => !i.url.includes('real-tenant-validation') && !i.url.includes('supporting-a-new-spfx-version')),
+      items.filter(
+        (i) =>
+          !i.url.includes('real-tenant-validation') &&
+          !i.url.includes('supporting-a-new-spfx-version') &&
+          !i.url.includes('AGENTS') &&
+          !i.url.includes('plan-0.1.0') &&
+          !i.url.includes('/plans/'),
+      ),
   },
   head: [
     ['link', { rel: 'alternate', type: 'text/plain', href: '/llm.txt', title: 'LLM index (plain text)' }],
@@ -221,13 +273,15 @@ export default defineConfig({
     // Component checks: frontmatter.copyMarkdown ?? theme.copyMarkdown ?? true
     copyMarkdown: true as unknown as boolean,
     nav: [
-      { text: 'Docs', link: '/docs/getting-started' },
-      { text: 'Guide', link: '/docs/commands' },
-      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
+      { text: 'Guide', link: '/docs/guide/getting-started' },
+      { text: 'Reference', link: '/docs/reference/' },
+      { text: 'Why RSPFx', link: '/docs/guide/why-rspfx' },
     ],
     sidebar: {
       '/llms': docsSidebar as any,
       '/llm': docsSidebar as any,
+      '/docs/guide/': guideSidebar as any,
+      '/docs/reference/': referenceSidebar as any,
       '/docs/': docsSidebar as any,
     },
     socialLinks: [
@@ -318,7 +372,13 @@ export default defineConfig({
                 return
               }
               const isDisabled = (r: string) => r === 'llm.md' || r === 'llms.md' || r.startsWith('llm')
-              if (isDisabled(rel) || isDisabled(rel + '.md')) {
+              const isHidden = (r: string) =>
+                r === 'docs/AGENTS.md' ||
+                r.startsWith('docs/plan-0.1.0/') ||
+                r.startsWith('docs/plans/') ||
+                r === 'docs/real-tenant-validation.md' ||
+                r === 'docs/supporting-a-new-spfx-version.md'
+              if (isDisabled(rel) || isDisabled(rel + '.md') || isHidden(rel) || isHidden(rel + '.md')) {
                 res.statusCode = 404
                 res.setHeader('Content-Type', 'text/plain; charset=utf-8')
                 res.end('Not found')
@@ -339,7 +399,7 @@ export default defineConfig({
                 const resolved = resolve(cand)
                 if (!resolved.startsWith(srcDirAbs)) continue
                 const candRel = relative(srcDirAbs, resolved)
-                if (isDisabled(candRel)) {
+                if (isDisabled(candRel) || isHidden(candRel)) {
                   res.statusCode = 404
                   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
                   res.end('Not found')
