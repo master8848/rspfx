@@ -15,6 +15,7 @@ const guideSidebar = [
     items: [
       { text: 'Why RSPFx', link: '/docs/guide/why-rspfx' },
       { text: 'Getting Started', link: '/docs/guide/getting-started' },
+      { text: 'Try in Existing Project', link: '/docs/guide/try-mode' },
       { text: 'Demos', link: '/docs/guide/demos' },
       { text: 'Overview', link: '/docs/guide/index' },
     ],
@@ -46,6 +47,7 @@ const guideSidebar = [
     collapsed: false,
     items: [
       { text: 'Overview', link: '/docs/guide/migration/overview' },
+      { text: 'Try Mode', link: '/docs/guide/try-mode' },
       { text: 'From SPFx', link: '/docs/guide/migration/migration-from-spfx' },
       { text: 'Off gulp + Heft', link: '/docs/guide/migration/migrating-from-gulp-heft' },
       { text: 'Case Study', link: '/docs/guide/migration/migration-case-study' },

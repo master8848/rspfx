@@ -57,7 +57,7 @@ rspfx new my-app --framework react --spfx-version 1.22 --yes  # CI
 
 `rspfx new` is a convenience wrapper that does the same (writes `vite.config.ts` + manifests). Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
 
-For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
+For existing Heft/Gulp projects, try without migrating: one file `vite.config.ts` with `devTryMode: true` and two installs. See [try-mode.md](try-mode.md). To preview a full switch, run `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
 
 ## 3. Dev server on :4321
 

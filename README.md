@@ -32,16 +32,18 @@ cd my-app
 rspfx dev
 ```
 
-**Existing SPFx project (Heft/Gulp):**
+**Existing SPFx project (Heft/Gulp) — try without migrating (recommended):**
+
+One file `vite.config.ts` with `devTryMode: true` and two dev deps. Keep `gulp serve` for production.
 
 ```sh
-npm i -g @mbsks/rspfx-cli   # or pnpm add -g / yarn global add / bun add -g / deno install -g
 cd my-existing-spfx-app
-rspfx migrate --dry-run   # preview
-rspfx migrate             # apply
-bun install      # or pnpm install / npm install / yarn / deno install
-rspfx dev
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli   # or pnpm add -D / yarn add -D / bun add -D / deno add -D
+# add vite.config.ts — see docs at https://rspfx.mbsks.me/docs/guide/try-mode
+rspfx dev        # http://localhost:4321 — gulp/heft stay, delete vite.config.ts to revert
 ```
+
+Full migrate when ready: `rspfx migrate --dry-run` → `rspfx migrate` → `bun install` → `rspfx dev`.
 
 Requires Node 20+.
 
@@ -57,7 +59,7 @@ Installs `skills/rspfx/SKILL.md` — the agent guide for building SPFx with RSPF
 
 Copy-paste to your agent:
 
-> Use RSPFx from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read `skills/rspfx/SKILL.md` and `docs/` in that repo (or https://rspfx.mbsks.me) for all toolchain details. Scaffold with Vite by default (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest` then add `@mbsks/rspfx-plugin` `rspfxVite()`), or use any starter the user prefers (better-t-stack, Rsbuild, Rspack, TanStack Router, etc.) — RSPFx is just a plugin (`rspfxVite`/`rspfxRsbuild`/`RSpfxPlugin`). Use `rspfx new` only as a shortcut. Check `ARCHITECTURE.md` and `packages/*/src` if docs lag — code is truth. Do not use webpack/Heft/gulp.
+> Use RSPFx from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read `skills/rspfx/SKILL.md` and `docs/` in that repo (or https://rspfx.mbsks.me) for all toolchain details. Scaffold with Vite by default (`npm create vite@latest -- --template react-ts` / `pnpm create vite@latest` / `yarn create vite@latest` / `bun create vite@latest` / `deno run -A npm:create-vite@latest` then add `@mbsks/rspfx-plugin` `rspfxVite()`), or use any starter the user prefers (better-t-stack, Rsbuild, Rspack, TanStack Router, etc.) — RSPFx is just a plugin (`rspfxVite`/`rspfxRsbuild`/`RSpfxPlugin`). Use `rspfx new` only as a shortcut. For existing Heft/gulp projects try without migrating: one file `vite.config.ts` with `devTryMode: true` + `tryComponents: [{ name: 'hello-world' }]` and two installs `npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli` then `rspfx dev` — see `docs/guide/try-mode.md`. Check `ARCHITECTURE.md` and `packages/*/src` if docs lag — code is truth. Do not use webpack/Heft/gulp.
 
 ## Docs
 

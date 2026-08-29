@@ -62,7 +62,9 @@ rspfx new my-app
 rspfx new my-app --framework react --spfx-version 1.22 --yes
 ```
 
-For existing Heft and gulp projects, run `rspfx migrate --dry-run` to preview changes. See [Migration from SPFx](./migration/migration-from-spfx.md).
+For existing Heft and gulp projects, add one file with `devTryMode: true` and install two packages to try dev without migrating. See [Try mode](./try-mode.md).
+
+To migrate fully, run `rspfx migrate --dry-run` to preview changes. See [Migration from SPFx](./migration/migration-from-spfx.md).
 
 ## Step 3: Run the dev server
 

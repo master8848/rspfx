@@ -1,6 +1,6 @@
 # Migration overview
 
-TL;DR: You can try RSPFx with no changes, migrate with one command, or stay on the official toolchain. This guide helps you pick the path.
+TL;DR: You can try RSPFx with one file and two installs, migrate with one command, or stay on the official toolchain. This guide helps you pick the path.
 
 RSPFx reads the same `config/` and `src/` files as Heft and gulp. You can switch with little risk and revert when needed.
 
@@ -8,17 +8,18 @@ RSPFx reads the same `config/` and `src/` files as Heft and gulp. You can switch
 
 | Path | What you do | When to use |
 |---|---|---|
-| Hybrid dev | run `rspfx dev` only | you want to try without changing files |
+| Try mode (recommended) | add `vite.config.ts` with `devTryMode: true` + two installs | you want to try in an existing project without switching |
+| Hybrid dev | run `rspfx dev` with no config | you want zero-file trial (experimental) |
 | Full migrate | run `rspfx migrate` | you want to move builds to RSPFx |
 | Stay official | keep gulp and Heft | you have blockers or want to wait |
 
 All paths keep your `src/` code and `sharepoint/` assets intact.
 
-## Try without migrating
+## Try in an existing project (recommended)
 
-Run `rspfx dev` inside an official SPFx project. Do not add a bundler config. RSPFx synthesizes config from manifests and serves on `https://localhost:4321`.
+Add one file and two dev dependencies. Run `rspfx dev` alongside gulp. Production stays on gulp and Heft.
 
-This mode changes no files and installs no deps. It is the lowest risk trial. See [Hybrid dev](./hybrid-dev.md).
+This is the pushed way to try RSPFx in existing projects. See [Try mode](../try-mode.md).
 
 ## Migrate an existing project
 

@@ -1,123 +1,89 @@
-# Migrating off gulp + Heft to RSPFx
+# Migrating from gulp and Heft
 
-Definitive guide for moving an existing SPFx project from the official toolchain (gulp/Heft, webpack, `@microsoft/spfx-web-build-rig`) to RSPFx. See Microsoft docs: [SharePoint Framework toolchain](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/toolchain/sharepoint-framework-toolchain) and [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview).
+TL;DR: Move an existing SPFx project by dropping gulp and Heft files, rewriting entrypoints, and adding a bundler config. Run `rspfx migrate` to automate it. To try without migrating, see [Try mode](../try-mode.md).
 
-Based on the real migration of [PnP Modern Search](../examples/modern-search) — see [migration-case-study.md](migration-case-study.md) for the full play-by-play.
+This is the definitive guide. See [Migration case study](./migration-case-study.md) for a real example.
 
-> Read [why-not-to-migrate.md](why-not-to-migrate.md) first.
+Read [Why not to migrate](./why-not-to-migrate.md) first if you are unsure. For a zero-risk trial that keeps gulp and Heft, start with [Try mode](../try-mode.md).
 
-Not every project should move.
-
-Web parts with React/Vanilla and standard `config/` layout are a good fit; custom gulp pipelines or SPFx 2019/on-prem are not.
-
-## What carries over
+## What you keep
 
 | Item | Status |
 |---|---|
-| `src/webparts/<name>/` — web part classes, `*.manifest.json`, components, styles | Unchanged |
-| `config/package-solution.json` | Read directly (`id`, `version`, `features`, `includeClientSideAssets`, `webApiPermissionRequests`, `paths.zippedPackage`) |
-| `config/serve.json` | Read directly (`initialPage` with `{tenantdomain}`, `https`, `port`, `hostname`) |
-| `config/config.json` | `bundles`, `externals`, `localizedResources` honored — entrypoint paths rewritten from `./lib/` to `./src/` |
-| `config/write-manifests.json` | `cdnBasePath` used for release base URLs |
-| `sharepoint/` assets | Unchanged |
-| `@microsoft/sp-*` dependencies | Externalized — keep only if your code imports that runtime (e.g. `@microsoft/sp-http`) |
-| Localized strings (`import strings from 'XxxWebPartStrings'`) | Resolved from `localizedResources` (default `en-us`) |
-| Lazy `import()` chunks, `*.module.scss`, HTML imports, `require('*.json')` | Supported |
+| `src/webparts/<name>/` | unchanged |
+| `config/package-solution.json` | read directly |
+| `config/serve.json` | read directly |
+| `config/config.json` | honored - entrypoints rewritten from `./lib/` to `./src/` |
+| `config/write-manifests.json` | `cdnBasePath` honored |
+| `sharepoint/` assets | unchanged |
+| `@microsoft/sp-*` | externalized - keep only if you import that runtime |
+| Localized strings | resolved via `localizedResources` |
+| Lazy `import()` chunks, SCSS modules, HTML, JSON | supported |
 
-## Same manifest for Heft/Gulp and RSPFx
+## Shared manifests for both toolchains
 
-`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work unchanged for Heft/Gulp and RSPFx.
-
-You can keep Heft for production and use RSPFx for dev — `rspfx dev` synthesizes config from manifests.
-
-See [hybrid-dev.md](hybrid-dev.md).
+`config/config.json`, `config/package-solution.json`, and `src/*/*.manifest.json` work for Heft and RSPFx. You can keep Heft for prod and use `rspfx dev` for dev before you migrate. See [Hybrid dev](./hybrid-dev.md).
 
 ## Automated path
 
 Preview, then apply:
 
 ```sh
-rspfx migrate --dry-run   # preview — no writes
-rspfx migrate             # rewrites configs, writes bundler config, backs up to .rspfx/migrate-backup.json
-bun install      # or pnpm install / npm install / yarn — toolchain deps drop out, @mbsks/rspfx-plugin added
-rspfx dev                 # verify workbench at https://localhost:4321
-rspfx package             # → sharepoint/solution/<name>.sppkg
+rspfx migrate --dry-run
+rspfx migrate
+bun install
+rspfx dev
+rspfx package
 ```
 
-`rspfx migrate` writes `vite.config.ts` by default.
+`rspfx migrate` writes `vite.config.ts` by default. Use `--bundler rspack` or `--bundler rsbuild` for those files.
 
-Use `--bundler rspack` or `--bundler rsbuild` to scaffold `rspack.config.ts` / `rsbuild.config.ts` instead.
+After migrate, `bun run build` and `rspfx build` run the chosen bundler. Dry run touches no files. The command backs up to `.rspfx/migrate-backup.json`.
 
-After migrate, `bun run build` (or `pnpm build` / `npm run build` / `yarn build`) and `rspfx build` run the chosen bundler internally — no extra setup.
-
-> **Tip:** Commit or stash before migrating so `git diff` shows exact changes.
-
-No `src/` files are touched except the two documented rewrites (entrypoints and `pkg:` SCSS).
-
-Dry-run is free — run it even if you plan a manual migration.
-
-### Reverting
+### Revert
 
 ```sh
-rspfx migrate --revert    # restores from .rspfx/migrate-backup.json
+rspfx migrate --revert
 ```
 
-Or with a clean branch:
+Or:
 
 ```sh
 git restore .
 git clean -fd .rspfx
-bun install      # or pnpm install / npm install / yarn
+bun install
 ```
 
-Both restore the Heft/Gulp toolchain.
+Delete the generated `vite.config.ts`, `rspack.config.ts`, or `rsbuild.config.ts` if present.
 
-Delete the generated `vite.config.ts` / `rspack.config.ts` / `rsbuild.config.ts` if present.
+## What gets removed
 
-> **Tip:** `--dry-run` shows what would change for custom layouts without writing.
-
-`--revert` is the undo for the automated path — prefer `git restore` if you committed first.
-
-## What is removed
-
-- `gulpfile.js` and Heft rig — `gulp serve`, `heft test`, `heft clean`, `heft package-solution` are gone (restored by revert).
-- Toolchain devDependencies — `@rushstack/heft`, `@microsoft/spfx-heft-plugins`, `@microsoft/spfx-web-build-rig`, `@microsoft/rush-stack-compiler-*`, `@microsoft/sp-build-web`, `gulp`, `webpack`, loaders, polyfills, rig eslint configs, `@types/webpack-env`.
-- Heft-only configs — `config/rig.json`, `config/typescript.json`, `config/sass.json`, `config/deploy-azure-storage.json`, `config/spfx-customize-webpack.js`.
-- Heft scripts — `start`, `eject-webpack` (replaced by `rspfx dev`).
+- `gulpfile.js` and Heft rig - `gulp serve`, `heft test`, `heft clean` go away.
+- Toolchain dev deps - `heft`, `spfx-heft-plugins`, `spfx-web-build-rig`, `rush-stack-compiler-*`, `sp-build-web`, `gulp`, `webpack`, loaders.
+- Heft configs - `config/rig.json`, `config/typescript.json`, `config/sass.json`, `config/deploy-azure-storage.json`, `config/spfx-customize-webpack.js`.
+- Heft scripts - `start`, `eject-webpack`.
 
 ## What `rspfx migrate` does
 
-Idempotent, never installs, backs up to `.rspfx/migrate-backup.json`.
+The command is idempotent. It never installs.
 
-1. `package.json` — drops toolchain devDependencies, adds `rspfx` scripts (`dev`, `build`, `package`, `analyze`, `doctor`, `clean`), relaxes `engines.node` to `>=20`, adds `@mbsks/rspfx-plugin`.
+1. `package.json` - drops toolchain dev deps, adds `rspfx` scripts, relaxes `engines.node` to `>=20`, adds `@mbsks/rspfx-plugin`.
+2. `config/config.json` - rewrites entrypoints `./lib/webparts/<name>/<Name>WebPart.js` to `./src/webparts/<name>/<Name>WebPart.ts` and renames bundle keys to folder names.
+3. SCSS - rewrites `@import 'pkg:<pkg>/<path>'` to a relative `node_modules` path.
+4. Deletes Heft only config files.
+5. Writes bundler config and a plain `tsconfig.json` if the old one extended a rig.
 
-2. `config/config.json` — rewrites entrypoints `./lib/webparts/<name>/<Name>WebPart.js` → `./src/webparts/<name>/<Name>WebPart.ts`, renames bundle keys to match web part folder names (default layout requires bundle name == `src/webparts/<name>` folder; decouple via `paths` if needed).
+<Steps>
 
-3. SCSS — rewrites `@import 'pkg:<pkg>/<path>'` (sass-loader ≥16.5 syntax) to a relative `node_modules` path.
+## Manual checklist when you skip `rspfx migrate`
 
-4. Deletes Heft-only config files listed above.
+### Step 1: Prune deps
 
-5. Writes bundler config (`vite.config.ts` with `rspfxVite`, or `rspack.config.ts` / `rsbuild.config.ts`) and a plain `tsconfig.json` if the old one extended a rig.
+Keep runtime deps. Keep `@microsoft/sp-*` only if you import that runtime. Remove Heft, webpack, and gulp packages and their `resolutions` or `overrides`.
 
-## Manual checklist
+### Step 2: Add bundler config
 
-Only needed if you skip `rspfx migrate`.
-
-Prefer `rspfx migrate --dry-run` first — it shows what would change even for custom layouts.
-
-### 1. Prune dependencies
-
-Keep runtime deps (framework, Fluent UI, PnPjs).
-
-Keep `@microsoft/sp-*` only if your code imports that runtime.
-
-Remove Heft/webpack/gulp packages and toolchain `resolutions`/`overrides` that pinned them — keep security overrides for runtime deps.
-
-### 2. Add bundler config (optional)
-
-Zero-config works for standard layouts — `rspfx dev` and `rspfx build` synthesize config from manifests.
-
-For explicit control (Vite default):
+Zero config works for standard layouts. For explicit control with Vite:
 
 ```ts
 import { rspfxVite } from '@mbsks/rspfx-plugin';
@@ -125,21 +91,19 @@ export default {
   plugins: [
     rspfxVite({
       name: 'my-app',
-      framework: 'react',      // vanilla | react | solid | preact | vue | svelte
-      spfxVersion: '1.22',     // 1.20 | 1.21 | 1.22 | 1.23 | 1.24
+      framework: 'react',
+      spfxVersion: '1.22',
       dev: { tenantUrl: 'https://contoso.sharepoint.com' }
     })
   ]
 };
 ```
 
-For Rspack/Rsbuild use `RspfxPlugin` / `rspfxRsbuild` — see [commands.md](commands.md).
+For Rspack or Rsbuild use `RspfxPlugin` or `rspfxRsbuild`. See [../../reference/commands.md](../../reference/commands.md).
 
-`@mbsks/rspfx-plugin` is a devDependency; its core has no dependencies.
+### Step 3: Rewrite entrypoints
 
-### 3. Rewrite entrypoints
-
-Official projects point at Heft output; RSPFx compiles source directly:
+Change Heft output paths to source paths:
 
 ```jsonc
 // before
@@ -148,96 +112,66 @@ Official projects point at Heft output; RSPFx compiles source directly:
 "entrypoint": "./src/webparts/searchResults/SearchResultsWebPart.ts"
 ```
 
-Bundle key must equal the web part folder in the default layout.
+Bundle key must equal the web part folder in default layout. That key becomes `loaderConfig.entryModuleId`.
 
-That key becomes `loaderConfig.entryModuleId` — see [project-structure.md](project-structure.md).
-
-For custom layouts set `paths.webpartsDir` / `paths.configDir` and the bundle key is authoritative.
-
-### 4. Delete Heft-only files
+### Step 4: Delete Heft only files
 
 Remove `config/rig.json`, `config/typescript.json`, `config/sass.json`, `config/deploy-azure-storage.json`, `config/spfx-customize-webpack.js`, and `gulpfile.js` if present.
 
-If `spfx-customize-webpack.js` had custom aliases, check if still needed — most Rspack resolves are automatic.
+### Step 5: Fix `pkg:` SCSS imports
 
-### 5. Fix `pkg:` SCSS imports
-
-`sass-loader` <16.5 does not understand `@import 'pkg:@fluentui/...'`.
-
-Rewrite to:
+Rewrite:
 
 ```scss
 @import '../../../node_modules/@fluentui/react/dist/sass/References.scss';
 ```
 
-### 6. Verify
+### Step 6: Verify
+
+Run:
 
 ```sh
 rspfx doctor
-rspfx dev    # workbench at https://localhost:4321 — check each web part, property panes, console
+rspfx dev
 ```
 
-Bundle 404s usually mean a bundle-name mismatch (step 3).
+Bundle 404s often mean a bundle name mismatch from step 3.
 
-### 7. Package
+### Step 7: Package
+
+Run:
 
 ```sh
-rspfx package   # → sharepoint/solution/<name>.sppkg
+rspfx package
 ```
 
-Verify the `.sppkg` contains `AppManifest.xml` and `ClientSideAssets/` when `includeClientSideAssets` is true.
+Check the `.sppkg` has `AppManifest.xml` and `ClientSideAssets/` when `includeClientSideAssets` is true. See [../../reference/architecture.md](../../reference/architecture.md).
 
-See [building-packages.md](building-packages.md) for output details and [reference/FORMATS.md](../reference/FORMATS.md) for ZIP layout.
+### Step 8: Migrate CI
 
-### 8. Migrate CI
+Update CI to:
 
 ```yaml
-- run: bun install --frozen-lockfile   # or pnpm install --frozen-lockfile / npm ci / yarn --frozen-lockfile
+- run: bun install --frozen-lockfile
 - run: rspfx doctor
 - run: rspfx package
 - upload: sharepoint/solution/*.sppkg
 ```
 
-## Troubleshooting
+</Steps>
+
+## Troubleshoot
 
 | Symptom | Fix |
 |---|---|
-| `entrypoint not found` | `config.json` still points at `./lib/...` — rewrite to `./src/...` |
-| `Can't resolve 'XxxWebPartStrings'` | `localizedResources` missing or pattern not `lib/.../{locale}.js` |
-| Manifest references missing `<bundle>.js` | Bundle name ≠ folder name — rename key or set `paths` |
-| `@import 'pkg:…'` fails | Rewrite as in step 5 |
-| `Module parse failed` on `.html` | Rebuild CLI — HTML handled as `asset/source` |
-| Type errors on `*.module.scss` | RSPFx uses swc (no typecheck); add `declare module '*.module.scss'` for IDE |
-| `engines` warnings | Relax `engines.node` to `>=20` |
+| `entrypoint not found` | rewrite `config.json` from `./lib/...` to `./src/...` |
+| `Can't resolve XxxWebPartStrings` | check `localizedResources` |
+| Manifest missing `<bundle>.js` | bundle name must equal folder name or set `paths` |
+| `@import 'pkg:…'` fails | rewrite as in step 5 |
+| Type errors on `*.module.scss` | add `declare module '*.module.scss'` |
 
 ## After migration
 
-Migrate keeps the detected `spfxVersion`.
+Migrate keeps the detected `spfxVersion`. To change it, edit `spfxVersion: '1.24'` and run `bun update @mbsks/rspfx-plugin`.
 
-To change target (e.g. `1.22` → `1.24`), edit one field and update:
-
-```sh
-# in vite.config.ts / rspack.config.ts / rsbuild.config.ts
-# spfxVersion: '1.24'
-bun update @mbsks/rspfx-plugin   # or pnpm update / npm update / yarn upgrade
-```
-
-See [upgrading-spfx-version.md](upgrading-spfx-version.md) and [compatibility.md](compatibility.md).
-
-Full matrix: [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix).
-
-## Comparison vs official
-
-| Task | Official SPFx | RSPFx |
-|---|---|---|
-| Dev | `gulp serve` / `heft start --clean` | `rspfx dev` (workbench at `https://localhost:4321`, local preview at `http://localhost:4321`) |
-| Hot reload | `spfx-fast-serve` | `rspfx dev --refresh` |
-| Build | `gulp bundle --ship` | `rspfx build` (or `bun` / `pnpm` / `npm` / `yarn` `run build` — zero-config) |
-| Package | `gulp package-solution --ship` | `rspfx package` |
-| Upload | manual / Azure storage script | `rspfx deploy` |
-| Bundle report | `webpack-bundle-analyzer` | `rspfx analyze` |
-| Clean | `gulp clean` | `rspfx clean` |
-| Preflight | — | `rspfx doctor` |
-| Revert | — | `rspfx migrate --revert` or `git restore` |
-
-See [building-packages.md](building-packages.md) for outputs and [migration-case-study.md](migration-case-study.md) for a real 42k-line migration (~2 hours including fixes).
+See [Upgrading SPFx version](./upgrading-spfx-version.md) and [../../reference/compatibility.md](../../reference/compatibility.md).

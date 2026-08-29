@@ -1,10 +1,10 @@
 # Migrating from gulp and Heft
 
-TL;DR: Move an existing SPFx project by dropping gulp and Heft files, rewriting entrypoints, and adding a bundler config. Run `rspfx migrate` to automate it.
+TL;DR: Move an existing SPFx project by dropping gulp and Heft files, rewriting entrypoints, and adding a bundler config. Run `rspfx migrate` to automate it. To try without migrating, see [Try mode](../try-mode.md).
 
 This is the definitive guide. See [Migration case study](./migration-case-study.md) for a real example.
 
-Read [Why not to migrate](./why-not-to-migrate.md) first if you are unsure.
+Read [Why not to migrate](./why-not-to-migrate.md) first if you are unsure. For a zero-risk trial that keeps gulp and Heft, start with [Try mode](../try-mode.md).
 
 ## What you keep
 
