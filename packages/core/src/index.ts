@@ -1,4 +1,4 @@
-export { configDefaults, defineConfig, parseRSPFXConfig, resolveConfig, resolvePathDefaults, RspfxConfigSchema, tryResolveConfig } from './config.js';
+export { configDefaults, defineConfig, parseRSPFXConfig, resolveConfig, resolvePathDefaults, RspfxConfigSchema, tryResolveConfig, TryComponentSchema, TryComponentsSchema } from './config.js';
 export type {
   BuildConfig,
   DeployConfig,
@@ -9,7 +9,8 @@ export type {
   PathsConfig,
   Result,
   RspfxConfig,
-  TeamsConfig
+  TeamsConfig,
+  TryComponent
 } from './config.js';
 export type { ComponentId, CultureName, Lcid, PlatformPrefix, ZipPath } from './newtypes.js';
 export {

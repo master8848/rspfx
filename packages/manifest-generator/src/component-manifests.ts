@@ -90,7 +90,134 @@ function findNonSpExternalManifest(
   return undefined;
 }
 
+function toPascalSynthetic(name: string): string {
+  return name
+    .split(/[-_]/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+function buildScriptResources(
+  ctx: ManifestContext,
+  spDependencies: Map<string, { id: string; version: string; manifestPath: string }>,
+  entryModuleId: string
+): Record<string, unknown> {
+  const scriptResources: Record<string, unknown> = {
+    [entryModuleId]: {
+      type: 'path',
+      path: ctx.bundleFiles.get(entryModuleId) ?? `${entryModuleId}.js`
+    }
+  };
+  const localizedNames = new Set((ctx.localizedResources ?? []).map((resource) => resource.name));
+  const externalNames = [...ctx.externals]
+    .filter((name) => name !== entryModuleId && !localizedNames.has(name))
+    .sort();
+  for (const externalName of externalNames) {
+    const spDependency = spDependencies.get(externalName);
+    if (spDependency) {
+      scriptResources[externalName] = {
+        type: 'component',
+        id: spDependency.id,
+        version: spDependency.version
+      };
+      continue;
+    }
+    const nonSpDependency = findNonSpExternalManifest(ctx.projectRoot, externalName);
+    if (!nonSpDependency) {
+      const mergedIds = getMergedComponentIds();
+      const fallback = (mergedIds as Record<string, { id: string; version: string }>)[externalName];
+      if (fallback) {
+        scriptResources[externalName] = {
+          type: 'component',
+          id: fallback.id,
+          version: fallback.version
+        };
+        continue;
+      }
+      throw new RspfxError(
+        'UNRESOLVED_EXTERNAL',
+        `External '${externalName}' could not be resolved to a component manifest (expected a .manifest.json under node_modules/${externalName}/dist)`
+      );
+    }
+    scriptResources[externalName] = {
+      type: 'component',
+      id: nonSpDependency.id,
+      version: nonSpDependency.version
+    };
+  }
+  for (const resource of ctx.localizedResources ?? []) {
+    const paths: Record<string, { path: string; integrity: string }> = {};
+    const defaultLocale =
+      resource.locales.find((locale) => locale.toLowerCase() === 'en-us') ?? resource.locales[0];
+    if (defaultLocale !== undefined) {
+      paths['default'] = { path: `${resource.name}_${defaultLocale.toLowerCase()}.js`, integrity: '' };
+    }
+    for (const locale of resource.locales) {
+      const normalized = locale.toLowerCase();
+      paths[normalized] = { path: `${resource.name}_${normalized}.js`, integrity: '' };
+    }
+    scriptResources[resource.name] = { type: 'localizedPath', paths };
+  }
+  return scriptResources;
+}
+
+function generateSyntheticManifests(
+  ctx: ManifestContext,
+  spDependencies: Map<string, { id: string; version: string; manifestPath: string }>
+): ComponentManifest[] {
+  const manifests: ComponentManifest[] = [];
+  if (!ctx.syntheticManifests || ctx.syntheticManifests.length === 0) return manifests;
+  for (const meta of ctx.syntheticManifests) {
+    const pascal = toPascalSynthetic(meta.bundleName);
+    const title = meta.title ?? pascal;
+    const description = meta.description ?? `${meta.bundleName} web part`;
+    const iconName = meta.iconName ?? 'Page';
+    const source: Record<string, unknown> = {
+      $schema: 'https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json',
+      id: meta.id,
+      alias: `${pascal}WebPart`,
+      componentType: 'WebPart',
+      version: '*',
+      manifestVersion: 2,
+      safeWithCustomScriptDisabled: true,
+      supportedHosts: ['SharePointWebPart', 'TeamsPersonalApp', 'TeamsTab', 'SharePointFullPage'],
+      preconfiguredEntries: [
+        {
+          groupId: '5c31a052-22b4-4f36-8f7d-4b4d8c7c2e7a',
+          group: { default: 'Other' },
+          title: { default: title },
+          description: { default: description },
+          officeFabricIconFontName: iconName,
+          properties: { description: meta.bundleName }
+        }
+      ]
+    };
+    if (source.version === '*') {
+      source.version = stripPreReleaseVersion(ctx.packageVersion);
+    }
+    const entryModuleId = ctx.entryModuleIds?.[meta.id] ?? meta.bundleName;
+    source.loaderConfig = {
+      internalModuleBaseUrls: ctx.production ? ctx.baseUrls.release : [ctx.baseUrls.debug],
+      entryModuleId,
+      scriptResources: buildScriptResources(ctx, spDependencies, entryModuleId)
+    };
+    manifests.push(source as ComponentManifest);
+  }
+  return manifests;
+}
+
 async function generateComponentManifestsBase(ctx: ManifestContext): Promise<ComponentManifest[]> {
+  const spDependencies = findSpDependencies(ctx.projectRoot);
+  // Synthetic path: if syntheticManifests provided (try mode), generate those directly
+  // Also handles case where bundle manifestPath is "__synthetic__" via syntheticManifests
+  if (ctx.syntheticManifests && ctx.syntheticManifests.length > 0) {
+    const synthetic = generateSyntheticManifests(ctx, spDependencies);
+    // In try mode we return synthetic only; if caller also expects filesystem manifests,
+    // they can be merged — but spec says synthesize instead of scanning.
+    // Return synthetic manifests; optionally also scan if not pure try mode.
+    // For devTryMode we return only synthetic to avoid scanning stale manifests.
+    return synthetic;
+  }
   if (native?.generateComponentManifests) {
     try { return await native.generateComponentManifests(ctx); } catch {}
   }
@@ -107,7 +234,6 @@ async function generateComponentManifestsBase(ctx: ManifestContext): Promise<Com
       if (Array.isArray(res)) return res as ComponentManifest[];
     } catch {}
   }
-  const spDependencies = findSpDependencies(ctx.projectRoot);
   const manifests: ComponentManifest[] = [];
   const webpartsDir = ctx.webpartsDir?.trim() ? ctx.webpartsDir : 'src/webparts';
   const extensionsDir = ctx.extensionsDir?.trim() ? ctx.extensionsDir : 'src/extensions';

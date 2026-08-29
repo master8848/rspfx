@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import {
@@ -27,11 +27,21 @@ export interface WebPartBundle {
   manifestPath: string;
 }
 
+export interface SyntheticManifestMeta {
+  id: string;
+  bundleName: string;
+  title?: string;
+  description?: string;
+  iconName?: string;
+}
+
 export interface DiscoveredWebParts {
   entries: BundleEntry[];
   bundles: WebPartBundle[];
   manifestIds: string[];
   packageVersion: string;
+  /** Synthetic manifests for try mode — consumed by manifest-generator. */
+  syntheticManifests?: SyntheticManifestMeta[];
 }
 
 export interface ProjectConfigJson {
@@ -67,6 +77,17 @@ function toPascal(name: string): string {
     .split(/[-_]/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
+}
+
+function deterministicGuid(seed: string): string {
+  const hash = createHash('sha256').update(seed).digest('hex').slice(0, 32);
+  const uuid = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+  const chars = uuid.split('');
+  chars[14] = '4';
+  const variantPos = 19;
+  const variantVal = parseInt(chars[variantPos]!, 16);
+  chars[variantPos] = ((variantVal & 0x3) | 0x8).toString(16);
+  return chars.join('');
 }
 
 const solidPngBuffer = solidPng;
@@ -146,10 +167,7 @@ function isTeamsEnabled(rspfxConfig?: RspfxConfig): boolean {
   return false;
 }
 
-/**
- * @deprecated use explicit CLI command; readProject no longer calls this
- * Ensure project configs exists — writes config/*.json files if missing.
- */
+/** Ensure project configs exist — writes config/*.json files if missing. Used by rspfx doctor --fix. */
 export function ensureProjectConfigs(
   projectRoot: string,
   paths?: PathsConfig,
@@ -388,7 +406,7 @@ export function ensureProjectConfigs(
   }
 }
 
-/** @deprecated use explicit CLI command; readProject no longer calls this */
+/** Read project configuration — pure read, no file writes. */
 export function readProject(
   projectRoot: string,
   paths?: PathsConfig,
@@ -450,7 +468,8 @@ export function readProject(
     resolvedPaths.webpartsDir,
     { version: versionOverride ?? packageJson.version },
     resolvedPaths.extensionsDir,
-    resolvedPaths.librariesDir
+    resolvedPaths.librariesDir,
+    rspfxConfig
   );
   return {
     webParts,
@@ -460,20 +479,6 @@ export function readProject(
     localizedAliases: readLocalizedAliases(projectRoot, configJson, resolvedPaths.srcDir),
     localizedResources: readLocalizedResources(projectRoot, configJson, resolvedPaths.srcDir)
   };
-}
-
-export const readProjectPure = readProject;
-
-/** @deprecated use readProject + ensureProjectConfigs explicitly */
-export function readProjectWithEnsure(
-  projectRoot: string,
-  paths?: PathsConfig,
-  versionOverride?: string,
-  rspfxConfig?: RspfxConfig
-): ReadProjectResult {
-  const resolvedPaths = resolvePathDefaults(paths);
-  ensureProjectConfigs(projectRoot, resolvedPaths, rspfxConfig);
-  return readProject(projectRoot, paths, versionOverride, rspfxConfig);
 }
 
 /**
@@ -623,8 +628,77 @@ export function discoverWebParts(
   webpartsDir = 'src/webparts',
   packageJson?: { version?: string },
   extensionsDir = 'src/extensions',
-  librariesDir = 'src/libraries'
+  librariesDir = 'src/libraries',
+  rspfxConfig?: RspfxConfig
 ): DiscoveredWebParts {
+  // Try mode: synthesize bundles from tryComponents without scanning filesystem manifests
+  if (rspfxConfig?.devTryMode && rspfxConfig?.tryComponents && rspfxConfig.tryComponents.length > 0) {
+    if (packageJson === undefined) {
+      packageJson = {};
+      const packageJsonPath = path.join(projectRoot, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as { version?: string };
+        } catch {}
+      }
+    }
+    const packageVersion = (rspfxConfig.version ?? packageJson.version ?? '1.0.0').split('-')[0]!;
+    const bundleMap: WebPartBundle[] = [];
+    const entries: BundleEntry[] = [];
+    const manifestIds: string[] = [];
+    const syntheticManifests: SyntheticManifestMeta[] = [];
+
+    for (const comp of rspfxConfig.tryComponents) {
+      const name = comp.name;
+      const seed = `rspfx-try:${name}`;
+      const id = deterministicGuid(seed);
+      let entrypoint: string | undefined;
+      if (comp.entry) {
+        entrypoint = resolveEntrypoint(projectRoot, comp.entry);
+        if (!entrypoint) {
+          const abs = path.resolve(projectRoot, comp.entry);
+          if (fs.existsSync(abs)) entrypoint = abs;
+        }
+        if (!entrypoint) {
+          throw new Error(`Try component "${name}" entrypoint not found: ${comp.entry} (resolved from ${path.resolve(projectRoot, comp.entry)})`);
+        }
+      } else {
+        const resolvedWebpartsDir = rspfxConfig.paths?.webpartsDir ?? webpartsDir;
+        const dirPath = path.join(projectRoot, resolvedWebpartsDir, name);
+        entrypoint = pickEntrypoint(dirPath, name);
+        if (!entrypoint) {
+          const fallbackCandidates = [
+            path.join(projectRoot, resolvedWebpartsDir, name, `${name}WebPart.ts`),
+            path.join(projectRoot, resolvedWebpartsDir, name, `${name}WebPart.tsx`),
+            path.join(projectRoot, resolvedWebpartsDir, name, `${toPascal(name)}WebPart.ts`),
+            path.join(projectRoot, resolvedWebpartsDir, name, `${toPascal(name)}WebPart.tsx`),
+            path.join(projectRoot, resolvedWebpartsDir, name, 'index.ts'),
+            path.join(projectRoot, resolvedWebpartsDir, name, 'index.tsx')
+          ];
+          for (const cand of fallbackCandidates) {
+            if (fs.existsSync(cand)) {
+              entrypoint = cand;
+              break;
+            }
+          }
+        }
+        if (!entrypoint) {
+          throw new Error(`Try component "${name}" entrypoint not found: expected one of src/webparts/${name}/${name}WebPart.(ts|tsx) or similar in ${path.join(projectRoot, rspfxConfig.paths?.webpartsDir ?? webpartsDir, name)}`);
+        }
+      }
+      bundleMap.push({ bundleName: name, entrypoint, manifestPath: '__synthetic__' });
+      entries.push({ name, import: entrypoint, componentIds: [id], version: packageVersion });
+      manifestIds.push(id);
+      syntheticManifests.push({ id, bundleName: name, title: comp.title, description: comp.description, iconName: comp.iconName });
+    }
+
+    if (bundleMap.length === 0) {
+      throw new Error('No tryComponents found for devTryMode — add at least one { name, entry? } to RspfxConfig.tryComponents');
+    }
+
+    return { entries, bundles: bundleMap, manifestIds, packageVersion, syntheticManifests };
+  }
+
   const bundleMap: WebPartBundle[] = [];
   if (configJson?.bundles) {
     for (const [bundleName, entry] of Object.entries(configJson.bundles)) {

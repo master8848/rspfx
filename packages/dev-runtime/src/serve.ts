@@ -232,7 +232,8 @@ export async function startServe(
       librariesDir: config.paths?.librariesDir,
       entryModuleIds,
       refreshRuntime,
-      bundleUrlSuffix: () => `?t=${reload.current}`
+      bundleUrlSuffix: () => `?t=${reload.current}`,
+      syntheticManifests: currentProject.webParts.syntheticManifests
     });
     await regenerator.regenerate();
 

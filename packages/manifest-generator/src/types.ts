@@ -18,6 +18,14 @@ export interface LocalizedResourceEntry {
   locales: string[];
 }
 
+export interface SyntheticManifestMeta {
+  id: string;
+  bundleName: string;
+  title?: string;
+  description?: string;
+  iconName?: string;
+}
+
 export interface ManifestContext {
   projectRoot: string;
   production: boolean;
@@ -30,4 +38,5 @@ export interface ManifestContext {
   extensionsDir?: string;
   librariesDir?: string;
   entryModuleIds?: Record<string, string>;
+  syntheticManifests?: SyntheticManifestMeta[];
 }

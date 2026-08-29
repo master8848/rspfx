@@ -26,6 +26,7 @@ export interface ManifestRegeneratorOptions {
   refreshRuntime?: RefreshRuntime;
   bundleUrlSuffix?: () => string;
   store?: DevStore;
+  syntheticManifests?: Array<{ id: string; bundleName: string; title?: string; description?: string; iconName?: string }>;
 }
 
 export interface ManifestRegenerator {
@@ -66,7 +67,8 @@ export function createManifestRegenerator(opts: ManifestRegeneratorOptions): Man
           webpartsDir: opts.webpartsDir,
           extensionsDir: opts.extensionsDir,
           librariesDir: opts.librariesDir,
-          entryModuleIds: opts.entryModuleIds
+          entryModuleIds: opts.entryModuleIds,
+          syntheticManifests: opts.syntheticManifests
         });
         const debugManifests = await collectDebugManifests({
           projectRoot: opts.projectRoot,

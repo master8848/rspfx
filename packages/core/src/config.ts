@@ -1,5 +1,18 @@
+import * as v from 'valibot';
 import { SPFX_DEFAULT_TARGET, getSpfxVersions } from './versions.js';
 import type { SpfxTarget } from './versions.js';
+
+export const TryComponentSchema = v.object({
+  name: v.pipe(v.string(), v.minLength(1)),
+  entry: v.optional(v.string()),
+  title: v.optional(v.string()),
+  description: v.optional(v.string()),
+  iconName: v.optional(v.string())
+});
+
+export type TryComponent = v.InferOutput<typeof TryComponentSchema>;
+
+export const TryComponentsSchema = v.array(TryComponentSchema);
 
 export type FrameworkIdCore = 'vanilla' | 'react' | 'solid' | 'vue' | 'preact' | 'svelte';
 export type FrameworkId = FrameworkIdCore | (string & { __custom?: never });
@@ -60,6 +73,10 @@ export interface RspfxConfig {
   deploy?: DeployConfig;
   /** Teams integration; when enabled, teams/manifest.json and icons are auto-created. Disabled by default. */
   teams?: boolean | TeamsConfig;
+  /** Try mode: run dev server without migrating config.json manifests. */
+  devTryMode?: boolean;
+  /** Components to synthesize in try mode. */
+  tryComponents?: TryComponent[];
 }
 
 export function defineConfig<const T extends RspfxConfig>(config: T): T {
@@ -86,7 +103,7 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
   }
   const record = raw as Record<string, unknown>;
   const cfg = record as Partial<RspfxConfig>;
-  const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams']);
+  const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams', 'devTryMode', 'tryComponents']);
   for (const k of Object.keys(record)) {
     if (!knownKeys.has(k)) {
       issues.push({ path: [k], message: `unknown key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
@@ -122,6 +139,22 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
     for (const k of Object.keys(teams)) {
       if (!knownTeamsKeys.has(k)) {
         issues.push({ path: ['teams', k], message: `unknown teams key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
+      }
+    }
+  }
+  if (cfg.devTryMode !== undefined && typeof cfg.devTryMode !== 'boolean') {
+    issues.push({ path: ['devTryMode'], message: 'devTryMode must be a boolean', code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.tryComponents !== undefined) {
+    if (!Array.isArray(cfg.tryComponents)) {
+      issues.push({ path: ['tryComponents'], message: 'tryComponents must be an array', code: 'CONFIG_VALIDATION_FAILED' });
+    } else {
+      const parsed = v.safeParse(TryComponentsSchema, cfg.tryComponents);
+      if (!parsed.success) {
+        for (const issue of parsed.issues) {
+          const dotPath = issue.path?.map((p) => (p as { key: string | number }).key) ?? [];
+          issues.push({ path: ['tryComponents', ...dotPath], message: issue.message, code: 'CONFIG_VALIDATION_FAILED' });
+        }
       }
     }
   }
@@ -209,6 +242,8 @@ export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): Rspfx
     },
     paths: resolvePathDefaults(config.paths),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
-    ...(teams !== undefined ? { teams } : {})
+    ...(teams !== undefined ? { teams } : {}),
+    ...(config.devTryMode !== undefined ? { devTryMode: config.devTryMode } : {}),
+    ...(config.tryComponents !== undefined ? { tryComponents: config.tryComponents } : {})
   };
 }

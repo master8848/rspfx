@@ -29,8 +29,6 @@ export {
   discoverWebParts,
   discoverComponents,
   readProject,
-  readProjectPure,
-  readProjectWithEnsure,
   loadFrameworkPreset,
   resolveContributionLoaders,
   createCompileContext,

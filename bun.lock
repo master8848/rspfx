@@ -460,6 +460,9 @@
     "packages/core": {
       "name": "@mbsks/rspfx-core",
       "version": "0.0.15",
+      "dependencies": {
+        "valibot": "1.4.2",
+      },
       "devDependencies": {
         "@mbsks/rspfx-webpart-base": "workspace:*",
       },
