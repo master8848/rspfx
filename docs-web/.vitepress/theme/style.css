@@ -650,6 +650,8 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
 }
 .dark .rspfx-hero-copy.failed { color: #f87171; border-color: #f87171; }
 .dark .rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.14); }
+.rspfx-hero-copy.copied:hover { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.rspfx-hero-copy.failed:hover { background: transparent; }
 @media (min-width: 640px) {
   .VPHero.has-image .rspfx-hero-prompt { text-align: left; }
 }
@@ -1629,6 +1631,7 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   border-color: rgba(74,222,128,0.30);
   background: rgba(74,222,128,0.12);
 }
+.rspfx-pm-copy.copied:hover { color: #4ade80; background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.30); }
 .rspfx-pm-copy:focus-visible {
   box-shadow: 0 0 0 2px rgba(255,255,255,0.16);
 }

@@ -515,6 +515,8 @@ rspfx migrate             <span class="c"># apply (backup → .rspfx/migrate-bac
 .rspfx-hero-copy.failed { border-color: #ef4444; color: #ef4444; }
 :global(.dark) .rspfx-hero-copy.failed { color: #f87171; border-color: #f87171; }
 :global(.dark) .rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.14); }
+.rspfx-hero-copy.copied:hover { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.rspfx-hero-copy.failed:hover { background: transparent; }
 
 .rspfx-hero-image {
   position: relative;
@@ -802,6 +804,7 @@ rspfx migrate             <span class="c"># apply (backup → .rspfx/migrate-bac
 }
 .rspfx-code-copy:hover { background: rgba(255,255,255,0.10); color: #fff; border-color: rgba(255,255,255,0.16); }
 .rspfx-code-copy.copied { color: #4ade80; border-color: rgba(74,222,128,0.30); background: rgba(74,222,128,0.12); }
+.rspfx-code-copy.copied:hover { color: #4ade80; background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.30); }
 .rspfx-code {
   margin: 0;
   padding: 12px 16px;
