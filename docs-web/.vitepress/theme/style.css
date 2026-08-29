@@ -868,6 +868,40 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   .rspfx-compare table { min-width: 560px; }
 }
 
+/* ── Home only: make Compare table break out to full width of VPHome container ── */
+/* VitePress renders home markdown inside a narrow .VPDoc container (~688px). These
+   rules pull .rspfx-compare (and its siblings) out to the full home max-width (1152px)
+   without affecting normal doc tables (.vp-doc table stays constrained). */
+.VPHome .rspfx-compare {
+  /* break out of narrow vp-doc wrapper */
+  width: 100%;
+  max-width: 1152px;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* when markdown content is wrapped in .vp-doc, force breakout to viewport width */
+.VPHome .vp-doc .rspfx-compare {
+  width: calc(100vw - 48px);
+  max-width: 1152px;
+  margin-left: calc(50% - 50vw + 24px);
+  margin-right: calc(50% - 50vw + 24px);
+  transform: none;
+}
+@media (max-width: 1152px) {
+  .VPHome .vp-doc .rspfx-compare {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.VPHome .rspfx-compare-table {
+  width: 100%;
+}
+.VPHome .rspfx-compare table {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
 /* Tip callout on home */
 .rspfx-tip {
   max-width: 1152px;

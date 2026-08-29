@@ -5,6 +5,8 @@ import AccentSwitcher from './components/AccentSwitcher.vue'
 import CopyMarkdown from './components/CopyMarkdown.vue'
 import HeroPrompt from './components/HeroPrompt.vue'
 import PackageManagerTabs from './components/PackageManagerTabs.vue'
+import HomeLanding from './components/HomeLanding.vue'
+import HomePage from './components/HomePage.vue'
 import './style.css'
 
 // auto-load extra shadcn themes — drop a `.css` file into `themes/` (see themes/README.md)
@@ -23,5 +25,7 @@ export default {
   },
   enhanceApp({ app }) {
     app.component('PackageManagerTabs', PackageManagerTabs)
+    app.component('HomeLanding', HomeLanding)
+    app.component('HomePage', HomePage)
   },
 } satisfies Theme
