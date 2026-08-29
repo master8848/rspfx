@@ -220,9 +220,11 @@ export default defineConfig({
     // (auto-set for /llm and /llms via transformPageData) overrides this.
     // Component checks: frontmatter.copyMarkdown ?? theme.copyMarkdown ?? true
     copyMarkdown: true as unknown as boolean,
-    // Minimal nav: sidebar holds all docs navigation; socialLinks + footer already expose GitHub/npm/Changelog.
-    // Keeping top bar clean (logo left, search middle, appearance+accent+social right) avoids clutter and prevents outline overlap.
-    nav: [],
+    nav: [
+      { text: 'Docs', link: '/docs/getting-started' },
+      { text: 'Guide', link: '/docs/commands' },
+      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
+    ],
     sidebar: {
       '/llms': docsSidebar as any,
       '/llm': docsSidebar as any,

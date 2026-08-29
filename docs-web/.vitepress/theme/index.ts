@@ -5,6 +5,8 @@ import AccentSwitcher from './components/AccentSwitcher.vue'
 import CopyMarkdown from './components/CopyMarkdown.vue'
 import HeroPrompt from './components/HeroPrompt.vue'
 import PackageManagerTabs from './components/PackageManagerTabs.vue'
+import HomeLanding from './components/HomeLanding.vue'
+import HomePage from './components/HomePage.vue'
 import './style.css'
 
 const posthogReady = !import.meta.env.SSR
@@ -62,5 +64,7 @@ export default {
     }
 
     app.component('PackageManagerTabs', PackageManagerTabs)
+    app.component('HomeLanding', HomeLanding)
+    app.component('HomePage', HomePage)
   },
 } satisfies Theme
