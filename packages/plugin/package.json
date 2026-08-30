@@ -27,6 +27,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mbsks/rspfx-build-core": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-dev-runtime": "workspace:*",

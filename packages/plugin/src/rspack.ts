@@ -13,6 +13,8 @@ import { createKernel, type Kernel } from './kernel.js';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxPluginOptions } from './types.js';
+// TODO: migrate collectExternals/platformOnlyExternal/amd helpers to build-core when rspack.ts is refactored to use kernel externals uniformly
+// import { collectExternals } from '@mbsks/rspfx-build-core'; // available via build-core, currently using kernel/marked externals
 
 const logger = createLogger('rspfx');
 

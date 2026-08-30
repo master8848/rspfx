@@ -36,7 +36,8 @@ import {
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
-import { collectExternals } from './shared.js';
+import { collectExternals } from '@mbsks/rspfx-build-core';
+// TODO: migrate remaining duplicated helpers (amdName, inlineStyleCode, defines, output, publicPath) to build-core imports when vite.ts restructure allows
 
 const logger = createLogger('rspfx');
 

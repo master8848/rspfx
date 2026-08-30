@@ -40,6 +40,9 @@ import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspf
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
 import { amdName, collectExternals, computeUniqueName, writeStatsJson } from './shared.js';
+// TODO: full migration to build-core for CSS/output/helpers is pending Rsbuild config extraction refactor
+// Currently shared.ts re-exports build-core helpers for backward compat; keep direct import minimal to avoid conflicts
+// import { platformOnlyExternal, hasPostcssConfig, inlineStyleCode, ALLOWED_DEFINE_KEYS, createDefineMap, getDevtool, createSpfxOutput } from '@mbsks/rspfx-build-core';
 
 const logger = createLogger('rspfx');
 
