@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { compile } from 'svelte/compiler';
+import { tick } from 'svelte';
 import { SvelteWebPart, type SvelteWebPartComponent } from '../src/webpart.js';
 
 const GENERATED_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'svelte-app', 'generated');
@@ -87,7 +88,7 @@ describe('SvelteWebPart', () => {
     expect(domElement.textContent).toBe('hello world');
   });
 
-  it('re-renders with updated properties', () => {
+  it('re-renders with updated properties', async () => {
     const domElement = document.createElement('div');
     const webPart = new TestSvelteWebPart();
     initialize(webPart, domElement);
@@ -97,6 +98,9 @@ describe('SvelteWebPart', () => {
       dataVersion: '1.0'
     });
     webPart.render();
+    // Svelte 4 $set batches updates via microtask; flush before asserting.
+    // Works for both real Svelte and the MockComponent fallback (tick resolves immediately).
+    await tick();
     expect(domElement.textContent).toBe('hello updated');
     expect(domElement.childNodes.length).toBe(1);
   });

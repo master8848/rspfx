@@ -712,6 +712,22 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       } catch {
         return;
       }
+      const isVite8 = isVite8OrLater(root);
+      if (isVite8) {
+        try {
+          const project = readProject(root, resolved.paths, resolved.version, resolved);
+          const alsEntry = viteAls.getStore();
+          const amdId = alsEntry
+            ? `${alsEntry.componentIds[0]}_${alsEntry.version}`
+            : (() => {
+                const entry = project.webParts.entries.find((e) => e.name === entryName);
+                return process.env[VITE_ENV.amdId] ?? (entry ? `${entry.componentIds[0]}_${entry.version}` : entryName);
+              })();
+          const externals = collectExternals(root, project.externals, project.localizedResources);
+          transformEntryBundle(entryName, bundle, { isVite8: true, amdId, externals });
+          return;
+        } catch {}
+      }
       transformEntryBundle(entryName, bundle);
     },
 

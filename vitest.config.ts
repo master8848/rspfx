@@ -20,9 +20,8 @@ export default defineConfig({
     testTimeout: 60000,
     hookTimeout: 60000,
     pool: 'forks',
-    poolOptions: {
-      forks: { singleFork: true }
-    },
+    maxWorkers: 1,
+    isolate: false,
     // examples builds are heavy (Vite/Rsbuild/Rspack + Tailwind) - allow per-test override via { timeout: 180000 }
     // but keep global at 60s for fast unit tests; the examples file sets its own timeout.
     exclude: [],
