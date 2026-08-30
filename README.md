@@ -23,6 +23,15 @@ rspfx dev        # http://localhost:4321
 rspfx package    # → sharepoint/solution/*.sppkg
 ```
 
+**Lean dev only (Vite users):** for fast `rspfx dev` without build/package deps, use the vite-first lean plugin (no `@rspack/core`, `sass`, or framework installs):
+
+```sh
+npm i -D @mbsks/rspfx-plugin-dev @mbsks/rspfx-cli      # or pnpm add -D / yarn add -D / bun add -D / deno add -D
+# vite.config.ts: import { rspfxDevPlugin } from '@mbsks/rspfx-plugin-dev' (or '@mbsks/rspfx-plugin-dev/vite')
+```
+
+`@mbsks/rspfx-plugin` = full build + dev + package (`rspfxVite`/`rspfxRsbuild`/`RSpfxPlugin`). `@mbsks/rspfx-plugin-dev` = dev-only `configureServer` (`rspfxDevPlugin`/`rspfxViteDev`), vite peer optional, reuses `@mbsks/rspfx-dev-runtime`. See [lean dev plugin guide](https://rspfx.mbsks.me/docs/guide/dev-plugin).
+
 **Shortcut (scaffold via CLI):**
 
 ```sh
@@ -38,7 +47,7 @@ One file `vite.config.ts` with `devTryMode: true` and two dev deps. Keep `gulp s
 
 ```sh
 cd my-existing-spfx-app
-npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli   # or pnpm add -D / yarn add -D / bun add -D / deno add -D
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli   # or: @mbsks/rspfx-plugin-dev for lean vite-only dev
 # add vite.config.ts — see docs at https://rspfx.mbsks.me/docs/guide/try-mode
 rspfx dev        # http://localhost:4321 — gulp/heft stay, delete vite.config.ts to revert
 ```

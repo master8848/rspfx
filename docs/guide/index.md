@@ -15,6 +15,7 @@ Use this page to find the right guide for your task.
 ## Build and deploy
 
 - [Dev server](./dev/dev-server.md) - run local preview and workbench on port 4321.
+- [Lean dev plugin](./dev-plugin.md) - vite-first dev-only plugin without heavy deps.
 - [Deployment guide](./deployment-guide.md) - build, package, and upload to the app catalog.
 - [Styling](./styling/styling.md) - handle CSS, SCSS, Tailwind, and inlining.
 - [Fast refresh](./styling/fast-refresh.md) - preserve state while you edit.

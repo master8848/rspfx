@@ -36,10 +36,13 @@ Single source of truth: `packages/core/src/versions.ts:13` (`SPFX_VERSIONS`, `SP
 | `1.22` | Supported | gulp + webpack | 18 / 20 | 20+ | `1.22.0` |
 | `1.23` | Supported, default | Heft | 20.19+ / 22+ | 20+ | `1.23.0` |
 | `1.24` | Preview | Heft | 20.19+ / 22+ | 20+ | `1.24.0` |
+| `1.14`–`1.19` | Dev-only (planned) | gulp + webpack | 16 / 18 | 20+ | — |
 
 Component `version` for `"type": "component"` deps is read from `node_modules/@microsoft/sp-*/dist/*.manifest.json` at build time, fallback `reference/sp-component-ids.json`.
 
 Pin target via `spfxVersion` in `vite.config.ts` / `rsbuild.config.ts` / `rspack.config.ts` and keep `@microsoft/sp-*` prefix equal to `spfxVersion`. See [upgrading-spfx-version.md](upgrading-spfx-version.md).
+
+SPFx `1.14`–`1.19` dev-only support is planned: `rspfx dev` (local preview + workbench) via `@mbsks/rspfx-plugin-dev`; build/package stay on the official toolchain until promoted.
 
 > Tip: after changing `spfxVersion`, run `bun update @mbsks/rspfx-plugin` (or `pnpm update` / `npm update` / `yarn upgrade`) `&& rspfx build` — no manifest or bundler patching needed. RSPFx adjusts `loaderConfig`, `chunkLoadingGlobal`, `manifests.js`, and `.sppkg` layout.
 
