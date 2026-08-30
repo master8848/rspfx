@@ -112,6 +112,8 @@ Validated via `tryResolveConfig` before the cache version is computed.
 
 ## Dev mode
 
+Primary is `vite dev --port 4321` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`. `rspfx dev` is an optional CLI alternative using the same dev-runtime.
+
 ```
 Save → rebuild → tick /__rspfx_hot.json → reload.
 ```
@@ -122,13 +124,15 @@ SharePoint (tenant set): `https://localhost:4321` — `/temp/manifests.js`, `/di
 
 Workbench loads `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — see Microsoft docs: [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench) and [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench).
 
-`rspfx dev` warns if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
+`vite dev` / `rspfx dev` warn if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
 
 `manifests.js` is regenerated each rebuild. Bundle names are stable `[name].js`.
 
-> Tip: `:4321` is the single dev port. Local preview is `http://localhost:4321/` (no tenant, no cert). Workbench mode is `https://localhost:4321/temp/manifests.js` (tenant set, cert required). The workbench URL is printed by `rspfx dev` — open it directly.
+> Tip: `:4321` is the single dev port. Local preview is `http://localhost:4321/` (no tenant, no cert). Workbench mode is `https://localhost:4321/temp/manifests.js` (tenant set, cert required). The workbench URL is printed by the dev server — open it directly.
 
 ## Production
+
+`vite build` alone does not generate `manifests.js` or `.sppkg`; use `rspfx build` / `rspfx package`:
 
 ```
 src/ → bundler → dist/ → manifest-generator → release/ → sppkg-builder → sharepoint/solution/<name>.sppkg

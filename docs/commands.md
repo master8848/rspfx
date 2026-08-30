@@ -51,7 +51,7 @@ Edits `package.json` (drops Heft/webpack/gulp, adds `rspfx` scripts), rewrites `
 
 ## `rspfx dev`
 
-Dev server on `:4321`.
+Dev server on `:4321` — optional CLI alternative. Primary for Vite users is `vite dev --port 4321` with `rspfxViteDev()` / `rspfxVite()` (Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`); `rspfx dev` uses the same dev-runtime.
 
 | Flag | Values |
 |---|---|
@@ -65,12 +65,14 @@ Local (default, no tenant): `http://localhost:4321/` — preview at `/` + mock `
 
 SharePoint (tenant set): `https://localhost:4321` — `/temp/manifests.js`, `/dist/*.js`. Workbench URL printed: `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>`.
 
-Cert is auto-generated in `~/.rspfx/certs` (825-day self-signed) and `rspfx dev` warns if missing/expiring/untrusted; `rspfx doctor` verifies. See [getting-started.md#cert-trust](getting-started.md#cert-trust).
+Cert is auto-generated in `~/.rspfx/certs` (825-day self-signed) and `vite dev` / `rspfx dev` warn if missing/expiring/untrusted; `rspfx doctor` verifies. See [getting-started.md#cert-trust](getting-started.md#cert-trust).
 
 Reload via `/__rspfx_hot.json` poll → `location.reload()`.
 
 ```sh
-rspfx dev
+vite dev --port 4321            # primary
+vite dev --port 4321 -- --refresh
+rspfx dev                       # optional alternative, same runtime
 rspfx dev --refresh
 rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 ```
@@ -79,7 +81,7 @@ rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 
 ## `rspfx build`
 
-Compile to `dist/` + `release/`.
+Compile to `dist/` + `release/` — required; `vite build` alone does not generate `manifests.js`/`release`.
 
 | Flag | Values |
 |---|---|
@@ -94,7 +96,7 @@ rspfx build --no-minify --sourcemap
 
 ## `rspfx package`
 
-Build + assemble `sharepoint/solution/<name>.sppkg` (from `paths.zippedPackage`).
+Build + assemble `sharepoint/solution/<name>.sppkg` (from `paths.zippedPackage`) — required; `vite build` alone does not generate `.sppkg`.
 
 | Flag | Values |
 |---|---|

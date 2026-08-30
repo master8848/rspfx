@@ -68,11 +68,12 @@ To migrate fully, run `rspfx migrate --dry-run` to preview changes. See [Migrati
 
 ## Step 3: Run the dev server
 
-Start the dev server on port 4321:
+Primary is `vite dev` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`. `rspfx dev` is an optional CLI alternative using the same dev-runtime.
 
 ```sh
-rspfx dev
-rspfx dev --refresh
+vite dev --port 4321
+vite dev --port 4321 -- --refresh   # state-preserving refresh where supported
+# alternative: rspfx dev [--refresh]
 ```
 
 RSPFx picks the mode based on tenant config:
@@ -86,13 +87,13 @@ Local preview shows a list of web parts. It serves mock `/_api` data from `local
 
 SharePoint workbench mode prints a URL like `https://<tenant>/_layouts/15/workbench.aspx?debugManifestsFile=https://localhost:4321/temp/manifests.js`. Open it to load your bundles in SharePoint.
 
-Set the tenant with `dev.tenantUrl` in config, with `SPFX_SERVE_TENANT_DOMAIN`, or with `rspfx dev --tenant https://contoso.sharepoint.com`.
+Set the tenant with `dev.tenantUrl` in config, with `SPFX_SERVE_TENANT_DOMAIN`, or via CLI tenant flag (`rspfx dev --tenant https://contoso.sharepoint.com`; `vite dev` reads config/env).
 
 Use local preview for UI work. Use workbench mode for SharePoint APIs, property pane, or theme.
 
 ### Trust the cert for workbench mode
 
-Workbench mode needs HTTPS. RSPFx creates a cert in `~/.rspfx/certs` on first run.
+Workbench mode needs HTTPS. The dev plugin (`vite dev`) and `rspfx dev` create a cert in `~/.rspfx/certs` on first run (via `ensureCertificates`).
 
 Trust it once per machine, then restart your browser:
 
@@ -110,7 +111,7 @@ Save a file to rebuild. Use `rspfx dev --refresh` to preserve state where suppor
 
 ## Step 4: Build and package
 
-Build and package your solution:
+`vite build` alone does not generate `manifests.js` or `.sppkg`; use the CLI for build/package:
 
 ```sh
 rspfx build

@@ -1,6 +1,6 @@
 # Lean vite-first dev plugin
 
-TL;DR: Use `@mbsks/rspfx-plugin-dev` when you only need `rspfx dev` on Vite. It is lean, vite-first, and reuses `@mbsks/rspfx-dev-runtime`.
+TL;DR: Use `@mbsks/rspfx-plugin-dev` when you only need `vite dev` on Vite. It is lean, vite-first, and reuses `@mbsks/rspfx-dev-runtime`.
 
 Use `@mbsks/rspfx-plugin` when you need build and package (`rspfx build`, `rspfx package`, `vite build` per-bundle, Rsbuild, Rspack) — it includes `@rspack/core` and framework integrations.
 
@@ -8,10 +8,10 @@ Use `@mbsks/rspfx-plugin` when you need build and package (`rspfx build`, `rspfx
 
 | Need | Package | Import |
 |---|---|---|
-| `rspfx dev` only (Vite) | `@mbsks/rspfx-plugin-dev` | `rspfxDevPlugin` / `rspfxViteDev` |
-| `rspfx dev` + `rspfx build`/`package` | `@mbsks/rspfx-plugin` | `rspfxVite` / `rspfxRsbuild` / `RSpfxPlugin` |
+| `vite dev` only (Vite) | `@mbsks/rspfx-plugin-dev` | `rspfxViteDev` / `rspfxDevPlugin` |
+| `vite dev` + `rspfx build`/`package` | `@mbsks/rspfx-plugin` | `rspfxVite` / `rspfxRsbuild` / `RSpfxPlugin` |
 
-Both carry `RspfxConfig` via `RSPFX_PLUGIN_MARKER` (`@mbsks/rspfx-core:68`) and are discovered by `rspfx dev` via `jiti`.
+`vite dev` is primary — Vite handles HMR/serve, the plugin just adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`. `rspfx dev` is an optional CLI alternative using the same dev-runtime. Both carry `RspfxConfig` via `RSPFX_PLUGIN_MARKER` (`@mbsks/rspfx-core:68`) and can be discovered by `rspfx dev` via `jiti`.
 
 ## Install (vite-first)
 
@@ -37,7 +37,7 @@ Options are `RspfxPluginOptions` (`packages/plugin-dev/src/types.ts:3`): `name`,
 
 ## What it does
 
-`rspfxDevPlugin` only hooks `configureServer` (`packages/plugin-dev/src/vite.ts:75`):
+`rspfxViteDev` / `rspfxDevPlugin` only hooks `configureServer` (`packages/plugin-dev/src/vite.ts:75`) — Vite owns the server/HMR, the plugin augments it:
 
 - resolves project (`readProject`), serve settings (`resolveServeSettings`), and mode (`resolveServeMode`);
 - ensures certs (`ensureCertificates` in `~/.rspfx/certs`) when `https`;
@@ -71,7 +71,7 @@ Contributions welcome — open an issue with your bundler target.
 
 ## Switching to the full plugin
 
-When you need `rspfx build`/`rspfx package`:
+When you need `rspfx build`/`rspfx package` (`vite build` alone does not generate `manifests.js`/`.sppkg`):
 
 ```sh
 npm i -D @mbsks/rspfx-plugin

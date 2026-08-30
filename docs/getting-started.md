@@ -61,9 +61,12 @@ For existing Heft/Gulp projects, try without migrating: one file `vite.config.ts
 
 ## 3. Dev server on :4321
 
+Primary: `vite dev` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`.
+
 ```sh
-rspfx dev
-rspfx dev --refresh   # state-preserving refresh where supported
+vite dev --port 4321
+vite dev --port 4321 -- --refresh   # state-preserving refresh where supported (dev.fastRefresh)
+# alternative: rspfx dev [--refresh] uses the same dev-runtime but is not required for Vite users
 ```
 
 Port `4321` is the single dev port. Mode is picked by whether a tenant is configured:
@@ -77,7 +80,7 @@ Local preview: browse `http://localhost:4321/` — lists every web part, mock `/
 
 Workbench: RSPFx prints `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — SharePoint loads bundles from `https://localhost:4321/dist/*`. See Microsoft docs: [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
 
-Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or `rspfx dev --tenant https://contoso.sharepoint.com`. See [commands.md#rspfx-dev](commands.md#rspfx-dev).
+Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or CLI flag (`vite dev` reads config/env; `rspfx dev --tenant https://contoso.sharepoint.com` as alternative). See [commands.md#rspfx-dev](commands.md#rspfx-dev).
 
 > **Tip:** Put `tenantUrl` in `vite.config.ts` (`dev: { tenantUrl: 'https://contoso.sharepoint.com' }`) so teammates don't need flags.
 
@@ -85,7 +88,7 @@ Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or
 
 ### Cert trust (SharePoint mode only)
 
-Workbench mode needs HTTPS. `rspfx dev` auto-generates a cert in `~/.rspfx/certs` on first run. If untrusted, the workbench shows `NET::ERR_CERT_AUTHORITY_INVALID` or a blank page.
+Workbench mode needs HTTPS. The dev plugin (`vite dev`) and `rspfx dev` auto-generate a cert in `~/.rspfx/certs` on first run (via `ensureCertificates`). If untrusted, the workbench shows `NET::ERR_CERT_AUTHORITY_INVALID` or a blank page.
 
 Trust once per machine, then restart the browser:
 
@@ -102,6 +105,8 @@ Save → rebuild → auto-reload. Dev builds are unminified; `rspfx build` minif
 > **Tip:** If `Load debug scripts` reappears every reload, check cert trust or Local Network Access — it should show once per session.
 
 ## 4. Build and package
+
+`vite build` alone does not generate `manifests.js` or `.sppkg`. Use the CLI for build/package:
 
 ```sh
 rspfx build      # → dist/ + release/
