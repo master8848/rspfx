@@ -10,7 +10,11 @@
     "html_handling": "auto-trailing-slash"
   },
   "observability": {
-    "enabled": false
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
   },
   "workers_dev": true,
   "preview_urls": true

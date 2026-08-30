@@ -25,6 +25,11 @@ async function copy(): Promise<void> {
   if (!text) return
   try {
     await copyToClipboard(text)
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+      void import('posthog-js').then(({ default: posthog }) => {
+        posthog.capture('llms_txt_copied')
+      })
+    }
     copied.value = true
     failed.value = false
     if (timer) clearTimeout(timer)

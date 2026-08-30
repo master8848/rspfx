@@ -75,13 +75,21 @@ const chatGptUrl = computed(() => {
 })
 const claudeUrl = computed(() => `https://claude.ai/new?q=${encodeURIComponent(`Read ${getPageUrl()} so I can ask questions about it.`)}`)
 
-async function doCopy(getText: () => Promise<string>): Promise<void> {
+function captureMarkdownCopied(format: Pref): void {
+  if (!import.meta.env.VITE_POSTHOG_PROJECT_TOKEN || !import.meta.env.VITE_POSTHOG_HOST) return
+  void import('posthog-js').then(({ default: posthog }) => {
+    posthog.capture('markdown_copied', { format })
+  })
+}
+
+async function doCopy(getText: () => Promise<string>, format: Pref): Promise<void> {
   if (copying.value) return
   copying.value = true
   failed.value = false
   try {
     const text = await getText()
     await copyToClipboard(text)
+    captureMarkdownCopied(format)
     setState('copied')
     open.value = false
   } catch {
@@ -92,13 +100,14 @@ async function doCopy(getText: () => Promise<string>): Promise<void> {
 }
 
 async function handleCopy() {
-  await doCopy(() => (isHumanized.value ? getHumanizedMarkdown() : copyMarkdown()))
+  const format: Pref = isHumanized.value ? 'humanized' : 'markdown'
+  await doCopy(() => (format === 'humanized' ? getHumanizedMarkdown() : copyMarkdown()), format)
 }
 
 async function handleCopyWithPref(pref: Pref) {
   if (copying.value) return
   savePref(pref)
-  await doCopy(() => (pref === 'humanized' ? getHumanizedMarkdown() : copyMarkdown()))
+  await doCopy(() => (pref === 'humanized' ? getHumanizedMarkdown() : copyMarkdown()), pref)
 }
 
 function handleViewRaw() {
