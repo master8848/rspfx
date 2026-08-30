@@ -7,6 +7,7 @@ import { getSpfxVersions } from '@mbsks/rspfx-core';
 import { version } from './version.js';
 import { runNew, type NewOptions } from './commands/new.js';
 import { runDev } from './commands/dev.js';
+import { runDevVite } from './commands/dev-vite.js';
 import { runBuild, type BuildOptions } from './commands/build.js';
 import { runPackage } from './commands/package.js';
 import { runDeploy } from './commands/deploy.js';
@@ -201,6 +202,33 @@ export function configureProgram(): void {
           port: toPort(options.port),
           mode: options.mode as 'local' | 'sharepoint' | undefined,
           tenant: options.tenant as string | undefined
+        })
+      );
+    });
+
+  program
+    .command('dev:vite')
+    .alias('vite:dev')
+    .description('setup Vite dev — add @mbsks/rspfx-plugin-dev (dev-only), create vite.config.ts, link tsconfig, then start Vite')
+    .option('--refresh', 'enable fast refresh')
+    .option('--browser', 'open the workbench in a browser')
+    .option('--port <n>', 'dev server port')
+    .option('--mode <local|sharepoint>', 'serve mode (default: local, or sharepoint when a tenant is configured)')
+    .option('--tenant <url>', 'tenant URL or domain (e.g. https://contoso.sharepoint.com)')
+    .option('--tsconfig <path>', 'path to tsconfig.json (default: auto-detect tsconfig.json)')
+    .option('--dry-run', 'print plan without writing files or starting Vite')
+    .option('--force', 'overwrite existing vite.config.*')
+    .action((options: Record<string, unknown>) => {
+      return guard(() =>
+        runDevVite(cwd, {
+          refresh: options.refresh as boolean | undefined,
+          browser: options.browser as boolean | undefined,
+          port: toPort(options.port),
+          mode: options.mode as 'local' | 'sharepoint' | undefined,
+          tenant: options.tenant as string | undefined,
+          tsconfig: options.tsconfig as string | undefined,
+          dryRun: options.dryRun as boolean | undefined,
+          force: options.force as boolean | undefined
         })
       );
     });

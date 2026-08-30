@@ -41,6 +41,8 @@ export interface BuildConfig {
   splitChunks?: boolean;
   outDir?: string;
   releaseDir?: string;
+  /** Path to tsconfig file, relative to projectRoot or absolute. */
+  tsconfigPath?: string;
 }
 
 export interface PathsConfig {
@@ -78,6 +80,8 @@ export interface RspfxConfig {
   devTryMode?: boolean;
   /** Components to synthesize in try mode. */
   tryComponents?: TryComponent[];
+  /** Path to tsconfig file, relative to projectRoot or absolute. Alias for build.tsconfigPath; build takes precedence. */
+  tsconfigPath?: string;
 }
 
 export function defineConfig<const T extends RspfxConfig>(config: T): T {
@@ -104,7 +108,7 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
   }
   const record = raw as Record<string, unknown>;
   const cfg = record as Partial<RspfxConfig>;
-  const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams', 'devTryMode', 'tryComponents']);
+  const knownKeys = new Set(['name', 'version', 'framework', 'spfxVersion', 'dev', 'build', 'paths', 'deploy', 'teams', 'devTryMode', 'tryComponents', 'tsconfigPath']);
   for (const k of Object.keys(record)) {
     if (!knownKeys.has(k)) {
       issues.push({ path: [k], message: `unknown key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
@@ -141,6 +145,15 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
       if (!knownTeamsKeys.has(k)) {
         issues.push({ path: ['teams', k], message: `unknown teams key "${k}"`, code: 'CONFIG_VALIDATION_FAILED' });
       }
+    }
+  }
+  if ((cfg as unknown as Record<string, unknown>).tsconfigPath !== undefined && typeof (cfg as unknown as Record<string, unknown>).tsconfigPath !== 'string') {
+    issues.push({ path: ['tsconfigPath'], message: 'tsconfigPath must be a string', code: 'CONFIG_VALIDATION_FAILED' });
+  }
+  if (cfg.build !== undefined) {
+    const build = cfg.build as unknown as Record<string, unknown>;
+    if (build.tsconfigPath !== undefined && typeof build.tsconfigPath !== 'string') {
+      issues.push({ path: ['build', 'tsconfigPath'], message: 'build.tsconfigPath must be a string', code: 'CONFIG_VALIDATION_FAILED' });
     }
   }
   if (cfg.devTryMode !== undefined && typeof cfg.devTryMode !== 'boolean') {
@@ -183,7 +196,8 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
     minify: true,
     splitChunks: false,
     outDir: 'dist',
-    releaseDir: 'release'
+    releaseDir: 'release',
+    tsconfigPath: undefined as unknown as string
   },
   paths: {
     srcDir: 'src',
@@ -219,6 +233,7 @@ export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): Rspfx
       teams = { enabled: !!(config.teams as TeamsConfig).enabled };
     }
   }
+  const buildTsconfigPath = (config.build as unknown as Record<string, unknown>)?.tsconfigPath as string | undefined ?? (config as unknown as Record<string, unknown>).tsconfigPath as string | undefined;
   return {
     name: config.name,
     ...(config.version !== undefined ? { version: config.version } : {}),
@@ -239,12 +254,14 @@ export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): Rspfx
       minify: config.build?.minify ?? configDefaults.build.minify,
       splitChunks: config.build?.splitChunks ?? configDefaults.build.splitChunks,
       outDir: config.build?.outDir ?? configDefaults.build.outDir,
-      releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir
+      releaseDir: config.build?.releaseDir ?? configDefaults.build.releaseDir,
+      tsconfigPath: buildTsconfigPath
     },
     paths: resolvePathDefaults(config.paths),
     ...(config.deploy !== undefined ? { deploy: config.deploy } : {}),
     ...(teams !== undefined ? { teams } : {}),
     ...(config.devTryMode !== undefined ? { devTryMode: config.devTryMode } : {}),
-    ...(config.tryComponents !== undefined ? { tryComponents: config.tryComponents } : {})
+    ...(config.tryComponents !== undefined ? { tryComponents: config.tryComponents } : {}),
+    ...(buildTsconfigPath ? { tsconfigPath: buildTsconfigPath } : {})
   };
 }

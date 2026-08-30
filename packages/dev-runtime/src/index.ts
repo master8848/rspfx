@@ -19,6 +19,7 @@ export { createStore } from './store.js';
 export type { DevStore, DevStoreSnapshot, DevStatus } from './store.js';
 export { createDevMachine } from './machine.js';
 export type { DevMachine, DevEvent, DevState } from './machine.js';
+export { findTsconfigFile, resolveTsconfigForVite } from './tsconfig.js';
 export { decodeIfEncoded } from './path.js';
 export { getDevtoolsScript, attachDevtools } from './devtools.js';
 export { createManifestRoute, createHotRoute, createLocalPageRoute, createReloadRoutes } from './routes.js';

@@ -59,7 +59,41 @@ History lives in [CHANGELOG.md](../CHANGELOG.md). If a future RSPFx drops a targ
 
 ## Node requirements
 
-RSPFx requires Node 20+ for every target (`package.json` `engines.node >=20`). Official SPFx ranges differ per target; RSPFx normalizes to one range. `rspfx doctor` passes on Node 20/22/24. See Microsoft docs: [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+RSPFx requires Node 20+ for every target (`package.json:8` `engines.node >=20`). Official SPFx ranges differ per target; RSPFx normalizes to one range. `rspfx doctor` (`apps/cli/src/commands/doctor.ts:159`) passes on Node 20/22/24 and fails on 14/16/18. See Microsoft docs: [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+
+### Vite Node matrix
+
+`@mbsks/rspfx-plugin` (`packages/plugin/package.json:43`) `devDependencies` `vite ^5.4.0 || ^7 || ^8` and `peerDependencies` `vite ^5 || ^6 || ^7 || ^8` (`packages/plugin-dev/package.json:38` same); framework peers (`@vitejs/plugin-react`, etc.) require `vite ^7 || ^8`.
+
+| Vite (npm) | Bundler | Official `engines.node` | RSPFx `doctor` | Use with RSPFx |
+|---|---|---|---|---|
+| `5.4.21` (`package.json:39` root) | Rollup 4 | `^18.0.0 \|\| >=20` | ✓ 20+ | Default, works on 20+ |
+| `6.x` | Rollup | `^18 \|\| >=20` | ✓ 20+ | Allowed via peer `^6` |
+| `7.3.6` (example `vite@7`) | Rollup 4 | `^20.19.0 \|\| >=22.12.0` | ✓ 20.19+/22+ | Requires 20.19+ |
+| `8.2.2` (plugin self + `vite@8`) | Rolldown 1.2.4 | `^20.19.0 \|\| >=22.12.0` | ✓ 20.19+/22+ (warns on 20.0) | Requires 20.19+, ideal 22 LTS |
+
+`packages/plugin/src/vite.ts:55` `getViteVersion`/`getViteMajor`/`isVite8OrLater` branches Rollup (`output.format:'amd'`) vs Rolldown (`format:'es'` → `esToAmd` in `transformEntryBundle:391`).
+
+Node 14/16 cannot run Vite 5+ (`vite` `engines` fails, `jiti`/`selfsigned` in `packages/manifest-server/src/index.ts:132` need `node:fs/promises`, `AsyncLocalStorage`).
+
+### Older SPFx Node history (official) vs RSPFx
+
+Official SPFx used lower Nodes per era; RSPFx always requires Node 20+ even when serving older targets via `spfxVersion` or dev-only hybrid (`apps/cli/src/commands/dev.ts:60` `detectOfficialProject`).
+
+| Era | SPFx | Official toolchain | Official Node | RSPFx Node | Notes |
+|---|---|---|---|---|---|
+| 2017–2019 | `1.1`–`1.8` | gulp + webpack 3/4 | `8` / `10` | 20+ (dev-only, not build) | `rush-stack-compiler-2.x/3.0` |
+| 2020 | `1.9`–`1.10` | gulp + webpack 4 | `10` / `12` | 20+ dev-only | `rush-stack-compiler-3.3` |
+| 2021 | `1.11` (`spfx-2021-contoso-tracker`) | gulp + webpack 4 | `12` / `14` | 20+ dev-only | `rush-stack-compiler-3.9`, `node@14.20.0` reported fails with `builtin:vite-transform` `Tsconfig not found .../includes/base.json` |
+| 2021–2022 | `1.12`–`1.14` | gulp + webpack 5 (heft preview) | `14` / `16` | 20+ dev-only | `rush-stack-compiler-3.9/4.1` |
+| 2022–2023 | `1.15`–`1.19` | gulp + webpack 5 / Heft | `16` / `18` | 20+ dev-only (planned `1.14`–`1.19`) | `heft.json`, `rig` extends |
+| 2023+ | `1.20`–`1.24` | gulp/Heft as above | `18/20` or `20.19+/22+` | 20+ (`0.0.14` `latest`) | Full build+dev support |
+
+If you must keep Node 14/16 for an unmigrated `1.11`–`1.19` gulp project, keep the official toolchain for `gulp bundle && gulp package-solution`; use `nvm`/`volta` with Node 20+ only for `vite dev` (`@mbsks/rspfx-plugin-dev` `packages/plugin-dev/src/vite.ts:80` `checkNodeVersion`) or `rspfx dev` hybrid (`docs/hybrid-dev.md:1`). `rspfx migrate` (`apps/cli/src/commands/migrate.ts:546`) relaxes `engines.node` to `>=20` and rewrites `tsconfig.json` (`packages/templates/src/index.ts:223`) that extends `rush-stack-compiler` to plain config.
+
+Vite config ESM: Vite 8 `configLoader: 'native'` warns `ESM syntax in a file loaded as CommonJS (vite.config.ts:1:1)` when `vite.config.ts` uses `import` but `package.json` lacks `"type":"module"` — rename to `vite.config.mts`/`vite.config.mjs` or add `"type":"module"` (`packages/plugin-dev/src/vite.ts:100` `checkViteConfigEsm`).
+
+Use `nvm use 20` / `volta pin node@20` before `rspfx doctor`; pin CI to `node:20` or `node:22`.
 
 ## What RSPFx handles per version
 

@@ -57,11 +57,20 @@ rspfx new my-app --framework react --spfx-version 1.22 --yes  # CI
 
 `rspfx new` is a convenience wrapper that does the same (writes `vite.config.ts` + manifests). Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
 
-For existing Heft/Gulp projects, try without migrating: one file `vite.config.ts` with `devTryMode: true` and two installs. See [try-mode.md](try-mode.md). To preview a full switch, run `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
+For existing Heft/Gulp projects, try without migrating — easiest is `rspfx dev:vite` (auto-generates `vite.config.ts`, no manual config). See [try-mode.md](try-mode.md) and [dev-vite.md](dev-vite.md). To preview a full switch, run `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
 
 ## 3. Dev server on :4321
 
-Primary: `vite dev` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`.
+Easiest in an existing SPFx project: `rspfx dev:vite` auto-detects `spfxVersion`/`framework`/`tsconfig.json` and creates `vite.config.ts` with the lean dev plugin, then starts Vite.
+
+See [dev-vite.md](dev-vite.md) and [commands.md#rspfx-devvite](commands.md#rspfx-devvite).
+
+```sh
+npx @mbsks/rspfx-cli dev:vite --dry-run
+npx @mbsks/rspfx-cli dev:vite
+```
+
+Primary for new projects: `vite dev` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`.
 
 ```sh
 vite dev --port 4321

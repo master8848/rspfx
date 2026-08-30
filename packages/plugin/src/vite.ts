@@ -135,6 +135,104 @@ function isVite8OrLater(root: string): boolean {
   } catch {}
 })();
 
+function resolveTsconfigRawForVite(root: string, explicit?: string): Record<string, unknown> | undefined {
+  if (explicit) {
+    const explicitPath = path.isAbsolute(explicit) ? explicit : path.join(root, explicit);
+    if (fs.existsSync(explicitPath)) {
+      try {
+        const raw = fs.readFileSync(explicitPath, 'utf8');
+        const parsed = JSON.parse(raw) as { extends?: string | string[] };
+        const ext = parsed.extends;
+        const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
+        if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
+          const basePaths = [
+            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
+            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
+            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
+          ];
+          const hasBase = basePaths.some((p) => fs.existsSync(p));
+          if (!hasBase) {
+            try {
+              const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
+              if (!fs.existsSync(stubPath)) {
+                fs.mkdirSync(path.dirname(stubPath), { recursive: true });
+                fs.writeFileSync(stubPath, JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2));
+              }
+            } catch {}
+            return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
+          }
+        }
+      } catch {}
+      return undefined;
+    }
+  }
+  const candidates = ['tsconfig.json', 'tsconfig.build.json', 'tsconfig.app.json'];
+  try {
+    const all = fs.readdirSync(root).filter((f) => f.startsWith('tsconfig') && f.endsWith('.json'));
+    for (const f of all) if (!candidates.includes(f)) candidates.push(f);
+  } catch {}
+  for (const file of candidates) {
+    const full = path.join(root, file);
+    if (!fs.existsSync(full)) continue;
+    try {
+      const raw = fs.readFileSync(full, 'utf8');
+      const parsed = JSON.parse(raw) as { extends?: string | string[] };
+      const ext = parsed.extends;
+      const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
+      if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
+        const basePaths = [
+          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
+          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
+          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
+        ];
+        const hasBase = basePaths.some((p) => fs.existsSync(p));
+        if (!hasBase) {
+          try {
+            const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
+            if (!fs.existsSync(stubPath)) {
+              fs.mkdirSync(path.dirname(stubPath), { recursive: true });
+              fs.writeFileSync(
+                stubPath,
+                JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2)
+              );
+              logger.warn(`Created stub ${path.relative(root, stubPath)} to satisfy tsconfig extends — run "rspfx migrate" to rewrite tsconfig to plain config.`);
+            }
+          } catch {}
+          logger.warn(`tsconfig ${file} extends "${extendsStr}" but base not found — Vite will use fallback compilerOptions (jsx: react, esModuleInterop). Run "rspfx migrate" to rewrite tsconfig to plain config, or install @microsoft/rush-stack-compiler.`);
+          return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
+        }
+      }
+    } catch {}
+    break;
+  }
+  return undefined;
+}
+
+function checkViteConfigEsmForFull(root: string): void {
+  try {
+    const pkgPath = path.join(root, 'package.json');
+    const pkg = fs.existsSync(pkgPath) ? (JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { type?: string }) : {};
+    const isEsmPkg = pkg.type === 'module';
+    const candidates = ['vite.config.ts', 'vite.config.js'];
+    for (const file of candidates) {
+      const full = path.join(root, file);
+      if (!fs.existsSync(full)) continue;
+      const content = fs.readFileSync(full, 'utf8').slice(0, 2000);
+      const hasEsm = /\bimport\s+.*from\b|\bexport\s+default\b/.test(content);
+      if (hasEsm && !isEsmPkg) {
+        logger.warn(`Vite config ${file} uses ESM syntax but package.json type is not "module" — Vite 8 with configLoader: 'native' will warn "ESM syntax in a file loaded as CommonJS". Rename to ${file.replace(/\.ts$|\.js$/, '.mjs')} or vite.config.mts, or add "type": "module" to package.json, or set VITE_CONFIG_NATIVE_IGNORE_WARNING=true.`);
+      }
+    }
+  } catch {}
+}
+
+function checkNodeVersionFull(): void {
+  const major = Number(process.versions.node.split('.')[0] ?? '0');
+  if (major < 20) {
+    logger.warn(`Node ${process.versions.node} is below RSPFx required >=20 (and Vite 8 requires >=20.19). Upgrade to Node 20+ or 22 LTS — see docs/compatibility.md. Vite may fail with syntax or ESM errors on Node 14.`);
+  }
+}
+
 /**
  * Environment contract between the CLI and the Vite plugin:
  * - `RSPFX_VITE_ENTRY` — the single bundle to build (AMD output is per-entry:
@@ -543,6 +641,10 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname)
         : undefined;
 
+    checkNodeVersionFull();
+    checkViteConfigEsmForFull(root);
+    const explicitTsconfig = (resolved as unknown as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as unknown as { tsconfigPath?: string })?.tsconfigPath;
+    const tsconfigRaw = resolveTsconfigRawForVite(root, explicitTsconfig);
     const fastRefresh =
       command === 'serve' && (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
     const preset = await loadPreset(root, resolved.framework);
@@ -597,11 +699,14 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           }
         };
 
+    const esbuild = tsconfigRaw
+      ? { ...(viteContribs?.esbuild as Record<string, unknown> | undefined), tsconfigRaw: JSON.stringify(tsconfigRaw) }
+      : viteContribs?.esbuild;
     return {
       root,
       base: './',
       define,
-      esbuild: viteContribs?.esbuild,
+      esbuild,
       plugins: [
         ...createEntryPlugins(entry.name, root, { isVite8, amdId, externals }),
         ...(viteContribs?.plugins ?? [])

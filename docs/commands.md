@@ -49,6 +49,43 @@ rspfx migrate --revert
 
 Edits `package.json` (drops Heft/webpack/gulp, adds `rspfx` scripts), rewrites `config/config.json` `lib` → `src`, rewrites `pkg:` SCSS imports, deletes Heft-only files, writes bundler config + plain `tsconfig.json`, backs up to `.rspfx/migrate-backup.json`. Commit before migrating.
 
+## `rspfx dev:vite` / `rspfx vite:dev`
+
+Fastest way to try dev mode in any SPFx project.
+
+Auto-detects Node/SPFx version/framework/`tsconfig.json`, adds lean dev plugin, creates `vite.config.ts`, then starts Vite on `:4321`.
+
+See `guide/dev-vite.md`.
+
+| Flag | Values |
+|---|---|
+| `--dry-run` | Preview plan without writing files or starting Vite |
+| `--force` | Overwrite existing `vite.config.*` |
+| `--tsconfig <path>` | Explicit tsconfig path (relative or absolute, else auto-detect `tsconfig.json` / `tsconfig.build.json` / `tsconfig.app.json` / `tsconfig*.json`) |
+| `--refresh` | Fast refresh (state-preserving where supported) |
+| `--browser` | Open browser (off by default) |
+| `--port <n>` | Override `dev.port` (default `4321`) |
+| `--mode <local\|sharepoint>` | `local` (default) or `sharepoint` when tenant set |
+| `--tenant <url>` | Tenant URL (else `dev.tenantUrl` or `SPFX_SERVE_TENANT_DOMAIN`) |
+
+What it does (`apps/cli/src/commands/dev-vite.ts:195` `runDevVite`):
+
+Checks Node `>=20` (Vite 8 needs `>=20.19` per `compatibility.md#vite-node-matrix`), detects `spfxVersion` from `package.json` `@microsoft/sp-core-library` (supports legacy `1.11`–`1.19` dev-only via `registerSpfxVersion`), detects `framework` from `dependencies`, finds `tsconfig.json` (default) or custom via `--tsconfig` and links as `build.tsconfigPath`, sets `package.json` `type: module` + `devDependencies.@mbsks/rspfx-plugin-dev` + `vite` + script `dev:vite`, generates `vite.config.ts` with `rspfxViteDev` (if no `vite.config.*`/`rsbuild.config.*`/`rspack.config.*` per `apps/cli/src/config.ts:25`), handles `rush-stack-compiler` `base.json` stub + `esbuild.tsconfigRaw`, then spawns Vite via `apps/cli/src/vite.ts:1` `spawnViteDev` (`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`).
+
+```sh
+rspfx dev:vite --dry-run                              # preview
+rspfx dev:vite                                        # scaffold + run
+rspfx dev:vite --tsconfig tsconfig.app.json --force   # custom tsconfig
+rspfx dev:vite --tenant https://contoso.sharepoint.com --mode sharepoint --browser
+npm run dev:vite   # after scaffold, runs `vite`
+```
+
+Keeps `gulp serve`/`heft build` for production.
+
+Delete `vite.config.ts` to revert.
+
+Production build/package stay on official toolchain until `rspfx migrate`.
+
 ## `rspfx dev`
 
 Dev server on `:4321` — optional CLI alternative. Primary for Vite users is `vite dev --port 4321` with `rspfxViteDev()` / `rspfxVite()` (Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`); `rspfx dev` uses the same dev-runtime.
@@ -78,6 +115,8 @@ rspfx dev --mode sharepoint --tenant https://contoso.sharepoint.com --browser
 ```
 
 > Tip: `:4321` is HTTP in local preview, HTTPS in SharePoint mode. If the workbench shows blank or CORS errors, run `rspfx doctor` and trust the cert per the printed instructions.
+
+For the easiest existing-project try without manual `vite.config.ts`, use `rspfx dev:vite` above.
 
 ## `rspfx build`
 

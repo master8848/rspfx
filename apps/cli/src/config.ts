@@ -24,8 +24,10 @@ export interface LoadedProject {
 
 const CONFIG_CANDIDATES: readonly { bundler: BundlerId; file: string }[] = [
   { bundler: 'vite', file: 'vite.config.ts' },
-  { bundler: 'vite', file: 'vite.config.js' },
+  { bundler: 'vite', file: 'vite.config.mts' },
   { bundler: 'vite', file: 'vite.config.mjs' },
+  { bundler: 'vite', file: 'vite.config.js' },
+  { bundler: 'vite', file: 'vite.config.cjs' },
   { bundler: 'rsbuild', file: 'rsbuild.config.ts' },
   { bundler: 'rsbuild', file: 'rsbuild.config.js' },
   { bundler: 'rsbuild', file: 'rsbuild.config.mjs' },
