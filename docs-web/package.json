@@ -12,9 +12,9 @@
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview",
-    "deploy": "wrangler deploy",
-    "deploy:pages": "wrangler pages deploy .vitepress/dist --project-name=rspfx-docs",
-    "deploy:preview": "wrangler deploy --dry-run",
+    "deploy": "wrangler pages deploy .vitepress/dist --project-name=rspfx-docs",
+    "deploy:worker": "wrangler deploy --config wrangler.jsonc",
+    "deploy:preview": "wrangler pages deploy .vitepress/dist --project-name=rspfx-docs --dry-run",
     "cf:types": "wrangler types"
   },
   "dependencies": {
