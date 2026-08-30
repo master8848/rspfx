@@ -5,8 +5,9 @@
   "type": "module",
   "description": "SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Works with Vite, Rsbuild, and Rspack",
   "license": "MIT",
+  "packageManager": "bun@1.4.0",
   "engines": {
-    "node": ">=20.0.0"
+    "bun": ">=1.4.0"
   },
   "scripts": {
     "build": "bun run --filter './packages/*' build",

@@ -3,6 +3,7 @@
   "version": "0.0.14",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.0",
   "description": "RSPFx documentation site — VitePress",
   "scripts": {
     "dev": "vitepress dev",
@@ -12,6 +13,7 @@
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview",
     "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy .vitepress/dist --project-name=rspfx-docs",
     "deploy:preview": "wrangler deploy --dry-run",
     "cf:types": "wrangler types"
   },
