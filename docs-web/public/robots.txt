@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rspfx.mbsks.me/sitemap.xml

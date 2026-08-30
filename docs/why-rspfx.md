@@ -80,3 +80,79 @@ RSPFx: change `spfxVersion: '1.24'` in your bundler config and run `bun update @
 | Scaffolding | `yo @microsoft/sharepoint` | `npm create vite@latest` (or `pnpm`/`yarn`/`bun`/`deno`) + `rspfxVite()` (or `rspfx new` shortcut); also `better-t-stack`, TanStack Router, Rsbuild/Rspack starters |
 | Migrate existing project | Manual edits | `rspfx migrate --dry-run` → `rspfx migrate` (or BYOS plugin for greenfield) |
 | Switch SPFx version | Update generator + rig + Heft + every `sp-*` | Change `spfxVersion` + `bun update` / `pnpm update` |
+
+## Search terms — SPFx Vite replacement and alternative bundlers
+
+If you searched for "SPFx Vite", "SPFx Vite replacement", "SPFx alternative bundler", "SPFx custom build pipeline", "SPFx replace Webpack", "SPFx custom Webpack", "SharePoint Framework Vite", "SharePoint Framework alternative build tool", "SPFx Rspack", "SPFx esbuild", "SPFx eject webpack", or "SPFx Heft custom toolchain" — RSPFx is that replacement.
+
+RSPFx is the SPFx Vite replacement that keeps SharePoint compatibility while replacing the old webpack + Heft + gulp toolchain.
+
+### SPFx Vite and SharePoint Framework Vite
+
+RSPFx is the SharePoint Framework Vite integration.
+
+Use Vite as the SPFx Vite bundler via `rspfxVite()` in `vite.config.ts` — see [getting-started.md](getting-started.md) and [project-structure.md](project-structure.md).
+
+Dev runs on `vite dev --port 4321` with `rspfxVite()` `configureServer` serving `/temp/manifests.js`; build runs via `rspfx build`/`rspfx package` so `.sppkg` is still generated.
+
+SharePoint Framework Vite means the same manifests and `.sppkg` as official SPFx, but with Vite HMR and esbuild/SWC speed.
+
+### SPFx alternative bundler and SharePoint Framework alternative build tool
+
+RSPFx is the SPFx alternative bundler and SharePoint Framework alternative build tool.
+
+Bundlers: Vite (default, esbuild-based dev + Rollup build), Rsbuild, and Rspack (Rust webpack-compatible).
+
+Same `config/config.json` → same AMD output (`packages/core/src/build.ts:1`), so you can switch bundler with one plugin import and keep deploying the same `.sppkg`.
+
+See [architecture.md](architecture.md) and [commands.md#bundler-plugin](commands.md#bundler-plugin).
+
+### SPFx custom build pipeline
+
+RSPFx is the SPFx custom build pipeline without Heft.
+
+No gulp task → Heft → webpack chain — `rspfx` calls the bundler directly (`packages/core/src/build.ts:1`, `packages/compiler-rspack/src/config.ts:44`, `packages/plugin/src/vite.ts:1`).
+
+Customize via `vite.config.ts`/`rspack.config.ts`/`rsbuild.config.ts` plugins, `FrameworkPreset` (`packages/plugin-api/src/types.ts:29`), and `compilerHooks` — not a Heft rig.
+
+See [project-structure.md](project-structure.md) and [extending-runtime.md](extending-runtime.md).
+
+### SPFx replace Webpack, SPFx custom Webpack, SPFx eject webpack
+
+RSPFx lets you SPFx replace Webpack, use an SPFx custom Webpack setup without maintaining it, or SPFx eject webpack entirely.
+
+Official SPFx is webpack 5 only via `spfx-customize-webpack.js`.
+
+RSPFx removes `config/spfx-customize-webpack.js` and the rig (`migrating-from-gulp-heft.md#what-gets-removed`) — `rspfx migrate` deletes it and writes `vite.config.ts`/`rspack.config.ts`.
+
+If your custom webpack only added aliases or polyfills, delete it and build without it — `rspfx doctor` validates.
+
+If you needed real webpack plugins, re-add them as Vite/Rspack plugins in the new config.
+
+This is the supported way to eject webpack from SPFx and stay on supported SPFx versions via `spfxVersion` (`packages/core/src/versions.ts:24`).
+
+See [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md) and [compatibility.md](compatibility.md).
+
+### SPFx Rspack and SPFx esbuild
+
+RSPFx supports SPFx Rspack and SPFx esbuild paths.
+
+SPFx Rspack: `RSpfxPlugin` (`packages/plugin/src/rspack.ts:1`) on `@rspack/core` (`packages/compiler-rspack/package.json:38`) — Rust bundler, SWC, disk cache, `output.library.type: 'amd'`.
+
+SPFx esbuild: Vite dev uses esbuild for fast transforms; production build uses Vite/Rollup with SWC — you get esbuild speed without changing SPFx output.
+
+Pick Vite (esbuild + simple CSS) by default, Rsbuild/Rspack when you need webpack-compatible loaders.
+
+See [performance.md](performance.md) and [why-rspfx.md#any-modern-bundler--not-just-webpack](why-rspfx.md#any-modern-bundler--not-just-webpack).
+
+### SPFx Heft custom toolchain and SPFx Heft replacement
+
+RSPFx is the SPFx Heft custom toolchain replacement.
+
+It replaces Heft, `spfx-heft-plugins`, `spfx-web-build-rig`, `rush-stack-compiler-*`, and `sp-build-web` — `rspfx migrate` removes them from `package.json` and deletes `config/rig.json`/`config/typescript.json`/`config/sass.json` (`migrating-from-gulp-heft.md#what-rspfx-migrate-does`).
+
+Version switching becomes `spfxVersion: '1.24'` in one file, not Heft rig + generator + every `sp-*` pin.
+
+Local toolchain validation: `rspfx doctor` checks Node 20+, manifests, externals, and cert.
+
+See [migrating-from-gulp-heft.md](migrating-from-gulp-heft.md) and [compatibility.md#spfx-version-matrix](compatibility.md#spfx-version-matrix).

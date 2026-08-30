@@ -97,7 +97,7 @@ const docsSidebar = [...guideSidebar, ...referenceSidebar] as const
 export default defineConfig({
   title: 'RSPFx',
   titleTemplate: ':title — RSPFx',
-  description: 'SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack ready — same manifests, same .sppkg.',
+  description: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Replace webpack, eject webpack, Heft custom toolchain. Vite, Rspack, Rsbuild & esbuild custom build pipeline — same manifests, same .sppkg.',
   lang: 'en-US',
   cleanUrls: true,
   ignoreDeadLinks: true,
@@ -232,6 +232,17 @@ export default defineConfig({
       pageData.frontmatter.copyMarkdown = false
     }
   },
+  transformHead({ pageData }) {
+    let canonical: string
+    if (pageData.relativePath === 'index.md') canonical = 'https://rspfx.mbsks.me/'
+    else canonical = `https://rspfx.mbsks.me/${pageData.relativePath.replace(/\.md$/, '').replace(/\/index$/, '')}`
+    const url = pageData.relativePath === 'index.md' ? 'https://rspfx.mbsks.me/' : `https://rspfx.mbsks.me/${pageData.relativePath.replace(/\.md$/, '.html')}`
+    // Per-page canonical + og:url for crawlers — complements global head canonical
+    return [
+      ['link', { rel: 'canonical', href: canonical }],
+      ['meta', { property: 'og:url', content: url }],
+    ]
+  },
   sitemap: {
     hostname: 'https://rspfx.mbsks.me',
     transformItems: (items) =>
@@ -249,7 +260,18 @@ export default defineConfig({
     ['link', { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'LLM index (detailed)' }],
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
+    ['link', { rel: 'canonical', href: 'https://rspfx.mbsks.me/' }],
     ['meta', { name: 'theme-color', content: '#059669' }],
+    ['meta', { name: 'robots', content: 'index, follow' }],
+    ['meta', { name: 'keywords', content: 'SPFx Vite, SPFx Vite replacement, SPFx alternative bundler, SPFx custom build pipeline, SPFx replace Webpack, SPFx custom Webpack, SharePoint Framework Vite, SharePoint Framework alternative build tool, SPFx Rspack, SPFx esbuild, SPFx eject webpack, SPFx Heft custom toolchain, SharePoint Framework build tool, SPFx webpack alternative' }],
+    ['meta', { name: 'publisher', content: 'RSPFx' }],
+    ['meta', { property: 'og:locale', content: 'en_US' }],
+    ['meta', { property: 'og:locale:alternate', content: 'en_GB' }],
+    ['meta', { name: 'twitter:site', content: '@rspfx' }],
+    ['meta', { name: 'twitter:creator', content: '@rspfx' }],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'RSPFx', alternateName: ['SPFx Vite', 'SPFx Vite replacement', 'SharePoint Framework Vite', 'SPFx alternative bundler', 'SPFx Rspack', 'SPFx esbuild'], description: 'SPFx-compatible build toolchain — Vite, Rsbuild and Rspack replacement for Heft + webpack + gulp. SPFx alternative bundler and custom build pipeline. Replace webpack, eject webpack, Heft custom toolchain. SharePoint Framework Vite alternative build tool with Rspack and esbuild.', url: 'https://rspfx.mbsks.me', applicationCategory: 'DeveloperApplication', operatingSystem: 'Cross-platform', keywords: 'SPFx Vite, SPFx Rspack, SPFx esbuild, SPFx alternative bundler, SharePoint Framework Vite', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, author: { '@type': 'Organization', name: 'RSPFx', url: 'https://github.com/master8848/rspfx' } })],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'RSPFx', alternateName: ['SPFx Vite replacement', 'SharePoint Framework Vite'], url: 'https://rspfx.mbsks.me', description: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Vite, Rspack, Rsbuild & esbuild custom build pipeline for SharePoint Framework.', inLanguage: 'en-US', publisher: { '@type': 'Organization', name: 'RSPFx', url: 'https://github.com/master8848/rspfx', logo: { '@type': 'ImageObject', url: 'https://rspfx.mbsks.me/logo.svg' } }, potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: 'https://rspfx.mbsks.me/docs/guide/why-rspfx?q={search_term_string}' }, 'query-input': 'required name=search_term_string' } })],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{ '@type': 'Question', name: 'What is SPFx Vite replacement?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx Vite replacement — a SharePoint Framework Vite integration via rspfxVite() in vite.config.ts. It builds the same manifests and .sppkg as official SPFx but with Vite HMR and esbuild speed: vite dev --port 4321 for dev, rspfx build/package for .sppkg.' } }, { '@type': 'Question', name: 'What is SPFx alternative bundler?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx alternative bundler and SharePoint Framework alternative build tool. It supports Vite (default, esbuild), Rsbuild and Rspack (Rust webpack-compatible) — same config/config.json → same AMD define bundle, switch with one plugin import.' } }, { '@type': 'Question', name: 'How to SPFx replace Webpack or eject webpack?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx lets you SPFx replace Webpack or SPFx eject webpack entirely. It deletes config/spfx-customize-webpack.js and Heft rig via rspfx migrate and writes vite.config.ts/rspack.config.ts. Re-add needed webpack plugins as Vite/Rspack plugins.' } }, { '@type': 'Question', name: 'What is SPFx custom build pipeline?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx custom build pipeline without Heft/gulp — rspfx calls Vite/Rsbuild/Rspack directly via packages/core/src/build.ts. Customize via vite.config.ts plugins and FrameworkPreset, not Heft rig.' } }, { '@type': 'Question', name: 'What is SPFx Rspack and SPFx esbuild?', acceptedAnswer: { '@type': 'Answer', text: 'SPFx Rspack is RSpfxPlugin on @rspack/core (Rust, SWC, disk cache). SPFx esbuild is Vite dev using esbuild for fast transforms. Pick Vite for esbuild speed, Rspack for webpack-compatible loaders.' } }, { '@type': 'Question', name: 'What is SPFx Heft custom toolchain replacement?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx replaces Heft, spfx-heft-plugins, spfx-web-build-rig and sp-build-web. Version switching becomes spfxVersion: 1.24 in one file, validated by rspfx doctor, instead of rig + generator + sp-* pins.' } }] })],
     ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v){document.documentElement.setAttribute('data-accent','emerald');return;}if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);}else if(v){document.documentElement.setAttribute('data-theme',v);} }catch(e){}} )()`],
     ['script', {}, `(function(){try{var k='rspfx-pm',v=localStorage.getItem(k);if(v&&['npm','pnpm','yarn','bun','deno'].includes(v)){document.documentElement.setAttribute('data-pm',v);window.__RSPFX_PM=v;}}catch(e){}} )()`],
     ['script', {}, `(function(){function p(){try{var y=new Date().getFullYear();var el=document.querySelector('.VPFooter .copyright');if(!el)return false;if(el.dataset.patched==='1'&&el.querySelector('a[href*="master8848"]'))return true;el.innerHTML='Copyright \\u00A9 '+y+' <a href="https://github.com/master8848" target="_blank" rel="noopener noreferrer">master8848</a>';el.dataset.patched='1';return true}catch(e){return false}}p();document.addEventListener('DOMContentLoaded',p);var t=setInterval(function(){if(p())clearInterval(t)},250);setTimeout(function(){clearInterval(t)},8000);try{new MutationObserver(p).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}window.addEventListener('popstate',p);window.addEventListener('hashchange',p);document.addEventListener('visibilitychange',p);})()`],
@@ -258,12 +280,12 @@ export default defineConfig({
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'RSPFx' }],
     ['meta', { property: 'og:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
-    ['meta', { property: 'og:description', content: 'No Heft, no webpack, no gulp. Vite default — Rsbuild & Rspack ready. Same manifests, same .sppkg.' }],
+    ['meta', { property: 'og:description', content: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Replace webpack, eject webpack, Heft custom toolchain. Vite, Rspack, Rsbuild & esbuild pipeline — same manifests, same .sppkg.' }],
     ['meta', { property: 'og:image', content: '/hero.svg' }],
-    ['meta', { property: 'og:image:alt', content: 'RSPFx' }],
+    ['meta', { property: 'og:image:alt', content: 'RSPFx — SPFx Vite replacement' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
-    ['meta', { name: 'twitter:description', content: 'Build SharePoint web parts without the old toolchain. Vite by default — Rsbuild & Rspack ready.' }],
+    ['meta', { name: 'twitter:title', content: 'RSPFx — SPFx Vite replacement & alternative bundler' }],
+    ['meta', { name: 'twitter:description', content: 'SharePoint Framework Vite alternative build tool. Replace webpack, Heft, gulp with Vite, Rspack, Rsbuild & esbuild — same .sppkg.' }],
     ['meta', { name: 'twitter:image', content: '/hero.svg' }],
   ],
   themeConfig: {

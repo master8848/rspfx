@@ -93,3 +93,59 @@ See [Deployment guide](./deployment-guide.md) and [../reference/architecture.md]
 | Switch SPFx version | many pins | one field |
 
 For technical details, see [../reference/commands.md](../reference/commands.md) and [../reference/architecture.md](../reference/architecture.md).
+
+## Search terms — SPFx Vite replacement and alternative bundlers
+
+If you searched for "SPFx Vite", "SPFx Vite replacement", "SPFx alternative bundler", "SPFx custom build pipeline", "SPFx replace Webpack", "SPFx custom Webpack", "SharePoint Framework Vite", "SharePoint Framework alternative build tool", "SPFx Rspack", "SPFx esbuild", "SPFx eject webpack", or "SPFx Heft custom toolchain" — RSPFx is that replacement.
+
+RSPFx is the SPFx Vite replacement that keeps SharePoint compatibility while replacing the old webpack + Heft + gulp toolchain.
+
+### SPFx Vite and SharePoint Framework Vite
+
+RSPFx is the SharePoint Framework Vite integration.
+
+Use Vite as the SPFx Vite bundler via `rspfxVite()` in `vite.config.ts` — see [Getting started](./getting-started.md).
+
+Dev runs on `vite dev --port 4321`; build via `rspfx build`/`rspfx package` still emits `.sppkg`.
+
+SharePoint Framework Vite means same manifests and `.sppkg` as official SPFx, but with Vite HMR and esbuild speed.
+
+### SPFx alternative bundler and SharePoint Framework alternative build tool
+
+RSPFx is the SPFx alternative bundler and SharePoint Framework alternative build tool.
+
+Pick Vite (default), Rsbuild, or Rspack — one plugin import switches bundler, same AMD output.
+
+See [../reference/architecture.md](../reference/architecture.md).
+
+### SPFx custom build pipeline
+
+RSPFx is the SPFx custom build pipeline without Heft.
+
+No gulp → Heft → webpack chain — `rspfx` calls the bundler directly; customize via `vite.config.ts`/`rspack.config.ts`/`rsbuild.config.ts`.
+
+See [../reference/commands.md](../reference/commands.md).
+
+### SPFx replace Webpack, SPFx custom Webpack, SPFx eject webpack
+
+RSPFx lets you SPFx replace Webpack or SPFx eject webpack entirely.
+
+It removes `config/spfx-customize-webpack.js` and the Heft rig — `rspfx migrate` deletes it and writes `vite.config.ts`.
+
+If your custom webpack only added aliases, delete it; if it used real webpack plugins, re-add them as Vite/Rspack plugins.
+
+See [Migration from SPFx](./migration/migration-from-spfx.md) and [Migrating from gulp and Heft](./migration/migrating-from-gulp-heft.md).
+
+### SPFx Rspack and SPFx esbuild
+
+RSPFx supports SPFx Rspack (`RSpfxPlugin` on `@rspack/core`) and SPFx esbuild (Vite dev uses esbuild).
+
+Pick Vite for esbuild speed and simple CSS; pick Rspack when you need webpack-compatible loaders.
+
+See [../reference/performance.md](../reference/performance.md).
+
+### SPFx Heft custom toolchain
+
+RSPFx is the SPFx Heft custom toolchain replacement — it drops Heft, rigs, and `sp-build-web`; version switching becomes `spfxVersion: '1.24'` in one file, validated by `rspfx doctor`.
+
+See [Migrating from gulp and Heft](./migration/migrating-from-gulp-heft.md).

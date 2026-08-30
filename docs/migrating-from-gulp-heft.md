@@ -2,7 +2,9 @@
 
 TL;DR: Move an existing SPFx project by dropping gulp and Heft files, rewriting entrypoints, and adding a bundler config. Run `rspfx migrate` to automate it. To try without migrating, see [Try mode](../try-mode.md).
 
-This is the definitive guide. See [Migration case study](./migration-case-study.md) for a real example.
+This is the definitive guide to SPFx replace Webpack, SPFx eject webpack, SPFx custom Webpack, and the SPFx Heft custom toolchain replacement — the SPFx custom build pipeline that replaces webpack + Heft + gulp. See [Migration case study](./migration-case-study.md) for a real example.
+
+See also [Why RSPFx](../why-rspfx.md#search-terms--spfx-vite-replacement-and-alternative-bundlers) for "SPFx Vite", "SPFx Vite replacement", "SPFx alternative bundler", "SharePoint Framework Vite", "SharePoint Framework alternative build tool", "SPFx Rspack", and "SPFx esbuild" search terms.
 
 Read [Why not to migrate](./why-not-to-migrate.md) first if you are unsure. For a zero-risk trial that keeps gulp and Heft, start with [Try mode](../try-mode.md).
 

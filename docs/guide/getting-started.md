@@ -1,8 +1,8 @@
 # Getting started
 
-TL;DR: You install the CLI, create a project, run the dev server on port 4321, and package a `.sppkg`. These four steps take you from zero to a working web part.
+TL;DR: You install the CLI, create a project, run the dev server on port 4321, and package a `.sppkg`. These four steps take you from zero to a working web part — the SharePoint Framework Vite path via the SPFx Vite replacement.
 
-This guide uses Vite and React. You can swap the bundler or framework later. See [Choosing a framework](./frameworks/choosing-a-framework.md).
+This guide uses Vite and React — the SPFx Vite / SharePoint Framework Vite default. It is the SPFx alternative bundler and SharePoint Framework alternative build tool path; Rspack and esbuild are also available as the SPFx custom build pipeline. See [Choosing a framework](./frameworks/choosing-a-framework.md) and [Why RSPFx](./why-rspfx.md#search-terms--spfx-vite-replacement-and-alternative-bundlers).
 
 <Steps>
 

@@ -1,6 +1,6 @@
 # Getting Started
 
-Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster — the SPFx Vite / SharePoint Framework Vite path. RSPFx is the SPFx Vite replacement, SPFx alternative bundler and SharePoint Framework alternative build tool, with Vite, Rspack and esbuild as the SPFx custom build pipeline. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment). Also see [Why RSPFx](why-rspfx.md#search-terms--spfx-vite-replacement-and-alternative-bundlers) for "SPFx replace Webpack", "SPFx custom Webpack", "SPFx eject webpack", and "SPFx Heft custom toolchain".
 
 ## 1. Install
 

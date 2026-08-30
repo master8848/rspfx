@@ -353,6 +353,12 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
       <span class="rspfx-tip-kicker">Before first dev</span>
       <span>Run <code>rspfx doctor</code> — it checks Node version, cert trust, port conflicts and missing manifests in one pass.</span>
     </section>
+
+    <!-- ── SEO: alternative search terms (visible for crawlers) ── -->
+    <section class="rspfx-section rspfx-seo" aria-label="Alternative search terms">
+      <h2 class="rspfx-seo-title">Looking for an SPFx Vite replacement?</h2>
+      <p class="rspfx-seo-text">RSPFx is the <strong>SPFx Vite</strong> and <strong>SharePoint Framework Vite</strong> replacement — the <strong>SPFx alternative bundler</strong> and <strong>SharePoint Framework alternative build tool</strong> that lets you <strong>SPFx replace Webpack</strong>, use an <strong>SPFx custom Webpack</strong> setup without maintaining it, or <strong>SPFx eject webpack</strong> entirely. It provides an <strong>SPFx custom build pipeline</strong> with Vite (esbuild), <strong>SPFx Rspack</strong> (Rspack + SWC) and Rsbuild — no Heft, no gulp, no <strong>SPFx Heft custom toolchain</strong> rig. Search: "SPFx Vite replacement", "SPFx esbuild", "SPFx Rspack". <a href="/docs/guide/why-rspfx">Why RSPFx</a> · <a href="/docs/getting-started">Getting started</a> · <a href="/docs/guide/migration/migrating-from-gulp-heft">Migrate from Heft</a></p>
+    </section>
   </div>
 </template>
 
@@ -937,4 +943,11 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   line-height: 1;
 }
 .rspfx-tip code { font-size: 13px; padding: 1px 5px; border-radius: 6px; background: var(--vp-c-default-soft); border: 1px solid var(--vp-c-divider); }
+
+/* ── SEO: alternative terms (visible, low-emphasis) ── */
+.rspfx-seo { margin-top: 28px; padding: 16px 18px; border: 1px solid var(--vp-c-divider); border-radius: 12px; background: var(--vp-c-bg-soft); }
+.rspfx-seo-title { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; color: var(--vp-c-text-1); margin: 0 0 8px; line-height: 1.4; }
+.rspfx-seo-text { font-size: 13px; line-height: 1.7; color: var(--vp-c-text-2); margin: 0; }
+.rspfx-seo-text a { color: var(--vp-c-brand-1); text-decoration: none; font-weight: 600; }
+.rspfx-seo-text a:hover { text-decoration: underline; }
 </style>
