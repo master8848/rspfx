@@ -23,7 +23,12 @@ describe('SpfxVersion registry', () => {
   it('registerSpfxVersion validates target pattern', () => {
     expect(() => registerSpfxVersion({ target: '2.0', npmVersion: '2.0.0', toolchain: 'heft', status: 'ga' })).toThrow(/must match/);
     expect(() => registerSpfxVersion({ target: '1.x', npmVersion: '1.x.0', toolchain: 'heft', status: 'ga' })).toThrow(/must match/);
-    expect(() => registerSpfxVersion({ target: '1.25 ', npmVersion: '1.25.0', toolchain: 'heft', status: 'ga' } as any)).not.toThrow(); // trimmed passes, but '1.25 ' trimmed is 1.25
+    // trailing whitespace is trimmed and stored as canonical target
+    registerSpfxVersion({ target: '1.25 ', npmVersion: '1.25.0', toolchain: 'heft', status: 'ga' } as any);
+    expect(isSpfxTarget('1.25')).toBe(true);
+    expect(getSpfxVersions().some((v) => v.target === '1.25')).toBe(true);
+    expect(spfxNpmVersion('1.25')).toBe('1.25.0');
+    expect(isSpfxTarget('1.25 ')).toBe(false);
     __clearRegisteredSpfxVersionsForTests();
     expect(() => registerSpfxVersion({ target: 'invalid', npmVersion: '1.25.0', toolchain: 'heft', status: 'ga' })).toThrow();
   });
@@ -47,22 +52,25 @@ describe('SpfxVersion registry', () => {
     expect(() => spfxNpmVersion('9.9')).toThrow(/Unknown SPFx target/);
   });
 
-  it('SPFX_TARGETS is mutable and reflects registry', () => {
-    const initialLen = SPFX_TARGETS.length;
+  it('registered versions are queryable via isSpfxTarget/getSpfxVersions', () => {
+    expect(isSpfxTarget('1.27')).toBe(false);
     registerSpfxVersion({ target: '1.27', npmVersion: '1.27.0', toolchain: 'heft', status: 'ga' });
-    expect(SPFX_TARGETS.length).toBe(initialLen + 1);
+    expect(isSpfxTarget('1.27')).toBe(true);
+    expect(getSpfxVersions().some((v) => v.target === '1.27')).toBe(true);
+    expect(spfxNpmVersion('1.27')).toBe('1.27.0');
     expect(SPFX_TARGETS).toContain('1.27');
   });
 
-  it('isDomainIsolatedDeprecated can be configured via metadata', async () => {
-    // Use dynamic import to avoid cycle in core; test sppkg-builder logic separately if needed.
-    // Here we just verify the version info carries the flag.
+  it('isDomainIsolatedDeprecated metadata is preserved and queryable', () => {
+    // Base versions have no explicit flag (sppkg-builder falls back to >=1.24 heuristic)
+    expect(getSpfxVersions().find((x) => x.target === '1.23')?.isDomainIsolatedDeprecated).toBeUndefined();
     registerSpfxVersion({ target: '1.30', npmVersion: '1.30.0', toolchain: 'heft', status: 'ga', isDomainIsolatedDeprecated: false });
-    const v = getSpfxVersions().find((x) => x.target === '1.30');
-    expect(v?.isDomainIsolatedDeprecated).toBe(false);
+    expect(getSpfxVersions().find((x) => x.target === '1.30')?.isDomainIsolatedDeprecated).toBe(false);
     registerSpfxVersion({ target: '1.31', npmVersion: '1.31.0', toolchain: 'heft', status: 'ga', isDomainIsolatedDeprecated: true });
-    const v2 = getSpfxVersions().find((x) => x.target === '1.31');
-    expect(v2?.isDomainIsolatedDeprecated).toBe(true);
+    expect(getSpfxVersions().find((x) => x.target === '1.31')?.isDomainIsolatedDeprecated).toBe(true);
+    // absent flag stays undefined
+    registerSpfxVersion({ target: '1.32', npmVersion: '1.32.0', toolchain: 'heft', status: 'ga' });
+    expect(getSpfxVersions().find((x) => x.target === '1.32')?.isDomainIsolatedDeprecated).toBeUndefined();
   });
 
   it('register rejects invalid toolchain/status', () => {

@@ -1,3 +1,6 @@
+// Parity lock for SPFx 1.23.2 contract — EnvironmentType mirrors @microsoft/sp-core-library
+// and PropertyPaneFieldType mirrors @microsoft/sp-property-pane. Do not change values
+// without upstream verification. See reference validation against SPFx 1.23.2.
 import { describe, it, expect } from 'vitest';
 import { EnvironmentType, PropertyPaneFieldType } from '../src/index.js';
 
@@ -51,5 +54,19 @@ describe('PropertyPaneFieldType', () => {
     expect(PropertyPaneFieldType[1]).toBe('Custom');
     expect(PropertyPaneFieldType[19]).toBe('IconPicker');
     expect(PropertyPaneFieldType[22]).toBe('SortableAccordion');
+  });
+});
+
+describe('enum stability', () => {
+  it('enums are not mutated at runtime', () => {
+    // Snapshot key counts to detect accidental additions/removals
+    expect(Object.keys(EnvironmentType).filter((k) => isNaN(Number(k))).length).toBe(4);
+    // PropertyPaneFieldType has 21 enum members (gaps at 0,4) — numeric keys 1-22 minus 0,4
+    const numericKeys = Object.keys(PropertyPaneFieldType).filter((k) => !isNaN(Number(k)));
+    expect(numericKeys.length).toBe(21);
+    // Values remain stable after any prior test mutations (no frozen guarantee, but contract holds)
+    expect(EnvironmentType.Test).toBe(0);
+    expect(PropertyPaneFieldType.Custom).toBe(1);
+    expect(PropertyPaneFieldType.SortableAccordion).toBe(22);
   });
 });

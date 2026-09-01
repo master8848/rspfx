@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { configDefaults, defineConfig, resolveConfig, resolvePathDefaults } from '../src/index.js';
+import { configDefaults, defineConfig, resolveConfig, resolvePathDefaults, tryResolveConfig } from '../src/index.js';
 
 describe('configDefaults', () => {
   it('holds the canonical default values', () => {
@@ -152,14 +152,38 @@ describe('resolveConfig', () => {
 });
 
 describe('defineConfig', () => {
-  it('returns the config as-is', () => {
-    const config = {
+  it('preserves config shape and integrates with resolveConfig/tryResolveConfig', () => {
+    // defineConfig is a typed identity helper — it should preserve the exact shape
+    // and the result must still be valid input to resolveConfig / tryResolveConfig
+    const raw = defineConfig({
       name: 'identity',
       framework: 'svelte',
       spfxVersion: '1.23',
       dev: { port: 4321 },
       build: { minify: true }
-    } as const;
-    expect(defineConfig(config)).toBe(config);
+    } as const);
+    expect(raw).toEqual({
+      name: 'identity',
+      framework: 'svelte',
+      spfxVersion: '1.23',
+      dev: { port: 4321 },
+      build: { minify: true }
+    });
+    const resolved = resolveConfig(raw);
+    expect(resolved.name).toBe('identity');
+    expect(resolved.framework).toBe('svelte');
+    expect(resolved.spfxVersion).toBe('1.23');
+    expect(resolved.dev.port).toBe(4321);
+    expect(resolved.build.minify).toBe(true);
+    // defaults are still applied on top
+    expect(resolved.dev.hostname).toBe(configDefaults.dev.hostname);
+    expect(resolved.paths.srcDir).toBe(configDefaults.paths.srcDir);
+    // also valid via validated path
+    const tried = tryResolveConfig(raw);
+    expect(tried.ok).toBe(true);
+    if (tried.ok) {
+      expect(tried.value.name).toBe('identity');
+      expect(tried.value.framework).toBe('svelte');
+    }
   });
 });
