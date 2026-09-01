@@ -1,3 +1,4 @@
+/** Allowlisted define keys — prevents RSPFx leakage and unknown globals. */
 export const ALLOWED_DEFINE_KEYS = new Set(['DEBUG', 'DEPRECATED_UNIT_TEST', 'process.env.NODE_ENV']);
 
 /**

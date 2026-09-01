@@ -1,7 +1,4 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { rspack, type Configuration, type RuleSetRule } from '@rspack/core';
 import type { CompileContext } from './types.js';
@@ -10,8 +7,6 @@ import { SpfxLocalizedResourcesPlugin } from './localized-resources.js';
 import { SpfxPublicPathPlugin, SPFX_PUBLIC_PATH_SENTINEL } from './public-path.js';
 import type { FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
 import { rspfxCssInlineRule, rspfxSassRule } from './helpers/css.js';
-
-const require = createRequire(import.meta.url);
 
 const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
@@ -22,11 +17,15 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
-import { canResolveFromProject, isPlatformOnlyModule } from '@mbsks/rspfx-core';
-
-function platformOnlyExternal(data: { request?: string }): string | undefined {
-  return typeof data.request === 'string' && isPlatformOnlyModule(data.request) ? `amd ${data.request}` : undefined;
-}
+import { canResolveFromProject } from '@mbsks/rspfx-core';
+import {
+  platformOnlyExternal,
+  hasPostcssConfig as buildHasPostcssConfig,
+  tryResolve,
+  computeUniqueName as buildComputeUniqueName,
+  cacheVersionHash as buildCacheVersionHash,
+  type CacheVersionInput
+} from '@mbsks/rspfx-build-core';
 
 /** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
 export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
@@ -36,34 +35,13 @@ const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss',
 /** Build-time aliases shared by the compiler config and the native rspack resolve. */
 export { BASE_EXTENSIONS };
 
-const POSTCSS_CONFIG_FILES = [
-  'postcss.config.js',
-  'postcss.config.cjs',
-  'postcss.config.mjs',
-  'postcss.config.ts',
-  'postcss.config.cts',
-  'postcss.config.mts',
-  'postcss.config.json'
-];
-
-function tryResolve(name: string, projectRoot: string): string | undefined {
-  try {
-    const req = createRequire(path.join(projectRoot, 'package.json'));
-    return req.resolve(name);
-  } catch {}
-  try {
-    return require.resolve(name);
-  } catch {}
-  return undefined;
-}
-
+const postcssCache = new Map<string, boolean>();
 function hasPostcssConfigFile(projectRoot: string): boolean {
-  for (const f of POSTCSS_CONFIG_FILES) {
-    try {
-      if (fs.existsSync(path.join(projectRoot, f))) return true;
-    } catch {}
-  }
-  return false;
+  const cached = postcssCache.get(projectRoot);
+  if (cached !== undefined) return cached;
+  const result = buildHasPostcssConfig(projectRoot);
+  postcssCache.set(projectRoot, result);
+  return result;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -80,26 +58,8 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   }
 }
 
-function computeUniqueName(ctx: CompileContext): string {
-  if (ctx.entries.length === 1) {
-    const entry = ctx.entries[0]!;
-    return `${entry.componentIds[0]!}_${entry.version}`;
-  }
-  const joined = ctx.entries
-    .map((entry) => `${entry.componentIds[0]!}_${entry.version}`)
-    .join('');
-  return createHash('md5').update(joined).digest('hex');
-}
-
-export interface CacheVersionInput {
-  framework: string;
-  version?: string;
-  build: Pick<CompileContext['build'], 'sourcemap' | 'minify' | 'splitChunks' | 'outDir'>;
-}
-
-export function cacheVersionHash(input: CacheVersionInput): string {
-  return createHash('md5').update(JSON.stringify(input)).digest('hex').slice(0, 8);
-}
+export const cacheVersionHash = buildCacheVersionHash;
+export type { CacheVersionInput };
 
 export async function createRspackConfig(ctx: CompileContext, userModuleRules?: unknown[]): Promise<unknown> {
   if (ctx.entries.length === 0) {
@@ -259,9 +219,9 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
       filename: '[name].js',
       chunkFilename: 'chunk.[name].js',
       assetModuleFilename: 'assets/[hash][ext][query]',
-      uniqueName: computeUniqueName(ctx),
+      uniqueName: buildComputeUniqueName(ctx.entries),
       library: { type: 'amd' },
-      chunkLoadingGlobal: `webpackJsonp_${computeUniqueName(ctx)}`,
+      chunkLoadingGlobal: `webpackJsonp_${buildComputeUniqueName(ctx.entries)}`,
       crossOriginLoading: 'anonymous',
       publicPath: SPFX_PUBLIC_PATH_SENTINEL,
       devtoolModuleFilenameTemplate: 'webpack:///../[resource-path]'

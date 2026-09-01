@@ -39,7 +39,7 @@ import {
   ensureCertificates
 } from '@mbsks/rspfx-dev-runtime/vite-shared';
 import '@mbsks/rspfx-dev-runtime/vite-shared';
-import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { collectExternals } from '@mbsks/rspfx-build-core';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
 
@@ -72,16 +72,6 @@ interface ConnectResponse {
   setHeader(name: string, value: string): void;
   end(body: string): void;
   statusCode?: number;
-}
-
-function collectExternals(root: string, projectExternals: string[], localizedResources: { name: string }[]): string[] {
-  return [
-    ...new Set([
-      ...findSpDependencies(root).keys(),
-      ...projectExternals,
-      ...localizedResources.map((r) => r.name)
-    ])
-  ];
 }
 
 /**

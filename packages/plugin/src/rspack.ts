@@ -6,15 +6,14 @@ import {
   type RspfxBundlerPluginLike,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
-import { createRspackConfig, type LocalizedResource } from '@mbsks/rspfx-compiler-rspack';
-import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
+import { createRspackConfig } from '@mbsks/rspfx-compiler-rspack';
 import { readProject, assembleRelease, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
+import { collectExternals } from './shared.js';
 import { createKernel, type Kernel } from './kernel.js';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxPluginOptions } from './types.js';
-// TODO: migrate collectExternals/platformOnlyExternal/amd helpers to build-core when rspack.ts is refactored to use kernel externals uniformly
-// import { collectExternals } from '@mbsks/rspfx-build-core'; // available via build-core, currently using kernel/marked externals
+// TODO(https://github.com/master8848/rspfx/issues/2): migrate collectExternals/platformOnlyExternal/amd helpers to build-core when rspack.ts is refactored to use kernel externals uniformly
 
 const logger = createLogger('rspfx');
 
@@ -212,12 +211,6 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   }
 
   private collectExternals(project: ReadProjectResult): string[] {
-    return [
-      ...new Set([
-        ...findSpDependencies(this.projectRoot).keys(),
-        ...project.externals,
-        ...project.localizedResources.map((resource: LocalizedResource) => resource.name)
-      ])
-    ];
+    return collectExternals(this.projectRoot, project.externals, project.localizedResources);
   }
 }

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vite plugin — 944 LOC god file.
+ * TODO: split into `vite/config.ts` (createConfig), `vite/bundle.ts` (transformEntryBundle/esToAmd),
+ * `vite/dev.ts` (configureServer) and `vite/utils.ts` (getViteVersion). Tracked at https://github.com/master8848/rspfx/issues/2
+ * Sections: 1) Vite version detection 2) build helpers 3) rspfxVite plugin 4) utils
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -42,8 +48,8 @@ import '@mbsks/rspfx-dev-runtime/vite-shared';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
-import { collectExternals } from '@mbsks/rspfx-build-core';
-// TODO: migrate remaining duplicated helpers (amdName, inlineStyleCode, defines, output, publicPath) to build-core imports when vite.ts restructure allows
+import { collectExternals, inlineStyleCode } from '@mbsks/rspfx-build-core';
+import { writeStatsJson } from './shared.js';
 
 const logger = createLogger('rspfx');
 
@@ -58,32 +64,41 @@ const viteAls = new AsyncLocalStorage<BundleEntry>();
  * Vite), then falling back to the rspfx installation's Vite. Returns
  * undefined when Vite is not installed or version cannot be read.
  */
+const viteVersionMemo = new Map<string, string | undefined>();
 function getViteVersion(root: string): string | undefined {
+  if (viteVersionMemo.has(root)) return viteVersionMemo.get(root);
   const tryRead = (pkgPath: string): string | undefined => {
     try {
       const raw = fs.readFileSync(pkgPath, 'utf8');
       const pkg = JSON.parse(raw) as { version?: string };
       return typeof pkg.version === 'string' ? pkg.version : undefined;
-    } catch {
+    } catch (e) {
+      logger.debug(`getViteVersion read ${pkgPath} failed: ${String(e)}`);
       return undefined;
     }
   };
-  // 1) project-local vite
+  let version: string | undefined;
   try {
     const requireFromProject = createRequire(path.join(root, 'package.json'));
     const pkgPath = requireFromProject.resolve('vite/package.json');
     const v = tryRead(pkgPath);
-    if (v) return v;
-  } catch {}
-  // 2) fallback to this package's vite
-  try {
-    const basePath = decodeIfEncoded(import.meta.url);
-    const fallbackRequire = createRequire(basePath);
-    const pkgPath = fallbackRequire.resolve('vite/package.json');
-    const v = tryRead(pkgPath);
-    if (v) return v;
-  } catch {}
-  return undefined;
+    if (v) version = v;
+  } catch (e) {
+    logger.debug(`getViteVersion project resolve failed: ${String(e)}`);
+  }
+  if (!version) {
+    try {
+      const basePath = decodeIfEncoded(import.meta.url);
+      const fallbackRequire = createRequire(basePath);
+      const pkgPath = fallbackRequire.resolve('vite/package.json');
+      const v = tryRead(pkgPath);
+      if (v) version = v;
+    } catch (e) {
+      logger.debug(`getViteVersion fallback resolve failed: ${String(e)}`);
+    }
+  }
+  viteVersionMemo.set(root, version);
+  return version;
 }
 
 function getViteMajor(root: string): number | undefined {
@@ -174,28 +189,7 @@ function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPres
 }
 
 function writeStats(root: string, entryName: string, moduleCount: number): void {
-  const file = path.join(root, '.rspfx', 'stats.json');
-  let existing: ViteStatsJson = {};
-  try {
-    existing = JSON.parse(fs.readFileSync(file, 'utf8')) as ViteStatsJson;
-  } catch {
-    // No stats file yet.
-  }
-  const moduleCounts: Record<string, number> = {
-    ...(typeof existing.moduleCounts === 'object' && existing.moduleCounts !== null
-      ? existing.moduleCounts
-      : {}),
-    [entryName]: moduleCount
-  };
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ ...existing, moduleCounts }, null, 2));
-}
-
-function inlineStyleCode(css: string): string {
-  return (
-    `\n(function(){var e=document.createElement("style");e.type="text/css";` +
-    `e.textContent=${JSON.stringify(css)};(document.head||document.documentElement).appendChild(e);})();\n`
-  );
+  writeStatsJson(root, { [entryName]: moduleCount });
 }
 
 /**
@@ -619,10 +613,9 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         https: certs ? { key: certs.key, cert: certs.cert } : settings.https ? true : false,
         open: false
       },
-      // Future-proof experimental flag: Vite 7 ignores unknown keys, Vite 8
-      // currently has no Rollup fallback – this is a no-op today but documents
-      // intent and will take effect if a future Vite 8.x re-introduces a
-      // `rolldown: false` / `builder: 'rollup'` escape hatch.
+      // Vite 7 (Rollup) / Vite 8 (Rolldown) compat: experimental.rolldown is a forward-compat no-op.
+      // Vite 7 ignores unknown keys; Vite 8 currently has no Rollup fallback.
+      // Kept in case a future Vite re-introduces `rolldown: false` / `builder: 'rollup'` escape hatch.
       // See https://vite.dev/guide/migration and https://github.com/vitejs/vite/discussions/22820
       experimental: {
         // `rolldown: false` is the hypothetical flag discussed for Vite 8 to

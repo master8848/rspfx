@@ -1,8 +1,10 @@
 import path from 'node:path';
 import { computeUniqueName, type BundleEntryLike } from './amd.js';
 
+/** Sentinel replaced by script URL at runtime (SpfxPublicPathPlugin). */
 export const SPFX_PUBLIC_PATH_SENTINEL = '__RSPFX_SPFX_PUBLIC_PATH__';
 
+/** Resolve rspack `devtool` for SPFx (hidden-source-map in prod when sourcemap enabled). */
 export function getDevtool(production: boolean, sourcemap?: boolean): 'hidden-source-map' | 'source-map' | false {
   if (production) {
     return sourcemap ? 'hidden-source-map' : false;
@@ -17,6 +19,7 @@ export interface SpfxOutputOptions {
   uniqueName?: string;
 }
 
+/** Create SPFx output config (AMD library, publicPath sentinel, chunk naming). */
 export function createSpfxOutput(opts: SpfxOutputOptions): {
   path: string;
   filename: string;

@@ -1,39 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { createRequire } from 'node:module';
 import type { RuleSetRule } from '@rspack/core';
-
-const require = createRequire(import.meta.url);
-
-const POSTCSS_CONFIG_FILES = [
-  'postcss.config.js',
-  'postcss.config.cjs',
-  'postcss.config.mjs',
-  'postcss.config.ts',
-  'postcss.config.cts',
-  'postcss.config.mts',
-  'postcss.config.json'
-];
-
-function tryResolve(name: string, projectRoot: string): string | undefined {
-  try {
-    const req = createRequire(path.join(projectRoot, 'package.json'));
-    return req.resolve(name);
-  } catch {}
-  try {
-    return require.resolve(name);
-  } catch {}
-  return undefined;
-}
-
-function hasPostcssConfigFile(projectRoot: string): boolean {
-  for (const f of POSTCSS_CONFIG_FILES) {
-    try {
-      if (fs.existsSync(path.join(projectRoot, f))) return true;
-    } catch {}
-  }
-  return false;
-}
+import { tryResolve, hasPostcssConfig } from '@mbsks/rspfx-build-core';
 
 export function rspfxCssInlineRule(projectRoot?: string): RuleSetRule {
   const root = projectRoot ?? process.cwd();
@@ -42,7 +8,7 @@ export function rspfxCssInlineRule(projectRoot?: string): RuleSetRule {
   const cssLoaderPath = tryResolve('css-loader', root) ?? 'css-loader';
   const sPath = styleLoaderPath;
   const cPath = cssLoaderPath;
-  const hasPostcss = hasPostcssConfigFile(root);
+  const hasPostcss = hasPostcssConfig(root);
   const postcssLoaderPath = tryResolve('postcss-loader', root);
   const postcssPath = tryResolve('postcss', root);
   const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;
@@ -70,7 +36,7 @@ export function rspfxSassRule(projectRoot?: string): RuleSetRule {
   let cssLoaderPath: string | undefined = tryResolve('css-loader', root);
   const sPath = styleLoaderPath ?? 'style-loader';
   const cPath = cssLoaderPath ?? 'css-loader';
-  const hasPostcss = hasPostcssConfigFile(root);
+  const hasPostcss = hasPostcssConfig(root);
   const postcssLoaderPath = tryResolve('postcss-loader', root);
   const postcssPath = tryResolve('postcss', root);
   const postcssAvailable = hasPostcss && !!postcssLoaderPath && !!postcssPath;

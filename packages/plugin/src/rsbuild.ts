@@ -8,7 +8,6 @@ import {
   resolveConfig,
   RSPFX_PLUGIN_MARKER,
   RSPFX_PLUGIN_OPTIONS,
-  isPlatformOnlyModule,
   type RspfxBundlerPluginLike,
   type RspfxConfig
 } from '@mbsks/rspfx-core';
@@ -39,16 +38,9 @@ import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspfx-plugin-api';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
-import { amdName, collectExternals, computeUniqueName, writeStatsJson } from './shared.js';
-// TODO: full migration to build-core for CSS/output/helpers is pending Rsbuild config extraction refactor
-// Currently shared.ts re-exports build-core helpers for backward compat; keep direct import minimal to avoid conflicts
-// import { platformOnlyExternal, hasPostcssConfig, inlineStyleCode, ALLOWED_DEFINE_KEYS, createDefineMap, getDevtool, createSpfxOutput } from '@mbsks/rspfx-build-core';
+import { amdName, collectExternals, computeUniqueName, writeStatsJson, platformOnlyExternal } from './shared.js';
 
 const logger = createLogger('rspfx');
-
-function platformOnlyExternal(data: { request?: string }): string | undefined {
-  return typeof data.request === 'string' && isPlatformOnlyModule(data.request) ? `amd ${data.request}` : undefined;
-}
 
 const require = createRequire(import.meta.url);
 let styleLoaderPath: string | undefined;
@@ -79,30 +71,7 @@ function resolveFromProject(request: string, root: string, fallback: string | un
   }
 }
 
-export function hasPostcssConfig(root: string): boolean {
-  // Mirror compiler-rspack: detect postcss via fs.existsSync postcss.config.* at root
-  const candidates = [
-    'postcss.config.js',
-    'postcss.config.cjs',
-    'postcss.config.mjs',
-    'postcss.config.ts',
-    'postcss.config.cts',
-    'postcss.config.mts',
-    'postcss.config.json'
-  ];
-  for (const file of candidates) {
-    if (fs.existsSync(path.join(root, file))) {
-      return true;
-    }
-  }
-  // Fallback: any postcss.config.* file (covers future extensions)
-  try {
-    const entries = fs.readdirSync(root);
-    return entries.some((f) => f.startsWith('postcss.config.'));
-  } catch {
-    return false;
-  }
-}
+export { hasPostcssConfig } from './shared.js';
 
 function hasSassInstalled(root: string): boolean {
   try {

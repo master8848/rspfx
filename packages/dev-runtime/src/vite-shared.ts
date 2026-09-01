@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { isAllowedOrigin } from '@mbsks/rspfx-core';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { ensureCertificates, formatTrustInstructions, isCertTrusted, tryTrustCert } from '@mbsks/rspfx-manifest-server';
+import { POSTCSS_CONFIG_FILES, tryResolve as buildTryResolve, hasPostcssConfig as buildHasPostcssConfig } from '@mbsks/rspfx-build-core';
 
 const logger = createLogger('rspfx');
 
@@ -264,15 +265,7 @@ export function corsMiddleware(req: unknown, res: unknown, next: () => void): vo
 // ---------------------------------------------------------------------------
 // Sass / Tailwind detection
 // ---------------------------------------------------------------------------
-const POSTCSS_CONFIG_FILES = [
-  'postcss.config.js',
-  'postcss.config.cjs',
-  'postcss.config.mjs',
-  'postcss.config.ts',
-  'postcss.config.cts',
-  'postcss.config.mts',
-  'postcss.config.json',
-];
+export { POSTCSS_CONFIG_FILES };
 const TAILWIND_CONFIG_FILES = [
   'tailwind.config.js',
   'tailwind.config.cjs',
@@ -283,13 +276,9 @@ const TAILWIND_CONFIG_FILES = [
 ];
 
 export function tryResolveFromRoot(name: string, root: string): string | undefined {
-  try {
-    const req = createRequire(path.join(root, 'package.json'));
-    return req.resolve(name);
-  } catch {}
-  try {
-    return createRequire(import.meta.url).resolve(name);
-  } catch {}
+  const result = buildTryResolve(name, root);
+  if (result) return result;
+  logger.debug(`tryResolveFromRoot ${name} not found via build-core`);
   return undefined;
 }
 
@@ -297,14 +286,32 @@ export function isSassInstalled(root: string): boolean {
   if (tryResolveFromRoot('sass', root)) return true;
   try {
     if (fs.existsSync(path.join(root, 'node_modules', 'sass'))) return true;
-  } catch {}
+  } catch (e) {
+    logger.debug(`isSassInstalled existsSync failed: ${String(e)}`);
+  }
   return false;
 }
 
+const scssCache = new Map<string, { mtimeMs: number; result: boolean }>();
+
+function getDirMtimeMs(dir: string): number {
+  try {
+    return fs.statSync(dir).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 export function hasScssFiles(root: string): boolean {
+  const cacheKey = root;
+  const mtimeMs = getDirMtimeMs(root);
+  const cached = scssCache.get(cacheKey);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.result;
+
   const ignoreDirs = new Set(['node_modules', 'dist', 'release', 'temp', '.git', '.rspfx', 'lib', '.vite']);
   const stack: string[] = [];
   const srcDir = path.join(root, 'src');
+  let result = false;
   if (fs.existsSync(srcDir)) stack.push(srcDir);
   else stack.push(root);
   let scanned = 0;
@@ -313,7 +320,8 @@ export function hasScssFiles(root: string): boolean {
     let entries: fs.Dirent[] = [];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
+    } catch (e) {
+      logger.debug(`hasScssFiles readdir ${dir} failed: ${String(e)}`);
       continue;
     }
     for (const entry of entries) {
@@ -324,17 +332,19 @@ export function hasScssFiles(root: string): boolean {
         if (entry.name.startsWith('.')) continue;
         stack.push(full);
       } else if (entry.isFile() && (entry.name.endsWith('.scss') || entry.name.endsWith('.sass'))) {
-        return true;
+        result = true;
+        break;
       }
       if (scanned >= 5000) break;
     }
+    if (result) break;
   }
-  return false;
+  scssCache.set(cacheKey, { mtimeMs, result });
+  return result;
 }
 
 export function hasPostcssConfig(root: string): boolean {
-  for (const f of POSTCSS_CONFIG_FILES) if (fs.existsSync(path.join(root, f))) return true;
-  return false;
+  return buildHasPostcssConfig(root);
 }
 
 export function hasTailwindConfig(root: string): boolean {
@@ -477,12 +487,28 @@ export async function ensureAndTrustCerts(opts: {
 }
 
 // ---------------------------------------------------------------------------
-// FS patch for %20 spaces — call once at import
+// FS patch for %20 spaces — scoped to paths containing spaces/%20
 // ---------------------------------------------------------------------------
-export function patchFsForSpaces(): void {
-  const patchTarget = (target: unknown): void => {
+type PatchRecord = { target: unknown; orig: unknown; key: string };
+const fsPatchRecords: PatchRecord[] = [];
+
+function shouldPatchForSpaces(rootHint?: string): boolean {
+  try {
+    if (import.meta.url.includes('%20')) return true;
+  } catch {}
+  const hint = rootHint ?? process.cwd();
+  if (hint.includes('%20') || hint.includes(' ')) return true;
+  try {
+    if (process.cwd().includes(' ') || process.cwd().includes('%20')) return true;
+  } catch {}
+  return false;
+}
+
+export function patchFsForSpaces(rootHint?: string): void {
+  if (!shouldPatchForSpaces(rootHint)) return;
+  const patchTarget = (target: unknown, key: string): void => {
     try {
-      const mod = target as { readFile: (...args: unknown[]) => Promise<unknown>; _rspfxPatched?: boolean };
+      const mod = target as { readFile: (...args: unknown[]) => Promise<unknown>; _rspfxPatched?: boolean; _rspfxOrig?: unknown };
       if (!mod || typeof mod.readFile !== 'function' || mod._rspfxPatched) return;
       const orig = mod.readFile.bind(mod);
       (mod as unknown as { readFile: unknown }).readFile = (file: unknown, ...args: unknown[]) => {
@@ -490,17 +516,23 @@ export function patchFsForSpaces(): void {
           try {
             const decoded = decodeURIComponent(file);
             if (decoded !== file) file = decoded;
-          } catch {}
+          } catch (e) {
+            logger.debug(`patchFsForSpaces decode failed: ${String(e)}`);
+          }
         }
         return (orig as (...a: unknown[]) => unknown)(file, ...args);
       };
       mod._rspfxPatched = true;
-    } catch {}
+      (mod as unknown as { _rspfxOrig: unknown })._rspfxOrig = orig;
+      fsPatchRecords.push({ target, orig, key });
+    } catch (e) {
+      logger.debug(`patchFsForSpaces patchTarget ${key} failed: ${String(e)}`);
+    }
   };
-  patchTarget(fs.promises);
-  patchTarget(fspEsm as unknown);
+  patchTarget(fs.promises, 'fs.promises');
+  patchTarget(fspEsm as unknown, 'fspEsm');
   try {
-    const fsAny = fs as unknown as { readFile: (...a: unknown[]) => unknown; _rspfxPatched?: boolean };
+    const fsAny = fs as unknown as { readFile: (...a: unknown[]) => unknown; _rspfxPatched?: boolean; _rspfxOrig?: unknown };
     if (fsAny && typeof fsAny.readFile === 'function' && !fsAny._rspfxPatched) {
       const orig = fsAny.readFile.bind(fs);
       fsAny.readFile = (file: unknown, ...args: unknown[]) => {
@@ -508,30 +540,57 @@ export function patchFsForSpaces(): void {
           try {
             const d = decodeURIComponent(file as string);
             if (d !== file) file = d;
-          } catch {}
+          } catch (e) {
+            logger.debug(`patchFsForSpaces decode failed: ${String(e)}`);
+          }
         }
         return (orig as (...a: unknown[]) => unknown)(file, ...args);
       };
       fsAny._rspfxPatched = true;
+      fsAny._rspfxOrig = orig;
+      fsPatchRecords.push({ target: fsAny, orig, key: 'fs.readFile' });
     }
-  } catch {}
+  } catch (e) {
+    logger.debug(`patchFsForSpaces fs.readFile patch failed: ${String(e)}`);
+  }
   try {
     const fspModule = createRequire(import.meta.url)('node:fs/promises') as unknown;
-    patchTarget(fspModule);
+    patchTarget(fspModule, 'node:fs/promises');
     try {
       const fspModule2 = createRequire(import.meta.url)('fs/promises') as unknown;
-      patchTarget(fspModule2);
-    } catch {}
-  } catch {}
+      patchTarget(fspModule2, 'fs/promises');
+    } catch (e) {
+      logger.debug(`patchFsForSpaces fs/promises patch failed: ${String(e)}`);
+    }
+  } catch (e) {
+    logger.debug(`patchFsForSpaces require fs/promises failed: ${String(e)}`);
+  }
 }
 
-export function patchViteForSpaces(_viteMod?: unknown): void {
-  patchFsForSpaces();
+export function unpatchFsForSpaces(): void {
+  for (const rec of fsPatchRecords.splice(0)) {
+    try {
+      const mod = rec.target as { readFile: unknown; _rspfxPatched?: boolean; _rspfxOrig?: unknown };
+      if (mod._rspfxOrig) {
+        mod.readFile = mod._rspfxOrig as unknown as typeof mod.readFile;
+        delete mod._rspfxPatched;
+        delete mod._rspfxOrig;
+      }
+    } catch (e) {
+      logger.debug(`unpatchFsForSpaces ${rec.key} failed: ${String(e)}`);
+    }
+  }
+}
+
+export function patchViteForSpaces(_viteMod?: unknown, rootHint?: string): void {
+  patchFsForSpaces(rootHint);
   if (_viteMod) {
     try {
       const { fileURLToPath } = awaitImportMetaSync();
       void fileURLToPath;
-    } catch {}
+    } catch (e) {
+      logger.debug(`patchViteForSpaces fileURLToPath failed: ${String(e)}`);
+    }
   }
 }
 
@@ -539,5 +598,6 @@ function awaitImportMetaSync(): { fileURLToPath: unknown } {
   return { fileURLToPath: null };
 }
 
-// Eager apply on import — mirrors previous IIFEs in plugin vite files
-patchFsForSpaces();
+if (shouldPatchForSpaces()) {
+  patchFsForSpaces();
+}
