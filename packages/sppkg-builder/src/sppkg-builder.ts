@@ -90,7 +90,7 @@ export const VersionSchema = v.pipe(
   v.regex(SEMVER_RE, 'version must be semver like "1.0.0.0" (got invalid) — fix: set "version": "1.0.0.0" in package-solution.json (see ' + SPPKG_DOCS + ')')
 );
 
-export const SolutionSchema = v.object({
+export const SolutionSchema = v.looseObject({
   name: v.pipe(v.string('solution.name must be a string — fix: set solution: { name: "my-solution" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.minLength(1, 'solution.name must be non-empty — fix: set solution: { name: "my-solution" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
   id: v.pipe(v.string('solution.id must be a string UUID — fix: set solution: { id: "00000000-0000-..."} in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.regex(UUID_RE_STRICT, 'solution.id must be a UUID like "00000000-0000-4000-a000-000000000000" (got invalid) — fix: set solution: { id: "00000000-0000-4000-a000-000000000000" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
   version: v.pipe(v.string('solution.version must be a string — fix: set solution: { version: "1.0.0.0" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.regex(SEMVER_RE, 'solution.version must be semver like "1.0.0.0" (got invalid) — fix: set solution: { version: "1.0.0.0" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
@@ -99,7 +99,7 @@ export const SolutionSchema = v.object({
   skipFeatureDeployment: v.optional(v.boolean('solution.skipFeatureDeployment must be a boolean — fix: set solution: { skipFeatureDeployment: true } in config/package-solution.json (see ' + SPPKG_DOCS + ')'))
 });
 
-export const PackageSolutionJsonSchema = v.object({
+export const PackageSolutionJsonSchema = v.looseObject({
   $schema: v.optional(v.string()),
   solution: SolutionSchema,
   paths: v.object({

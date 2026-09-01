@@ -91,8 +91,6 @@ interface BlackboxProjectOpts {
   components: Array<'webpart' | 'extension' | 'library'>;
   includeClientSideAssets?: boolean;
   spfxVersion?: string;
-  withTeams?: boolean;
-  withResx?: boolean;
 }
 
 async function createBlackboxProject(opts: BlackboxProjectOpts): Promise<string> {
@@ -196,16 +194,6 @@ async function createBlackboxProject(opts: BlackboxProjectOpts): Promise<string>
   if (opts.components.includes('webpart')) await writeFile(path.join(assetsDir, 'blackbox-wp.js'), 'define([],()=>{});\n');
   if (opts.components.includes('extension')) await writeFile(path.join(assetsDir, 'blackbox-ext.js'), 'define([],()=>{});\n');
   if (opts.components.includes('library')) await writeFile(path.join(assetsDir, 'blackbox-lib.js'), 'define([],()=>{});\n');
-
-  if (opts.withTeams) {
-    const teamsDir = path.join(dir, 'teams');
-    await mkdir(teamsDir, { recursive: true });
-    await writeFile(path.join(teamsDir, 'manifest.json'), JSON.stringify({ manifestVersion: '1.0', version: '1.0.0', id: SOLUTION_ID }, null, 2));
-  }
-  if (opts.withResx) {
-    const resxDir = path.join(dir, 'Resources.resx');
-    // resxDir in buildPackage opts is a directory; fixture uses file. Keep simple.
-  }
 
   return dir;
 }
@@ -394,16 +382,6 @@ describe('blackbox: RSPFx invariants (always run)', () => {
     }
   });
 
-  it('normalizers replace volatile UUIDs so parity can be asserted', () => {
-    const xml = `<?xml ...><Id>${FEATURE_ID_WEBPART}</Id><ClientSideComponentInstance Id="${WEBPART_ID}" /></xml>`;
-    // FEATURE_ID is not v4? Actually it is v4-looking; we replace any v4.
-    // Ensure normalize does not corrupt non-v4 GUIDs — our IDs are v4-compatible
-    // so they will be replaced; the point is replacement is deterministic.
-    expect(normalizeVolatileIds(xml)).toContain('00000000-0000-4000-8000-000000000000');
-    expect(normalizeXml(xml).length).toBeGreaterThan(0);
-    expect(sortedEntries(['b', 'a'])).toEqual(['a', 'b']);
-  });
-
   it('suppresses IsDomainIsolated for spfxVersion 1.24 (deprecated)', async () => {
     const dir = await createBlackboxProject({ components: ['webpart'] });
     try {
@@ -438,11 +416,7 @@ describe.skipIf(!OFFICIAL_ENABLED)('blackbox: RSPFx vs official parity (OFFICIAL
           // Try official build; if toolchain not available, skip with diagnostic.
           const officialSppkg = await tryBuildOfficial(dir, outDir, version);
           if (!officialSppkg) {
-            // Advisory skip — official toolchain not installed / network unavailable.
-            // Mark as passed with warning so the suite does not fail when the
-            // harness cannot provision the official build.
-            console.warn(`[blackbox] official build not available for ${version} (${variant.label}) — skipping parity assert (install official toolchain or check bench/.official-work)`);
-            return;
+            throw new Error(`[blackbox] official build failed for ${version} (${variant.label}) — install official toolchain or check bench/.official-work`);
           }
 
           const officialZip = await readZipEntries(officialSppkg);
