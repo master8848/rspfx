@@ -11,9 +11,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "sideEffects": false,
   "scripts": {
@@ -44,5 +42,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

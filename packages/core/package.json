@@ -32,9 +32,7 @@
       "default": "./dist/platform.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
     "build": "rslib build",
@@ -51,5 +49,8 @@
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

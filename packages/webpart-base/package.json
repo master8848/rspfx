@@ -18,9 +18,7 @@
       "default": "./dist/define.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
     "build": "rslib build",
@@ -40,5 +38,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

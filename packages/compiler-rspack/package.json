@@ -22,9 +22,7 @@
       "default": "./dist/helpers/inline-css.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
     "build": "rslib build",
@@ -42,6 +40,7 @@
     "postcss-loader": "^8.1.1"
   },
   "devDependencies": {
+    "@mbsks/rspfx-build-core": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-framework-react": "workspace:*",
@@ -56,5 +55,8 @@
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

@@ -1,7 +1,20 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
   "files": {
-    "ignore": ["dist", "node_modules", ".rspfx", ".rspack-cache", "release", "sharepoint", "coverage", "bench/skeletons", "examples"]
+    "ignore": [
+      "dist",
+      "node_modules",
+      ".rspfx",
+      ".rspack-cache",
+      "release",
+      "sharepoint",
+      "coverage",
+      "bench/skeletons",
+      "bench/.official-work",
+      "examples",
+      "tmp",
+      "tmp/**"
+    ]
   },
   "linter": {
     "enabled": true,
@@ -12,7 +25,8 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "indentWidth": 2
+    "indentWidth": 2,
+    "lineWidth": 80
   },
   "overrides": [
     {

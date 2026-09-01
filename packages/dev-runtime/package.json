@@ -17,9 +17,7 @@
       "default": "./dist/vite-shared.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
     "build": "rslib build",
@@ -34,6 +32,7 @@
   },
   "sideEffects": false,
   "devDependencies": {
+    "@mbsks/rspfx-build-core": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
@@ -47,5 +46,8 @@
     "@mbsks/rspfx-manifest-server": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
     "@mbsks/rspfx-sharepoint-runtime": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
