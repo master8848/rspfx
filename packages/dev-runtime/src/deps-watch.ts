@@ -1,30 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 
 const MISSING = '<missing>';
+const logger = createLogger('rspfx:deps-watch');
 
 export interface DependencyScopeWatcher {
-  stop(): void;
+  stop(): Promise<void> | void;
 }
 
-/**
- * Cheap snapshot of everything that determines the bundle's `externals` set
- * (and thus the compiled dependency scope) for a running dev server:
- * the `node_modules/@microsoft` entries (name + symlink mtime) and
- * `config/config.json` (project `externals`/`localizedResources`).
- *
- * Computing the snapshot is a single readdir plus a handful of lstats — no
- * JSON parsing, no recursion — so polling it every second is negligible
- * compared to a single rebuild. A mismatch means the running compiler's
- * externals are stale and a restart is required.
- */
 export function fingerprintDependencyScope(projectRoot: string, configDir = 'config'): string {
   const parts: string[] = [];
   const microsoftDir = path.join(projectRoot, 'node_modules', '@microsoft');
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(microsoftDir, { withFileTypes: true });
-  } catch {
+  } catch (e) {
+    logger.debug(`fingerprint: readdir ${microsoftDir} failed: ${String(e)}`);
     parts.push(`@microsoft@${MISSING}`);
     entries = [];
   }
@@ -34,30 +27,21 @@ export function fingerprintDependencyScope(projectRoot: string, configDir = 'con
     }
     try {
       parts.push(`${entry.name}@${fs.lstatSync(path.join(microsoftDir, entry.name)).mtimeMs.toFixed(3)}`);
-    } catch {
+    } catch (e) {
+      logger.debug(`fingerprint: lstat ${entry.name} failed: ${String(e)}`);
       parts.push(`${entry.name}@${MISSING}`);
     }
   }
   try {
     const configStat = fs.statSync(path.join(projectRoot, configDir, 'config.json'));
     parts.push(`config.json@${configStat.mtimeMs.toFixed(3)}`);
-  } catch {
+  } catch (e) {
+    logger.debug(`fingerprint: stat config.json failed: ${String(e)}`);
     parts.push(`config.json@${MISSING}`);
   }
   return parts.sort().join('|');
 }
 
-/**
- * Watches the dependency scope and fires `onChange` when the fingerprint
- * changes (an sp package was installed/removed/upgraded, or config.json
- * edited).
- *
- * Prefers `@parcel/watcher` (native, O(1) events, no polling) when the
- * optional peer is installed; otherwise falls back to polling every
- * `intervalMs` (default 1000 ms). Polling costs one readdir + a few lstats
- * per tick — negligible vs a rebuild — and avoids `fs.watch` platform
- * quirks. See docs/building-packages.md#sizing--performance for the tradeoff.
- */
 export function watchDependencyScope(
   projectRoot: string,
   onChange: (fingerprint: string) => void,
@@ -66,30 +50,33 @@ export function watchDependencyScope(
 ): DependencyScopeWatcher {
   let fingerprint = fingerprintDependencyScope(projectRoot, configDir);
   let stopped = false;
-
-  // Try native watcher; fall back to polling on failure (optional peer).
   let nativeSub: { unsubscribe(): Promise<void> | void } | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
+  let nativeSubs: { unsubscribe(): Promise<void> | void }[] = [];
 
   const check = (): void => {
-    if (stopped) {
-      return;
-    }
-    const current = fingerprintDependencyScope(projectRoot, configDir);
-    if (current !== fingerprint) {
-      fingerprint = current;
-      onChange(current);
+    if (stopped) return;
+    try {
+      const current = fingerprintDependencyScope(projectRoot, configDir);
+      if (current !== fingerprint) {
+        fingerprint = current;
+        onChange(current);
+      }
+    } catch (e) {
+      logger.debug(`watchDependencyScope check failed: ${String(e)}`);
     }
   };
 
   const startPolling = (): void => {
+    if (timer || stopped) return;
     timer = setInterval(check, intervalMs);
-    timer.unref();
+    (timer as unknown as { unref?: () => void }).unref?.();
   };
 
+  let nativeAvailable = false;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const watcher = eval('require')('@parcel/watcher') as {
+    const req = createRequire(import.meta.url);
+    const watcher = req('@parcel/watcher') as {
       subscribe(dir: string, cb: (err: Error | null, events: { type: string }[]) => void): Promise<{ unsubscribe(): Promise<void> }>;
     };
     if (watcher && typeof watcher.subscribe === 'function') {
@@ -103,54 +90,67 @@ export function watchDependencyScope(
           return false;
         }
       });
-      void Promise.all(
-        watchDirs.map((dir) =>
-          watcher.subscribe(dir, () => {
-            check();
-          }).then((sub) => {
-            if (stopped) {
-              void sub.unsubscribe();
-            } else {
-              nativeSub = sub;
-            }
-          }).catch(() => {
-            // Fall back to polling if subscribe fails for this dir.
-            if (!timer && !nativeSub) {
-              startPolling();
-            }
-          })
-        )
-      ).catch(() => {
-        if (!timer) {
-          startPolling();
-        }
-      });
-      // Also start polling as a safety net until watcher confirms; cleared once native succeeds.
-      // If watcher loads, polling is replaced by events; if it fails, polling remains.
-      timer = setInterval(check, intervalMs);
-      timer.unref();
-      // Give watcher a moment to establish; if it succeeds we cancel polling.
-      setTimeout(() => {
-        if (nativeSub && timer) {
-          clearInterval(timer);
-          timer = undefined;
-        }
-      }, 1500).unref?.();
+      if (watchDirs.length === 0) {
+        startPolling();
+      } else {
+        nativeAvailable = true;
+        void Promise.all(
+          watchDirs.map((dir) =>
+            watcher.subscribe(dir, () => {
+              check();
+            }).then((sub) => {
+              if (stopped) {
+                void sub.unsubscribe().catch((e) => logger.debug(`watcher unsubscribe after stop failed: ${String(e)}`));
+              } else {
+                nativeSubs.push(sub);
+                nativeSub = sub;
+              }
+            }).catch((e) => {
+              logger.debug(`watcher subscribe failed for ${dir}: ${String(e)}`);
+              if (!timer && nativeSubs.length === 0) {
+                startPolling();
+              }
+            })
+          )
+        ).catch((e) => {
+          logger.debug(`watcher subscribe batch failed: ${String(e)}`);
+          if (!timer) startPolling();
+        });
+      }
     } else {
       startPolling();
     }
-  } catch {
+  } catch (e) {
+    logger.debug(`@parcel/watcher not available, falling back to polling: ${String(e)}`);
     startPolling();
   }
 
+  if (nativeAvailable && !timer) {
+    const fallbackTimer = setTimeout(() => {
+      if (!stopped && nativeSubs.length === 0 && !timer) {
+        logger.debug('native watcher did not establish, starting poll fallback');
+        startPolling();
+      }
+    }, 1500);
+    (fallbackTimer as unknown as { unref?: () => void }).unref?.();
+  }
+
   return {
-    stop(): void {
+    async stop(): Promise<void> {
       stopped = true;
       if (timer) {
         clearInterval(timer);
+        timer = undefined;
       }
-      if (nativeSub) {
-        void nativeSub.unsubscribe();
+      const subs = [...nativeSubs];
+      nativeSubs = [];
+      nativeSub = undefined;
+      for (const sub of subs) {
+        try {
+          await sub.unsubscribe();
+        } catch (e) {
+          logger.debug(`watcher unsubscribe failed: ${String(e)}`);
+        }
       }
     }
   };

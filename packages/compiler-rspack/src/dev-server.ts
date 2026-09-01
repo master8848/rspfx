@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { rspack, type Compiler, type Configuration } from '@rspack/core';
 import { RspackDevServer, type Configuration as DevServerConfiguration } from '@rspack/dev-server';
-import { isAllowedOrigin } from '@mbsks/rspfx-core';
+import { DEFAULT_DEV_PORT, isAllowedOrigin } from '@mbsks/rspfx-core';
 import type { CompileContext, DevServerOptions, StartDevServerResult } from './types.js';
 import { createRspackConfig } from './config.js';
 
@@ -144,7 +144,7 @@ export async function startDevServer(
   ctx: CompileContext,
   devServerOptions: DevServerOptions
 ): Promise<StartDevServerResult> {
-  const port = devServerOptions.port ?? 4321;
+  const port = devServerOptions.port ?? DEFAULT_DEV_PORT;
   const hostname = devServerOptions.hostname ?? 'localhost';
   const https = devServerOptions.https ?? false;
   const certs = devServerOptions.certs;

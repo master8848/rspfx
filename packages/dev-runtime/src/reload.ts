@@ -1,4 +1,6 @@
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { isAllowedOrigin } from './cors.js';
+const logger = createLogger('rspfx:reload');
 
 export const RSPFX_HOT_PATH = '/__rspfx_hot.json';
 
@@ -27,8 +29,12 @@ export function createReloadController(): ReloadController {
     res.setHeader('Vary', 'Origin');
     const origin = (req as { headers?: Record<string, string | string[] | undefined> })?.headers?.origin;
     const originValue = Array.isArray(origin) ? origin[0] : origin;
-    if (originValue && isAllowedOrigin(originValue)) {
-      res.setHeader('Access-Control-Allow-Origin', originValue);
+    if (originValue) {
+      if (isAllowedOrigin(originValue)) {
+        res.setHeader('Access-Control-Allow-Origin', originValue);
+      }
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
     }
     res.end(JSON.stringify({ build: current }));
   };
@@ -36,7 +42,9 @@ export function createReloadController(): ReloadController {
     for (const l of [...listeners]) {
       try {
         l(current);
-      } catch {}
+      } catch (e) {
+        logger.debug(`reload broadcast listener failed: ${String(e)}`);
+      }
     }
   };
   return {

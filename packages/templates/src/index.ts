@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Scaffold templates — large file (~800 LOC).
+ * TODO: split into `scaffold.ts` (buildFiles), `templates/manifests.ts` (JSON generators),
+ * `templates/entries.ts` (webpartEntry/extensionEntry) and `templates/styles.ts`. Tracked at https://github.com/master8848/rspfx/issues/3
+ * Sections: 1) scaffoldProject 2) package/config generators 3) entry templates 4) style/assets
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { configDefaults, spfxNpmVersion } from '@mbsks/rspfx-core';

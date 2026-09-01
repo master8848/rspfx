@@ -1,4 +1,4 @@
-import { spfxNpmVersion } from '@mbsks/rspfx-core';
+import { DEFAULT_DEV_PORT, spfxNpmVersion } from '@mbsks/rspfx-core';
 import type { TemplateVars } from './types.js';
 
 // Keep in sync with `packages/sppkg-builder/src/xml.ts:194` Location mapping
@@ -121,7 +121,7 @@ export function serveJson(_vars: TemplateVars): string {
       $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json',
       initialPage: 'https://{tenantdomain}/_layouts/15/workbench.aspx',
       https: true,
-      port: 4321,
+      port: DEFAULT_DEV_PORT,
       hostname: 'localhost'
     },
     null,

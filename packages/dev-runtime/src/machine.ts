@@ -1,4 +1,6 @@
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxError } from '@mbsks/rspfx-diagnostics';
+const logger = createLogger('rspfx:machine');
 import type { DevStore, DevStoreSnapshot, DevStatus } from './store.js';
 
 export type DevEvent =
@@ -43,7 +45,9 @@ export function createDevMachine(store: DevStore, opts: MachineOpts): DevMachine
     for (const l of [...listeners]) {
       try {
         l(state);
-      } catch {}
+      } catch (e) {
+        logger.debug(`machine listener failed: ${String(e)}`);
+      }
     }
   };
 
@@ -165,7 +169,9 @@ export function createDevMachine(store: DevStore, opts: MachineOpts): DevMachine
       listeners.add(l);
       try {
         l(getState());
-      } catch {}
+      } catch (e) {
+        logger.debug(`machine subscribe listener failed: ${String(e)}`);
+      }
       let unsubscribed = false;
       return () => {
         if (unsubscribed) return;

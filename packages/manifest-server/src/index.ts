@@ -7,6 +7,7 @@ import * as crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import * as v from 'valibot';
 
 const execFileAsync = promisify(execFile);
 
@@ -122,7 +123,95 @@ export function validateCustomHostname(hostname: string): void {
   }
 }
 
+// ── valibot schemas for manifest-server options ──
+const MANIFEST_SERVER_DOCS = 'https://github.com/master8848/rspfx#configuration';
+export const CertOptionsSchema = v.object({
+  certsDir: v.pipe(
+    v.string('cert certsDir must be a string — fix: pass certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')'),
+    v.minLength(1, 'cert certsDir must be non-empty — fix: pass certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')')
+  ),
+  hostname: v.optional(
+    v.pipe(
+      v.string('cert hostname must be a string — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'),
+      v.minLength(1, 'cert hostname must be non-empty — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'),
+      v.check((val) => {
+        try { validateCustomHostname(val); return true; } catch { return false; }
+      }, 'cert hostname is invalid — fix: set hostname "localhost" or a valid DNS/IP (see ' + MANIFEST_SERVER_DOCS + ')')
+    )
+  )
+});
+
+export const ManifestServerPortSchema = v.pipe(
+  v.number('manifest server port must be a number — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.integer('manifest server port must be an integer — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.minValue(1024, 'manifest server port must be 1024-65535 — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.maxValue(65535, 'manifest server port must be 1024-65535 — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')')
+);
+
+export const ManifestPathSchema = v.pipe(
+  v.string('manifest path must be a string — fix: set manifest path "src/webparts/hello/HelloWebPart.manifest.json" (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.minLength(1, 'manifest path must be non-empty — fix: set manifest path "src/webparts/hello/HelloWebPart.manifest.json" (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.check((val) => !val.includes('\0'), 'manifest path must not contain null bytes — fix: check manifest path (see ' + MANIFEST_SERVER_DOCS + ')')
+);
+
+export const ManifestServerOptionsSchema = v.object({
+  certsDir: v.pipe(v.string('manifest server certsDir must be a string — fix: set certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')'), v.minLength(1, 'manifest server certsDir must be non-empty — fix: set certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')')),
+  hostname: v.optional(v.pipe(v.string('manifest server hostname must be a string — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'), v.minLength(1, 'manifest server hostname must be non-empty — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'))),
+  port: v.optional(ManifestServerPortSchema),
+  manifestPaths: v.optional(v.array(ManifestPathSchema, 'manifest server manifestPaths must be an array — fix: set manifestPaths ["src/webparts/hello/HelloWebPart.manifest.json"] (see ' + MANIFEST_SERVER_DOCS + ')'))
+});
+
+export type CertIssue = { path: (string | number)[]; message: string; code: string };
+export type CertResult<T> = { ok: true; value: T } | { ok: false; error: CertIssue[] };
+
+function mapCertIssues(issues: readonly v.BaseIssue<unknown>[]): CertIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes('fix:')) message += ' — fix: check manifest-server options (see ' + MANIFEST_SERVER_DOCS + ')';
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
+}
+
+export function validateCertOptions(raw: unknown): CertResult<{ certsDir: string; hostname?: string }> {
+  const result = v.safeParse(CertOptionsSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output as { certsDir: string; hostname?: string } };
+}
+
+export function validateManifestServerOptions(raw: unknown): CertResult<v.InferOutput<typeof ManifestServerOptionsSchema>> {
+  const result = v.safeParse(ManifestServerOptionsSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
+export function validatePort(raw: unknown): CertResult<number> {
+  const result = v.safeParse(ManifestServerPortSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
+export function validateManifestPath(raw: unknown): CertResult<string> {
+  const result = v.safeParse(ManifestPathSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
 export async function ensureCertificates(certsDir: string, hostname?: string): Promise<{ key: string; cert: string }> {
+  const certValidation = validateCertOptions({ certsDir, ...(hostname !== undefined ? { hostname } : {}) });
+  if (!certValidation.ok) {
+    throw new Error(certValidation.error[0]!.message);
+  }
   if (hostname) {
     validateCustomHostname(hostname);
   }

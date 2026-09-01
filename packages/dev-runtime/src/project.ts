@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Project discovery & config hydration (1072 LOC).
+ * TODO: split into `discovery.ts` (scanComponentDir/pickEntrypoint), `synthetic.ts` (try-mode),
+ * `config-ensure.ts` (ensureProjectConfigs) and `utils/string.ts` (toPascal/deterministicGuid → @mbsks/rspfx-core).
+ * Tracked at https://github.com/master8848/rspfx/issues/1
+ * Sections: 1) helpers (toPascal, deterministicGuid) 2) ensureProjectConfigs 3) readProject 4) discoverWebParts
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -6,6 +13,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import { getPlugins } from '@mbsks/rspfx-plugin-api';
 import {
+  DEFAULT_DEV_PORT,
   resolvePathDefaults,
   solidPng,
   type BuildConfig,
@@ -20,6 +28,33 @@ import type {
   ExternalMatcher,
   LocalizedResource
 } from '@mbsks/rspfx-compiler-rspack';
+import * as v from 'valibot';
+
+const projectLogger = createLogger('rspfx:project');
+const jsonCache = new Map<string, { mtimeMs: number; value: unknown }>();
+
+function getMtimeMs(p: string): number {
+  try {
+    return fs.statSync(p).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+function readJsonCached<T>(filePath: string): T | undefined {
+  try {
+    const mtimeMs = getMtimeMs(filePath);
+    const cached = jsonCache.get(filePath);
+    if (cached && cached.mtimeMs === mtimeMs) return cached.value as T;
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw) as T;
+    jsonCache.set(filePath, { mtimeMs, value: parsed });
+    return parsed;
+  } catch (e) {
+    projectLogger.debug(`readJsonCached ${filePath} failed: ${String(e)}`);
+    return undefined;
+  }
+}
 
 export interface WebPartBundle {
   bundleName: string;
@@ -58,6 +93,107 @@ export interface ProjectServeConfigJson {
   ipAddress?: string;
 }
 
+// ── valibot schemas for config/serve.json ──
+const SERVE_DOCS = 'https://github.com/master8848/rspfx#configuration';
+const SERVE_FIX_PORT = ' — fix: set {"port":4321} in config/serve.json or use --port 4321 (see ' + SERVE_DOCS + ')';
+const SERVE_FIX_HOST = ' — fix: set {"hostname":"localhost"} in config/serve.json (see ' + SERVE_DOCS + ')';
+const SERVE_FIX_HTTPS = ' — fix: set {"https":true} in config/serve.json (see ' + SERVE_DOCS + ')';
+const SERVE_FIX_PAGE = ' — fix: set {"initialPage":"https://{tenantdomain}/_layouts/15/workbench.aspx"} in config/serve.json (see ' + SERVE_DOCS + ')';
+
+export const ProjectServeConfigJsonSchema = v.object({
+  $schema: v.optional(v.string()),
+  port: v.optional(
+    v.pipe(
+      v.number('serve.json port must be a number' + SERVE_FIX_PORT),
+      v.integer('serve.json port must be an integer' + SERVE_FIX_PORT),
+      v.minValue(1024, 'serve.json port must be 1024-65535' + SERVE_FIX_PORT),
+      v.maxValue(65535, 'serve.json port must be 1024-65535' + SERVE_FIX_PORT)
+    )
+  ),
+  https: v.optional(v.boolean('serve.json https must be a boolean' + SERVE_FIX_HTTPS)),
+  hostname: v.optional(
+    v.pipe(
+      v.string('serve.json hostname must be a string' + SERVE_FIX_HOST),
+      v.minLength(1, 'serve.json hostname must be non-empty' + SERVE_FIX_HOST),
+      v.check((val) => val.trim().length > 0, 'serve.json hostname must be non-empty' + SERVE_FIX_HOST)
+    )
+  ),
+  initialPage: v.optional(
+    v.pipe(
+      v.string('serve.json initialPage must be a string' + SERVE_FIX_PAGE),
+      v.minLength(1, 'serve.json initialPage must be non-empty' + SERVE_FIX_PAGE)
+    )
+  ),
+  ipAddress: v.optional(
+    v.pipe(
+      v.string('serve.json ipAddress must be a string — fix: set {"hostname":"localhost"} in config/serve.json (see ' + SERVE_DOCS + ')'),
+      v.minLength(1, 'serve.json ipAddress must be non-empty — fix: set {"hostname":"localhost"} in config/serve.json (see ' + SERVE_DOCS + ')')
+    )
+  )
+});
+
+export type ServeConfigIssue = { path: (string | number)[]; message: string; code: string };
+export type ServeConfigResult<T> = { ok: true; value: T } | { ok: false; error: ServeConfigIssue[] };
+
+function mapServeValibotIssues(issues: readonly v.BaseIssue<unknown>[]): ServeConfigIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes('fix:')) message += ' — fix: check config/serve.json (see ' + SERVE_DOCS + ')';
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
+}
+
+export function validateProjectServeConfigJson(raw: unknown, filePath = 'config/serve.json'): ServeConfigResult<ProjectServeConfigJson> {
+  let parsed: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      return {
+        ok: false,
+        error: [
+          {
+            path: [],
+            message: `serve.json is not valid JSON in ${filePath}: ${e instanceof Error ? e.message : String(e)} — fix: ensure ${filePath} is valid JSON with {"port":4321} (see ${SERVE_DOCS})`,
+            code: 'CONFIG_VALIDATION_FAILED'
+          }
+        ]
+      };
+    }
+  }
+  const expanded = (() => {
+    try { return expandObject(parsed as Record<string, unknown>); } catch { return parsed; }
+  })();
+  // coerce string port like "4321" to number before validation (mirrors readProject logic)
+  const coercePort = (val: unknown): unknown => {
+    if (val && typeof val === 'object' && typeof (val as Record<string, unknown>).port === 'string') {
+      const s = (val as Record<string, unknown>).port as string;
+      const n = Number(s);
+      if (!Number.isNaN(n) && s.trim() !== '') return { ...(val as Record<string, unknown>), port: n };
+    }
+    return val;
+  };
+  const toValidate = coercePort(expanded);
+  const result = v.safeParse(ProjectServeConfigJsonSchema, toValidate);
+  if (!result.success) return { ok: false, error: mapServeValibotIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output as ProjectServeConfigJson };
+}
+
+export function tryParseServeConfig(raw: unknown, filePath = 'config/serve.json'): ServeConfigResult<ProjectServeConfigJson> {
+  return validateProjectServeConfigJson(raw, filePath);
+}
+
 export interface ReadProjectResult {
   webParts: DiscoveredWebParts;
   configJson: ProjectConfigJson | undefined;
@@ -72,6 +208,7 @@ export interface ReadProjectResult {
 import { expandEnvVars, expandObject, loadDotEnv } from './env.js';
 export { expandEnvVars, expandObject };
 
+// ── helpers ──
 function toPascal(name: string): string {
   return name
     .split(/[-_]/)
@@ -92,16 +229,11 @@ function deterministicGuid(seed: string): string {
 
 const solidPngBuffer = solidPng;
 
+// ── config-ensure helpers ──
 function shortNameFromPackageJson(projectRoot: string): string {
   let packageName = 'my-solution';
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')) as { name?: string };
-    if (pkg.name) {
-      packageName = pkg.name;
-    }
-  } catch {
-    // ignore
-  }
+  const cached = readJsonCached<{ name?: string }>(path.join(projectRoot, 'package.json'));
+  if (cached?.name) packageName = cached.name;
   return packageName.replace(/^@[^/]+\//, '');
 }
 
@@ -109,12 +241,14 @@ function warnIfBrokenJson(filePath: string, projectRoot: string, label: string):
   try {
     JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch (error) {
-    createLogger('rspfx').warn(
+    projectLogger.warn(
       `Config broken, not overwriting: ${label} - ${error instanceof Error ? error.message : String(error)}`
     );
+    projectLogger.debug(`warnIfBrokenJson ${label} parse failed: ${String(error)}`);
   }
 }
 
+// ── discovery ──
 function discoverComponentId(projectRoot: string, paths: Required<PathsConfig>): string | undefined {
   const dirs = [paths.webpartsDir, paths.extensionsDir, paths.librariesDir];
   for (const dir of dirs) {
@@ -167,6 +301,7 @@ function isTeamsEnabled(rspfxConfig?: RspfxConfig): boolean {
   return false;
 }
 
+// ── config-ensure ──
 /** Ensure project configs exist — writes config/*.json files if missing. Used by rspfx doctor --fix. */
 export function ensureProjectConfigs(
   projectRoot: string,
@@ -186,7 +321,7 @@ export function ensureProjectConfigs(
         $schema: 'https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json',
         initialPage: 'https://{tenantdomain}/_layouts/15/workbench.aspx',
         https: true,
-        port: 4321,
+        port: DEFAULT_DEV_PORT,
         hostname: 'localhost'
       },
       null,
@@ -406,6 +541,7 @@ export function ensureProjectConfigs(
   }
 }
 
+// ── read ──
 /** Read project configuration — pure read, no file writes. */
 export function readProject(
   projectRoot: string,
@@ -418,47 +554,90 @@ export function readProject(
   const packageJsonPath = path.join(projectRoot, 'package.json');
   let packageJson: { name?: string; version?: string } = {};
   if (fs.existsSync(packageJsonPath)) {
-    try {
-      packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    } catch (error) {
-      createLogger('rspfx').warn(
-        `Config broken, not overwriting: package.json - ${error instanceof Error ? error.message : String(error)}`
-      );
+    const cached = readJsonCached<{ name?: string; version?: string }>(packageJsonPath);
+    if (cached) packageJson = cached;
+    else {
+      try {
+        packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        jsonCache.set(packageJsonPath, { mtimeMs: getMtimeMs(packageJsonPath), value: packageJson });
+      } catch (error) {
+        projectLogger.warn(
+          `Config broken, not overwriting: package.json - ${error instanceof Error ? error.message : String(error)}`
+        );
+        projectLogger.debug(`package.json parse failed: ${String(error)}`);
+      }
     }
   }
 
   const configJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'config.json');
   let configJson: ProjectConfigJson | undefined;
   if (fs.existsSync(configJsonPath)) {
-    try {
-      configJson = JSON.parse(fs.readFileSync(configJsonPath, 'utf8'));
-    } catch (error) {
-      createLogger('rspfx').warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, configJsonPath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-      configJson = undefined;
+    const cached = readJsonCached<ProjectConfigJson>(configJsonPath);
+    if (cached) configJson = cached;
+    else {
+      try {
+        configJson = JSON.parse(fs.readFileSync(configJsonPath, 'utf8')) as ProjectConfigJson;
+        jsonCache.set(configJsonPath, { mtimeMs: getMtimeMs(configJsonPath), value: configJson });
+      } catch (error) {
+        projectLogger.warn(
+          `Config broken, not overwriting: ${path.relative(projectRoot, configJsonPath)} - ${error instanceof Error ? error.message : String(error)}`
+        );
+        projectLogger.debug(`config.json parse failed: ${String(error)}`);
+        configJson = undefined;
+      }
     }
   }
 
   const serveJsonPath = path.join(projectRoot, resolvedPaths.configDir, 'serve.json');
   let serveJson: ProjectServeConfigJson | undefined;
   if (fs.existsSync(serveJsonPath)) {
-    try {
-      const raw = JSON.parse(fs.readFileSync(serveJsonPath, 'utf8'));
-      const expanded = expandObject(raw) as ProjectServeConfigJson;
-      serveJson = expanded;
-      if (serveJson && typeof (serveJson as unknown as Record<string, unknown>).port === 'string') {
-        const portStr = (serveJson as unknown as Record<string, unknown>).port as string;
-        const portNum = Number(portStr);
-        if (!Number.isNaN(portNum) && portStr.trim() !== '') {
-          serveJson.port = portNum;
+    const cachedRaw = readJsonCached<Record<string, unknown>>(serveJsonPath);
+    if (cachedRaw) {
+      const validated = validateProjectServeConfigJson(cachedRaw, path.relative(projectRoot, serveJsonPath));
+      if (!validated.ok) {
+        for (const iss of validated.error) {
+          projectLogger.warn(`serve.json validation failed at ${iss.path.join('.') || '<root>'}: ${iss.message} (${iss.code})`);
         }
+        projectLogger.debug(`serve.json cached validation failed: ${JSON.stringify(validated.error)}`);
+        serveJson = undefined;
+      } else {
+        serveJson = validated.value;
       }
-    } catch (error) {
-      createLogger('rspfx').warn(
-        `Config broken, not overwriting: ${path.relative(projectRoot, serveJsonPath)} - ${error instanceof Error ? error.message : String(error)}`
-      );
-      serveJson = undefined;
+    } else {
+      try {
+        const rawText = fs.readFileSync(serveJsonPath, 'utf8');
+        let raw: unknown;
+        try {
+          raw = JSON.parse(rawText);
+        } catch (e) {
+          const msg = `serve.json is not valid JSON in ${path.relative(projectRoot, serveJsonPath)}: ${e instanceof Error ? e.message : String(e)} — fix: ensure ${path.relative(projectRoot, serveJsonPath)} is valid JSON with {"port":4321} (see ${SERVE_DOCS})`;
+          projectLogger.warn(`Config broken, not overwriting: ${path.relative(projectRoot, serveJsonPath)} - ${msg}`);
+          projectLogger.debug(`serve.json parse failed: ${String(e)}`);
+          serveJson = undefined;
+          // skip to next — do not attempt validation
+          raw = undefined;
+        }
+        if (raw !== undefined) {
+          jsonCache.set(serveJsonPath, { mtimeMs: getMtimeMs(serveJsonPath), value: raw });
+          const validated = validateProjectServeConfigJson(raw, path.relative(projectRoot, serveJsonPath));
+          if (!validated.ok) {
+            for (const iss of validated.error) {
+              projectLogger.warn(`serve.json validation failed at ${iss.path.join('.') || '<root>'}: ${iss.message} (${iss.code})`);
+            }
+            projectLogger.debug(`serve.json validation failed: ${JSON.stringify(validated.error)}`);
+            serveJson = undefined;
+          } else {
+            serveJson = validated.value;
+          }
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        projectLogger.warn(
+          `Config broken, not overwriting: ${path.relative(projectRoot, serveJsonPath)} - ${msg}`
+        );
+        projectLogger.debug(`serve.json parse failed: ${String(error)}`);
+        serveJson = undefined;
+      }
     }
   }
 
@@ -772,6 +951,7 @@ export function discoverWebParts(
     componentIds: [],
     version: packageVersion
   }));
+  const entryByName = new Map(entries.map((e) => [e.name, e] as const));
 
   const manifestIds: string[] = [];
   for (const bundle of bundleMap) {
@@ -780,7 +960,7 @@ export function discoverWebParts(
       throw new Error(`Manifest missing "id": ${bundle.manifestPath}`);
     }
     manifestIds.push(manifest.id);
-    const entry = entries.find((e) => e.name === bundle.bundleName)!;
+    const entry = entryByName.get(bundle.bundleName)!;
     entry.componentIds.push(manifest.id);
   }
 
