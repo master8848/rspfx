@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { RSPFX_PLUGIN_MARKER, RSPFX_PLUGIN_OPTIONS, resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
-import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
@@ -13,8 +12,33 @@ import {
   createRefreshRuntime,
   createReloadController,
   openBrowser,
-  loadFrameworkPreset
+  loadFrameworkPreset,
+  createMockSharePointApi,
+  buildLocalPageHtml,
+  readLocalPageComponents
 } from '@mbsks/rspfx-dev-runtime';
+import {
+  resolveTsconfigRaw,
+  checkNodeVersion,
+  checkViteConfigEsm,
+  updateOriginWithActualPort,
+  contentTypeFor,
+  safeDecodeURIComponent,
+  hasDotSegment,
+  corsMiddleware,
+  tryResolveFromRoot,
+  isSassInstalled,
+  hasScssFiles,
+  hasPostcssConfig,
+  hasTailwindConfig,
+  getTailwindVersion,
+  detectSassAndWarn,
+  detectTailwindAndWarn,
+  tryLoadTailwindVitePlugin,
+  ensureAndTrustCerts,
+  ensureCertificates
+} from '@mbsks/rspfx-dev-runtime/vite-shared';
+import '@mbsks/rspfx-dev-runtime/vite-shared';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
@@ -33,114 +57,12 @@ export interface RspfxViteDevPlugin {
   [key: symbol]: unknown;
 }
 
-function resolveTsconfigRaw(root: string, explicit?: string): Record<string, unknown> | undefined {
-  if (explicit) {
-    const explicitPath = path.isAbsolute(explicit) ? explicit : path.join(root, explicit);
-    if (fs.existsSync(explicitPath)) {
-      try {
-        const raw = fs.readFileSync(explicitPath, 'utf8');
-        const parsed = JSON.parse(raw) as { extends?: string | string[] };
-        const ext = parsed.extends;
-        const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
-        if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
-          const basePaths = [
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
-          ];
-          const hasBase = basePaths.some((p) => fs.existsSync(p));
-          if (!hasBase) {
-            try {
-              const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
-              if (!fs.existsSync(stubPath)) {
-                fs.mkdirSync(path.dirname(stubPath), { recursive: true });
-                fs.writeFileSync(stubPath, JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2));
-              }
-            } catch {}
-            return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
-          }
-        }
-      } catch {}
-      return undefined;
-    }
-  }
-  const candidates = ['tsconfig.json', 'tsconfig.build.json', 'tsconfig.app.json'];
-  try {
-    const all = fs.readdirSync(root).filter((f) => f.startsWith('tsconfig') && f.endsWith('.json'));
-    for (const f of all) if (!candidates.includes(f)) candidates.push(f);
-  } catch {}
-  for (const file of candidates) {
-    const full = path.join(root, file);
-    if (!fs.existsSync(full)) continue;
-    try {
-      const raw = fs.readFileSync(full, 'utf8');
-      const parsed = JSON.parse(raw) as { extends?: string | string[] };
-      const ext = parsed.extends;
-      const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
-      if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
-        const basePaths = [
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
-        ];
-        const hasBase = basePaths.some((p) => fs.existsSync(p));
-        if (!hasBase) {
-          // Ensure stub so builtin:vite-transform (oxc/rolldown) can resolve extends without throwing
-          try {
-            const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
-            if (!fs.existsSync(stubPath)) {
-              fs.mkdirSync(path.dirname(stubPath), { recursive: true });
-              fs.writeFileSync(
-                stubPath,
-                JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2)
-              );
-              logger.warn(`Created stub ${path.relative(root, stubPath)} to satisfy tsconfig extends — run "rspfx migrate" to rewrite tsconfig to plain config.`);
-            }
-          } catch {}
-          logger.warn(
-            `tsconfig ${file} extends "${extendsStr}" but base not found — Vite will use fallback compilerOptions (jsx: react, esModuleInterop). Run "rspfx migrate" to rewrite tsconfig to plain config, or install @microsoft/rush-stack-compiler.`
-          );
-          return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
-        }
-      }
-    } catch {}
-    break;
-  }
-  return undefined;
-}
 
-function checkNodeVersion(): void {
-  const major = Number(process.versions.node.split('.')[0] ?? '0');
-  if (major < 20) {
-    logger.warn(`Node ${process.versions.node} is below RSPFx required >=20 (and Vite 8 requires >=20.19). Upgrade to Node 20+ or 22 LTS — see docs/compatibility.md. Vite may fail with syntax or ESM errors on Node 14.`);
-  }
-  const viteNote = 'Vite 8 (Rolldown) requires Node >=20.19 (ideally 22+). RSPFx supports Vite 5/7 on Node 20+, but Node 14 is unsupported.';
-  if (major < 18) logger.warn(viteNote);
-}
-
-function checkViteConfigEsm(root: string): void {
-  try {
-    const pkgPath = path.join(root, 'package.json');
-    const pkg = fs.existsSync(pkgPath) ? (JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { type?: string }) : {};
-    const isEsmPkg = pkg.type === 'module';
-    const candidates = ['vite.config.ts', 'vite.config.js'];
-    for (const file of candidates) {
-      const full = path.join(root, file);
-      if (!fs.existsSync(full)) continue;
-      const content = fs.readFileSync(full, 'utf8').slice(0, 2000);
-      const hasEsm = /\bimport\s+.*from\b|\bexport\s+default\b/.test(content);
-      if (hasEsm && !isEsmPkg) {
-        logger.warn(
-          `Vite config ${file} uses ESM syntax but package.json type is not "module" — Vite 8 with configLoader: 'native' will warn "ESM syntax in a file loaded as CommonJS". Rename to ${file.replace(/\.ts$|\.js$/, '.mjs')} or vite.config.mts, or add "type": "module" to package.json, or set VITE_CONFIG_NATIVE_IGNORE_WARNING=true. RSPFx CLI uses jiti so "rspfx dev" is unaffected, but direct "vite" may warn.`
-        );
-      }
-    }
-  } catch {}
-}
 
 interface ConnectMiddlewareServer {
   middlewares: {
-    use(route: string, handler: (req: unknown, res: unknown) => void): void;
+    use(handler: (req: unknown, res: unknown, next: () => void) => void): void;
+    use(route: string, handler: (req: unknown, res: unknown, next?: () => void) => void): void;
   };
   watcher?: { on(event: string, listener: (path: string) => void): unknown };
   httpServer?: { once(event: 'listening', listener: () => void): unknown; address(): unknown };
@@ -160,21 +82,6 @@ function collectExternals(root: string, projectExternals: string[], localizedRes
       ...localizedResources.map((r) => r.name)
     ])
   ];
-}
-
-function updateOriginWithActualPort(
-  settings: { scheme: string; hostname: string; origin: string },
-  devServer: ConnectMiddlewareServer
-): string {
-  try {
-    const address = (devServer.httpServer as { address(): unknown } | undefined)?.address();
-    if (address && typeof address === 'object' && 'port' in address) {
-      return `${settings.scheme}://${settings.hostname}:${(address as { port: number }).port}`;
-    }
-  } catch {
-    // fall back to configured origin
-  }
-  return settings.origin;
 }
 
 /**
@@ -203,39 +110,128 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       const useHttps = mode === 'sharepoint' ? settings.https : false;
       const tsconfigRaw = resolveTsconfigRaw(root, explicit);
 
-      if (isServe && useHttps) {
+      const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'];
+      let viteContribs: { plugins?: unknown[]; esbuild?: Record<string, unknown>; define?: Record<string, string>; resolveExtensions?: string[] } | undefined;
+      let fastRefresh = isServe && (process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as unknown as { fastRefresh?: boolean })?.fastRefresh === true);
+      if (fastRefresh) {
         try {
-          const certs = await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname);
-          return {
-            server: {
-              host: settings.hostname,
-              port: settings.port,
-              https: { key: certs.key, cert: certs.cert },
-              open: false
-            },
-            ...(tsconfigRaw ? { esbuild: { tsconfigRaw: JSON.stringify(tsconfigRaw) } } : {})
-          } as Record<string, unknown>;
-        } catch {
-          return {
-            server: {
-              host: settings.hostname,
-              port: settings.port,
-              https: true as unknown as boolean,
-              open: false
-            },
-            ...(tsconfigRaw ? { esbuild: { tsconfigRaw: JSON.stringify(tsconfigRaw) } } : {})
-          } as Record<string, unknown>;
+          const presetMod = await loadFrameworkPreset(resolved.framework, root);
+          const preset = (presetMod as unknown as { preset: { vite?: (opts: { fastRefresh: boolean }) => { plugins?: unknown[]; esbuild?: Record<string, unknown>; define?: Record<string, string>; resolveExtensions?: string[] } } }).preset;
+          if (preset?.vite) {
+            viteContribs = preset.vite({ fastRefresh });
+          }
+        } catch (error) {
+          logger.warn(
+            `Framework preset for '${resolved.framework}' not available — fastRefresh disabled: ${error instanceof Error ? error.message : String(error)}`
+          );
+          viteContribs = undefined;
+          fastRefresh = false;
+        }
+      }
+      const viteMode: 'development' | 'production' =
+        (process.env.RSPFX_VITE_MODE as 'development' | 'production' | undefined) ??
+        (env.mode === 'development' || env.mode === 'production' ? (env.mode as 'development' | 'production') : isServe ? 'development' : 'production');
+      const define: Record<string, string> = {
+        DEBUG: JSON.stringify(viteMode === 'development'),
+        DEPRECATED_UNIT_TEST: JSON.stringify(false),
+        'process.env.NODE_ENV': JSON.stringify(viteMode)
+      };
+      if (viteContribs?.define) {
+        const allowed = new Set(['DEBUG', 'DEPRECATED_UNIT_TEST', 'process.env.NODE_ENV']);
+        for (const [k, v] of Object.entries(viteContribs.define)) {
+          if (k.startsWith('RSPFX_') || k.includes('RSPFx')) {
+            logger.warn(`Ignoring disallowed define key '${k}' from vite contributions (RSPFx leakage blocked)`);
+            continue;
+          }
+          if (!allowed.has(k)) {
+            logger.warn(`Ignoring disallowed define key '${k}' from vite contributions (allowlist: ${[...allowed].join(', ')})`);
+            continue;
+          }
+          define[k] = v;
+        }
+      }
+      const esbuild: Record<string, unknown> | undefined = tsconfigRaw
+        ? { ...(viteContribs?.esbuild as Record<string, unknown> | undefined), tsconfigRaw: JSON.stringify(tsconfigRaw) }
+        : (viteContribs?.esbuild as Record<string, unknown> | undefined);
+      // CSS / SCSS / Tailwind detection — parity with plugin full + compiler-rspack
+      const sassInstalled = detectSassAndWarn(root);
+      const tailwindInfo = detectTailwindAndWarn(root);
+
+      // Build plugin list — auto-inject @tailwindcss/vite for Tailwind v4 when needed
+      const plugins: unknown[] = viteContribs?.plugins ? [...viteContribs.plugins] : [];
+      if (tailwindInfo.hasTailwind && !tailwindInfo.hasPostcss && (tailwindInfo.major ?? 0) >= 4) {
+        const hasExistingTailwindPlugin = plugins.some((p) => {
+          try {
+            const name = (p as { name?: string })?.name ?? '';
+            return typeof name === 'string' && name.toLowerCase().includes('tailwind');
+          } catch { return false; }
+        });
+        if (!hasExistingTailwindPlugin) {
+          const tw = tryLoadTailwindVitePlugin(root);
+          if (tw) {
+            try {
+              const instance = typeof tw === 'function' ? (tw as () => unknown)() : tw;
+              if (instance) {
+                plugins.unshift(instance);
+                logger.info('Auto-injected @tailwindcss/vite plugin for Tailwind v4 (no postcss.config.* found).');
+              }
+            } catch (e) {
+              logger.warn(`Failed to initialize @tailwindcss/vite plugin: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }
         }
       }
 
+      const resolve =
+        viteContribs?.resolveExtensions && viteContribs.resolveExtensions.length > 0
+          ? { extensions: [...new Set([...VITE_BASE_EXTENSIONS, ...viteContribs.resolveExtensions])] }
+          : undefined;
+
+      // CSS modules: keep localsConvention:'asIs', scopeBehaviour:'local' — Vite applies
+      // this only to *.module.* files (consistent with css-loader auto: /\.module\.\w+$/).
+      // Regular .scss / .css remains global, .module.scss becomes local scoped.
+      // preprocessorOptions.scss.api='modern' required for Dart Sass modern API (sass-loader parity).
+      const css: Record<string, unknown> = {
+        modules: { localsConvention: 'asIs' as const, scopeBehaviour: 'local' as const },
+        ...(sassInstalled
+          ? {
+              preprocessorOptions: {
+                scss: { api: 'modern' as const },
+                sass: { api: 'modern' as const }
+              }
+            }
+          : {})
+      };
+      if (isServe && useHttps) {
+        const autoTrust = (resolved.dev as { autoTrust?: boolean | 'prompt' }).autoTrust;
+        const certs = await ensureAndTrustCerts({ hostname: settings.hostname, autoTrust });
+        return {
+          css,
+          define,
+          ...(esbuild ? { esbuild } : {}),
+          ...(plugins.length > 0 ? { plugins } : {}),
+          ...(resolve ? { resolve } : {}),
+          server: {
+            host: settings.hostname,
+            port: settings.port,
+            https: { key: certs.key, cert: certs.cert },
+            open: false
+          }
+        } as Record<string, unknown>;
+      }
+
       return {
+        css,
+        define,
+        ...(esbuild ? { esbuild } : {}),
+        ...(plugins.length > 0 ? { plugins } : {}),
+        ...(resolve ? { resolve } : {}),
         server: {
           host: settings.hostname,
           port: settings.port,
           https: false as unknown as boolean,
           open: false
-        },
-        ...(tsconfigRaw ? { esbuild: { tsconfigRaw: JSON.stringify(tsconfigRaw) } } : {})
+        }
       } as Record<string, unknown>;
     },
 
@@ -245,6 +241,20 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain);
       const reload = createReloadController();
       const originRef: { value: string } = { value: settings.origin };
+
+      // Dist staleness warning — dev-only plugin does not build dist itself
+      {
+        const missing: string[] = [];
+        for (const entry of project.webParts.entries) {
+          const distFile = path.join(root, resolved.build?.outDir ?? 'dist', `${entry.name}.js`);
+          if (!fs.existsSync(distFile)) missing.push(`${entry.name}.js`);
+        }
+        if (missing.length > 0) {
+          logger.warn(
+            `dist/*.js not found - run 'heft build' or 'rspfx build' to generate initial bundles, or use full plugin @mbsks/rspfx-plugin for integrated build (missing: ${missing.join(', ')})`
+          );
+        }
+      }
 
       // Certs are already ensured in config() for sharepoint/https; this is best-effort refresh for configureServer-only consumers
       if (mode === 'sharepoint' && settings.https) {
@@ -258,11 +268,10 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       // Framework preset — dynamic, peer optional (e.g. react may not be installed)
       let refreshRuntime: ReturnType<typeof createRefreshRuntime> | undefined;
       try {
-        const fastRefresh = resolved.dev?.fastRefresh ?? false;
+        const fastRefresh = process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as unknown as { fastRefresh?: boolean })?.fastRefresh === true;
         if (fastRefresh) {
           // loadFrameworkPreset handles missing package gracefully (returns empty preset with warn)
-          const presetMod = await loadFrameworkPreset(resolved.framework, root);
-          void presetMod;
+          await loadFrameworkPreset(resolved.framework, root);
           refreshRuntime = createRefreshRuntime(resolved.framework);
         }
       } catch (error) {
@@ -290,7 +299,8 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
         librariesDir: resolved.paths?.librariesDir,
         entryModuleIds,
         refreshRuntime,
-        bundleUrlSuffix: () => `?t=${reload.current}`
+        bundleUrlSuffix: () => `?t=${reload.current}`,
+        syntheticManifests: project.webParts.syntheticManifests
       });
 
       await regenerator.regenerate().catch((error) => {
@@ -322,9 +332,129 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       };
 
       const devServer = server as ConnectMiddlewareServer;
+      // CORS before all other handlers — SharePoint workbench iframe needs ACAO + private network.
+      // Mirrors compiler-rspack/src/dev-server.ts allowlist logic via isAllowedOrigin.
+      devServer.middlewares.use(corsMiddleware as unknown as (req: unknown, res: unknown, next: () => void) => void);
       devServer.watcher?.on('change', debounced);
       devServer.watcher?.on('add', debounced);
       devServer.watcher?.on('unlink', debounced);
+
+      // Local preview mode (tenantDomain missing): serve / as local page + mock /_api
+      if (mode === 'local') {
+        try {
+          const mockApi = createMockSharePointApi({ projectRoot: root, origin: () => originRef.value });
+          devServer.middlewares.use(mockApi.path, mockApi.handle as unknown as (req: unknown, res: unknown, next?: () => void) => void);
+        } catch (error) {
+          logger.warn(`Failed to create mock API: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        try {
+          const getComponents = (): ReturnType<typeof readLocalPageComponents> => {
+            const hasSynthetic = Boolean(project.webParts.syntheticManifests && project.webParts.syntheticManifests.length > 0);
+            if (hasSynthetic) {
+              return (project.webParts.syntheticManifests ?? []).map((meta) => ({
+                id: meta.id,
+                alias: meta.bundleName,
+                bundleName: meta.bundleName,
+                amdId: `${meta.id}_${project.webParts.packageVersion}`,
+                componentType: 'WebPart' as const
+              }));
+            }
+            try {
+              return readLocalPageComponents(project.webParts.bundles, project.webParts.packageVersion);
+            } catch {
+              return [];
+            }
+          };
+          devServer.middlewares.use('/', (req, res, next) => {
+            const pathname = ((req as { url?: string }).url ?? '').split('?')[0] ?? '';
+            if (pathname !== '/' && pathname !== '') {
+              next?.();
+              return;
+            }
+            // Build html per-request so origin reflects actual bound port
+            const components = getComponents();
+            const pageHtml = buildLocalPageHtml({
+              projectName: resolved.name,
+              origin: originRef.value,
+              components,
+              reloadClientScript: reload.clientScript
+            });
+            (res as ConnectResponse).setHeader('Content-Type', 'text/html; charset=utf-8');
+            (res as ConnectResponse).setHeader('Cache-Control', 'no-store');
+            (res as ConnectResponse).end(pageHtml);
+          });
+        } catch (error) {
+          logger.warn(`Failed to create local preview page: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      const localizedMap = new Map<string, string>();
+      for (const resource of project.localizedResources) {
+        for (const file of resource.files) {
+          localizedMap.set(`${resource.name}_${file.locale}.js`, file.path);
+        }
+      }
+      const distRoot = path.resolve(path.join(root, resolved.build?.outDir ?? 'dist'));
+      const urlPrefix = '/dist';
+      (devServer.middlewares as unknown as { use(route: string, handler: (req: unknown, res: unknown, next?: () => void) => void): void }).use(
+        urlPrefix,
+        (req, res, next) => {
+          const { originalUrl, url } = req as { originalUrl?: string; url?: string };
+          const requestUrl = originalUrl ?? url ?? '';
+          if (!requestUrl.startsWith(urlPrefix)) {
+            next?.();
+            return;
+          }
+          const rawRelative = requestUrl.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '';
+          let effectiveRelative: string | null = safeDecodeURIComponent(rawRelative);
+          if (effectiveRelative === null) {
+            next?.();
+            return;
+          }
+          if (hasDotSegment(effectiveRelative)) {
+            next?.();
+            return;
+          }
+          let current = effectiveRelative;
+          for (let i = 0; i < 4; i++) {
+            const nextDecoded = safeDecodeURIComponent(current);
+            if (nextDecoded === null || nextDecoded === current) break;
+            if (hasDotSegment(nextDecoded)) {
+              next?.();
+              return;
+            }
+            current = nextDecoded;
+            effectiveRelative = current;
+          }
+          const localizedPath = localizedMap.get(effectiveRelative);
+          if (localizedPath) {
+            try {
+              const content = fs.readFileSync(localizedPath, 'utf8');
+              (res as ConnectResponse).setHeader('Content-Type', 'application/javascript');
+              (res as ConnectResponse).setHeader('Cache-Control', 'no-store');
+              (res as ConnectResponse).end(content);
+              return;
+            } catch {
+              next?.();
+              return;
+            }
+          }
+          const file = path.resolve(distRoot, effectiveRelative);
+          if (file !== distRoot && !file.startsWith(distRoot + path.sep)) {
+            next?.();
+            return;
+          }
+          fs.lstat(file, (err, stat) => {
+            if (err || stat.isSymbolicLink() || !stat.isFile()) {
+              next?.();
+              return;
+            }
+            (res as ConnectResponse).setHeader('Content-Type', contentTypeFor(file));
+            (res as ConnectResponse).setHeader('Cache-Control', 'no-store');
+            fs.createReadStream(file).pipe(res as unknown as NodeJS.WritableStream);
+          });
+        }
+      );
 
       devServer.middlewares.use('/temp/manifests.js', (_req, res) => {
         const response = res as ConnectResponse;
@@ -349,16 +479,18 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       devServer.httpServer?.once('listening', () => {
         originRef.value = updateOriginWithActualPort(settings, devServer);
         const workbenchUrl = buildWorkbenchUrl({ ...settings, origin: originRef.value }, resolved);
+        const openTarget = workbenchUrl ?? (mode === 'local' ? `${originRef.value}/` : undefined);
         const shouldOpenBrowser =
           process.env.RSPFX_OPEN_BROWSER === '1'
             ? true
             : process.env.RSPFX_OPEN_BROWSER === '0'
               ? false
               : (resolved.dev.openBrowser ?? false);
-        if (!browserOpened && workbenchUrl && shouldOpenBrowser) {
+        if (!browserOpened && openTarget && shouldOpenBrowser) {
           browserOpened = true;
-          openBrowser(workbenchUrl);
-          logger.info(`Workbench: ${workbenchUrl}`);
+          openBrowser(openTarget);
+          if (workbenchUrl) logger.info(`Workbench: ${workbenchUrl}`);
+          else logger.info(`Local preview: ${openTarget}`);
         }
         {
           const bus = createHookBus(getPlugins(), { logger: logger.child({ phase: 'afterStart' }) });
@@ -366,7 +498,13 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
         }
       });
 
-      logger.success(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+      if (mode === 'local') {
+        logger.success(`Local preview running at ${settings.origin}/ — no SharePoint needed.`);
+      } else {
+        logger.success(`Manifest server running at ${settings.origin}/temp/manifests.js`);
+        const wb = buildWorkbenchUrl(settings, resolved);
+        if (wb) logger.info(`Workbench: ${wb}`);
+      }
     }
   };
 }

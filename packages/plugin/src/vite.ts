@@ -1,6 +1,4 @@
-import os from 'node:os';
 import fs from 'node:fs';
-import * as fspEsm from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createRequire } from 'node:module';
@@ -17,7 +15,6 @@ import {
   scriptUrlCaptureLine,
   scriptUrlPublicPathExpression
 } from '@mbsks/rspfx-compiler-rspack';
-import { ensureCertificates, formatTrustInstructions, isCertTrusted, tryTrustCert } from '@mbsks/rspfx-manifest-server';
 import { createHookBus, getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
@@ -30,9 +27,17 @@ import {
   assembleRelease,
   openBrowser,
   loadFrameworkPreset,
-  decodeIfEncoded,
-  type ServeSettings
+  decodeIfEncoded
 } from '@mbsks/rspfx-dev-runtime';
+import {
+  resolveTsconfigRaw,
+  checkNodeVersion,
+  checkViteConfigEsm,
+  updateOriginWithActualPort,
+  ensureAndTrustCerts,
+  patchFsForSpaces
+} from '@mbsks/rspfx-dev-runtime/vite-shared';
+import '@mbsks/rspfx-dev-runtime/vite-shared';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
@@ -92,146 +97,7 @@ function isVite8OrLater(root: string): boolean {
   return major !== undefined && major >= 8;
 }
 
-// Eager patch for Vite's loadAndTransform which does `fsp.readFile(file)` where
-// `file` may be "/Volumes/New%20Volume/..." when the workspace path contains a
-// space (pathToFileURL encodes it, Vite's cleanUrl leaves %20). Decode %20
-// before the actual read so the build succeeds on such paths.
-(() => {
-  const patchTarget = (target: unknown): void => {
-    try {
-      const mod = target as { readFile: (...args: unknown[]) => Promise<unknown>; _rspfxPatched?: boolean };
-      if (!mod || typeof mod.readFile !== 'function' || mod._rspfxPatched) return;
-      const orig = mod.readFile.bind(mod);
-      (mod as unknown as { readFile: unknown }).readFile = (file: unknown, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const decoded = decodeURIComponent(file);
-            if (decoded !== file) file = decoded;
-          } catch {}
-        }
-        return (orig as (...a: unknown[]) => unknown)(file, ...args);
-      };
-      mod._rspfxPatched = true;
-    } catch {}
-  };
-  patchTarget(fs.promises);
-  patchTarget(fspEsm as unknown);
-  // Also patch the classic fs.readFile
-  try {
-    const fsAny = fs as unknown as { readFile: (...a: unknown[]) => unknown; _rspfxPatched?: boolean };
-    if (fsAny && typeof fsAny.readFile === 'function' && !fsAny._rspfxPatched) {
-      const orig = fsAny.readFile.bind(fs);
-      fsAny.readFile = (file: unknown, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const d = decodeURIComponent(file as string);
-            if (d !== file) file = d;
-          } catch {}
-        }
-        return (orig as (...a: unknown[]) => unknown)(file, ...args);
-      };
-      fsAny._rspfxPatched = true;
-    }
-  } catch {}
-})();
 
-function resolveTsconfigRawForVite(root: string, explicit?: string): Record<string, unknown> | undefined {
-  if (explicit) {
-    const explicitPath = path.isAbsolute(explicit) ? explicit : path.join(root, explicit);
-    if (fs.existsSync(explicitPath)) {
-      try {
-        const raw = fs.readFileSync(explicitPath, 'utf8');
-        const parsed = JSON.parse(raw) as { extends?: string | string[] };
-        const ext = parsed.extends;
-        const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
-        if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
-          const basePaths = [
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
-            path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
-          ];
-          const hasBase = basePaths.some((p) => fs.existsSync(p));
-          if (!hasBase) {
-            try {
-              const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
-              if (!fs.existsSync(stubPath)) {
-                fs.mkdirSync(path.dirname(stubPath), { recursive: true });
-                fs.writeFileSync(stubPath, JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2));
-              }
-            } catch {}
-            return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
-          }
-        }
-      } catch {}
-      return undefined;
-    }
-  }
-  const candidates = ['tsconfig.json', 'tsconfig.build.json', 'tsconfig.app.json'];
-  try {
-    const all = fs.readdirSync(root).filter((f) => f.startsWith('tsconfig') && f.endsWith('.json'));
-    for (const f of all) if (!candidates.includes(f)) candidates.push(f);
-  } catch {}
-  for (const file of candidates) {
-    const full = path.join(root, file);
-    if (!fs.existsSync(full)) continue;
-    try {
-      const raw = fs.readFileSync(full, 'utf8');
-      const parsed = JSON.parse(raw) as { extends?: string | string[] };
-      const ext = parsed.extends;
-      const extendsStr = Array.isArray(ext) ? ext.join(' ') : typeof ext === 'string' ? ext : '';
-      if (extendsStr.includes('rush-stack-compiler') || extendsStr.includes('rush-stack')) {
-        const basePaths = [
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json'),
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-3.9/includes/base.json'),
-          path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.7/includes/base.json')
-        ];
-        const hasBase = basePaths.some((p) => fs.existsSync(p));
-        if (!hasBase) {
-          try {
-            const stubPath = path.join(root, 'node_modules/@microsoft/rush-stack-compiler-4.1/includes/base.json');
-            if (!fs.existsSync(stubPath)) {
-              fs.mkdirSync(path.dirname(stubPath), { recursive: true });
-              fs.writeFileSync(
-                stubPath,
-                JSON.stringify({ compilerOptions: { target: 'es2017', module: 'esnext', jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node', strict: true } }, null, 2)
-              );
-              logger.warn(`Created stub ${path.relative(root, stubPath)} to satisfy tsconfig extends — run "rspfx migrate" to rewrite tsconfig to plain config.`);
-            }
-          } catch {}
-          logger.warn(`tsconfig ${file} extends "${extendsStr}" but base not found — Vite will use fallback compilerOptions (jsx: react, esModuleInterop). Run "rspfx migrate" to rewrite tsconfig to plain config, or install @microsoft/rush-stack-compiler.`);
-          return { compilerOptions: { jsx: 'react', esModuleInterop: true, allowSyntheticDefaultImports: true, moduleResolution: 'node' } };
-        }
-      }
-    } catch {}
-    break;
-  }
-  return undefined;
-}
-
-function checkViteConfigEsmForFull(root: string): void {
-  try {
-    const pkgPath = path.join(root, 'package.json');
-    const pkg = fs.existsSync(pkgPath) ? (JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { type?: string }) : {};
-    const isEsmPkg = pkg.type === 'module';
-    const candidates = ['vite.config.ts', 'vite.config.js'];
-    for (const file of candidates) {
-      const full = path.join(root, file);
-      if (!fs.existsSync(full)) continue;
-      const content = fs.readFileSync(full, 'utf8').slice(0, 2000);
-      const hasEsm = /\bimport\s+.*from\b|\bexport\s+default\b/.test(content);
-      if (hasEsm && !isEsmPkg) {
-        logger.warn(`Vite config ${file} uses ESM syntax but package.json type is not "module" — Vite 8 with configLoader: 'native' will warn "ESM syntax in a file loaded as CommonJS". Rename to ${file.replace(/\.ts$|\.js$/, '.mjs')} or vite.config.mts, or add "type": "module" to package.json, or set VITE_CONFIG_NATIVE_IGNORE_WARNING=true.`);
-      }
-    }
-  } catch {}
-}
-
-function checkNodeVersionFull(): void {
-  const major = Number(process.versions.node.split('.')[0] ?? '0');
-  if (major < 20) {
-    logger.warn(`Node ${process.versions.node} is below RSPFx required >=20 (and Vite 8 requires >=20.19). Upgrade to Node 20+ or 22 LTS — see docs/compatibility.md. Vite may fail with syntax or ESM errors on Node 14.`);
-  }
-}
 
 /**
  * Environment contract between the CLI and the Vite plugin:
@@ -660,43 +526,14 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
 
     let certs: { key: string; cert: string } | undefined;
     if (mode === 'development' && settings.https) {
-      const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
-      try {
-        certs = await ensureCertificates(certsDir, settings.hostname);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logger.error(`Failed to generate dev certificates: ${msg}. Run 'rspfx doctor --fix' — see ${path.join(certsDir, 'cert.pem.trust.txt')} for manual trust.`);
-        throw new Error(`Failed to generate dev certificates: ${msg}. Run 'rspfx doctor --fix' to regenerate and 'rspfx doctor --trust' to trust.`);
-      }
       const autoTrust = (resolved.dev as { autoTrust?: boolean | 'prompt' }).autoTrust;
-      if (autoTrust !== false) {
-        try {
-          const certPath = path.join(certsDir, 'cert.pem');
-          const trusted = await isCertTrusted(certPath);
-          if (trusted.trusted === false) {
-            const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
-            const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
-            const shouldAttempt = autoTrust === true || (autoTrust === 'prompt' && !isCI && isTTY);
-            if (shouldAttempt) {
-              const result = await tryTrustCert(certPath);
-              if (result.trusted) logger.success(`Dev cert trusted: ${result.detail}`);
-              else logger.warn(`Auto-trust failed: ${result.detail} — ${formatTrustInstructions(certsDir)} — then restart browser`);
-            } else {
-              logger.warn(`Dev cert not trusted — ${trusted.detail}. ${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor --trust to auto-install.`);
-            }
-          } else if (trusted.trusted === 'unknown') {
-            logger.info(`Dev cert trust unknown: ${trusted.detail} — ${formatTrustInstructions(certsDir)}`);
-          }
-        } catch (e) {
-          logger.warn(`Cert trust check failed: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      }
+      certs = await ensureAndTrustCerts({ hostname: settings.hostname, autoTrust });
     }
 
-    checkNodeVersionFull();
-    checkViteConfigEsmForFull(root);
+    checkNodeVersion();
+    checkViteConfigEsm(root);
     const explicitTsconfig = (resolved as unknown as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as unknown as { tsconfigPath?: string })?.tsconfigPath;
-    const tsconfigRaw = resolveTsconfigRawForVite(root, explicitTsconfig);
+    const tsconfigRaw = resolveTsconfigRaw(root, explicitTsconfig);
     const fastRefresh =
       command === 'serve' && (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
     const preset = await loadPreset(root, resolved.framework);
@@ -1027,21 +864,6 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
   };
 }
 
-function updateOriginWithActualPort(
-  settings: ServeSettings,
-  devServer: ConnectMiddlewareServer
-): string {
-  try {
-    const address = (devServer.httpServer as { address(): unknown } | undefined)?.address();
-    if (address && typeof address === 'object' && 'port' in address) {
-      return `${settings.scheme}://${settings.hostname}:${(address as { port: number }).port}`;
-    }
-  } catch {
-    // Fall back to the configured origin.
-  }
-  return settings.origin;
-}
-
 function selectEntry(
   entries: BundleEntry[],
   entryName: string | undefined
@@ -1119,43 +941,5 @@ async function importViteFrom(root: string): Promise<unknown> {
 }
 
 function patchViteForSpaces(_viteMod: unknown): void {
-  // Vite's dev server loadAndTransform does `file = cleanUrl(id)` then
-  // `fsp.readFile(file)`. When the workspace path contains a space, `id`
-  // / `url` may be "/Volumes/New%20Volume/..." and cleanUrl leaves %20 literal.
-  // Monkey-patch both fs.promises and fs/promises to decode %20 on the fly.
-  const patch = (target: unknown): void => {
-    try {
-      const fsp = target as { readFile: typeof fs.promises.readFile; _rspfxPatched?: boolean };
-      if (!fsp || typeof fsp.readFile !== 'function' || fsp._rspfxPatched) return;
-      const origReadFile = fsp.readFile.bind(fsp);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (fsp.readFile as any) = (file: string, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const decoded = decodeURIComponent(file);
-            if (decoded !== file) file = decoded;
-          } catch {
-            // keep original
-          }
-        }
-        // @ts-expect-error variadic
-        return origReadFile(file, ...args);
-      };
-      fsp._rspfxPatched = true;
-    } catch {
-      // best-effort
-    }
-  };
-  patch(fs.promises);
-  try {
-    // Also patch the separate 'node:fs/promises' ESM namespace that Vite imports
-    // as `import fsp from 'node:fs/promises'`.
-    const fspModule = createRequire(fileURLToPath(import.meta.url))('node:fs/promises') as unknown;
-    patch(fspModule);
-    // Also patch 'fs/promises' without node: prefix (Vite also imports it)
-    try {
-      const fspModule2 = createRequire(fileURLToPath(import.meta.url))('fs/promises') as unknown;
-      patch(fspModule2);
-    } catch {}
-  } catch {}
+  patchFsForSpaces();
 }
