@@ -17,6 +17,7 @@ import {
   type Relationship
 } from './xml.js';
 import { writeZip, type ZipFileEntry } from './zip.js';
+import * as v from 'valibot';
 
 function getActivePluginsSafe(): readonly { patches?: { buildAppManifestXml?: (opts: unknown, next: (opts: unknown) => string | Promise<string>) => string | Promise<string>; buildPackage?: (opts: unknown, next: (opts: unknown) => Promise<unknown>) => Promise<unknown> } }[] {
   try {

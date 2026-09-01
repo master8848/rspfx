@@ -1,10 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, afterAll, beforeAll } from 'vitest';
+import { describe, expect, it, afterAll, beforeAll, vi, afterEach } from 'vitest';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { resolveServeMode, startServe } from '../src/index.js';
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+vi.stubEnv('NODE_TLS_REJECT_UNAUTHORIZED', '0');
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv('NODE_TLS_REJECT_UNAUTHORIZED', '0');
+});
 
 const FIXTURE = path.join(process.cwd(), 'tests', 'fixtures', 'proj');
 

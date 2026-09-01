@@ -1,4 +1,4 @@
-import { EnvironmentType } from '@mbsks/rspfx-core';
+import { EnvironmentType, LOCALHOST_PREVIEW_FALLBACK_ORIGIN } from '@mbsks/rspfx-core';
 import type { WebPartContextLike } from '@mbsks/rspfx-core';
 import { RspfxError } from '@mbsks/rspfx-diagnostics';
 
@@ -19,8 +19,8 @@ export function createMockWebPartContext(
     properties: preconfiguredEntries?.[0]?.properties ?? {},
     environment: { type: EnvironmentType.Local },
     pageContext: {
-      web: { title: 'Local Workbench', absoluteUrl: 'http://localhost:3000' },
-      site: { absoluteUrl: 'http://localhost:3000' }
+      web: { title: 'Local Workbench', absoluteUrl: LOCALHOST_PREVIEW_FALLBACK_ORIGIN },
+      site: { absoluteUrl: LOCALHOST_PREVIEW_FALLBACK_ORIGIN }
     },
     propertyPane: {},
     themeProvider: undefined

@@ -4,7 +4,7 @@ import net from 'node:net';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createLogger, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
-import { SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
+import { DEFAULT_DEV_PORT, DEV_SERVER_HTTPS_ORIGIN, SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
 import { ensureProjectConfigs, readProject } from '@mbsks/rspfx-dev-runtime';
 import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted, tryTrustCert } from '@mbsks/rspfx-manifest-server';
 import { loadConfig, type LoadedProject } from '../config.js';
@@ -151,7 +151,7 @@ export async function runDoctor(cwd: string, opts?: { fix?: boolean; trust?: boo
     });
   }
 
-  const devPort = config?.dev.port ?? 4321;
+  const devPort = config?.dev.port ?? DEFAULT_DEV_PORT;
   const portFree = await isPortFree(devPort);
   checks.push({ name: `port ${devPort} free (dev server)`, ok: portFree });
 
@@ -342,7 +342,7 @@ async function checkCertTrusted(): Promise<DoctorCheck> {
       return {
         name: 'dev cert trusted (OS store)',
         ok: false,
-        detail: `${result.detail} — browsers block https://localhost:4321 until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). ${formatTrustInstructions(certsDir)} — then restart browser. See ${path.join(certsDir, 'cert.pem.trust.txt')}`
+        detail: `${result.detail} — browsers block ${DEV_SERVER_HTTPS_ORIGIN} until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). ${formatTrustInstructions(certsDir)} — then restart browser. See ${path.join(certsDir, 'cert.pem.trust.txt')}`
       };
     }
     return {
