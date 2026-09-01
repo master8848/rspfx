@@ -10,9 +10,10 @@ import { createRspackConfig } from '@mbsks/rspfx-compiler-rspack';
 import { readProject, assembleRelease, type ReadProjectResult } from '@mbsks/rspfx-dev-runtime';
 import { collectExternals } from './shared.js';
 import { createKernel, type Kernel } from './kernel.js';
-import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { RspfxPluginOptions } from './types.js';
+import { validatePluginOptions } from './validation.js';
 // TODO(https://github.com/master8848/rspfx/issues/2): migrate collectExternals/platformOnlyExternal/amd helpers to build-core when rspack.ts is refactored to use kernel externals uniformly
 
 const logger = createLogger('rspfx');
@@ -63,6 +64,11 @@ export class RspfxPlugin implements RspfxBundlerPluginLike {
   }
 
   constructor(options: RspfxPluginOptions) {
+    const pluginValidation = validatePluginOptions(options as unknown as Record<string, unknown>);
+    if (!pluginValidation.ok) {
+      const msg = pluginValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `plugin option validation failed:\n${msg}`, pluginValidation.error as unknown as Error);
+    }
     const { projectRoot, ...rest } = options;
     this.projectRoot = projectRoot ?? process.cwd();
     this._options = resolveConfig(rest);

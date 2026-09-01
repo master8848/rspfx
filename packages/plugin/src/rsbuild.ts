@@ -36,8 +36,9 @@ import {
 } from '@mbsks/rspfx-dev-runtime';
 import { createHookBus, getPlugins } from '@mbsks/rspfx-plugin-api';
 import type { FrameworkPreset, FrameworkRsbuildContributions } from '@mbsks/rspfx-plugin-api';
-import { createLogger } from '@mbsks/rspfx-diagnostics';
+import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { RspfxPluginOptions } from './types.js';
+import { validatePluginOptions } from './validation.js';
 import { amdName, collectExternals, computeUniqueName, writeStatsJson, platformOnlyExternal } from './shared.js';
 
 const logger = createLogger('rspfx');
@@ -94,6 +95,11 @@ export interface RsbuildRspfxPlugin extends RspfxBundlerPluginLike {
 }
 
 export function rspfxRsbuild(options: RspfxPluginOptions): RsbuildRspfxPlugin {
+  const pluginValidation = validatePluginOptions(options as unknown as Record<string, unknown>);
+  if (!pluginValidation.ok) {
+    const msg = pluginValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `plugin option validation failed:\n${msg}`, pluginValidation.error as unknown as Error);
+  }
   const { projectRoot, ...rest } = options;
   const root = projectRoot ?? process.cwd();
   const resolved = resolveConfig(rest);
