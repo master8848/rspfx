@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import * as coreStub from './sp-core-library.js';
 import * as webpartStub from './sp-webpart-base.js';
 
 describe('stub contract: sp-core-library', () => {
+  afterEach(() => {
+    coreStub.Environment._initialize({ type: coreStub.EnvironmentType.Test });
+  });
+
   it('exports required symbols matching @microsoft/sp-core-library 1.23.2', () => {
     expect(coreStub.DisplayMode).toBeDefined();
     expect(coreStub.DisplayMode.Read).toBe(1);

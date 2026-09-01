@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { build, type CompileContext } from '../../compiler-rspack/src/index.js';
 import { preset } from '../src/index.js';
 
@@ -18,7 +18,7 @@ function makeCtx(): CompileContext {
       {
         name: 'test',
         import: path.join(FIXTURE, 'src', 'index.jsx'),
-        componentIds: ['test'],
+        componentIds: ['00000000-0000-4000-a000-000000000000'],
         version: '1.0.0'
       }
     ],
@@ -47,6 +47,10 @@ describe('framework-react build', () => {
     fs.rmSync(path.join(FIXTURE, OUT_DIR), { recursive: true, force: true });
   });
 
+  beforeEach(() => {
+    fs.rmSync(path.join(FIXTURE, OUT_DIR), { recursive: true, force: true });
+  });
+
   it('compiles a react JSX entry with the preset contributions', async () => {
     const result = await build(makeCtx());
     const stats = result.stats as unknown as StatsLike;
@@ -55,7 +59,8 @@ describe('framework-react build', () => {
     expect(result.outputFiles).toContain('test.js');
   });
 
-  it('transforms JSX via the automatic runtime', () => {
+  it('transforms JSX via the automatic runtime', async () => {
+    await build(makeCtx());
     const bundle = fs.readFileSync(path.join(FIXTURE, OUT_DIR, 'test.js'), 'utf8');
     expect(bundle).toContain('react_jsx_runtime');
     expect(bundle).not.toContain('<div>');
