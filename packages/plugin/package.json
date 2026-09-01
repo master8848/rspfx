@@ -28,6 +28,7 @@
     "@rspack/core": "^1.2.0"
   },
   "devDependencies": {
+    "valibot": "1.4.2",
     "@mbsks/rspfx-build-core": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",

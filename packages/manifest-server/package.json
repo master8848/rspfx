@@ -26,6 +26,7 @@
   },
   "sideEffects": false,
   "devDependencies": {
+    "valibot": "1.4.2",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-diagnostics": "workspace:*",
     "selfsigned": "^2.4.1"

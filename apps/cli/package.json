@@ -24,6 +24,7 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "valibot": "1.4.2",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
     "@mbsks/rspfx-dev-runtime": "workspace:*",
