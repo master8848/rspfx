@@ -48,6 +48,7 @@ import '@mbsks/rspfx-dev-runtime/vite-shared';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
+import { validatePluginOptions } from './validation.js';
 import { collectExternals, inlineStyleCode } from '@mbsks/rspfx-build-core';
 import { writeStatsJson } from './shared.js';
 
@@ -487,6 +488,11 @@ function createEntryPlugins(
  *   rebuild the AMD bundles to `dist/` and open the workbench.
  */
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
+  const pluginValidation = validatePluginOptions(options as unknown as Record<string, unknown>);
+  if (!pluginValidation.ok) {
+    const msg = pluginValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `plugin option validation failed:\n${msg}`, pluginValidation.error as unknown as Error);
+  }
   const { projectRoot, ...rest } = options;
   const root = projectRoot ?? process.cwd();
   const resolved = resolveConfig(rest);
