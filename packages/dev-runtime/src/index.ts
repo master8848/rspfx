@@ -39,12 +39,24 @@ export {
   createCompileContext,
   ensureProjectConfigs,
   expandEnvVars,
-  expandObject
+  expandObject,
+  ProjectServeConfigJsonSchema,
+  validateProjectServeConfigJson,
+  tryParseServeConfig
 } from './project.js';
 export type {
   DiscoveredWebParts,
   ProjectConfigJson,
   ProjectServeConfigJson,
   ReadProjectResult,
-  WebPartBundle
+  WebPartBundle,
+  ServeConfigIssue,
+  ServeConfigResult
 } from './project.js';
+export {
+  ServeSettingsSchema,
+  WorkbenchSettingsSchema,
+  validateServeSettings,
+  validateServeConfig,
+  tryValidateServeSettings
+} from './serve.js';
