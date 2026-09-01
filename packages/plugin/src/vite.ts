@@ -17,7 +17,7 @@ import {
   scriptUrlCaptureLine,
   scriptUrlPublicPathExpression
 } from '@mbsks/rspfx-compiler-rspack';
-import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
+import { ensureCertificates, formatTrustInstructions, isCertTrusted, tryTrustCert } from '@mbsks/rspfx-manifest-server';
 import { createHookBus, getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
@@ -333,6 +333,13 @@ function inlineStyleCode(css: string): string {
   );
 }
 
+/**
+ * @deprecated Disk fallback for leftover CSS files not caught by transformEntryBundle.
+ * With cssCodeSplit:false and transformEntryBundle deleting CSS assets from the bundle map,
+ * this fallback is normally a no-op (no stale assets). Kept for legacy Vite configs with
+ * custom assetFileNames or extraction enabled. Adjusts sourcemaps on disk consistently with
+ * packages/core/src/inline-css.ts helper (prepend ';' to mappings for the capture line).
+ */
 function inlineRemainingCssFiles(root: string, outDir: string, entryNames: string[]): void {
   const distDir = path.join(root, outDir);
   if (!fs.existsSync(distDir)) return;
@@ -377,6 +384,21 @@ function inlineRemainingCssFiles(root: string, outDir: string, entryNames: strin
     const codeWithoutMap = sourceMapComment ? js.slice(0, -sourceMapComment.length) : js;
     js = codeWithoutMap + inlineStyleCode(combinedCss) + (sourceMapComment || '');
     fs.writeFileSync(jsPath, js);
+    // Adjust corresponding .js.map on disk (if emitted) to keep mappings in sync.
+    // Reuses ';' logic from packages/core/src/inline-css.ts: prepend ';' for the prepended capture line.
+    // If sourcemaps are disabled (production default), no .map file exists and this is a no-op, ensuring
+    // no stale .map artifacts are left. If sourcemaps are enabled (e.g. dev or hidden), adjust instead of deleting.
+    try {
+      const mapPath = `${jsPath}.map`;
+      if (fs.existsSync(mapPath)) {
+        const raw = fs.readFileSync(mapPath, 'utf8');
+        const parsed = JSON.parse(raw) as { mappings?: string };
+        if (typeof parsed.mappings === 'string' && !parsed.mappings.startsWith(';')) {
+          parsed.mappings = ';' + parsed.mappings;
+          fs.writeFileSync(mapPath, JSON.stringify(parsed));
+        }
+      }
+    } catch {}
   }
   // Delete the now-inlined CSS files
   for (const f of cssFiles) {
@@ -636,10 +658,40 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     const viteMajor = viteVersion ? Number(viteVersion.split('.')[0] ?? '') : undefined;
     const isVite8 = viteMajor !== undefined && Number.isFinite(viteMajor) && viteMajor >= 8;
 
-    const certs =
-      mode === 'development' && settings.https
-        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname)
-        : undefined;
+    let certs: { key: string; cert: string } | undefined;
+    if (mode === 'development' && settings.https) {
+      const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+      try {
+        certs = await ensureCertificates(certsDir, settings.hostname);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to generate dev certificates: ${msg}. Run 'rspfx doctor --fix' — see ${path.join(certsDir, 'cert.pem.trust.txt')} for manual trust.`);
+        throw new Error(`Failed to generate dev certificates: ${msg}. Run 'rspfx doctor --fix' to regenerate and 'rspfx doctor --trust' to trust.`);
+      }
+      const autoTrust = (resolved.dev as { autoTrust?: boolean | 'prompt' }).autoTrust;
+      if (autoTrust !== false) {
+        try {
+          const certPath = path.join(certsDir, 'cert.pem');
+          const trusted = await isCertTrusted(certPath);
+          if (trusted.trusted === false) {
+            const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
+            const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
+            const shouldAttempt = autoTrust === true || (autoTrust === 'prompt' && !isCI && isTTY);
+            if (shouldAttempt) {
+              const result = await tryTrustCert(certPath);
+              if (result.trusted) logger.success(`Dev cert trusted: ${result.detail}`);
+              else logger.warn(`Auto-trust failed: ${result.detail} — ${formatTrustInstructions(certsDir)} — then restart browser`);
+            } else {
+              logger.warn(`Dev cert not trusted — ${trusted.detail}. ${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor --trust to auto-install.`);
+            }
+          } else if (trusted.trusted === 'unknown') {
+            logger.info(`Dev cert trust unknown: ${trusted.detail} — ${formatTrustInstructions(certsDir)}`);
+          }
+        } catch (e) {
+          logger.warn(`Cert trust check failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+    }
 
     checkNodeVersionFull();
     checkViteConfigEsmForFull(root);
