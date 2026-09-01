@@ -2,7 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
-import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
+import type { StartDevServerResult, DevServerOptions } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
@@ -243,7 +243,7 @@ export async function startServe(
 
     const devtoolsScript = getDevtoolsScript(store, regenerator, config.version ?? '0.0.0');
 
-    const routes: NonNullable<Parameters<typeof startDevServer>[1]['routes']> = [
+    const routes: NonNullable<DevServerOptions['routes']> = [
       {
         path: '/temp/manifests.js',
         handler: (req, res) => {
@@ -302,6 +302,7 @@ export async function startServe(
       });
     }
 
+    const { startDevServer } = await import('@mbsks/rspfx-compiler-rspack');
     const nextServer = await startDevServer(
       { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
       {

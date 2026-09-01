@@ -8,6 +8,10 @@ export {
 export type { DevRuntimeHandle, DevRuntimeOptions, ServeMode, ServeSettings } from './serve.js';
 export { createManifestRegenerator } from './manifests.js';
 export type { ManifestRegenerator, ManifestRegeneratorOptions } from './manifests.js';
+export { createMockSharePointApi } from './mock-api.js';
+export type { MockApiOptions, MockStore } from './mock-api.js';
+export { buildLocalPageHtml, readLocalPageComponents } from './local-page.js';
+export type { LocalPageComponent, LocalPageOptions } from './local-page.js';
 export { createRefreshRuntime } from './refresh.js';
 export type { RefreshRuntime } from './refresh.js';
 export { watchDependencyScope, fingerprintDependencyScope } from './deps-watch.js';
