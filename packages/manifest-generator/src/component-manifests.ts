@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { RspfxError } from './errors.js';
 import { findSpDependencies } from './sp-dependencies.js';
 import type { ComponentManifest, ManifestContext } from './types.js';
+import { validateComponentManifestJson } from './types.js';
 import { buildScriptResources, stripPreReleaseVersion, toPascalSynthetic } from './manifest-helpers.js';
 
 let native:
@@ -159,9 +160,25 @@ function scanComponentsDir(
         `Expected exactly one manifest per web part/extension folder but found ${manifestFiles.length} in ${dirPath}: ${manifestFiles.join(', ')}`
       );
     }
-    const source = JSON.parse(
-      fs.readFileSync(path.join(dirPath, manifestFiles[0]!), 'utf8')
-    ) as Record<string, unknown>;
+    const manifestPath = path.join(dirPath, manifestFiles[0]!);
+    let rawText: string;
+    try {
+      rawText = fs.readFileSync(manifestPath, 'utf8');
+    } catch (error) {
+      throw new RspfxError('INVALID_MANIFEST_JSON', `Failed to read manifest ${manifestPath}: ${error instanceof Error ? error.message : String(error)} — fix: ensure ${manifestPath} exists with {"id":"00000000-0000-4000-a000-000000000000"} (see https://github.com/master8848/rspfx#configuration)`, error);
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (error) {
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `Manifest ${manifestPath} is not valid JSON: ${error instanceof Error ? error.message : String(error)} — fix: ensure ${manifestPath} is valid JSON with {"id":"00000000-0000-4000-a000-000000000000"} (see https://github.com/master8848/rspfx#configuration)`, error);
+    }
+    const validation = validateComponentManifestJson(parsed, manifestPath);
+    if (!validation.ok) {
+      const msg = validation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `Manifest ${manifestPath} validation failed:\n${msg}`, validation.error as unknown as Error);
+    }
+    const source = parsed as Record<string, unknown>;
     delete source.$schema;
     if (source.version === '*') {
       source.version = stripPreReleaseVersion(ctx.packageVersion);
