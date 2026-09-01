@@ -276,9 +276,10 @@ export function configureProgram(): void {
     .command('doctor')
     .description('run environment and project checks')
     .option('--fix', 'fix issues when possible')
+    .option('--trust', 'attempt to trust dev cert in OS store (darwin/win32)')
     .action((options: Record<string, unknown>) => {
       return guard(async () => {
-        const result = await runDoctor(cwd, { fix: options.fix as boolean | undefined });
+        const result = await runDoctor(cwd, { fix: options.fix as boolean | undefined, trust: options.trust as boolean | undefined });
         process.exitCode = result.ok ? 0 : 1;
       });
     });

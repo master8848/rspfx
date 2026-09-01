@@ -27,6 +27,7 @@ export interface DevConfig {
   openBrowser?: boolean;
   tenantUrl?: string;
   initialPage?: string;
+  autoTrust?: boolean | 'prompt';
 }
 
 export interface BuildConfig {
@@ -137,6 +138,9 @@ export function tryResolveConfig(raw: unknown): Result<RspfxConfig, Issue[]> {
         issues.push({ path: ['dev', 'port'], message: 'dev.port must be integer 1024-65535', code: 'CONFIG_VALIDATION_FAILED' });
       }
     }
+    if (dev.autoTrust !== undefined && dev.autoTrust !== 'prompt' && typeof dev.autoTrust !== 'boolean') {
+      issues.push({ path: ['dev', 'autoTrust'], message: 'dev.autoTrust must be boolean or "prompt"', code: 'CONFIG_VALIDATION_FAILED' });
+    }
   }
   if (cfg.teams !== undefined && typeof cfg.teams === 'object' && cfg.teams !== null) {
     const teams = cfg.teams as Record<string, unknown>;
@@ -189,7 +193,8 @@ export const configDefaults: Required<Pick<RspfxConfig, 'dev' | 'build'>> & { pa
     hostname: 'localhost',
     workbench: true,
     fastRefresh: false,
-    openBrowser: false
+    openBrowser: false,
+    autoTrust: 'prompt' as unknown as boolean | 'prompt'
   },
   build: {
     sourcemap: false,
@@ -246,6 +251,7 @@ export function resolveConfig(config: RspfxConfig | Partial<RspfxConfig>): Rspfx
       workbench: config.dev?.workbench ?? configDefaults.dev.workbench,
       fastRefresh: config.dev?.fastRefresh ?? configDefaults.dev.fastRefresh,
       openBrowser: config.dev?.openBrowser ?? configDefaults.dev.openBrowser,
+      autoTrust: (config.dev?.autoTrust as boolean | 'prompt' | undefined) ?? (process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD ? (false as unknown as boolean | 'prompt') : ('prompt' as unknown as boolean | 'prompt')),
       ...(config.dev?.tenantUrl !== undefined ? { tenantUrl: config.dev.tenantUrl } : {}),
       ...(config.dev?.initialPage !== undefined ? { initialPage: config.dev.initialPage } : {})
     },

@@ -2,7 +2,6 @@ import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { isIP } from 'node:net';
 import * as crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
@@ -62,12 +61,6 @@ interface SelfsignedPems {
   cert: string;
   fingerprint: string;
 }
-
-const require = createRequire(import.meta.url);
-
-const selfsigned = require('selfsigned') as {
-  generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): Promise<SelfsignedPems>;
-};
 
 const logger = createLogger('rspfx');
 
@@ -187,6 +180,11 @@ export async function ensureCertificates(certsDir: string, hostname?: string): P
       altNames.push({ type: 2, value: hostname });
     }
   }
+  const { default: selfsigned } = (await import('selfsigned')) as unknown as {
+    default: {
+      generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): Promise<SelfsignedPems>;
+    };
+  };
   const pems = await selfsigned.generate(
     [{ name: 'commonName', value: 'localhost' }],
     {
@@ -327,6 +325,109 @@ export async function isCertTrusted(certPath: string): Promise<{ trusted: boolea
   } catch (error) {
     return { trusted: 'unknown', detail: error instanceof Error ? error.message : String(error) };
   }
+}
+
+export async function tryTrustCert(certPath: string): Promise<{ trusted: boolean; detail: string }> {
+  const platform = process.platform;
+  if (platform === 'darwin') {
+    try {
+      await execFileAsync('security', ['add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', certPath], {
+        timeout: 15000
+      });
+      const verified = await isCertTrusted(certPath).catch(() => undefined);
+      if (verified?.trusted === true) return { trusted: true, detail: 'trusted via security add-trusted-cert' };
+      return { trusted: true, detail: 'security add-trusted-cert succeeded — restart browser' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const needsSudo =
+        /not authorized|permission|authorization|write permissions|User interaction|SecTrust|requires.*admin/i.test(msg) ||
+        msg.includes('100013') ||
+        msg.toLowerCase().includes('sudo');
+      // If we seem to need sudo and we are interactive, try with sudo and inherit stdio so the user can enter password
+      const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
+      const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
+      if (needsSudo && isTTY && !isCI) {
+        try {
+          const { spawn } = await import('node:child_process');
+          const ok = await new Promise<boolean>((resolve) => {
+            const child = spawn('sudo', ['security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', certPath], {
+              stdio: 'inherit'
+            });
+            child.on('close', (code) => resolve(code === 0));
+            child.on('error', () => resolve(false));
+          });
+          if (ok) {
+            const verified = await isCertTrusted(certPath).catch(() => undefined);
+            if (verified?.trusted === true) return { trusted: true, detail: 'trusted via sudo security add-trusted-cert' };
+            return { trusted: true, detail: 'sudo security add-trusted-cert succeeded — restart browser' };
+          }
+        } catch {}
+      }
+      if (needsSudo || /permission/i.test(msg)) {
+        return {
+          trusted: false,
+          detail: `sudo required — run: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${certPath}`
+        };
+      }
+      return {
+        trusted: false,
+        detail: `security add-trusted-cert failed: ${msg} — ${formatTrustInstructions(path.dirname(certPath))}`
+      };
+    }
+  }
+  if (platform === 'win32') {
+    try {
+      await execFileAsync('certutil', ['-addstore', '-user', 'Root', certPath], { timeout: 15000 });
+      const verified = await isCertTrusted(certPath).catch(() => undefined);
+      if (verified?.trusted === true) return { trusted: true, detail: 'trusted via certutil -addstore' };
+      return { trusted: true, detail: 'certutil -addstore succeeded — restart browser' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { trusted: false, detail: `certutil failed: ${msg} — run: certutil -addstore -user Root ${certPath}` };
+    }
+  }
+  // Linux: try NSS DB
+  try {
+    const nssDb = path.join(os.homedir(), '.pki', 'nssdb');
+    await execFileAsync('certutil', ['-d', `sql:${nssDb}`, '-A', '-t', 'C,,', '-n', 'RSPFx', '-i', certPath], { timeout: 10000 });
+    return { trusted: true, detail: `added to NSS DB ${nssDb} — restart browser` };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return {
+      trusted: false,
+      detail: `Linux has no single trust store — import ${certPath} into browser/OS store and restart browser${msg ? ` (${msg})` : ''}`
+    };
+  }
+}
+
+export async function ensureCertificatesAndTrust(
+  certsDir: string,
+  hostname?: string
+): Promise<{ key: string; cert: string; trusted: boolean | 'unknown'; detail: string }> {
+  const { key, cert } = await ensureCertificates(certsDir, hostname);
+  const certPath = path.join(certsDir, 'cert.pem');
+  const trust = await isCertTrusted(certPath);
+  if (trust.trusted === true) {
+    return { key, cert, trusted: true, detail: trust.detail };
+  }
+  if (trust.trusted === 'unknown') {
+    logger.info(`Cert trust check unknown: ${trust.detail}`);
+    return { key, cert, trusted: 'unknown', detail: trust.detail };
+  }
+  const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
+  const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
+  if (isCI || !isTTY) {
+    logger.warn(`Dev cert not trusted — ${trust.detail}. ${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor --trust to auto-install.`);
+    return { key, cert, trusted: false, detail: trust.detail };
+  }
+  logger.info('Dev cert not trusted — attempting auto-trust...');
+  const result = await tryTrustCert(certPath);
+  if (result.trusted) {
+    logger.success(`Dev cert trusted: ${result.detail}`);
+    return { key, cert, trusted: true, detail: result.detail };
+  }
+  logger.warn(`Auto-trust failed: ${result.detail} — ${formatTrustInstructions(certsDir)}`);
+  return { key, cert, trusted: false, detail: result.detail };
 }
 
 export function formatTrustInstructions(certsDir: string): string {

@@ -10,7 +10,8 @@ describe('configDefaults', () => {
         hostname: 'localhost',
         workbench: true,
         fastRefresh: false,
-        openBrowser: false
+        openBrowser: false,
+        autoTrust: 'prompt'
       },
       build: {
         sourcemap: false,
@@ -52,7 +53,8 @@ describe('resolveConfig', () => {
         hostname: 'localhost',
         workbench: true,
         fastRefresh: false,
-        openBrowser: false
+        openBrowser: false,
+        autoTrust: 'prompt'
       },
       build: {
         sourcemap: false,
@@ -88,7 +90,8 @@ describe('resolveConfig', () => {
       hostname: 'localhost',
       workbench: true,
       fastRefresh: true,
-      openBrowser: false
+      openBrowser: false,
+      autoTrust: 'prompt'
     });
     expect(config.build).toEqual({
       sourcemap: true,
