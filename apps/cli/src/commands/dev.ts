@@ -13,6 +13,7 @@ import { formatTrustInstructions, getCertStatus, isCertTrusted } from "@mbsks/rs
 import os from "node:os";
 import path from "node:path";
 import { type BundlerId, loadConfig } from "../config.js";
+import { validateDevOptions } from "../validation.js";
 import { detectOfficialProject, loadOfficialConfig } from "../hybrid.js";
 import { spawnRsbuildDev } from "../rsbuild.js";
 import { spawnViteDev } from "../vite.js";
@@ -44,6 +45,11 @@ export async function runDev(
   cwd: string,
   opts: DevOptions = {},
 ): Promise<DevRuntimeHandle> {
+  const devValidation = validateDevOptions({ port: opts.port, tenant: opts.tenant, mode: opts.mode, browser: opts.browser, refresh: opts.refresh });
+  if (!devValidation.ok) {
+    const msg = devValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError(RspfxErrorCode.CONFIG_VALIDATION_FAILED, `dev options validation failed:\n${msg}`, devValidation.error as unknown as Error);
+  }
   let config: RspfxConfig;
   let bundler: BundlerId = "rspack";
   let loadedRspfx: unknown;
