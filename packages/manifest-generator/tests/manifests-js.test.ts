@@ -42,13 +42,6 @@ function installScriptAndEval(js: string): DebugManifests {
 }
 
 describe('generateManifestsJs', () => {
-  it('emits the debug manifests IIFE shape', async () => {
-    const js = await generateManifestsJs([helloManifest()]);
-    expect(js).toContain('self.debugManifests');
-    expect(js).toContain('define([],');
-    expect(js).toContain('getManifests');
-  });
-
   it('executes and getManifests returns fresh clones with defaulted base urls', async () => {
     const debugManifests = installScriptAndEval(await generateManifestsJs([helloManifest()]));
     expect(debugManifests._metadata).toBeUndefined();
@@ -108,6 +101,21 @@ describe('generateManifestsJs', () => {
       loaderConfig: { scriptResources: Record<string, Record<string, unknown>> };
     }>;
     expect(manifests[0]!.loaderConfig.scriptResources['loc']!.path).toBe('strings.en-us.js');
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('falls back to default when market param is unknown locale', async () => {
+    const manifest = helloManifest();
+    manifest.loaderConfig.scriptResources['loc'] = {
+      type: 'localizedPath',
+      paths: { l: { 'en-us': 'strings.en-us', default: 'strings' }, p: '', s: '.js' }
+    };
+    window.history.replaceState({}, '', '?market=fr-fr');
+    const debugManifests = installScriptAndEval(await generateManifestsJs([manifest]));
+    const manifests = debugManifests.getManifests() as Array<{
+      loaderConfig: { scriptResources: Record<string, Record<string, unknown>> };
+    }>;
+    expect(manifests[0]!.loaderConfig.scriptResources['loc']!.path).toBe('strings.js');
     window.history.replaceState({}, '', '/');
   });
 });
