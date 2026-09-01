@@ -29,6 +29,50 @@ bunx vite
 
 Delete `vite.config.ts` to revert.
 
+## Local testing with unpublished changes (`../spfx` → `spfx-test-versions`)
+
+We test that the dev-mode-only plugin (`@mbsks/rspfx-plugin-dev`) works on both old and new SPFx projects (`spfx-test-versions`: `1.14` / `1.18.2` / `1.20` / `1.23.2`).
+
+> **Careful:** the global `rspfx` CLI is **not** file-based. Changes in `../spfx` are not live and are not published to npm until release. After editing `apps/cli` or `packages/plugin-dev`, rebuild and reinstall the CLI globally from local files, and install the dev plugin from file instead of npm.
+
+```sh
+# 1) build rspfx locally (sibling repo of spfx-test-versions)
+cd ../spfx
+bun install
+bun run build
+
+# 2) install/replace global CLI from local build (not npm)
+# option A — pack + global install (reproducible)
+npm pack ./apps/cli
+npm i -g ./apps/cli/mbsks-rspfx-cli-*.tgz
+# or: (cd apps/cli && bun pm pack) then npm i -g ./apps/cli/mbsks-rspfx-cli-*.tgz
+# option B — npm link (dev loop)
+# npm link ./apps/cli
+
+rspfx --version
+which rspfx  # should point to global install you just replaced
+
+# 3) in each test project, install dev plugin from file instead of npm
+#    (otherwise `rspfx dev:vite` would add `@mbsks/rspfx-plugin-dev@^${cliVersion}` from npm)
+cd ../spfx-test-versions/spfx-2021-contoso-tracker
+bun add -D file:../../spfx/packages/plugin-dev
+# or: npm i -D file:../../spfx/packages/plugin-dev
+
+# repeat for the other eras
+cd ../spfx-2024-contoso-tracker && bun add -D file:../../spfx/packages/plugin-dev
+cd ../spfx-2025-contoso-tracker && bun add -D file:../../spfx/packages/plugin-dev
+cd ../spfx-2026-contoso-tracker && bun add -D file:../../spfx/packages/plugin-dev
+```
+
+Then verify scaffold without starting Vite:
+
+```sh
+rspfx dev:vite --dry-run  # preview: Node/SPFx/framework/tsconfig detection, package.json + vite.config.ts plan
+rspfx dev:vite             # scaffold + `vite --port 4321` (needs Node >=20, see below)
+```
+
+The CLI (`apps/cli/src/commands/dev-vite.ts:195`) auto-detects `spfxVersion`/`framework`/`tsconfig` and writes the lean `vite.config.ts` (`@mbsks/rspfx-plugin-dev/vite`). Re-run `bun run build && npm i -g ./apps/cli/*.tgz` after any CLI change — the global binary does not watch files.
+
 ## What `dev:vite` does
 
 `apps/cli/src/commands/dev-vite.ts:195` `runDevVite` runs these steps in order.
