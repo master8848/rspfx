@@ -180,6 +180,8 @@ export function updateOriginWithActualPort(settings: ServeLike, devServer: DevSe
 // ---------------------------------------------------------------------------
 // Static / path safety helpers
 // ---------------------------------------------------------------------------
+export const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'] as const;
+
 const CONTENT_TYPES: Record<string, string> = {
   '.js': 'application/javascript',
   '.mjs': 'application/javascript',

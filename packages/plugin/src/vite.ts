@@ -30,6 +30,7 @@ import {
   decodeIfEncoded
 } from '@mbsks/rspfx-dev-runtime';
 import {
+  VITE_BASE_EXTENSIONS,
   resolveTsconfigRaw,
   checkNodeVersion,
   checkViteConfigEsm,
@@ -159,8 +160,6 @@ interface ViteBuildOverrides {
 interface ViteStatsJson {
   moduleCounts?: Record<string, number>;
 }
-
-const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'];
 
 const presetCache = new Map<string, Promise<FrameworkPreset>>();
 
@@ -532,7 +531,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
 
     checkNodeVersion();
     checkViteConfigEsm(root);
-    const explicitTsconfig = (resolved as unknown as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as unknown as { tsconfigPath?: string })?.tsconfigPath;
+    const explicitTsconfig = (resolved as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as { tsconfigPath?: string })?.tsconfigPath;
     const tsconfigRaw = resolveTsconfigRaw(root, explicitTsconfig);
     const fastRefresh =
       command === 'serve' && (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
@@ -630,7 +629,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         // force Rollup. It is ignored on Vite 7 and currently not implemented
         // on Vite 8, but including it makes the config forward-compatible.
         rolldown: false
-      } as unknown as Record<string, unknown>,
+      } as Record<string, unknown>,
       build: {
         outDir: resolved.build.outDir,
         emptyOutDir: overrides.emptyOutDir ?? false,
@@ -751,7 +750,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         await Promise.all(
           project.webParts.entries.map((entry, index) =>
             viteAls.run(entry, async () => {
-              await (vite as unknown as ViteBuildApi).build({
+              await (vite as ViteBuildApi).build({
                 ...(await createConfig({ minify: false, sourcemap: true, emptyOutDir: index === 0 }, entry))
               });
             })
@@ -838,7 +837,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       await Promise.all(
         project.webParts.entries.slice(1).map((entry) =>
           viteAls.run(entry, async () => {
-            await (vite as unknown as ViteBuildApi).build({
+            await (vite as ViteBuildApi).build({
               ...(await createConfig({}, entry))
             });
           })
@@ -921,7 +920,7 @@ async function importViteFrom(root: string): Promise<unknown> {
       throw new RspfxError(
         'VITE_NOT_FOUND',
         'Vite is not installed in this project. Add "vite" to devDependencies (rspfx dev/build use the project-local Vite).',
-        error as unknown as Error
+        error as Error
       );
     }
   }

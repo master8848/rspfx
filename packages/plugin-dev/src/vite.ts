@@ -18,13 +18,13 @@ import {
   readLocalPageComponents
 } from '@mbsks/rspfx-dev-runtime';
 import {
+  VITE_BASE_EXTENSIONS,
   resolveTsconfigRaw,
   checkNodeVersion,
   checkViteConfigEsm,
   updateOriginWithActualPort,
   contentTypeFor,
-  safeDecodeURIComponent,
-  hasDotSegment,
+  safeDecodeWithHops,
   corsMiddleware,
   tryResolveFromRoot,
   isSassInstalled,
@@ -96,13 +96,13 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
 
   return {
     name: 'rspfx:dev',
-    [RSPFX_PLUGIN_MARKER]: true as unknown as boolean,
-    [RSPFX_PLUGIN_OPTIONS]: resolved as unknown as boolean,
+    [RSPFX_PLUGIN_MARKER]: true,
+    [RSPFX_PLUGIN_OPTIONS]: resolved,
 
     async config(_config, env) {
       checkNodeVersion();
       checkViteConfigEsm(root);
-      const explicit = (resolved as unknown as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as unknown as { tsconfigPath?: string })?.tsconfigPath;
+      const explicit = (resolved as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as { tsconfigPath?: string })?.tsconfigPath;
       const project = readProject(root, resolved.paths, resolved.version, resolved);
       const settings = resolveServeSettings({ config: resolved }, project.serveJson);
       const mode = resolveServeMode({ mode: undefined, config: resolved }, settings.tenantDomain);
@@ -110,13 +110,12 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       const useHttps = mode === 'sharepoint' ? settings.https : false;
       const tsconfigRaw = resolveTsconfigRaw(root, explicit);
 
-      const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'];
       let viteContribs: { plugins?: unknown[]; esbuild?: Record<string, unknown>; define?: Record<string, string>; resolveExtensions?: string[] } | undefined;
-      let fastRefresh = isServe && (process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as unknown as { fastRefresh?: boolean })?.fastRefresh === true);
+      let fastRefresh = isServe && (process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as { fastRefresh?: boolean } | undefined)?.fastRefresh === true);
       if (fastRefresh) {
         try {
           const presetMod = await loadFrameworkPreset(resolved.framework, root);
-          const preset = (presetMod as unknown as { preset: { vite?: (opts: { fastRefresh: boolean }) => { plugins?: unknown[]; esbuild?: Record<string, unknown>; define?: Record<string, string>; resolveExtensions?: string[] } } }).preset;
+          const preset = (presetMod as { preset: { vite?: (opts: { fastRefresh: boolean }) => { plugins?: unknown[]; esbuild?: Record<string, unknown>; define?: Record<string, string>; resolveExtensions?: string[] } } }).preset;
           if (preset?.vite) {
             viteContribs = preset.vite({ fastRefresh });
           }
@@ -229,7 +228,7 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
         server: {
           host: settings.hostname,
           port: settings.port,
-          https: false as unknown as boolean,
+          https: false,
           open: false
         }
       } as Record<string, unknown>;
@@ -268,7 +267,7 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       // Framework preset — dynamic, peer optional (e.g. react may not be installed)
       let refreshRuntime: ReturnType<typeof createRefreshRuntime> | undefined;
       try {
-        const fastRefresh = process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as unknown as { fastRefresh?: boolean })?.fastRefresh === true;
+        const fastRefresh = process.env.RSPFX_FAST_REFRESH === '1' || (resolved.dev as { fastRefresh?: boolean } | undefined)?.fastRefresh === true;
         if (fastRefresh) {
           // loadFrameworkPreset handles missing package gracefully (returns empty preset with warn)
           await loadFrameworkPreset(resolved.framework, root);
@@ -334,7 +333,7 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       const devServer = server as ConnectMiddlewareServer;
       // CORS before all other handlers — SharePoint workbench iframe needs ACAO + private network.
       // Mirrors compiler-rspack/src/dev-server.ts allowlist logic via isAllowedOrigin.
-      devServer.middlewares.use(corsMiddleware as unknown as (req: unknown, res: unknown, next: () => void) => void);
+      devServer.middlewares.use(corsMiddleware);
       devServer.watcher?.on('change', debounced);
       devServer.watcher?.on('add', debounced);
       devServer.watcher?.on('unlink', debounced);
@@ -343,7 +342,7 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       if (mode === 'local') {
         try {
           const mockApi = createMockSharePointApi({ projectRoot: root, origin: () => originRef.value });
-          devServer.middlewares.use(mockApi.path, mockApi.handle as unknown as (req: unknown, res: unknown, next?: () => void) => void);
+          devServer.middlewares.use(mockApi.path, mockApi.handle as (req: unknown, res: unknown, next?: () => void) => void);
         } catch (error) {
           logger.warn(`Failed to create mock API: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -396,7 +395,7 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
       }
       const distRoot = path.resolve(path.join(root, resolved.build?.outDir ?? 'dist'));
       const urlPrefix = '/dist';
-      (devServer.middlewares as unknown as { use(route: string, handler: (req: unknown, res: unknown, next?: () => void) => void): void }).use(
+      devServer.middlewares.use(
         urlPrefix,
         (req, res, next) => {
           const { originalUrl, url } = req as { originalUrl?: string; url?: string };
@@ -406,25 +405,10 @@ export function rspfxDevPlugin(options: ViteDevPluginOptions): RspfxViteDevPlugi
             return;
           }
           const rawRelative = requestUrl.slice(urlPrefix.length).replace(/^\/+/, '').split('?')[0] ?? '';
-          let effectiveRelative: string | null = safeDecodeURIComponent(rawRelative);
+          const effectiveRelative = safeDecodeWithHops(rawRelative, 4);
           if (effectiveRelative === null) {
             next?.();
             return;
-          }
-          if (hasDotSegment(effectiveRelative)) {
-            next?.();
-            return;
-          }
-          let current = effectiveRelative;
-          for (let i = 0; i < 4; i++) {
-            const nextDecoded = safeDecodeURIComponent(current);
-            if (nextDecoded === null || nextDecoded === current) break;
-            if (hasDotSegment(nextDecoded)) {
-              next?.();
-              return;
-            }
-            current = nextDecoded;
-            effectiveRelative = current;
           }
           const localizedPath = localizedMap.get(effectiveRelative);
           if (localizedPath) {

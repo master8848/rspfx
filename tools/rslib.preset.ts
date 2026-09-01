@@ -51,7 +51,7 @@ export function createRspfxLib(
     },
   };
   const extra = overrides?.extraExternals ?? [];
-  const extraArray: Array<string | RegExp> = Array.isArray(extra) ? extra : extra ? [extra as unknown as string | RegExp] : [];
+  const extraArray: Array<string | RegExp> = Array.isArray(extra) ? extra : extra ? [extra as string | RegExp] : [];
   const { extraExternals: _omit, output: overrideOutput, ...rest } = (overrides ?? {}) as Record<string, unknown>;
   return {
     ...base,
