@@ -22,18 +22,11 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-dev-runtime": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
-    "@mbsks/rspfx-manifest-generator": "workspace:*",
-    "@mbsks/rspfx-manifest-server": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
   },
@@ -46,5 +39,14 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-dev-runtime": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*"
   }
 }

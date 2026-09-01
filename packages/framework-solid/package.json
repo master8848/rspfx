@@ -27,16 +27,13 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@babel/core": "^7.26.0",
     "@babel/preset-typescript": "^7.26.0",
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-webpart-base": "workspace:*",
     "babel-loader": "^9.2.1",
     "babel-preset-solid": "^1.9.4",
     "solid-refresh": "^0.7.8",
@@ -52,11 +49,15 @@
     }
   },
   "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "solid-js": "^1.9.4"
   },
   "description": "RSPFx Solid framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
-  }
+  },
+  "sideEffects": false
 }

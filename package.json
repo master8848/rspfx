@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@rslib/core": "^0.23.2",
     "@types/node": "^22.10.0",
     "happy-dom": "^15.11.0",
     "typescript": "^5.7.0",

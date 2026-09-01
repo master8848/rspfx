@@ -17,18 +17,20 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
-    "@mbsks/rspfx-manifest-generator": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*"
-  },
+  "dependencies": {},
   "description": "RSPFx shared build helpers: amd, externals, defines, css, output",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*"
   }
 }

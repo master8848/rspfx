@@ -17,19 +17,21 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "fflate": "^0.8.2"
-  },
+  "dependencies": {},
   "description": "RSPFx .sppkg package assembly (AppManifest, features, assets)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "fflate": "^0.8.2"
   }
 }

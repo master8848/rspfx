@@ -22,11 +22,14 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
+    "@rspack/core": "^1.2.0"
+  },
+  "devDependencies": {
     "@mbsks/rspfx-build-core": "workspace:*",
     "@mbsks/rspfx-compiler-rspack": "workspace:*",
     "@mbsks/rspfx-core": "workspace:*",
@@ -35,9 +38,6 @@
     "@mbsks/rspfx-manifest-generator": "workspace:*",
     "@mbsks/rspfx-manifest-server": "workspace:*",
     "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@rspack/core": "^1.2.0"
-  },
-  "devDependencies": {
     "@rsbuild/core": "^2.1.9",
     "typescript": "^5.7.0",
     "vite": "^5.4.0 || ^7.0.0 || ^8.0.0"
@@ -58,5 +58,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
-  }
+  },
+  "sideEffects": false
 }

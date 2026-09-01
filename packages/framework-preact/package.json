@@ -27,7 +27,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
@@ -35,9 +35,6 @@
     "@babel/core": "^7.26.0",
     "@babel/preset-react": "^7.26.0",
     "@babel/preset-typescript": "^7.26.0",
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-webpart-base": "workspace:*",
     "@prefresh/babel-plugin": "^0.5.2",
     "@prefresh/vite": "^2.4.12",
     "@rspack/plugin-preact-refresh": "^1.0.0",
@@ -53,11 +50,15 @@
     }
   },
   "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "preact": "^10.24.0"
   },
   "description": "RSPFx Preact framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
-  }
+  },
+  "sideEffects": false
 }

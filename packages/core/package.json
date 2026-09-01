@@ -37,19 +37,19 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "valibot": "1.4.2"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@mbsks/rspfx-webpart-base": "workspace:*"
+    "@mbsks/rspfx-webpart-base": "workspace:*",
+    "valibot": "1.4.2"
   },
   "description": "Zero-dependency core for RSPFx: SPFx types, base web part, config, environment",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
-  }
+  },
+  "sideEffects": false
 }
