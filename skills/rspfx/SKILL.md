@@ -47,6 +47,12 @@ Then create `src/webparts/<name>/*.manifest.json` + `config/package-solution.jso
 
 ## Existing project — try without migrating (recommended)
 
+> Lean-first: run `rspfx dev:vite` — it auto-detects `spfxVersion`/`framework`,
+> installs `@mbsks/rspfx-plugin-dev` + `vite`, and scaffolds `vite.config.ts`
+> with `rspfxViteDev` (no `@rspack/core`). Start with `npm run dev:vite`.
+> Manual alternative: `vite.config.ts` with `rspfxVite({ devTryMode: true, tryComponents })`
+> from `@mbsks/rspfx-plugin`, then `rspfx dev`. See `docs/guide/try-mode.md`.
+
 One file `vite.config.ts` with `devTryMode: true` and two installs. Keeps `gulp serve` for production — no migration needed to try.
 
 ```sh

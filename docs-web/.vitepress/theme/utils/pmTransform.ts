@@ -60,6 +60,13 @@ const PM_ADD_PLUGIN: PMCommands = {
   bun: 'bun add -D @mbsks/rspfx-plugin @mbsks/rspfx-cli',
   deno: 'deno add -D npm:@mbsks/rspfx-plugin npm:@mbsks/rspfx-cli',
 }
+const PM_ADD_PLUGIN_DEV: PMCommands = {
+  npm: 'npm i -D @mbsks/rspfx-plugin-dev @mbsks/rspfx-cli',
+  pnpm: 'pnpm add -D @mbsks/rspfx-plugin-dev @mbsks/rspfx-cli',
+  yarn: 'yarn add -D @mbsks/rspfx-plugin-dev @mbsks/rspfx-cli',
+  bun: 'bun add -D @mbsks/rspfx-plugin-dev @mbsks/rspfx-cli',
+  deno: 'deno add -D npm:@mbsks/rspfx-plugin-dev npm:@mbsks/rspfx-cli',
+}
 const PM_TAILWIND: PMCommands = {
   npm: 'npm i -D tailwindcss @tailwindcss/postcss postcss',
   pnpm: 'pnpm add -D tailwindcss @tailwindcss/postcss postcss',
@@ -80,6 +87,13 @@ const PM_UPDATE_PLUGIN: PMCommands = {
   yarn: 'yarn upgrade @mbsks/rspfx-plugin',
   bun: 'bun update @mbsks/rspfx-plugin',
   deno: 'deno update @mbsks/rspfx-plugin',
+}
+const PM_UPDATE_PLUGIN_DEV: PMCommands = {
+  npm: 'npm update @mbsks/rspfx-plugin-dev',
+  pnpm: 'pnpm update @mbsks/rspfx-plugin-dev',
+  yarn: 'yarn upgrade @mbsks/rspfx-plugin-dev',
+  bun: 'bun update @mbsks/rspfx-plugin-dev',
+  deno: 'deno update @mbsks/rspfx-plugin-dev',
 }
 const PM_INSTALL: PMCommands = {
   npm: 'npm install',
@@ -180,6 +194,10 @@ export function detectPM(content: string): string | null {
     return pmTag(PM_CREATE_RSBUILD)
   }
 
+  if (c.includes('@mbsks/rspfx-plugin-dev') && (c.includes('i -D @mbsks') || c.includes('add -D @mbsks'))) {
+    return pmTag(PM_ADD_PLUGIN_DEV)
+  }
+
   if (c.includes('@mbsks/rspfx-plugin') && (c.includes('i -D @mbsks') || c.includes('add -D @mbsks'))) {
     return pmTag(PM_ADD_PLUGIN)
   }
@@ -190,6 +208,10 @@ export function detectPM(content: string): string | null {
 
   if (c.includes('add -D sass') || (c.includes('sass') && c.includes('or pnpm add -D'))) {
     return pmTag(PM_SASS)
+  }
+
+  if (c.includes('update @mbsks/rspfx-plugin-dev') || (c.includes('rspfx-plugin-dev') && c.includes('pnpm update') && c.includes('yarn upgrade'))) {
+    return pmTag(PM_UPDATE_PLUGIN_DEV)
   }
 
   if (c.includes('update @mbsks/rspfx-plugin') || (c.includes('pnpm update') && c.includes('yarn upgrade'))) {
