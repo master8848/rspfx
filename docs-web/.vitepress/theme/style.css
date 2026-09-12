@@ -1340,6 +1340,25 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   background: var(--vp-c-bg);
 }
 .vp-doc table::-webkit-scrollbar { height: 6px; }
+.vp-doc table:has(thead:not(:has(th:not(:empty)))) thead { display: none; }
+/* inner thead/tbody must fill the outer scroll-container border; otherwise the
+   green th header + rows only span content width inside a full-width container */
+.vp-doc thead,
+.vp-doc tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.vp-doc tr { display: table-row; }
+/* collapse zero-width empty header cells so they never render as green slivers */
+.vp-doc th:empty {
+  padding: 0 !important;
+  border: 0 !important;
+}
+/* headerless tables (e.g. docs/performance.md `| | |` header): round the first
+   tbody row's top corners to match the outer container radius */
+.vp-doc table:has(thead:not(:has(th:not(:empty)))) tbody tr:first-child td:first-child { border-top-left-radius: 10px; }
+.vp-doc table:has(thead:not(:has(th:not(:empty)))) tbody tr:first-child td:last-child { border-top-right-radius: 10px; }
 .vp-doc table::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.22); border-radius: 9999px; }
 .vp-doc th,
 .vp-doc td {
@@ -1381,6 +1400,9 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-fo
   white-space: nowrap;
   border-bottom: 1px solid hsl(var(--primary) / 0.9);
   border-right-color: hsl(var(--primary-foreground) / 0.18);
+}
+@media (max-width: 640px) {
+  .vp-doc th { white-space: normal; }
 }
 .vp-doc th:first-child { border-top-left-radius: 10px; }
 .vp-doc th:last-child { border-top-right-radius: 10px; }
