@@ -1,8 +1,8 @@
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
-import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
-import { startDevServer, type StartDevServerResult } from '@mbsks/rspfx-compiler-rspack';
+import { DEFAULT_DEV_PORT, DEV_SERVER_HTTPS_ORIGIN, resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
+import type { StartDevServerResult, DevServerOptions } from '@mbsks/rspfx-compiler-rspack';
 import { findSpDependencies } from '@mbsks/rspfx-manifest-generator';
 import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted, validateCustomHostname } from '@mbsks/rspfx-manifest-server';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
@@ -17,10 +17,11 @@ import { openBrowser } from './browser.js';
 import { createReloadController } from './reload.js';
 import { createMockSharePointApi } from './mock-api.js';
 import { buildLocalPageHtml, readLocalPageComponents } from './local-page.js';
-import { isPlatformOnlyModule } from '@mbsks/rspfx-sharepoint-runtime/platform-modules';
+import { platformOnlyExternal } from '@mbsks/rspfx-build-core';
 import { createStore } from './store.js';
 import { createDevMachine } from './machine.js';
 import { getDevtoolsScript } from './devtools.js';
+import * as v from 'valibot';
 
 const require = createRequire(import.meta.url);
 
@@ -55,6 +56,144 @@ export interface ServeSettings {
   initialPage: string | undefined;
 }
 
+export interface WorkbenchSettings {
+  port: number;
+  hostname: string;
+  https: boolean;
+  initialPage?: string;
+}
+
+// ── valibot schemas for serve runtime ──
+const SERVE_RT_DOCS = 'https://github.com/master8848/rspfx#configuration';
+const SERVE_RT_HINT = (example: string) => ` — fix: ${example} (see ${SERVE_RT_DOCS})`;
+
+export const ServeSettingsSchema = v.object({
+  port: v.pipe(
+    v.number('serve port must be a number' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321')),
+    v.integer('serve port must be an integer' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321')),
+    v.minValue(1024, 'serve.json port must be 1024-65535 — fix: set {"port":4321} in config/serve.json or use --port 4321 (see ' + SERVE_RT_DOCS + ')'),
+    v.maxValue(65535, 'serve.json port must be 1024-65535 — fix: set {"port":4321} in config/serve.json or use --port 4321 (see ' + SERVE_RT_DOCS + ')')
+  ),
+  hostname: v.pipe(
+    v.string('serve hostname must be a string' + SERVE_RT_HINT('set {"hostname":"localhost"} in config/serve.json')),
+    v.minLength(1, 'serve hostname must be non-empty' + SERVE_RT_HINT('set {"hostname":"localhost"} in config/serve.json'))
+  ),
+  https: v.boolean('serve https must be a boolean' + SERVE_RT_HINT('set {"https":true} in config/serve.json')),
+  scheme: v.picklist(['https', 'http'], 'serve scheme must be https or http' + SERVE_RT_HINT('set {"https":true} in config/serve.json')),
+  origin: v.pipe(
+    v.string('serve origin must be a string URL' + SERVE_RT_HINT('set {"hostname":"localhost","port":4321} in config/serve.json')),
+    v.url('serve origin must be a valid URL like https://localhost:4321' + SERVE_RT_HINT('set {"hostname":"localhost","port":4321} in config/serve.json'))
+  ),
+  tenantDomain: v.optional(
+    v.pipe(
+      v.string('serve tenantDomain must be a string like "contoso.sharepoint.com"' + SERVE_RT_HINT('set dev: { tenantUrl: "https://contoso.sharepoint.com" } in rspfx.config.ts')),
+      v.minLength(1, 'serve tenantDomain must be non-empty' + SERVE_RT_HINT('set dev: { tenantUrl: "https://contoso.sharepoint.com" } in rspfx.config.ts'))
+    )
+  ),
+  initialPage: v.optional(v.string('serve initialPage must be a string' + SERVE_RT_HINT('set {"initialPage":"https://{tenantdomain}/_layouts/15/workbench.aspx"} in config/serve.json')))
+});
+
+export const WorkbenchSettingsSchema = v.object({
+  port: v.pipe(
+    v.number('workbench port must be 1024-65535' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321')),
+    v.integer('workbench port must be an integer' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321')),
+    v.minValue(1024, 'workbench port must be 1024-65535' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321')),
+    v.maxValue(65535, 'workbench port must be 1024-65535' + SERVE_RT_HINT('set {"port":4321} in config/serve.json or use --port 4321'))
+  ),
+  hostname: v.pipe(v.string('workbench hostname must be a string' + SERVE_RT_HINT('set {"hostname":"localhost"} in config/serve.json')), v.minLength(1, 'workbench hostname must be non-empty' + SERVE_RT_HINT('set {"hostname":"localhost"} in config/serve.json'))),
+  https: v.boolean('workbench https must be a boolean' + SERVE_RT_HINT('set {"https":true} in config/serve.json')),
+  initialPage: v.optional(v.string('workbench initialPage must be a string' + SERVE_RT_HINT('set {"initialPage":"https://{tenantdomain}/_layouts/15/workbench.aspx"} in config/serve.json')))
+});
+
+export type ServeIssue = { path: (string | number)[]; message: string; code: string };
+export type ServeResult<T> = { ok: true; value: T } | { ok: false; error: ServeIssue[] };
+
+function mapServeIssues(issues: readonly v.BaseIssue<unknown>[]): ServeIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes('fix:')) message += ' — fix: check config/serve.json (see ' + SERVE_RT_DOCS + ')';
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
+}
+
+export function validateServeSettings(raw: unknown): ServeResult<ServeSettings> {
+  const result = v.safeParse(ServeSettingsSchema, raw);
+  if (!result.success) return { ok: false, error: mapServeIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output as ServeSettings };
+}
+
+export function validateServeConfig(raw: unknown, filePath = 'config/serve.json'): ServeResult<ProjectServeConfigJson> {
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch (e) {
+      return {
+        ok: false,
+        error: [
+          {
+            path: [],
+            message: `serve.json is not valid JSON in ${filePath}: ${e instanceof Error ? e.message : String(e)} — fix: ensure ${filePath} is valid JSON with {"port":4321} (see ${SERVE_RT_DOCS})`,
+            code: 'CONFIG_VALIDATION_FAILED'
+          }
+        ]
+      };
+    }
+  }
+  // Coerce string port
+  const maybe = raw as Record<string, unknown>;
+  if (maybe && typeof maybe.port === 'string') {
+    const n = Number(maybe.port as string);
+    if (!Number.isNaN(n) && (maybe.port as string).trim() !== '') maybe.port = n;
+  }
+  // Inline port range check with actionable message before delegating to full schema would.
+  // We keep this fast path but also ensure full validation via project schema for other fields.
+  // If valibot is available, the full check will happen in validateProjectServeConfigJson; we inline minimal to avoid circular import at top-level.
+  // For now, do minimal port validation plus return.
+  const port = (raw as Record<string, unknown>)?.port;
+  if (typeof port === 'number' && (!Number.isInteger(port) || port < 1024 || port > 65535)) {
+    return {
+      ok: false,
+      error: [
+        {
+          path: ['port'],
+          message: `serve.json port must be 1024-65535 (got ${JSON.stringify(port)}) — fix: set {"port":4321} in config/serve.json or use --port 4321 (see ${SERVE_RT_DOCS})`,
+          code: 'CONFIG_VALIDATION_FAILED'
+        }
+      ]
+    };
+  }
+  // hostname validation
+  const hostname = (raw as Record<string, unknown>)?.hostname;
+  if (hostname !== undefined && (typeof hostname !== 'string' || hostname.trim().length === 0)) {
+    return {
+      ok: false,
+      error: [
+        {
+          path: ['hostname'],
+          message: `serve.json hostname must be non-empty (got ${JSON.stringify(hostname)}) — fix: set {"hostname":"localhost"} in config/serve.json (see ${SERVE_RT_DOCS})`,
+          code: 'CONFIG_VALIDATION_FAILED'
+        }
+      ]
+    };
+  }
+  return { ok: true, value: raw as ProjectServeConfigJson };
+}
+
+export function tryValidateServeSettings(raw: unknown): ServeResult<ServeSettings> {
+  return validateServeSettings(raw);
+}
+
 const defaultLogger = createLogger('rspfx');
 
 export function resolveServeSettings(
@@ -62,12 +201,16 @@ export function resolveServeSettings(
   serveJson?: ProjectServeConfigJson
 ): ServeSettings {
   const config = resolveConfig(opts.config as unknown as Partial<RspfxConfig> & Record<string, unknown>);
-  const port = opts.port ?? serveJson?.port ?? config.dev.port ?? 4321;
+  const port = opts.port ?? serveJson?.port ?? config.dev.port ?? DEFAULT_DEV_PORT;
   const hostname = serveJson?.hostname ?? serveJson?.ipAddress ?? config.dev.hostname ?? 'localhost';
   const https = serveJson?.https ?? config.dev.https ?? true;
   const scheme = https ? 'https' : 'http';
+  const envTenant = process.env.SPFX_SERVE_TENANT_DOMAIN?.trim() || undefined;
+  if (envTenant && !opts.tenantDomain) {
+    defaultLogger.debug(`Using SPFX_SERVE_TENANT_DOMAIN env override: ${envTenant}`);
+  }
   const tenantDomain =
-    opts.tenantDomain ?? process.env.SPFX_SERVE_TENANT_DOMAIN ?? stripScheme(config.dev.tenantUrl);
+    opts.tenantDomain ?? envTenant ?? stripScheme(config.dev.tenantUrl);
   const initialPage = serveJson?.initialPage ?? config.dev.initialPage;
   return {
     port,
@@ -135,14 +278,22 @@ export async function startServe(
   if (https && settings.hostname) {
     validateCustomHostname(settings.hostname);
   }
-  const preStatus = https ? await getCertStatus(certsDir, settings.hostname).catch(() => undefined) : undefined;
+  let preStatus: Awaited<ReturnType<typeof getCertStatus>> | undefined;
+  if (https) {
+    try {
+      preStatus = await getCertStatus(certsDir, settings.hostname);
+    } catch (e) {
+      logger.debug(`getCertStatus failed for ${settings.hostname}: ${String(e)}`);
+      preStatus = undefined;
+    }
+  }
   const wasMissing = preStatus ? !preStatus.exists || !preStatus.valid : false;
   const certs = https ? await ensureCertificates(certsDir, settings.hostname) : undefined;
   if (https && certs) {
     if (wasMissing) {
       logger.warn(
         `Dev cert was missing or expiring and has been (re)generated in ${certsDir}. ` +
-          `Browsers will block https://localhost:4321 until it is trusted — ${formatTrustInstructions(certsDir)}. ` +
+          `Browsers will block ${DEV_SERVER_HTTPS_ORIGIN} until it is trusted — ${formatTrustInstructions(certsDir)}. ` +
           `See ${path.join(certsDir, 'cert.pem.trust.txt')} and run rspfx doctor to verify. ` +
           `Untrusted certs surface as CORS errors, NET::ERR_CERT_AUTHORITY_INVALID, or blank workbench.`
       );
@@ -160,7 +311,9 @@ export async function startServe(
             `Dev cert trust status unknown — ${trusted.detail}. If workbench shows CORS or NET::ERR_CERT_AUTHORITY_INVALID, ${formatTrustInstructions(certsDir).toLowerCase()}. Run rspfx doctor.`
           );
         }
-      } catch {}
+      } catch (e) {
+        logger.debug(`cert trust check failed on startServe: ${String(e)}`);
+      }
     }
   }
 
@@ -232,7 +385,8 @@ export async function startServe(
       librariesDir: config.paths?.librariesDir,
       entryModuleIds,
       refreshRuntime,
-      bundleUrlSuffix: () => `?t=${reload.current}`
+      bundleUrlSuffix: () => `?t=${reload.current}`,
+      syntheticManifests: currentProject.webParts.syntheticManifests
     });
     await regenerator.regenerate();
 
@@ -242,7 +396,7 @@ export async function startServe(
 
     const devtoolsScript = getDevtoolsScript(store, regenerator, config.version ?? '0.0.0');
 
-    const routes: NonNullable<Parameters<typeof startDevServer>[1]['routes']> = [
+    const routes: NonNullable<DevServerOptions['routes']> = [
       {
         path: '/temp/manifests.js',
         handler: (req, res) => {
@@ -301,6 +455,7 @@ export async function startServe(
       });
     }
 
+    const { startDevServer } = await import('@mbsks/rspfx-compiler-rspack');
     const nextServer = await startDevServer(
       { ...ctx, swcContributions: [contributions as Record<string, unknown>] },
       {
@@ -459,12 +614,28 @@ export async function startServe(
     // attach watcher stop to machine dispose
     const originalClose = async (): Promise<void> => {
       closing = true;
-      machine?.send({ type: 'CLOSE' });
-      store.set({ status: 'closed' });
-      watcher.stop();
-      machine?.dispose();
-      refreshRuntime?.dispose();
-      await server?.close();
+      try {
+        machine?.send({ type: 'CLOSE' });
+        store.set({ status: 'closed' });
+        try {
+          await watcher.stop();
+        } catch (e) {
+          logger.debug(`watcher stop failed on close: ${String(e)}`);
+        }
+        machine?.dispose();
+        refreshRuntime?.dispose();
+        if (server) {
+          try {
+            await server.close();
+          } catch (e) {
+            logger.debug(`server close failed: ${String(e)}`);
+          } finally {
+            server = undefined;
+          }
+        }
+      } finally {
+        store.set({ status: 'closed' });
+      }
     };
 
     return {
@@ -488,12 +659,6 @@ function localRuntimeEntry(packageVersion: string): {
     componentIds: ['local-runtime'],
     version: packageVersion
   };
-}
-
-function platformOnlyExternal(data: { request?: string }): string | undefined {
-  return typeof data.request === 'string' && isPlatformOnlyModule(data.request)
-    ? `amd ${data.request}`
-    : undefined;
 }
 
 export function stripScheme(url: string | undefined): string | undefined {

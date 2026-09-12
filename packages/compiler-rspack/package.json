@@ -22,19 +22,14 @@
       "default": "./dist/helpers/inline-css.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
     "@rspack/core": "^1.2.0",
     "@rspack/dev-server": "^1.0.0",
     "sass": "^1.83.0",
@@ -45,15 +40,24 @@
     "postcss-loader": "^8.1.1"
   },
   "devDependencies": {
+    "valibot": "1.4.2",
+    "@mbsks/rspfx-build-core": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
     "@mbsks/rspfx-framework-react": "workspace:*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
     "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0"
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "description": "RSPFx Rspack compiler: config factory, TS/SWC, SCSS, asset pipeline",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

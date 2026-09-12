@@ -1,5 +1,5 @@
 import type { WebPartContextLike } from '@mbsks/rspfx-core';
-import { EnvironmentType } from '@mbsks/rspfx-core';
+import { EnvironmentType, LOCALHOST_FALLBACK_ORIGIN } from '@mbsks/rspfx-core';
 import type { HeadlessContext } from '@mbsks/rspfx-core/headless';
 import type { CultureName } from '@mbsks/rspfx-core';
 import { createMockThemeProvider, type LocalThemeProvider } from './theme.js';
@@ -53,7 +53,7 @@ export function createMockPageContextData(
       id: '3d81f5a1-0000-0000-0000-000000000001',
       title: 'Local Workbench',
       description: '',
-      absoluteUrl: 'http://localhost:4321',
+      absoluteUrl: LOCALHOST_FALLBACK_ORIGIN,
       serverRelativeUrl: '/',
       isAppWeb: false,
       language: resolved.language,
@@ -68,7 +68,7 @@ export function createMockPageContextData(
     site: {
       id: '3d81f5a1-0000-0000-0000-000000000002',
       title: 'Local Workbench',
-      absoluteUrl: 'http://localhost:4321',
+      absoluteUrl: LOCALHOST_FALLBACK_ORIGIN,
       serverRelativeUrl: '/',
       classification: '',
       group: null,

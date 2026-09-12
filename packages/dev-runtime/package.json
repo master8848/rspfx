@@ -10,35 +10,45 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./vite-shared": {
+      "types": "./dist/vite-shared.d.ts",
+      "import": "./dist/vite-shared.js",
+      "default": "./dist/vite-shared.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-compiler-rspack": "workspace:*",
-    "@mbsks/rspfx-manifest-server": "workspace:*",
-    "@mbsks/rspfx-manifest-generator": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-sharepoint-runtime": "workspace:*",
-    "@mbsks/rspfx-framework-vanilla": "workspace:*",
-    "@mbsks/rspfx-framework-react": "workspace:*",
-    "@mbsks/rspfx-framework-solid": "workspace:*",
-    "@mbsks/rspfx-framework-preact": "workspace:*",
-    "@mbsks/rspfx-framework-vue": "workspace:*",
-    "@mbsks/rspfx-framework-svelte": "workspace:*"
-  },
+  "dependencies": {},
   "description": "RSPFx dev runtime: serve emulation, websocket refresh, fast refresh",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "valibot": "1.4.2",
+    "@mbsks/rspfx-build-core": "workspace:*",
+    "@mbsks/rspfx-compiler-rspack": "workspace:*",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-framework-preact": "workspace:*",
+    "@mbsks/rspfx-framework-react": "workspace:*",
+    "@mbsks/rspfx-framework-solid": "workspace:*",
+    "@mbsks/rspfx-framework-svelte": "workspace:*",
+    "@mbsks/rspfx-framework-vanilla": "workspace:*",
+    "@mbsks/rspfx-framework-vue": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-manifest-server": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-sharepoint-runtime": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

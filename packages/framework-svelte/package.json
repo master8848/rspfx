@@ -22,19 +22,14 @@
       "default": "./dist/headless.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-webpart-base": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^3.1.0",
     "svelte-hmr": "^0.16.0",
     "svelte-loader": "^3.2.4"
@@ -52,11 +47,18 @@
     }
   },
   "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "svelte": "^4.2.19"
   },
   "description": "RSPFx Svelte framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

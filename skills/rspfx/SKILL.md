@@ -45,18 +45,26 @@ Then create `src/webparts/<name>/*.manifest.json` + `config/package-solution.jso
 
 **Shortcut:** `rspfx new my-app --yes` (also `rspfx new my-app --framework react --spfx-version 1.24 --yes`) scaffolds Vite + manifests + `git init` for you. See `docs/commands.md#rspfx-new-name` for all flags (`--framework`, `--language`, `--spfx-version`, `--pm`, `--component`, `--bundler vite|rsbuild|rspack`).
 
-## Existing project — migrate from Heft/gulp
+## Existing project — try without migrating (recommended)
+
+One file `vite.config.ts` with `devTryMode: true` and two installs. Keeps `gulp serve` for production — no migration needed to try.
 
 ```sh
-rspfx migrate --dry-run   # preview
-rspfx migrate             # writes vite.config.ts
-bun install      # or pnpm install / npm install / yarn / deno install
-rspfx dev        # http://localhost:4321
+cd my-existing-spfx-app
+npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli   # or pnpm add -D / yarn add -D / bun add -D / deno add -D
 ```
 
-Commit before migrating. Keeps `config/package-solution.json` and `src/*/*.manifest.json`; `gulpfile.js` can stay for dual builds.
+Create `vite.config.ts`:
 
-See `docs/migrating-from-gulp-heft.md`.
+```ts
+import { defineConfig } from 'vite';
+import { rspfxVite } from '@mbsks/rspfx-plugin';
+export default defineConfig({ plugins: [rspfxVite({ name: 'my-project', framework: 'react', spfxVersion: '1.24', devTryMode: true, tryComponents: [{ name: 'hello-world' }] })] });
+```
+
+Then `rspfx dev` — `http://localhost:4321`. Delete `vite.config.ts` to revert. See `docs/guide/try-mode.md`.
+
+Migrate fully only when ready: `rspfx migrate --dry-run` then `rspfx migrate` then `bun install`. Commit before migrating. See `docs/migrating-from-gulp-heft.md`.
 
 ## Develop and build
 

@@ -11,8 +11,9 @@ import {
   readProject,
   resolveContributionLoaders,
 } from "@mbsks/rspfx-dev-runtime";
-import { createLogger, RspfxError } from "@mbsks/rspfx-diagnostics";
+import { createLogger, RspfxError, RspfxErrorCode } from "@mbsks/rspfx-diagnostics";
 import { findSpDependencies } from "@mbsks/rspfx-manifest-generator";
+import { validateBuildOptions } from "../validation.js";
 import type { ComponentManifest } from "@mbsks/rspfx-manifest-generator";
 import { loadConfig } from "../config.js";
 import { loadConfigOrRefuseOfficial } from "../hybrid.js";
@@ -41,6 +42,11 @@ export async function runBuild(
   cwd: string,
   opts: BuildOptions = {},
 ): Promise<BuildOutput> {
+  const buildValidation = validateBuildOptions({ minify: opts.minify, sourcemap: opts.sourcemap });
+  if (!buildValidation.ok) {
+    const msg = buildValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError(RspfxErrorCode.CONFIG_VALIDATION_FAILED, `build options validation failed:\n${msg}`, buildValidation.error as unknown as Error);
+  }
   let loaded = await loadConfigWithSynthesis(cwd);
   const synthesizedCleanup = loaded.synthesizedPath;
   try {

@@ -1,4 +1,22 @@
-export { configDefaults, defineConfig, parseRSPFXConfig, resolveConfig, resolvePathDefaults, RspfxConfigSchema, tryResolveConfig } from './config.js';
+export {
+  BuildConfigSchema,
+  DeployConfigSchema,
+  DevConfigSchema,
+  FrameworkIdSchema,
+  PathsConfigSchema,
+  RspfxConfigSchema,
+  SpfxVersionSchema,
+  TeamsConfigObjectSchema,
+  TeamsConfigSchema,
+  TryComponentSchema,
+  TryComponentsSchema,
+  configDefaults,
+  defineConfig,
+  parseRSPFXConfig,
+  resolveConfig,
+  resolvePathDefaults,
+  tryResolveConfig
+} from './config.js';
 export type {
   BuildConfig,
   DeployConfig,
@@ -9,7 +27,9 @@ export type {
   PathsConfig,
   Result,
   RspfxConfig,
-  TeamsConfig
+  TeamsConfig,
+  TeamsField,
+  TryComponent
 } from './config.js';
 export type { ComponentId, CultureName, Lcid, PlatformPrefix, ZipPath } from './newtypes.js';
 export {
@@ -31,6 +51,18 @@ export { solidPng } from './png.js';
 export { canResolveFromProject, clearCanResolveCache } from './package-resolve.js';
 export { EnvironmentType, PropertyPaneFieldType } from './environment.js';
 export { Version } from './version.js';
+export {
+  CERT_CORS_DETAIL,
+  CERT_INSTALL_TIMEOUT,
+  CERT_VERIFY_TIMEOUT,
+  DEFAULT_DEV_PORT,
+  DEV_SERVER_HTTP_ORIGIN,
+  DEV_SERVER_HTTPS_ORIGIN,
+  LOCALHOST_FALLBACK_ORIGIN,
+  LOCALHOST_PREVIEW_FALLBACK_ORIGIN,
+  NSSDB_TIMEOUT
+} from './constants.js';
+export { deterministicGuid, toPascal } from './utils.js';
 export type { ISpfxTheme, ThemeProvider, WebPartContextLike } from './context.js';
 export type { HeadlessAdapter, HeadlessContext, HeadlessWebPartOptions, PropsSelector } from './headless.js';
 export {

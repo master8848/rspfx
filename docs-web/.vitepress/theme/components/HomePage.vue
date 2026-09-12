@@ -6,7 +6,8 @@ import { copyToClipboard } from '../utils/copy.js'
 // ── Hero: Copy Prompt (inline, no slot dependency — layout: page has no home-hero-actions-after) ──
 const RSPFX_PROMPT = `Use RSPFx from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read skills/rspfx/SKILL.md and docs/ in that repo (or https://rspfx.mbsks.me) for all toolchain details (Vite is default, Rsbuild/Rspack only if needed). Check ARCHITECTURE.md and packages/*/src if docs lag — code is truth. Do not use webpack/Heft/gulp.
 You can use vite or rsbuild to scafold the app and follow docs on github to add plugin
-Build with RSPFx's Vite-first pipeline: zero-config from config/config.json and *.manifest.json, single spfxVersion switch for SPFx 1.20–1.24, any framework via preset (React/Vue/Svelte/Solid/Preact/custom), CSS bundled into JS, dev server at localhost:4321, output to sharepoint/solution/*.sppkg, deploy with rspfx deploy. Keep manifests as contract and target the SharePoint runtime without changing the app model.`
+Build with RSPFx's Vite-first pipeline: zero-config from config/config.json and *.manifest.json, single spfxVersion switch for SPFx 1.20–1.24, any framework via preset (React/Vue/Svelte/Solid/Preact/custom), CSS bundled into JS, dev server at localhost:4321, output to sharepoint/solution/*.sppkg, deploy with rspfx deploy. Keep manifests as contract and target the SharePoint runtime without changing the app model.
+For existing Heft/gulp projects: try without migrating — one file vite.config.ts with devTryMode: true + tryComponents and two installs (npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli) then rspfx dev. Keep gulp/heft for production. See docs/guide/try-mode.md.`
 const promptCopied = ref(false)
 const promptFailed = ref(false)
 let promptTimer: ReturnType<typeof setTimeout> | null = null
@@ -218,7 +219,7 @@ const features = [
       <!-- Start tabs -->
       <div class="rspfx-start-tabs" role="tablist" aria-label="Start options">
         <button role="tab" :aria-selected="String(activeTab === 'new')" class="rspfx-start-tab" :class="{ 'is-active': activeTab === 'new' }" @click="setTab('new')">new project — plugin</button>
-        <button role="tab" :aria-selected="String(activeTab === 'existing')" class="rspfx-start-tab" :class="{ 'is-active': activeTab === 'existing' }" @click="setTab('existing')">existing project</button>
+        <button role="tab" :aria-selected="String(activeTab === 'existing')" class="rspfx-start-tab" :class="{ 'is-active': activeTab === 'existing' }" @click="setTab('existing')">try in existing project</button>
         <button role="tab" :aria-selected="String(activeTab === 'plugin')" class="rspfx-start-tab" :class="{ 'is-active': activeTab === 'plugin' }" @click="setTab('plugin')">plugin — Vite default</button>
       </div>
 
@@ -257,25 +258,27 @@ rspfx package      <span class="c"># → sharepoint/solution/my-app.sppkg</span>
           </div>
         </div>
 
-        <!-- Existing project -->
+        <!-- Existing project — try mode (pushed way, keeps gulp/heft) -->
         <div v-else-if="activeTab === 'existing'" class="rspfx-start-content">
           <div class="rspfx-code-block rspfx-code-block-muted">
-            <pre class="rspfx-code"><code><span class="c"># in your existing Heft/gulp SPFx project</span>
-rspfx migrate --dry-run   <span class="c"># preview</span>
-rspfx migrate             <span class="c"># apply (backup → .rspfx/migrate-backup.json)</span></code></pre>
+            <pre class="rspfx-code"><code><span class="c"># in your existing Heft/gulp SPFx project — one file + two installs, keeps gulp/heft</span>
+<span class="c"># 1. install two dev deps</span>
+{{ addCmd }}   <span class="c"># adds @mbsks/rspfx-plugin + @mbsks/rspfx-cli</span></code></pre>
           </div>
-          <div class="rspfx-code-block">
+          <div class="rspfx-code-block rspfx-code-block-code">
             <div class="rspfx-code-header">
-              <span class="rspfx-code-lang">sh</span>
-              <button class="rspfx-code-copy" :class="{ copied: copiedInstall }" aria-label="Copy" @click="copyCmd(installCmd, 'install')">
-                <svg v-if="!copiedInstall" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" /></svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
-              </button>
+              <span class="rspfx-code-lang">ts</span>
             </div>
-            <pre class="rspfx-code"><code>{{ installCmd }}</code></pre>
+            <pre class="rspfx-code"><code><span class="c">// 2. add vite.config.ts — single file, synthetic manifests, no config.json edits</span>
+<span class="kw">import</span> { defineConfig } <span class="kw">from</span> <span class="str">'vite'</span>
+<span class="kw">import</span> { rspfxVite } <span class="kw">from</span> <span class="str">'@mbsks/rspfx-plugin'</span>
+<span class="kw">export default</span> defineConfig({ plugins: [rspfxVite({ name: <span class="str">'my-project'</span>, framework: <span class="str">'react'</span>, spfxVersion: <span class="str">'1.24'</span>, devTryMode: <span class="kw">true</span>, tryComponents: [{ name: <span class="str">'hello-world'</span> }] })] })</code></pre>
           </div>
           <div class="rspfx-code-block rspfx-code-block-muted">
-            <pre class="rspfx-code"><code>rspfx dev                 <span class="c"># same manifests, no config required</span></code></pre>
+            <pre class="rspfx-code"><code><span class="c"># 3. run — gulp/heft stay for production, rspfx dev only for dev</span>
+rspfx dev          <span class="c"># http://localhost:4321 — or https with --tenant</span>
+<span class="c"># delete vite.config.ts to revert; fully migrate later with rspfx migrate --dry-run</span>
+<span class="c"># docs: /docs/guide/try-mode</span></code></pre>
           </div>
         </div>
 
@@ -349,6 +352,12 @@ rspfx migrate             <span class="c"># apply (backup → .rspfx/migrate-bac
     <section class="rspfx-section rspfx-tip">
       <span class="rspfx-tip-kicker">Before first dev</span>
       <span>Run <code>rspfx doctor</code> — it checks Node version, cert trust, port conflicts and missing manifests in one pass.</span>
+    </section>
+
+    <!-- ── SEO: alternative search terms (visible for crawlers) ── -->
+    <section class="rspfx-section rspfx-seo" aria-label="Alternative search terms">
+      <h2 class="rspfx-seo-title">Looking for an SPFx Vite replacement?</h2>
+      <p class="rspfx-seo-text">RSPFx is the <strong>SPFx Vite</strong> and <strong>SharePoint Framework Vite</strong> replacement — the <strong>SPFx alternative bundler</strong> and <strong>SharePoint Framework alternative build tool</strong> that lets you <strong>SPFx replace Webpack</strong>, use an <strong>SPFx custom Webpack</strong> setup without maintaining it, or <strong>SPFx eject webpack</strong> entirely. It provides an <strong>SPFx custom build pipeline</strong> with Vite (esbuild), <strong>SPFx Rspack</strong> (Rspack + SWC) and Rsbuild — no Heft, no gulp, no <strong>SPFx Heft custom toolchain</strong> rig. Search: "SPFx Vite replacement", "SPFx esbuild", "SPFx Rspack". <a href="/docs/guide/why-rspfx">Why RSPFx</a> · <a href="/docs/getting-started">Getting started</a> · <a href="/docs/guide/migration/migrating-from-gulp-heft">Migrate from Heft</a></p>
     </section>
   </div>
 </template>
@@ -934,4 +943,11 @@ rspfx migrate             <span class="c"># apply (backup → .rspfx/migrate-bac
   line-height: 1;
 }
 .rspfx-tip code { font-size: 13px; padding: 1px 5px; border-radius: 6px; background: var(--vp-c-default-soft); border: 1px solid var(--vp-c-divider); }
+
+/* ── SEO: alternative terms (visible, low-emphasis) ── */
+.rspfx-seo { margin-top: 28px; padding: 16px 18px; border: 1px solid var(--vp-c-divider); border-radius: 12px; background: var(--vp-c-bg-soft); }
+.rspfx-seo-title { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; color: var(--vp-c-text-1); margin: 0 0 8px; line-height: 1.4; }
+.rspfx-seo-text { font-size: 13px; line-height: 1.7; color: var(--vp-c-text-2); margin: 0; }
+.rspfx-seo-text a { color: var(--vp-c-brand-1); text-decoration: none; font-weight: 600; }
+.rspfx-seo-text a:hover { text-decoration: underline; }
 </style>

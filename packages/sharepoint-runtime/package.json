@@ -22,19 +22,14 @@
       "default": "./dist/platform-modules.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-diagnostics": "workspace:*"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@microsoft/sp-component-base": "*",
     "@microsoft/sp-core-library": "*",
@@ -50,11 +45,17 @@
     "@microsoft/sp-http": "1.23.2",
     "@microsoft/sp-listview-extensibility": "1.23.2",
     "@microsoft/sp-page-context": "1.23.2",
-    "@microsoft/sp-webpart-base": "1.23.2"
+    "@microsoft/sp-webpart-base": "1.23.2",
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*"
   },
   "description": "RSPFx shims/bridges for @microsoft/sp-* packages",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

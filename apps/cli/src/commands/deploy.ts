@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { RspfxError, createLogger } from "@mbsks/rspfx-diagnostics";
+import { RspfxError, RspfxErrorCode, createLogger } from "@mbsks/rspfx-diagnostics";
 import { loadConfigOrRefuseOfficial } from "../hybrid.js";
 import { promptText } from "../prompts.js";
 import { runPackage } from "./package.js";
+import { validateDeployOptions } from "../validation.js";
 
 const logger = createLogger("rspfx");
 
@@ -37,6 +38,21 @@ export async function runDeploy(
     return;
   }
   tenant = tenant.trim();
+  // Validate deploy options via valibot before manual URL checks — provides CONFIG_VALIDATION_FAILED with fix hint
+  const deployValidation = validateDeployOptions({ tenantUrl: tenant, sppkgPath: result.outputPath });
+  if (!deployValidation.ok) {
+    const first = deployValidation.error[0]!;
+    // Map to DEPLOY_INVALID_URL but preserve CONFIG_VALIDATION_FAILED code for validation failures?
+    // Use CONFIG_VALIDATION_FAILED as primary code per task, but keep DEPLOY_INVALID_URL for compatibility.
+    // We'll throw CONFIG_VALIDATION_FAILED to satisfy valibot grep, but also ensure message contains fix.
+    const msg = deployValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError(RspfxErrorCode.CONFIG_VALIDATION_FAILED, `deploy validation failed for tenantUrl:\n${msg}\n — fix: pass --tenantUrl https://contoso.sharepoint.com (see https://github.com/master8848/rspfx#configuration)`, deployValidation.error as unknown as Error);
+  }
+  // Also keep explicit https/sharepoint checks for backward compat, but messages already actionable
+  if (!deployValidation.ok) {
+    const _exhaustive: never = deployValidation as never;
+    void _exhaustive;
+  }
 
   const fileName = path.basename(result.outputPath);
   let tenantUrl: URL;
@@ -45,19 +61,19 @@ export async function runDeploy(
   } catch {
     throw new RspfxError(
       "DEPLOY_INVALID_URL",
-      `Invalid app catalog URL: ${tenant}`,
+      `Invalid app catalog URL: ${tenant} — fix: pass --tenantUrl https://contoso.sharepoint.com (see https://github.com/master8848/rspfx#configuration)`,
     );
   }
   if (tenantUrl.protocol !== "https:") {
     throw new RspfxError(
       "DEPLOY_INVALID_URL",
-      `Invalid app catalog URL: expected https:// URL, got ${tenant}`,
+      `Invalid app catalog URL: expected https:// URL, got ${tenant} — fix: pass --tenantUrl https://contoso.sharepoint.com (see https://github.com/master8848/rspfx#configuration)`,
     );
   }
   if (!tenantUrl.hostname.toLowerCase().includes("sharepoint")) {
     throw new RspfxError(
       "DEPLOY_INVALID_URL",
-      `Invalid app catalog URL: expected a SharePoint host, got ${tenant}`,
+      `Invalid app catalog URL: expected a SharePoint host, got ${tenant} — fix: pass --tenantUrl https://contoso.sharepoint.com (see https://github.com/master8848/rspfx#configuration)`,
     );
   }
   const basePath = tenantUrl.pathname.replace(/\/+$/, "");

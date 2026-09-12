@@ -17,6 +17,7 @@ import {
   type Relationship
 } from './xml.js';
 import { writeZip, type ZipFileEntry } from './zip.js';
+import * as v from 'valibot';
 
 function getActivePluginsSafe(): readonly { patches?: { buildAppManifestXml?: (opts: unknown, next: (opts: unknown) => string | Promise<string>) => string | Promise<string>; buildPackage?: (opts: unknown, next: (opts: unknown) => Promise<unknown>) => Promise<unknown> } }[] {
   try {
@@ -72,6 +73,123 @@ function collectBuildPackagePatches(): Array<(opts: BuildPackageOptions, next: (
 export interface PackageConfig {
   solution: Record<string, unknown>;
   paths: { zippedPackage: string };
+}
+
+// ── valibot schemas for package-solution.json ──
+const SPPKG_DOCS = 'https://github.com/master8848/rspfx#configuration';
+const UUID_RE_STRICT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEMVER_RE = /^\d+\.\d+\.\d+(\.\d+)?$/;
+
+export const GuidSchema = v.pipe(
+  v.string('manifest id must be a string UUID — fix: set "id": "00000000-0000-4000-a000-000000000000" in *.manifest.json or package-solution.json (see ' + SPPKG_DOCS + ')'),
+  v.regex(UUID_RE_STRICT, 'manifest id must be a UUID like "00000000-0000-4000-a000-000000000000" (got invalid) — fix: set "id": "00000000-0000-4000-a000-000000000000" in *.manifest.json or package-solution.json (see ' + SPPKG_DOCS + ')')
+);
+
+export const VersionSchema = v.pipe(
+  v.string('version must be a string — fix: set "version": "1.0.0.0" in package-solution.json (see ' + SPPKG_DOCS + ')'),
+  v.regex(SEMVER_RE, 'version must be semver like "1.0.0.0" (got invalid) — fix: set "version": "1.0.0.0" in package-solution.json (see ' + SPPKG_DOCS + ')')
+);
+
+export const SolutionSchema = v.looseObject({
+  name: v.pipe(v.string('solution.name must be a string — fix: set solution: { name: "my-solution" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.minLength(1, 'solution.name must be non-empty — fix: set solution: { name: "my-solution" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
+  id: v.pipe(v.string('solution.id must be a string UUID — fix: set solution: { id: "00000000-0000-..."} in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.regex(UUID_RE_STRICT, 'solution.id must be a UUID like "00000000-0000-4000-a000-000000000000" (got invalid) — fix: set solution: { id: "00000000-0000-4000-a000-000000000000" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
+  version: v.pipe(v.string('solution.version must be a string — fix: set solution: { version: "1.0.0.0" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.regex(SEMVER_RE, 'solution.version must be semver like "1.0.0.0" (got invalid) — fix: set solution: { version: "1.0.0.0" } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
+  includeClientSideAssets: v.optional(v.boolean('solution.includeClientSideAssets must be a boolean — fix: set solution: { includeClientSideAssets: true } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
+  isDomainIsolated: v.optional(v.boolean('solution.isDomainIsolated must be a boolean — fix: set solution: { isDomainIsolated: false } in config/package-solution.json (see ' + SPPKG_DOCS + ')')),
+  skipFeatureDeployment: v.optional(v.boolean('solution.skipFeatureDeployment must be a boolean — fix: set solution: { skipFeatureDeployment: true } in config/package-solution.json (see ' + SPPKG_DOCS + ')'))
+});
+
+export const PackageSolutionJsonSchema = v.looseObject({
+  $schema: v.optional(v.string()),
+  solution: SolutionSchema,
+  paths: v.object({
+    zippedPackage: v.pipe(v.string('paths.zippedPackage must be a string — fix: set paths: { zippedPackage: "sharepoint/solution/my-solution.sppkg" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'), v.minLength(1, 'paths.zippedPackage must be non-empty — fix: set paths: { zippedPackage: "sharepoint/solution/my-solution.sppkg" } in config/package-solution.json (see ' + SPPKG_DOCS + ')'))
+  })
+});
+
+export const ComponentManifestSchema = v.object({
+  id: GuidSchema,
+  alias: v.optional(v.string()),
+  componentType: v.optional(v.string()),
+  version: v.optional(VersionSchema),
+  manifestVersion: v.optional(v.number()),
+  loaderConfig: v.optional(v.object({
+    internalModuleBaseUrls: v.optional(v.array(v.string())),
+    entryModuleId: v.optional(v.string()),
+    scriptResources: v.optional(v.record(v.string(), v.unknown())),
+    exportName: v.optional(v.string())
+  }))
+});
+
+export type PackageIssue = { path: (string | number)[]; message: string; code: string };
+export type PackageResult<T> = { ok: true; value: T } | { ok: false; error: PackageIssue[] };
+
+function mapPackageIssues(issues: readonly v.BaseIssue<unknown>[], filePath: string): PackageIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes(filePath)) message = `${message} in ${filePath}`;
+    if (!message.includes('fix:')) message += ` — fix: check ${filePath} (see ${SPPKG_DOCS})`;
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
+}
+
+export function validatePackageSolutionJson(raw: unknown, filePath = 'config/package-solution.json'): PackageResult<v.InferOutput<typeof PackageSolutionJsonSchema>> {
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw as string);
+    } catch (e) {
+      return {
+        ok: false,
+        error: [
+          {
+            path: [],
+            message: `package-solution.json is not valid JSON in ${filePath}: ${e instanceof Error ? e.message : String(e)} — fix: ensure ${filePath} is valid JSON with {"solution":{"name":"my-solution","id":"...","version":"1.0.0.0"},"paths":{"zippedPackage":"sharepoint/solution/my-solution.sppkg"}} (see ${SPPKG_DOCS})`,
+            code: 'CONFIG_VALIDATION_FAILED'
+          }
+        ]
+      };
+    }
+  }
+  const result = v.safeParse(PackageSolutionJsonSchema, raw);
+  if (!result.success) return { ok: false, error: mapPackageIssues(result.issues as unknown as v.BaseIssue<unknown>[], filePath) };
+  return { ok: true, value: result.output };
+}
+
+export function validateComponentManifest(raw: unknown, filePath = 'component.manifest.json'): PackageResult<v.InferOutput<typeof ComponentManifestSchema>> {
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw as string);
+    } catch (e) {
+      return {
+        ok: false,
+        error: [
+          {
+            path: [],
+            message: `manifest is not valid JSON in ${filePath}: ${e instanceof Error ? e.message : String(e)} — fix: ensure ${filePath} contains {"id":"00000000-0000-4000-a000-000000000000","alias":"HelloWebPart","componentType":"WebPart","version":"1.0.0.0"} (see ${SPPKG_DOCS})`,
+            code: 'CONFIG_VALIDATION_FAILED'
+          }
+        ]
+      };
+    }
+  }
+  const result = v.safeParse(ComponentManifestSchema, raw);
+  if (!result.success) return { ok: false, error: mapPackageIssues(result.issues as unknown as v.BaseIssue<unknown>[], filePath) };
+  return { ok: true, value: result.output };
+}
+
+export function tryValidatePackageSolution(raw: unknown, filePath = 'config/package-solution.json'): PackageResult<v.InferOutput<typeof PackageSolutionJsonSchema>> {
+  return validatePackageSolutionJson(raw, filePath);
 }
 
 export interface ComponentManifest {
@@ -378,35 +496,44 @@ async function loadSolutionConfig(
   solutionConfigPath: string
 ): Promise<{ solution: Record<string, unknown>; zippedPackage: string }> {
   const configPath = path.resolve(projectRoot, solutionConfigPath);
-  let raw: unknown;
+  let rawText: string;
   try {
-    raw = JSON.parse(await readFile(configPath, 'utf8'));
+    rawText = await readFile(configPath, 'utf8');
   } catch (error) {
     throw new RspfxError(
       'INVALID_PACKAGE_CONFIG',
-      `Unable to read or parse solution configuration at '${configPath}' (${error instanceof Error ? error.message : String(error)})`,
+      `Unable to read solution configuration at '${configPath}' (${error instanceof Error ? error.message : String(error)}) — fix: ensure ${configPath} exists with {"solution":{"name":"my-solution","id":"00000000-0000-4000-a000-000000000000","version":"1.0.0.0"},"paths":{"zippedPackage":"sharepoint/solution/my-solution.sppkg"}} (see ${SPPKG_DOCS})`,
       error
     );
   }
-  const config = raw as PackageConfig;
-  if (!isRecord(config.solution)) {
-    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'${configPath}' must contain a 'solution' object`);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(rawText);
+  } catch (error) {
+    throw new RspfxError(
+      'CONFIG_VALIDATION_FAILED',
+      `package-solution.json is not valid JSON in ${configPath}: ${error instanceof Error ? error.message : String(error)} — fix: ensure ${configPath} is valid JSON with {"solution":{"name":"my-solution","id":"00000000-0000-4000-a000-000000000000","version":"1.0.0.0"},"paths":{"zippedPackage":"sharepoint/solution/my-solution.sppkg"}} (see ${SPPKG_DOCS})`,
+      error
+    );
   }
+  const validated = validatePackageSolutionJson(raw, configPath);
+  if (!validated.ok) {
+    const msg = validated.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `package-solution.json validation failed in ${configPath}:\n${msg}`, validated.error as unknown as Error);
+  }
+  const config = validated.value as unknown as PackageConfig;
   const solution = config.solution;
-  const zippedPackage =
-    isRecord(config.paths) && typeof config.paths.zippedPackage === 'string' && config.paths.zippedPackage.trim()
-      ? config.paths.zippedPackage
-      : undefined;
+  const zippedPackage = (config.paths as { zippedPackage: string }).zippedPackage;
   if (!zippedPackage) {
-    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'paths.zippedPackage' must be a non-empty string in '${configPath}'`);
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `paths.zippedPackage must be a non-empty string in '${configPath}' — fix: set paths: { zippedPackage: "sharepoint/solution/my-solution.sppkg" } in ${configPath} (see ${SPPKG_DOCS})`);
   }
-  if (typeof solution.id !== 'string' || solution.id.trim() === '') {
-    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'solution.id' must be a non-empty string in '${configPath}'`);
+  if (typeof solution.id !== 'string' || !UUID_RE_STRICT.test(solution.id)) {
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `solution.id must be a valid UUID in '${configPath}' (got ${JSON.stringify(solution.id)}) — fix: set solution: { id: "00000000-0000-4000-a000-000000000000" } in ${configPath} (see ${SPPKG_DOCS})`);
   }
-  if (typeof solution.name !== 'string' || solution.name.trim() === '') {
-    throw new RspfxError('INVALID_PACKAGE_CONFIG', `'solution.name' must be a non-empty string in '${configPath}'`);
+  if (typeof solution.version === 'string' && !SEMVER_RE.test(solution.version)) {
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `solution.version must be semver like "1.0.0.0" in '${configPath}' (got ${JSON.stringify(solution.version)}) — fix: set solution: { version: "1.0.0.0" } in ${configPath} (see ${SPPKG_DOCS})`);
   }
-  return { solution, zippedPackage };
+  return { solution: solution as Record<string, unknown>, zippedPackage };
 }
 
 async function loadManifests(manifestsDir: string): Promise<ComponentManifest[]> {
@@ -417,21 +544,36 @@ async function loadManifests(manifestsDir: string): Promise<ComponentManifest[]>
   const byId = new Map<string, ComponentManifest>();
   for (const file of files) {
     let parsed: unknown;
+    const fullPath = path.join(manifestsDir, file);
+    let rawText: string;
     try {
-      parsed = JSON.parse(await readFile(path.join(manifestsDir, file), 'utf8'));
+      rawText = await readFile(fullPath, 'utf8');
+    } catch (error) {
+      throw new RspfxError('INVALID_MANIFEST_JSON', `Failed to read component manifest '${file}' in ${fullPath}: ${error instanceof Error ? error.message : String(error)} — fix: ensure ${fullPath} exists (see ${SPPKG_DOCS})`, error);
+    }
+    try {
+      parsed = JSON.parse(rawText);
     } catch (error) {
       throw new RspfxError(
-        'INVALID_MANIFEST_JSON',
-        `Failed to parse component manifest '${file}': ${error instanceof Error ? error.message : String(error)}`,
+        'CONFIG_VALIDATION_FAILED',
+        `Component manifest '${file}' is not valid JSON in ${fullPath}: ${error instanceof Error ? error.message : String(error)} — fix: ensure ${fullPath} is valid JSON with {"id":"00000000-0000-4000-a000-000000000000","alias":"HelloWebPart","componentType":"WebPart","version":"1.0.0.0"} (see ${SPPKG_DOCS})`,
         error
       );
     }
+    const validated = validateComponentManifest(parsed, fullPath);
+    if (!validated.ok) {
+      const msg = validated.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `Component manifest '${file}' validation failed in ${fullPath}:\n${msg}`, validated.error as unknown as Error);
+    }
     const manifest = parsed as ComponentManifest;
-    if (typeof manifest.id !== 'string' || manifest.id.trim() === '') {
-      throw new RspfxError('INVALID_MANIFEST_ID', `Component manifest '${file}' is missing a valid 'id'`);
+    if (!UUID_RE_STRICT.test(manifest.id)) {
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `Component manifest '${file}' id must be a UUID like "00000000-0000-4000-a000-000000000000" in ${fullPath} (got ${JSON.stringify(manifest.id)}) — fix: set "id": "00000000-0000-4000-a000-000000000000" in ${fullPath} (see ${SPPKG_DOCS})`);
+    }
+    if (manifest.version && !SEMVER_RE.test(manifest.version)) {
+      throw new RspfxError('CONFIG_VALIDATION_FAILED', `Component manifest '${file}' version must be semver like "1.0.0.0" in ${fullPath} (got ${JSON.stringify(manifest.version)}) — fix: set "version": "1.0.0.0" in ${fullPath} (see ${SPPKG_DOCS})`);
     }
     if (byId.has(manifest.id)) {
-      throw new RspfxError('DUPLICATE_MANIFEST_ID', `Multiple component manifests use the same id '${manifest.id}'`);
+      throw new RspfxError('DUPLICATE_MANIFEST_ID', `Multiple component manifests use the same id '${manifest.id}' in ${fullPath} (see ${SPPKG_DOCS})`);
     }
     if (!isRecord(manifest.loaderConfig)) {
       manifest.loaderConfig = { internalModuleBaseUrls: [], entryModuleId: '', scriptResources: {} };

@@ -48,9 +48,11 @@ RSPFx replaces Heft + webpack + gulp. Pick your bundler — Vite (default), Rsbu
 | `compiler-rspack` | `core`, `plugin-api`, `diagnostics` | Rspack config, SWC, SCSS, cache, dev server. |
 | `manifest-generator` | `core`, `diagnostics` | Component manifests, `manifests.js`. |
 | `sppkg-builder` | `core`, `diagnostics` | `package-solution.json` → `.sppkg`. |
+| `build-core` | `core`, `diagnostics`, `manifest-generator`, `plugin-api` | Shared helpers: amd, externals, defines, css, output. Zero heavy deps. |
 | `manifest-server` | `core`, `diagnostics` | Certs `~/.rspfx/certs`. |
 | `dev-runtime` | `core`, `compiler-rspack`, `manifest-server`, `manifest-generator`, `diagnostics`, `plugin-api`, `sharepoint-runtime`, `framework-*` | Dev server, reload, preview + mock `/_api`, workbench URL. |
-| `plugin` | `core`, `compiler-rspack`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api`, `@rspack/core` | `RSpfxPlugin` / `rspfxVite` / `rspfxRsbuild`. |
+| `plugin` | `core`, `build-core`, `compiler-rspack`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api`, `@rspack/core` | Full plugin: `RSpfxPlugin` / `rspfxVite` / `rspfxRsbuild` (build + dev + package). |
+| `plugin-dev` | `core`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api` | Lean vite-first dev-only: `rspfxDevPlugin` / `rspfxViteDev` (`configureServer` only, no `@rspack/core`/`sass`/frameworks). |
 | `framework-*` | `core`, `plugin-api`, `webpart-base` | Adapter + preset + thin shim. |
 | `fluent-adapter` | `core`, `framework-react`, `webpart-base` | Fluent theme sync. |
 | `sharepoint-runtime` | `core`, `diagnostics` | Local preview context, `local-runtime.js`. |
@@ -84,20 +86,21 @@ Framework loaders (`vue-loader`, `@rspack/plugin-react-refresh`) are aliased to 
    │generator   │    │             │    │server        │
    └────────────┘    └─────────────┘    └──────────────┘
          ▲                  ▲                  ▲
-         └─────────┬────────┴──────────────────┘
-                   ▼
-            ┌────────────┐
-            │dev-runtime │
-            └─────┬──────┘
-                  ▼
-            ┌─────────┐
-            │ plugin  │  (carries RspfxConfig)
-            └────┬────┘
-                  ▼
-             rspfx CLI
+         └─────────┬────────┴────────┬─────────┘
+                   ▼                 ▼
+            ┌────────────┐    ┌────────────┐
+            │build-core  │    │dev-runtime │  (local + sharepoint modes, reload, preview)
+            └─────┬──────┘    └─────┬──────┘
+                  ▼                 ▼
+            ┌─────────┐       ┌────────────┐
+            │ plugin  │       │ plugin-dev │  (vite-first dev-only, lean)
+            └────┬────┘       └─────┬──────┘
+                 └────────┬─────────┘
+                          ▼
+                      rspfx CLI
 ```
 
-`core` has no deps. `webpart-base` owns `sp-webpart-base`. `compiler-rspack` knows nothing about SharePoint. `manifest-server` + `dev-runtime` only run in dev.
+`core` has no deps. `webpart-base` owns `sp-webpart-base`. `compiler-rspack` knows nothing about SharePoint. `build-core` is lean shared helpers (amd, externals, defines, css, output). `manifest-server` + `dev-runtime` + `plugin-dev` only run in dev.
 
 ## Config
 
@@ -109,6 +112,8 @@ Validated via `tryResolveConfig` before the cache version is computed.
 
 ## Dev mode
 
+Primary is `vite dev --port 4321` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`. `rspfx dev` is an optional CLI alternative using the same dev-runtime.
+
 ```
 Save → rebuild → tick /__rspfx_hot.json → reload.
 ```
@@ -119,13 +124,15 @@ SharePoint (tenant set): `https://localhost:4321` — `/temp/manifests.js`, `/di
 
 Workbench loads `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — see Microsoft docs: [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench) and [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench).
 
-`rspfx dev` warns if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
+`vite dev` / `rspfx dev` warn if the cert is missing/expiring/untrusted (CORS / `NET::ERR_CERT_AUTHORITY_INVALID`) and `rspfx doctor` checks `cert exists` / `cert valid` / `key.pem 0600` / `cert trusted` (see [getting-started.md#cert-trust](getting-started.md#cert-trust) and [commands.md#rspfx-doctor](commands.md#rspfx-doctor)).
 
 `manifests.js` is regenerated each rebuild. Bundle names are stable `[name].js`.
 
-> Tip: `:4321` is the single dev port. Local preview is `http://localhost:4321/` (no tenant, no cert). Workbench mode is `https://localhost:4321/temp/manifests.js` (tenant set, cert required). The workbench URL is printed by `rspfx dev` — open it directly.
+> Tip: `:4321` is the single dev port. Local preview is `http://localhost:4321/` (no tenant, no cert). Workbench mode is `https://localhost:4321/temp/manifests.js` (tenant set, cert required). The workbench URL is printed by the dev server — open it directly.
 
 ## Production
+
+`vite build` alone does not generate `manifests.js` or `.sppkg`; use `rspfx build` / `rspfx package`:
 
 ```
 src/ → bundler → dist/ → manifest-generator → release/ → sppkg-builder → sharepoint/solution/<name>.sppkg

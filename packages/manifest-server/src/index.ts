@@ -2,12 +2,12 @@ import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { isIP } from 'node:net';
 import * as crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@mbsks/rspfx-diagnostics';
+import * as v from 'valibot';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,12 +62,6 @@ interface SelfsignedPems {
   cert: string;
   fingerprint: string;
 }
-
-const require = createRequire(import.meta.url);
-
-const selfsigned = require('selfsigned') as {
-  generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): Promise<SelfsignedPems>;
-};
 
 const logger = createLogger('rspfx');
 
@@ -129,7 +123,95 @@ export function validateCustomHostname(hostname: string): void {
   }
 }
 
+// ── valibot schemas for manifest-server options ──
+const MANIFEST_SERVER_DOCS = 'https://github.com/master8848/rspfx#configuration';
+export const CertOptionsSchema = v.object({
+  certsDir: v.pipe(
+    v.string('cert certsDir must be a string — fix: pass certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')'),
+    v.minLength(1, 'cert certsDir must be non-empty — fix: pass certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')')
+  ),
+  hostname: v.optional(
+    v.pipe(
+      v.string('cert hostname must be a string — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'),
+      v.minLength(1, 'cert hostname must be non-empty — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'),
+      v.check((val) => {
+        try { validateCustomHostname(val); return true; } catch { return false; }
+      }, 'cert hostname is invalid — fix: set hostname "localhost" or a valid DNS/IP (see ' + MANIFEST_SERVER_DOCS + ')')
+    )
+  )
+});
+
+export const ManifestServerPortSchema = v.pipe(
+  v.number('manifest server port must be a number — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.integer('manifest server port must be an integer — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.minValue(1024, 'manifest server port must be 1024-65535 — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.maxValue(65535, 'manifest server port must be 1024-65535 — fix: set port 4321 (see ' + MANIFEST_SERVER_DOCS + ')')
+);
+
+export const ManifestPathSchema = v.pipe(
+  v.string('manifest path must be a string — fix: set manifest path "src/webparts/hello/HelloWebPart.manifest.json" (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.minLength(1, 'manifest path must be non-empty — fix: set manifest path "src/webparts/hello/HelloWebPart.manifest.json" (see ' + MANIFEST_SERVER_DOCS + ')'),
+  v.check((val) => !val.includes('\0'), 'manifest path must not contain null bytes — fix: check manifest path (see ' + MANIFEST_SERVER_DOCS + ')')
+);
+
+export const ManifestServerOptionsSchema = v.object({
+  certsDir: v.pipe(v.string('manifest server certsDir must be a string — fix: set certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')'), v.minLength(1, 'manifest server certsDir must be non-empty — fix: set certsDir "/home/user/.rspfx/certs" (see ' + MANIFEST_SERVER_DOCS + ')')),
+  hostname: v.optional(v.pipe(v.string('manifest server hostname must be a string — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'), v.minLength(1, 'manifest server hostname must be non-empty — fix: set hostname "localhost" (see ' + MANIFEST_SERVER_DOCS + ')'))),
+  port: v.optional(ManifestServerPortSchema),
+  manifestPaths: v.optional(v.array(ManifestPathSchema, 'manifest server manifestPaths must be an array — fix: set manifestPaths ["src/webparts/hello/HelloWebPart.manifest.json"] (see ' + MANIFEST_SERVER_DOCS + ')'))
+});
+
+export type CertIssue = { path: (string | number)[]; message: string; code: string };
+export type CertResult<T> = { ok: true; value: T } | { ok: false; error: CertIssue[] };
+
+function mapCertIssues(issues: readonly v.BaseIssue<unknown>[]): CertIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes('fix:')) message += ' — fix: check manifest-server options (see ' + MANIFEST_SERVER_DOCS + ')';
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
+}
+
+export function validateCertOptions(raw: unknown): CertResult<{ certsDir: string; hostname?: string }> {
+  const result = v.safeParse(CertOptionsSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output as { certsDir: string; hostname?: string } };
+}
+
+export function validateManifestServerOptions(raw: unknown): CertResult<v.InferOutput<typeof ManifestServerOptionsSchema>> {
+  const result = v.safeParse(ManifestServerOptionsSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
+export function validatePort(raw: unknown): CertResult<number> {
+  const result = v.safeParse(ManifestServerPortSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
+export function validateManifestPath(raw: unknown): CertResult<string> {
+  const result = v.safeParse(ManifestPathSchema, raw);
+  if (!result.success) return { ok: false, error: mapCertIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
+}
+
 export async function ensureCertificates(certsDir: string, hostname?: string): Promise<{ key: string; cert: string }> {
+  const certValidation = validateCertOptions({ certsDir, ...(hostname !== undefined ? { hostname } : {}) });
+  if (!certValidation.ok) {
+    throw new Error(certValidation.error[0]!.message);
+  }
   if (hostname) {
     validateCustomHostname(hostname);
   }
@@ -187,6 +269,11 @@ export async function ensureCertificates(certsDir: string, hostname?: string): P
       altNames.push({ type: 2, value: hostname });
     }
   }
+  const { default: selfsigned } = (await import('selfsigned')) as unknown as {
+    default: {
+      generate(attrs: { name: string; value: string }[], options: SelfsignedOptions): Promise<SelfsignedPems>;
+    };
+  };
   const pems = await selfsigned.generate(
     [{ name: 'commonName', value: 'localhost' }],
     {
@@ -327,6 +414,109 @@ export async function isCertTrusted(certPath: string): Promise<{ trusted: boolea
   } catch (error) {
     return { trusted: 'unknown', detail: error instanceof Error ? error.message : String(error) };
   }
+}
+
+export async function tryTrustCert(certPath: string): Promise<{ trusted: boolean; detail: string }> {
+  const platform = process.platform;
+  if (platform === 'darwin') {
+    try {
+      await execFileAsync('security', ['add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', certPath], {
+        timeout: 15000
+      });
+      const verified = await isCertTrusted(certPath).catch(() => undefined);
+      if (verified?.trusted === true) return { trusted: true, detail: 'trusted via security add-trusted-cert' };
+      return { trusted: true, detail: 'security add-trusted-cert succeeded — restart browser' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const needsSudo =
+        /not authorized|permission|authorization|write permissions|User interaction|SecTrust|requires.*admin/i.test(msg) ||
+        msg.includes('100013') ||
+        msg.toLowerCase().includes('sudo');
+      // If we seem to need sudo and we are interactive, try with sudo and inherit stdio so the user can enter password
+      const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
+      const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
+      if (needsSudo && isTTY && !isCI) {
+        try {
+          const { spawn } = await import('node:child_process');
+          const ok = await new Promise<boolean>((resolve) => {
+            const child = spawn('sudo', ['security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', certPath], {
+              stdio: 'inherit'
+            });
+            child.on('close', (code) => resolve(code === 0));
+            child.on('error', () => resolve(false));
+          });
+          if (ok) {
+            const verified = await isCertTrusted(certPath).catch(() => undefined);
+            if (verified?.trusted === true) return { trusted: true, detail: 'trusted via sudo security add-trusted-cert' };
+            return { trusted: true, detail: 'sudo security add-trusted-cert succeeded — restart browser' };
+          }
+        } catch {}
+      }
+      if (needsSudo || /permission/i.test(msg)) {
+        return {
+          trusted: false,
+          detail: `sudo required — run: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${certPath}`
+        };
+      }
+      return {
+        trusted: false,
+        detail: `security add-trusted-cert failed: ${msg} — ${formatTrustInstructions(path.dirname(certPath))}`
+      };
+    }
+  }
+  if (platform === 'win32') {
+    try {
+      await execFileAsync('certutil', ['-addstore', '-user', 'Root', certPath], { timeout: 15000 });
+      const verified = await isCertTrusted(certPath).catch(() => undefined);
+      if (verified?.trusted === true) return { trusted: true, detail: 'trusted via certutil -addstore' };
+      return { trusted: true, detail: 'certutil -addstore succeeded — restart browser' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { trusted: false, detail: `certutil failed: ${msg} — run: certutil -addstore -user Root ${certPath}` };
+    }
+  }
+  // Linux: try NSS DB
+  try {
+    const nssDb = path.join(os.homedir(), '.pki', 'nssdb');
+    await execFileAsync('certutil', ['-d', `sql:${nssDb}`, '-A', '-t', 'C,,', '-n', 'RSPFx', '-i', certPath], { timeout: 10000 });
+    return { trusted: true, detail: `added to NSS DB ${nssDb} — restart browser` };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return {
+      trusted: false,
+      detail: `Linux has no single trust store — import ${certPath} into browser/OS store and restart browser${msg ? ` (${msg})` : ''}`
+    };
+  }
+}
+
+export async function ensureCertificatesAndTrust(
+  certsDir: string,
+  hostname?: string
+): Promise<{ key: string; cert: string; trusted: boolean | 'unknown'; detail: string }> {
+  const { key, cert } = await ensureCertificates(certsDir, hostname);
+  const certPath = path.join(certsDir, 'cert.pem');
+  const trust = await isCertTrusted(certPath);
+  if (trust.trusted === true) {
+    return { key, cert, trusted: true, detail: trust.detail };
+  }
+  if (trust.trusted === 'unknown') {
+    logger.info(`Cert trust check unknown: ${trust.detail}`);
+    return { key, cert, trusted: 'unknown', detail: trust.detail };
+  }
+  const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS || process.env.TF_BUILD);
+  const isTTY = Boolean(process.stdin.isTTY || process.stdout.isTTY);
+  if (isCI || !isTTY) {
+    logger.warn(`Dev cert not trusted — ${trust.detail}. ${formatTrustInstructions(certsDir)} — then restart browser. Run rspfx doctor --trust to auto-install.`);
+    return { key, cert, trusted: false, detail: trust.detail };
+  }
+  logger.info('Dev cert not trusted — attempting auto-trust...');
+  const result = await tryTrustCert(certPath);
+  if (result.trusted) {
+    logger.success(`Dev cert trusted: ${result.detail}`);
+    return { key, cert, trusted: true, detail: result.detail };
+  }
+  logger.warn(`Auto-trust failed: ${result.detail} — ${formatTrustInstructions(certsDir)}`);
+  return { key, cert, trusted: false, detail: result.detail };
 }
 
 export function formatTrustInstructions(certsDir: string): string {

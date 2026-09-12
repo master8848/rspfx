@@ -12,21 +12,24 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*"
-  },
+  "dependencies": {},
   "description": "RSPFx project scaffolding templates",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

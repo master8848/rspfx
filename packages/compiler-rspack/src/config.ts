@@ -1,7 +1,4 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { rspack, type Configuration, type RuleSetRule } from '@rspack/core';
 import type { CompileContext } from './types.js';
@@ -10,8 +7,6 @@ import { SpfxLocalizedResourcesPlugin } from './localized-resources.js';
 import { SpfxPublicPathPlugin, SPFX_PUBLIC_PATH_SENTINEL } from './public-path.js';
 import type { FrameworkRspackContributions } from '@mbsks/rspfx-plugin-api';
 import { rspfxCssInlineRule, rspfxSassRule } from './helpers/css.js';
-
-const require = createRequire(import.meta.url);
 
 const BUILD_TIME_ALIASES: Record<string, string> = {
   '@rspack/plugin-react-refresh': fileURLToPath(new URL('./stubs/react-refresh.js', import.meta.url)),
@@ -22,11 +17,16 @@ const BUILD_TIME_ALIASES: Record<string, string> = {
 
 const SOLID_REFRESH_STUB = fileURLToPath(new URL('./stubs/solid-refresh.js', import.meta.url));
 
-import { canResolveFromProject, isPlatformOnlyModule } from '@mbsks/rspfx-core';
-
-function platformOnlyExternal(data: { request?: string }): string | undefined {
-  return typeof data.request === 'string' && isPlatformOnlyModule(data.request) ? `amd ${data.request}` : undefined;
-}
+import { canResolveFromProject } from '@mbsks/rspfx-core';
+import {
+  platformOnlyExternal,
+  hasPostcssConfig as buildHasPostcssConfig,
+  tryResolve,
+  computeUniqueName as buildComputeUniqueName,
+  cacheVersionHash as buildCacheVersionHash,
+  type CacheVersionInput
+} from '@mbsks/rspfx-build-core';
+import * as v from 'valibot';
 
 /** Build-time stub aliases (refresh plugins, vue-loader) for the native rspack path. */
 export { BUILD_TIME_ALIASES, SOLID_REFRESH_STUB };
@@ -36,34 +36,13 @@ const BASE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.scss',
 /** Build-time aliases shared by the compiler config and the native rspack resolve. */
 export { BASE_EXTENSIONS };
 
-const POSTCSS_CONFIG_FILES = [
-  'postcss.config.js',
-  'postcss.config.cjs',
-  'postcss.config.mjs',
-  'postcss.config.ts',
-  'postcss.config.cts',
-  'postcss.config.mts',
-  'postcss.config.json'
-];
-
-function tryResolve(name: string, projectRoot: string): string | undefined {
-  try {
-    const req = createRequire(path.join(projectRoot, 'package.json'));
-    return req.resolve(name);
-  } catch {}
-  try {
-    return require.resolve(name);
-  } catch {}
-  return undefined;
-}
-
+const postcssCache = new Map<string, boolean>();
 function hasPostcssConfigFile(projectRoot: string): boolean {
-  for (const f of POSTCSS_CONFIG_FILES) {
-    try {
-      if (fs.existsSync(path.join(projectRoot, f))) return true;
-    } catch {}
-  }
-  return false;
+  const cached = postcssCache.get(projectRoot);
+  if (cached !== undefined) return cached;
+  const result = buildHasPostcssConfig(projectRoot);
+  postcssCache.set(projectRoot, result);
+  return result;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -80,28 +59,79 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   }
 }
 
-function computeUniqueName(ctx: CompileContext): string {
-  if (ctx.entries.length === 1) {
-    const entry = ctx.entries[0]!;
-    return `${entry.componentIds[0]!}_${entry.version}`;
-  }
-  const joined = ctx.entries
-    .map((entry) => `${entry.componentIds[0]!}_${entry.version}`)
-    .join('');
-  return createHash('md5').update(joined).digest('hex');
+export const cacheVersionHash = buildCacheVersionHash;
+export type { CacheVersionInput };
+
+// ── valibot schemas for compiler options ──
+const COMPILER_DOCS = 'https://github.com/master8848/rspfx#configuration';
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEMVER_RE_COMPILER = /^\d+\.\d+\.\d+(\.\d+)?$/;
+
+export const BundleEntrySchema = v.object({
+  name: v.pipe(v.string('compiler bundle name must be a string — fix: set compile entry { name: "hello-world" } (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler bundle name must be non-empty — fix: set compile entry { name: "hello-world" } (see ' + COMPILER_DOCS + ')')),
+  import: v.pipe(v.string('compiler bundle import must be a string path — fix: set compile entry { import: "src/webparts/hello/HelloWebPart.ts" } (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler bundle import must be non-empty — fix: set compile entry { import: "src/webparts/hello/HelloWebPart.ts" } (see ' + COMPILER_DOCS + ')')),
+  componentIds: v.pipe(
+    v.array(v.pipe(v.string('compiler componentId must be a string UUID — fix: set componentId "00000000-0000-4000-a000-000000000000" (see ' + COMPILER_DOCS + ')'), v.regex(GUID_RE, 'compiler componentId must be a UUID like "00000000-0000-4000-a000-000000000000" (got invalid) — fix: set componentId "00000000-0000-4000-a000-000000000000" (see ' + COMPILER_DOCS + ')')), 'compiler componentIds must be an array — fix: set entry { componentIds: ["00000000-0000-4000-a000-000000000000"] } (see ' + COMPILER_DOCS + ')'),
+    v.minLength(1, 'compiler bundle entry componentIds must be non-empty — fix: set entry { componentIds: ["00000000-0000-4000-a000-000000000000"] } (see ' + COMPILER_DOCS + ')')
+  ),
+  version: v.pipe(v.string('compiler bundle version must be a string — fix: set entry { version: "1.0.0" } (see ' + COMPILER_DOCS + ')'), v.regex(SEMVER_RE_COMPILER, 'compiler bundle version must be semver like "1.0.0" (got invalid) — fix: set entry { version: "1.0.0" } (see ' + COMPILER_DOCS + ')'))
+});
+
+export const CompileContextSchema = v.object({
+  projectRoot: v.pipe(v.string('compiler projectRoot must be a string — fix: set projectRoot "/path/to/project" (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler projectRoot must be non-empty — fix: set projectRoot "/path/to/project" (see ' + COMPILER_DOCS + ')')),
+  framework: v.pipe(v.string('compiler framework must be a string — fix: set framework: "react" in rspfx.config.ts (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler framework must be non-empty — fix: set framework: "react" in rspfx.config.ts (see ' + COMPILER_DOCS + ')')),
+  fastRefresh: v.boolean('compiler fastRefresh must be a boolean — fix: set fastRefresh: false (see ' + COMPILER_DOCS + ')'),
+  production: v.boolean('compiler production must be a boolean — fix: set production: true (see ' + COMPILER_DOCS + ')'),
+  entries: v.pipe(v.array(BundleEntrySchema, 'compiler entries must be an array — fix: set entries: [{ name: "hello", import: "src/...", componentIds: ["..."], version: "1.0.0" }] (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler entries must be non-empty — fix: add at least one bundle entry (see ' + COMPILER_DOCS + ')')),
+  externals: v.array(v.union([v.string(), v.custom((val) => typeof val === 'function', 'external matcher must be string or function')]), 'compiler externals must be array — fix: set externals: ["@microsoft/sp-webpart-base"] (see ' + COMPILER_DOCS + ')'),
+  build: v.object({
+    outDir: v.optional(v.pipe(v.string('compiler build.outDir must be a string — fix: set build: { outDir: "dist" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler build.outDir must be non-empty — fix: set build: { outDir: "dist" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')'))),
+    sourcemap: v.optional(v.boolean('compiler build.sourcemap must be a boolean — fix: set build: { sourcemap: false } in rspfx.config.ts (see ' + COMPILER_DOCS + ')')),
+    minify: v.optional(v.boolean('compiler build.minify must be a boolean — fix: set build: { minify: true } in rspfx.config.ts (see ' + COMPILER_DOCS + ')')),
+    splitChunks: v.optional(v.boolean('compiler build.splitChunks must be a boolean — fix: set build: { splitChunks: false } in rspfx.config.ts (see ' + COMPILER_DOCS + ')')),
+    releaseDir: v.optional(v.pipe(v.string('compiler build.releaseDir must be a string — fix: set build: { releaseDir: "release" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler build.releaseDir must be non-empty — fix: set build: { releaseDir: "release" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')'))),
+    tsconfigPath: v.optional(v.pipe(v.string('compiler build.tsconfigPath must be a string — fix: set build: { tsconfigPath: "./tsconfig.json" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')'), v.minLength(1, 'compiler build.tsconfigPath must be non-empty — fix: set build: { tsconfigPath: "./tsconfig.json" } in rspfx.config.ts (see ' + COMPILER_DOCS + ')')))
+  })
+});
+
+export type CompilerIssue = { path: (string | number)[]; message: string; code: string };
+export type CompilerResult<T> = { ok: true; value: T } | { ok: false; error: CompilerIssue[] };
+
+function mapCompilerIssues(issues: readonly v.BaseIssue<unknown>[]): CompilerIssue[] {
+  return issues.map((issue) => {
+    const p = (issue as unknown as { path?: { key: string | number }[] }).path;
+    const dotPath: (string | number)[] = p ? p.map((seg) => (seg as { key: string | number }).key) : [];
+    let message = (issue as { message?: string }).message ?? 'Invalid value';
+    const inputVal = (issue as { input?: unknown }).input;
+    if (inputVal !== undefined && !message.includes('(got')) {
+      try {
+        const got = JSON.stringify(inputVal);
+        const short = got.length > 60 ? got.slice(0, 57) + '...' : got;
+        if (message.includes(' — fix:')) message = message.replace(' — fix:', ` (got ${short}) — fix:`);
+        else message = `${message} (got ${short})`;
+      } catch {}
+    }
+    if (!message.includes('fix:')) message += ' — fix: check compiler options (see ' + COMPILER_DOCS + ')';
+    return { path: dotPath, message, code: 'CONFIG_VALIDATION_FAILED' };
+  });
 }
 
-export interface CacheVersionInput {
-  framework: string;
-  version?: string;
-  build: Pick<CompileContext['build'], 'sourcemap' | 'minify' | 'splitChunks' | 'outDir'>;
+export function validateCompileContext(raw: unknown): CompilerResult<v.InferOutput<typeof CompileContextSchema>> {
+  const result = v.safeParse(CompileContextSchema, raw);
+  if (!result.success) return { ok: false, error: mapCompilerIssues(result.issues as unknown as v.BaseIssue<unknown>[]) };
+  return { ok: true, value: result.output };
 }
 
-export function cacheVersionHash(input: CacheVersionInput): string {
-  return createHash('md5').update(JSON.stringify(input)).digest('hex').slice(0, 8);
+export function tryValidateCompileContext(raw: unknown): CompilerResult<v.InferOutput<typeof CompileContextSchema>> {
+  return validateCompileContext(raw);
 }
 
 export async function createRspackConfig(ctx: CompileContext, userModuleRules?: unknown[]): Promise<unknown> {
+  const ctxValidation = validateCompileContext(ctx);
+  if (!ctxValidation.ok) {
+    const msg = ctxValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `compiler options validation failed:\n${msg}`, ctxValidation.error as unknown as Error);
+  }
   if (ctx.entries.length === 0) {
     throw new RspfxError('COMPILE_NO_ENTRIES', 'compiler-rspack: at least one bundle entry is required');
   }
@@ -259,9 +289,9 @@ export async function createRspackConfig(ctx: CompileContext, userModuleRules?: 
       filename: '[name].js',
       chunkFilename: 'chunk.[name].js',
       assetModuleFilename: 'assets/[hash][ext][query]',
-      uniqueName: computeUniqueName(ctx),
+      uniqueName: buildComputeUniqueName(ctx.entries),
       library: { type: 'amd' },
-      chunkLoadingGlobal: `webpackJsonp_${computeUniqueName(ctx)}`,
+      chunkLoadingGlobal: `webpackJsonp_${buildComputeUniqueName(ctx.entries)}`,
       crossOriginLoading: 'anonymous',
       publicPath: SPFX_PUBLIC_PATH_SENTINEL,
       devtoolModuleFilenameTemplate: 'webpack:///../[resource-path]'

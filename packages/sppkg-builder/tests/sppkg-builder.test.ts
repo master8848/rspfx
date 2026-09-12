@@ -21,6 +21,35 @@ interface ProjectVariant {
 async function makeProject(variant?: ProjectVariant): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'rspfx-sppkg-'));
   await cp(fixtureRoot, dir, { recursive: true });
+  // Ensure release manifests/assets exist even when the fixture's release/ is gitignored.
+  await mkdir(path.join(dir, 'release/manifests'), { recursive: true });
+  await mkdir(path.join(dir, 'release/assets'), { recursive: true });
+  const manifestPath = path.join(dir, `release/manifests/${componentId}.manifest.json`);
+  if (!existsSync(manifestPath)) {
+    await writeFile(
+      manifestPath,
+      JSON.stringify(
+        {
+          id: componentId,
+          alias: 'RspfxTestWebPart',
+          componentType: 'WebPart',
+          version: '1.0.0.0',
+          manifestVersion: 2,
+          loaderConfig: {
+            internalModuleBaseUrls: ['https://cdn.example.com/dist/'],
+            entryModuleId: 'hello',
+            scriptResources: { hello: { type: 'path', path: 'hello.js' } }
+          }
+        },
+        null,
+        2
+      )
+    );
+  }
+  const assetPath = path.join(dir, 'release/assets/hello.js');
+  if (!existsSync(assetPath)) {
+    await writeFile(assetPath, 'define([], () => {});\n');
+  }
   if (variant) {
     const configPath = path.join(dir, 'config/package-solution.json');
     const config = JSON.parse(await readFile(configPath, 'utf8')) as { solution: Record<string, unknown> };
@@ -64,49 +93,62 @@ function extractComponentManifest(xml: string): string {
   return decodeXmlEntities(match[1]!);
 }
 
+// Helpers to keep the mega-test readable — each asserts one concern in isolation.
+function assertAppManifestBasics(manifest: string): void {
+  expect(manifest).toContain('IsClientSideSolution="true"');
+  expect(manifest).toContain(`ProductID="${solutionId}"`);
+  expect(manifest).not.toContain(`ProductID="{${solutionId}}"`);
+  expect(manifest).toContain('IsDomainIsolated="false"');
+  expect(manifest).toContain('SkipFeatureDeployment="true"');
+  expect(manifest).toContain('Name="rspfx-test-solution"');
+  expect(manifest).toContain('<Title>rspfx-test-solution</Title>');
+  expect(manifest).toContain('DeveloperProperties');
+  expect(manifest).toContain('&quot;name&quot;');
+}
+
+function assertZipEntryList(names: string[]): void {
+  expect(names).toEqual(
+    [
+      '[Content_Types].xml',
+      '_rels/.rels',
+      'AppManifest.xml',
+      '_rels/AppManifest.xml.rels',
+      `feature_${featureId}.xml`,
+      `feature_${featureId}.xml.config.xml`,
+      `_rels/feature_${featureId}.xml.rels`,
+      `${featureId}/WebPart_${componentId}.xml`,
+      'ClientSideAssets.xml',
+      'ClientSideAssets.xml.config.xml',
+      '_rels/ClientSideAssets.xml.rels',
+      'ClientSideAssets/hello.js'
+    ].sort()
+  );
+  expect(names.some((name) => name.endsWith('.map'))).toBe(false);
+  expect(names.some((name) => name.endsWith('.manifest.json'))).toBe(false);
+}
+
 describe('buildPackage', () => {
   it('builds a production package with client-side assets', async () => {
     const projectRoot = await makeProject();
     try {
       const result = await buildPackage(buildOptions(projectRoot));
+      // --- output path & ordering ---
       expect(existsSync(result.outputPath)).toBe(true);
       expect(path.basename(result.outputPath)).toBe('rspfx-test.sppkg');
       expect(result.zipEntries[0]).toBe('[Content_Types].xml');
 
       const zip = await readZipEntries(result.outputPath);
       const names = [...zip.keys()].sort();
-      expect(names).toEqual(
-        [
-          '[Content_Types].xml',
-          '_rels/.rels',
-          'AppManifest.xml',
-          '_rels/AppManifest.xml.rels',
-          `feature_${featureId}.xml`,
-          `feature_${featureId}.xml.config.xml`,
-          `_rels/feature_${featureId}.xml.rels`,
-          `${featureId}/WebPart_${componentId}.xml`,
-          'ClientSideAssets.xml',
-          'ClientSideAssets.xml.config.xml',
-          '_rels/ClientSideAssets.xml.rels',
-          'ClientSideAssets/hello.js'
-        ].sort()
-      );
-      expect(names.some((name) => name.endsWith('.map'))).toBe(false);
-      expect(names.some((name) => name.endsWith('.manifest.json'))).toBe(false);
+      // --- zip entry list ---
+      assertZipEntryList(names);
 
       const helloContent = await readFile(path.join(projectRoot, 'release/assets/hello.js'));
       expect(zip.get('ClientSideAssets/hello.js')).toEqual(helloContent);
 
-      expect(result.appManifest).toContain('IsClientSideSolution="true"');
-      expect(result.appManifest).toContain(`ProductID="${solutionId}"`);
-      expect(result.appManifest).not.toContain(`ProductID="{${solutionId}}"`);
-      expect(result.appManifest).toContain('IsDomainIsolated="false"');
-      expect(result.appManifest).toContain('SkipFeatureDeployment="true"');
-      expect(result.appManifest).toContain('Name="rspfx-test-solution"');
-      expect(result.appManifest).toContain('<Title>rspfx-test-solution</Title>');
-      expect(result.appManifest).toContain('DeveloperProperties');
-      expect(result.appManifest).toContain('&quot;name&quot;');
+      // --- appManifest ---
+      assertAppManifestBasics(result.appManifest);
 
+      // --- element XML (WebPart) ---
       const webPartXml = zip.get(`${featureId}/WebPart_${componentId}.xml`)!.toString('utf8');
       expect(webPartXml).toContain('Type="WebPart"');
       expect(webPartXml).toContain('<Module Name="RspfxTestWebPart" Url="_catalogs/wp" List="113"/>');
@@ -124,6 +166,7 @@ describe('buildPackage', () => {
       };
       expect(JSON.parse(extractComponentManifest(webPartXml))).toEqual(expected);
 
+      // --- feature XML ---
       const featureXml = zip.get(`feature_${featureId}.xml`)!.toString('utf8');
       expect(featureXml).toContain(`Id="${featureId}"`);
       expect(featureXml).toContain('Scope="Web"');
@@ -133,15 +176,18 @@ describe('buildPackage', () => {
       expect(featureRels).not.toContain('clientsideasset');
       expect(featureRels).toContain('Target="/feature_');
 
+      // --- config XML (volatile Id) ---
       const configXml = zip.get(`feature_${featureId}.xml.config.xml`)!.toString('utf8');
       expect(configXml).not.toContain(`<Id>${featureId}</Id>`);
       expect(configXml).toMatch(/<Id>[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}<\/Id>/);
 
       expect(zip.get('ClientSideAssets.xml')!.toString('utf8')).toContain('Client Side Assets');
 
+      // --- validation ---
       const validation = await validateSppkg(result.outputPath);
       expect(validation).toEqual({ ok: true, errors: [] });
 
+      // --- debug dir ---
       const debugDir = path.join(projectRoot, 'sharepoint/solution/debug/rspfx-test');
       expect(existsSync(path.join(debugDir, 'AppManifest.xml'))).toBe(true);
       expect(existsSync(path.join(debugDir, 'ClientSideAssets/hello.js'))).toBe(true);

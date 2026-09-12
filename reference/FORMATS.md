@@ -61,7 +61,9 @@ Library manifest source (`src/libraries/<name>/<name>.manifest.json`, schema `ht
 
 Built library manifest adds `loaderConfig` identical to web part (`internalModuleBaseUrls`, `entryModuleId = bundleName`, `scriptResources` with `path`/`component` types); `alias` and `id` unchanged.
 
-## 2. Bundle format (webpack → Rspack equivalents)
+## 2. Bundle format (webpack → Vite / Rsbuild / Rspack equivalents)
+
+RSPFx supports Vite (`rspfxVite` / `@mbsks/rspfx-plugin`, esbuild + Rollup), Rsbuild (`rspfxRsbuild` / `@rsbuild/core`), and Rspack (`RSpfxPlugin` / `@rspack/core`). All three emit the same byte-compatible AMD bundle as official webpack — same `define('<id>_<version>', …)` head, same filenames, same externals. Rsbuild and Rspack share `packages/compiler-rspack/src/config.ts:44` (`output.library.type: 'amd'`); Vite uses `packages/plugin/src/vite.ts:1` with `build.lib` + `output.amd`. The reference config below is the harvested webpack baseline:
 
 Official webpack output config (harvested from WebpackConfigurationGenerator):
 
@@ -80,7 +82,7 @@ output: {
 optimization: { moduleIds: 'deterministic', sideEffects: true, removeEmptyChunks: true, avoidEntryIife: false }
 ```
 
-Generated bundle head (VERIFIED with Rspack spike — byte-compatible):
+Generated bundle head (VERIFIED with Vite + Rspack + Rsbuild — byte-compatible across all three bundlers):
 
 ```js
 define('<componentId>_<version>', ["@microsoft/sp-core-library", ...], function(__external_1, ...){
@@ -91,7 +93,8 @@ define('<componentId>_<version>', ["@microsoft/sp-core-library", ...], function(
 
 - `define` = AMD named define; dependency names = external package names.
 - `uniqueName` = single component: `<componentId>_<version>`; multiple bundles: full hash of all ids.
-- publicPath: no static value; `output.publicPath: 'auto'` (Rspack equivalent of SetPublicPathCurrentScriptPlugin).
+- publicPath: no static value; `output.publicPath: 'auto'` (Rspack/Rsbuild via `@rspack/core`, Vite via `build.lib` `publicPath: 'auto'` equivalent of SetPublicPathCurrentScriptPlugin — both emit `__rspfx_script_url_<bundle>` detection).
+- All three bundlers (Vite / Rsbuild / Rspack) produce identical `define('<id>_<version>', …)` output verified by `packages/plugin/tests/vite-build.test.ts:108` and Rspack spike — see `packages/compiler-rspack/src/config.ts:44` and `packages/plugin/src/vite.ts:1`.
 
 ## 3. manifests.js (dev debug manifests)
 
@@ -143,7 +146,9 @@ ClientSideAssets/<file>          → bundles + assets (component JS, maps exclud
 - `AppManifest.xml` `ProductID` is the raw `solution.id` GUID without braces (`packages/sppkg-builder/src/xml.ts:280`); `IsDomainIsolated` is emitted as `String(boolean)` when defined including `false` for `1.20`-`1.23` (`packages/sppkg-builder/src/xml.ts:293`), deprecated and suppressed when `spfxVersion` `1.24`+ (official `1.24-beta.3` deleted `IsDomainIsolated` handling, schema title "Domain Isolation (deprecated)" — `packages/sppkg-builder/src/xml.ts:266` `isDomainIsolatedDeprecated()` and `packages/sppkg-builder/src/xml.ts:274` gate, `packages/sppkg-builder/src/sppkg-builder.ts:235` `spfxVersion`); `DeveloperProperties` is `JSON.stringify` of the subset of 5 keys `name, websiteUrl, privacyUrl, termsOfUseUrl, mpnId` that are defined (undefined/null omitted, defined values `String()`-ified, order `DEVELOPER_PROPERTY_NAMES`, matching official `createSolutionXml.js:338-345` `JSON.stringify` semantics — `packages/sppkg-builder/src/xml.ts:262-294`); `Title` falls back to `solution.name` when `solution.title` is absent (`packages/sppkg-builder/src/xml.ts:261`); `categories` emit one `CategoryID` with comma-joined values (`packages/sppkg-builder/src/xml.ts:284`); `Screenshots` emits `Screenshot/Filename` per `metadata.screenshotPaths` (`packages/sppkg-builder/src/xml.ts:296`); `AppPartConfig` `Id` is `randomUUID()` (`packages/sppkg-builder/src/xml.ts:172`); `escapeXmlText` escapes `&quot;`/`&apos;` (`packages/sppkg-builder/src/xml.ts:31`).
 - OPC package: zip root contains `[Content_Types].xml` and `_rels/.rels`; `_rels/.rels` has `Type="http://schemas.microsoft.com/sharepoint/2012/app/relationships/package-manifest"` → `Target="/AppManifest.xml"` (`packages/sppkg-builder/src/sppkg-builder.ts:239`); all relationship `Target` values are prefixed with `/` (`packages/sppkg-builder/src/xml.ts:48` `createRelationshipsXml` equivalent); `AppManifest` relationships live in `_rels/AppManifest.xml.rels`, feature relationships in `_rels/feature_<id>.xml.rels`, asset relationships in `_rels/ClientSideAssets.xml.rels`; output path from `paths.zippedPackage` (e.g. `sharepoint/solution/<name>.sppkg`) and SharePoint validates `IsValidAppPackage:true` with `Title`/`AppProductID` populated.
 
-## 5. Dev server (serve mode, heft-era SPFx — our reference behavior)
+## 5. Dev server (serve mode — Vite / Rsbuild / Rspack, heft-era SPFx reference behavior)
+
+RSPFx serves on the same port (default **4321**) with any bundler: `vite dev --port 4321` via `rspfxVite()` `configureServer` (`packages/plugin/src/vite.ts:1`), `rsbuild dev` via `rspfxRsbuild` (`packages/plugin/src/rsbuild.ts:1`), or `@rspack/dev-server` via `RSpfxPlugin` (`packages/compiler-rspack/src/dev-server.ts:8`). All emit `https://localhost:4321/dist/*` + `/temp/manifests.js` and honor `config/serve.json` `port`/`hostname` for parity with official SPFx (below is the harvested heft-era reference):
 
 Single HTTPS server, port from `config/serve.json` (default **4321**), hostname default `localhost`:
 

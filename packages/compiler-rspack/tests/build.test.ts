@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { build, type CompileContext } from '../src/index.js';
 
 const FIXTURE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'basic');
@@ -46,6 +46,10 @@ describe('build', () => {
   beforeAll(() => {
     fs.rmSync(path.join(FIXTURE, OUT_DIR), { recursive: true, force: true });
     fs.rmSync(path.join(FIXTURE, '.rspack-cache'), { recursive: true, force: true });
+  });
+
+  beforeEach(() => {
+    fs.rmSync(path.join(FIXTURE, OUT_DIR), { recursive: true, force: true });
   });
 
   it('emits dist/testwebpart.js with the exact SPFx AMD wrapper prefix', async () => {

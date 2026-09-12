@@ -1,4 +1,6 @@
+import { createLogger } from '@mbsks/rspfx-diagnostics';
 import type { FrameworkId } from '@mbsks/rspfx-core';
+const logger = createLogger('rspfx:store');
 import type { RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { ServeMode } from './serve.js';
 
@@ -40,16 +42,16 @@ export function createStore(initial: DevStoreSnapshot): DevStore {
     for (const l of [...listeners]) {
       try {
         l(current);
-      } catch {}
+      } catch (e) {
+        logger.debug(`store listener failed: ${String(e)}`);
+      }
     }
     notifying = false;
     if (pending) {
       pending = false;
       const next = pendingSnapshot;
       pendingSnapshot = null;
-      if (next && next !== snapshot) {
-        // if batch during notify, re-notify if snapshot changed
-        // snapshot already updated, just notify again
+      if (next) {
         notify();
       }
     }
@@ -90,7 +92,9 @@ export function createStore(initial: DevStoreSnapshot): DevStore {
       // Let's call immediately.
       try {
         listener(snapshot);
-      } catch {}
+      } catch (e) {
+        logger.debug(`store subscribe listener failed: ${String(e)}`);
+      }
       let unsubscribed = false;
       return () => {
         if (unsubscribed) return;

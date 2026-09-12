@@ -1,7 +1,11 @@
-import { createHash } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { rspack } from '@rspack/core';
 import { createRspackConfig, type BundleEntry, type CompileContext } from '../src/index.js';
 import type { Configuration } from '@rspack/core';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const ENTRY: BundleEntry = {
   name: 'testwebpart',
@@ -82,10 +86,8 @@ describe('createRspackConfig', () => {
       version: '2.0.0'
     };
     const config = await getConfig(makeCtx({ entries: [ENTRY, second] }));
-    const expected = createHash('md5')
-      .update('aaaaaaaa-0000-0000-0000-000000000001_1.0.0bbbbbbbb-0000-0000-0000-000000000002_2.0.0')
-      .digest('hex');
-    expect(config.output?.chunkLoadingGlobal).toBe(`webpackJsonp_${expected}`);
+    // frozen snapshot: md5('aaaaaaaa-0000-0000-0000-000000000001_1.0.0bbbbbbbb-0000-0000-0000-000000000002_2.0.0') = 9141e61ec8e8ded06950e6e2a99bb09b
+    expect(config.output?.chunkLoadingGlobal).toBe('webpackJsonp_9141e61ec8e8ded06950e6e2a99bb09b');
   });
 
   it('maps devtool by production/sourcemap matrix', async () => {
@@ -115,18 +117,53 @@ describe('createRspackConfig', () => {
 
   it('includes DefinePlugin with DEBUG, DEPRECATED_UNIT_TEST and process.env.NODE_ENV', async () => {
     const config = await getConfig(makeCtx());
-    const definePlugin = config.plugins?.find(
-      (plugin) =>
-        plugin &&
-        typeof plugin === 'object' &&
-        Object.getPrototypeOf(plugin)?.constructor?.name === 'DefinePlugin'
-    ) as { _args?: Record<string, string>[] } | undefined;
+    const definePlugin = config.plugins?.find((plugin) => {
+      if (!plugin || typeof plugin !== 'object') return false;
+      try {
+        if (plugin instanceof (rspack as unknown as { DefinePlugin: new (...args: unknown[]) => unknown }).DefinePlugin) return true;
+      } catch {}
+      if ((plugin as { name?: string }).name === 'DefinePlugin') return true;
+      if (Object.getPrototypeOf(plugin)?.constructor?.name === 'DefinePlugin') return true;
+      return false;
+    }) as unknown as Record<string, unknown> | undefined;
     expect(definePlugin).toBeDefined();
-    expect(definePlugin?._args?.[0]).toEqual({
+
+    // Robustly extract the define map without coupling to private _args.
+    // Rspack stores it as _args[0] today, but also check common public-ish
+    // locations and scan values for an object containing DEBUG.
+    const expectedDefines = {
       DEBUG: 'false',
       DEPRECATED_UNIT_TEST: 'false',
       'process.env.NODE_ENV': '"production"'
-    });
+    };
+    const candidateKeys = ['definitions', 'define', 'options', '_options', '_args'];
+    let defineMap: Record<string, unknown> | undefined;
+    if (definePlugin) {
+      for (const key of candidateKeys) {
+        const val = (definePlugin as Record<string, unknown>)[key];
+        if (Array.isArray(val) && val[0] && typeof val[0] === 'object' && 'DEBUG' in (val[0] as Record<string, unknown>)) {
+          defineMap = val[0] as Record<string, unknown>;
+          break;
+        }
+        if (val && typeof val === 'object' && 'DEBUG' in (val as Record<string, unknown>)) {
+          defineMap = val as Record<string, unknown>;
+          break;
+        }
+      }
+      if (!defineMap) {
+        const scanned = Object.values(definePlugin).find(
+          (v) => v && typeof v === 'object' && !Array.isArray(v) && 'DEBUG' in (v as Record<string, unknown>)
+        ) as Record<string, unknown> | undefined;
+        if (scanned) defineMap = scanned;
+        else {
+          const scannedArray = Object.values(definePlugin).find(
+            (v) => Array.isArray(v) && v[0] && typeof v[0] === 'object' && 'DEBUG' in (v[0] as Record<string, unknown>)
+          ) as unknown[] | undefined;
+          if (scannedArray) defineMap = scannedArray[0] as Record<string, unknown>;
+        }
+      }
+    }
+    expect(defineMap).toEqual(expectedDefines);
   });
 
   it('uses stable [name].js output filename', async () => {
@@ -165,15 +202,8 @@ describe('createRspackConfig', () => {
   });
 
   it('enables filesystem cache in serve mode under .rspack-cache', async () => {
-    const prevCache = process.env.RSPFX_CACHE;
-    process.env.RSPFX_CACHE = '1';
-    let serve: Awaited<ReturnType<typeof getConfig>>;
-    try {
-      serve = await getConfig(makeCtx({ serveMode: true }));
-    } finally {
-      if (prevCache === undefined) delete process.env.RSPFX_CACHE;
-      else process.env.RSPFX_CACHE = prevCache;
-    }
+    vi.stubEnv('RSPFX_CACHE', '1');
+    const serve = await getConfig(makeCtx({ serveMode: true }));
     expect(serve.experiments?.cache).toMatchObject({
       type: 'persistent',
       storage: { type: 'filesystem', directory: '/tmp/proj/.rspack-cache' }
@@ -184,24 +214,24 @@ describe('createRspackConfig', () => {
     });
     expect(serve.experiments?.lazyCompilation).toEqual({ entries: false, imports: true });
 
+    vi.unstubAllEnvs();
+    delete process.env.RSPFX_CACHE;
     const notServe = await getConfig(makeCtx());
     expect(notServe.experiments?.cache).toBeUndefined();
     expect(notServe.experiments?.lazyCompilation).toBeUndefined();
   });
 
   it('disables filesystem cache under Vitest by default (opt-in via RSPFX_CACHE=1)', async () => {
-    const prevCache = process.env.RSPFX_CACHE;
+    vi.unstubAllEnvs();
     delete process.env.RSPFX_CACHE;
     const serveDefault = await getConfig(makeCtx({ serveMode: true }));
     expect(serveDefault.experiments?.cache).toBeUndefined();
     // lazyCompilation is independent of the filesystem cache and still applies in serveMode
     expect(serveDefault.experiments?.lazyCompilation).toEqual({ entries: false, imports: true });
 
-    process.env.RSPFX_CACHE = '1';
+    vi.stubEnv('RSPFX_CACHE', '1');
     const serveOptIn = await getConfig(makeCtx({ serveMode: true }));
     expect(serveOptIn.experiments?.cache).toBeDefined();
-    if (prevCache === undefined) delete process.env.RSPFX_CACHE;
-    else process.env.RSPFX_CACHE = prevCache;
   });
 
   it('adds plain css/scss rules', async () => {

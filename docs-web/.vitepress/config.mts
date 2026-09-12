@@ -7,72 +7,110 @@ import { detectPM } from './theme/utils/pmTransform.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const docsWebRoot = resolve(__dirname, '..')
 
-// Shared sidebar — used for /docs/, /llm and /llms. Keep single source to avoid drift.
-const docsSidebar = [
+// Guide — human-friendly, task-oriented, plain language (TanStack-style Docs)
+const guideSidebar = [
   {
-    text: 'Getting Started',
+    text: 'Get Started',
     collapsed: false,
     items: [
-      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
-      { text: 'Getting Started', link: '/docs/getting-started' },
-      { text: 'Demos', link: '/docs/demos' },
-      { text: 'llms.txt', link: '/llms' },
+      { text: 'Why RSPFx', link: '/docs/guide/why-rspfx' },
+      { text: 'Getting Started', link: '/docs/guide/getting-started' },
+      { text: 'Try in Existing Project', link: '/docs/guide/try-mode' },
+      { text: 'Demos', link: '/docs/guide/demos' },
+      { text: 'Overview', link: '/docs/guide/index' },
     ],
   },
   {
-    text: 'Guide',
+    text: 'Guides',
     collapsed: false,
     items: [
-      { text: 'Command Reference', link: '/docs/commands' },
-      { text: 'Project Structure', link: '/docs/project-structure' },
-      { text: 'Building & Packaging', link: '/docs/building-packages' },
-      { text: 'Deployment', link: '/docs/deployment' },
-      { text: 'Teams & Outlook Install', link: '/docs/teams-outlook-install' },
-      { text: 'Multi-webpart', link: '/docs/multi-webpart' },
-      { text: 'Frameworks', link: '/docs/frameworks' },
-      { text: 'React 19', link: '/docs/react-19' },
-      { text: 'Custom Framework', link: '/docs/custom-framework' },
-      { text: 'Styling', link: '/docs/styling' },
-      { text: 'Favicon & Assets', link: '/docs/favicon-and-assets' },
-      { text: 'Fast Refresh', link: '/docs/fast-refresh' },
+      { text: 'Dev Server', link: '/docs/guide/dev/dev-server' },
+      { text: 'Deployment', link: '/docs/guide/deployment-guide' },
+      { text: 'Styling', link: '/docs/guide/styling/styling' },
+      { text: 'Fast Refresh', link: '/docs/guide/styling/fast-refresh' },
+      { text: 'Favicon & Assets', link: '/docs/guide/project-setup/favicon-and-assets' },
+      { text: 'Multi-webpart', link: '/docs/guide/project-setup/multi-webpart' },
+      { text: 'Teams & Outlook', link: '/docs/guide/project-setup/teams-outlook-install' },
+    ],
+  },
+  {
+    text: 'Frameworks',
+    collapsed: false,
+    items: [
+      { text: 'Choosing a Framework', link: '/docs/guide/frameworks/choosing-a-framework' },
+      { text: 'React 19', link: '/docs/guide/frameworks/react-19' },
+      { text: 'Custom Framework', link: '/docs/guide/frameworks/custom-framework-guide' },
     ],
   },
   {
     text: 'Migration',
-    collapsed: true,
-    items: [
-      { text: 'Migrating from SPFx', link: '/docs/migration-from-spfx' },
-      { text: 'Migrating off gulp + Heft', link: '/docs/migrating-from-gulp-heft' },
-      { text: 'Case Study — PnP Modern Search', link: '/docs/migration-case-study' },
-      { text: 'Hybrid Dev Mode', link: '/docs/hybrid-dev' },
-      { text: 'Upgrading SPFx Version', link: '/docs/upgrading-spfx-version' },
-    ],
-  },
-  {
-    text: 'Reference',
     collapsed: false,
     items: [
-      { text: 'Architecture', link: '/docs/architecture' },
-      { text: 'Security', link: '/docs/security' },
-      { text: 'Internal API', link: '/docs/internal-api' },
-      { text: 'Compatibility', link: '/docs/compatibility' },
-      { text: 'Performance', link: '/docs/performance' },
-      { text: 'Roadmap', link: '/docs/roadmap' },
-      { text: 'Why Not Migrate', link: '/docs/why-not-to-migrate' },
-      { text: 'Roadblocks', link: '/docs/roadblocks' },
+      { text: 'Overview', link: '/docs/guide/migration/overview' },
+      { text: 'Try Mode', link: '/docs/guide/try-mode' },
+      { text: 'From SPFx', link: '/docs/guide/migration/migration-from-spfx' },
+      { text: 'Off gulp + Heft', link: '/docs/guide/migration/migrating-from-gulp-heft' },
+      { text: 'Case Study', link: '/docs/guide/migration/migration-case-study' },
+      { text: 'Hybrid Dev', link: '/docs/guide/migration/hybrid-dev' },
+      { text: 'Upgrading SPFx Version', link: '/docs/guide/migration/upgrading-spfx-version' },
+      { text: 'Why Not Migrate', link: '/docs/guide/migration/why-not-to-migrate' },
     ],
   },
 ] as const
 
+// Reference — exhaustive technical lookup (imports, types, flags, exact behavior)
+const referenceSidebar = [
+  {
+    text: 'Reference',
+    collapsed: false,
+    items: [
+      { text: 'Overview', link: '/docs/reference/' },
+      { text: 'Architecture', link: '/docs/reference/architecture' },
+      { text: 'Commands & CLI', link: '/docs/reference/commands' },
+      { text: 'Project Structure', link: '/docs/reference/project-structure' },
+      { text: 'Building & Packaging', link: '/docs/reference/building-packages' },
+      { text: 'Deployment', link: '/docs/reference/deployment-reference' },
+      { text: 'Compatibility', link: '/docs/reference/compatibility' },
+      { text: 'Security', link: '/docs/reference/security' },
+      { text: 'Internal API', link: '/docs/reference/internal-api' },
+      { text: 'Performance', link: '/docs/reference/performance' },
+      { text: 'Roadmap', link: '/docs/reference/roadmap' },
+      { text: 'Roadblocks', link: '/docs/reference/roadblocks' },
+    ],
+  },
+  {
+    text: 'API Details',
+    collapsed: true,
+    items: [
+      { text: 'Frameworks', link: '/docs/reference/frameworks-reference' },
+      { text: 'Styling', link: '/docs/reference/styling-reference' },
+      { text: 'React 19', link: '/docs/reference/react-19-reference' },
+      { text: 'Custom Framework', link: '/docs/reference/custom-framework-reference' },
+      { text: 'Extending Runtime', link: '/docs/reference/extending-runtime' },
+    ],
+  },
+] as const
+
+// Legacy flat sidebar for backward compat — keeps old /docs/* URLs in search/nav
+const docsSidebar = [...guideSidebar, ...referenceSidebar] as const
+
 export default defineConfig({
   title: 'RSPFx',
   titleTemplate: ':title — RSPFx',
-  description: 'SPFx-compatible build toolchain. Replaces Heft + webpack + gulp. Vite default, Rsbuild & Rspack ready — same manifests, same .sppkg.',
+  description: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Replace webpack, eject webpack, Heft custom toolchain. Vite, Rspack, Rsbuild & esbuild custom build pipeline — same manifests, same .sppkg.',
   lang: 'en-US',
   cleanUrls: true,
   ignoreDeadLinks: true,
   appearance: true,
   srcDir: '.',
+  // Hide internal/private docs from VitePress routes, search, and build.
+  srcExclude: [
+    'docs/AGENTS.md',
+    'docs/plan-0.1.0/**',
+    'docs/plans/**',
+    'docs/real-tenant-validation.md',
+    'docs/supporting-a-new-spfx-version.md',
+  ],
   outDir: './.vitepress/dist',
   // Publish raw markdown alongside HTML so LLMs / curl can fetch e.g. /docs/why-rspfx.md,
   // /markdown/docs/*.md (legacy alias) and /md/docs/*.md (token-efficient same-origin alias).
@@ -111,12 +149,20 @@ export default defineConfig({
 
     walk(srcDir)
 
+    const isHiddenDoc = (rel: string) =>
+      rel === 'docs/AGENTS.md' ||
+      rel.startsWith('docs/plan-0.1.0/') ||
+      rel.startsWith('docs/plans/') ||
+      rel === 'docs/real-tenant-validation.md' ||
+      rel === 'docs/supporting-a-new-spfx-version.md'
+
     let count = 0
     for (const src of mdFiles) {
       const rel = relative(srcDir, src)
       // Disabled pages (llm.md / llms.md / any llm* prefix) must NOT be published
       // as raw markdown — mirrors transformPageData disabling copyMarkdown.
       if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
+      if (isHiddenDoc(rel)) continue
       // Primary: same path as route + .md  (e.g. docs/why-rspfx.md -> dist/docs/why-rspfx.md)
       // Alias:   /markdown/<rel>            (e.g. docs/why-rspfx.md -> dist/markdown/docs/why-rspfx.md)
       // New:    /md/<rel>                  (e.g. docs/why-rspfx.md -> dist/md/docs/why-rspfx.md)
@@ -138,6 +184,7 @@ export default defineConfig({
       for (const src of mdFiles) {
         const rel = relative(srcDir, src)
         if (rel === 'llm.md' || rel === 'llms.md' || rel.startsWith('llm')) continue
+        if (isHiddenDoc(rel)) continue
         const noExt = rel.replace(/\.md$/, '')
         const from = `/md/${noExt}`
         const to = `/md/${rel}`
@@ -185,17 +232,46 @@ export default defineConfig({
       pageData.frontmatter.copyMarkdown = false
     }
   },
+  transformHead({ pageData }) {
+    let canonical: string
+    if (pageData.relativePath === 'index.md') canonical = 'https://rspfx.mbsks.me/'
+    else canonical = `https://rspfx.mbsks.me/${pageData.relativePath.replace(/\.md$/, '').replace(/\/index$/, '')}`
+    const url = pageData.relativePath === 'index.md' ? 'https://rspfx.mbsks.me/' : `https://rspfx.mbsks.me/${pageData.relativePath.replace(/\.md$/, '.html')}`
+    // Per-page canonical + og:url for crawlers — complements global head canonical
+    return [
+      ['link', { rel: 'canonical', href: canonical }],
+      ['meta', { property: 'og:url', content: url }],
+    ]
+  },
   sitemap: {
     hostname: 'https://rspfx.mbsks.me',
     transformItems: (items) =>
-      items.filter((i) => !i.url.includes('real-tenant-validation') && !i.url.includes('supporting-a-new-spfx-version')),
+      items.filter(
+        (i) =>
+          !i.url.includes('real-tenant-validation') &&
+          !i.url.includes('supporting-a-new-spfx-version') &&
+          !i.url.includes('AGENTS') &&
+          !i.url.includes('plan-0.1.0') &&
+          !i.url.includes('/plans/'),
+      ),
   },
   head: [
     ['link', { rel: 'alternate', type: 'text/plain', href: '/llm.txt', title: 'LLM index (plain text)' }],
     ['link', { rel: 'alternate', type: 'text/plain', href: '/llms.txt', title: 'LLM index (detailed)' }],
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['link', { rel: 'apple-touch-icon', href: '/logo.svg' }],
+    ['link', { rel: 'canonical', href: 'https://rspfx.mbsks.me/' }],
     ['meta', { name: 'theme-color', content: '#059669' }],
+    ['meta', { name: 'robots', content: 'index, follow' }],
+    ['meta', { name: 'keywords', content: 'SPFx Vite, SPFx Vite replacement, SPFx alternative bundler, SPFx custom build pipeline, SPFx replace Webpack, SPFx custom Webpack, SharePoint Framework Vite, SharePoint Framework alternative build tool, SPFx Rspack, SPFx esbuild, SPFx eject webpack, SPFx Heft custom toolchain, SharePoint Framework build tool, SPFx webpack alternative' }],
+    ['meta', { name: 'publisher', content: 'RSPFx' }],
+    ['meta', { property: 'og:locale', content: 'en_US' }],
+    ['meta', { property: 'og:locale:alternate', content: 'en_GB' }],
+    ['meta', { name: 'twitter:site', content: '@rspfx' }],
+    ['meta', { name: 'twitter:creator', content: '@rspfx' }],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'RSPFx', alternateName: ['SPFx Vite', 'SPFx Vite replacement', 'SharePoint Framework Vite', 'SPFx alternative bundler', 'SPFx Rspack', 'SPFx esbuild'], description: 'SPFx-compatible build toolchain — Vite, Rsbuild and Rspack replacement for Heft + webpack + gulp. SPFx alternative bundler and custom build pipeline. Replace webpack, eject webpack, Heft custom toolchain. SharePoint Framework Vite alternative build tool with Rspack and esbuild.', url: 'https://rspfx.mbsks.me', applicationCategory: 'DeveloperApplication', operatingSystem: 'Cross-platform', keywords: 'SPFx Vite, SPFx Rspack, SPFx esbuild, SPFx alternative bundler, SharePoint Framework Vite', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, author: { '@type': 'Organization', name: 'RSPFx', url: 'https://github.com/master8848/rspfx' } })],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'RSPFx', alternateName: ['SPFx Vite replacement', 'SharePoint Framework Vite'], url: 'https://rspfx.mbsks.me', description: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Vite, Rspack, Rsbuild & esbuild custom build pipeline for SharePoint Framework.', inLanguage: 'en-US', publisher: { '@type': 'Organization', name: 'RSPFx', url: 'https://github.com/master8848/rspfx', logo: { '@type': 'ImageObject', url: 'https://rspfx.mbsks.me/logo.svg' } }, potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: 'https://rspfx.mbsks.me/docs/guide/why-rspfx?q={search_term_string}' }, 'query-input': 'required name=search_term_string' } })],
+    ['script', { type: 'application/ld+json' }, JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{ '@type': 'Question', name: 'What is SPFx Vite replacement?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx Vite replacement — a SharePoint Framework Vite integration via rspfxVite() in vite.config.ts. It builds the same manifests and .sppkg as official SPFx but with Vite HMR and esbuild speed: vite dev --port 4321 for dev, rspfx build/package for .sppkg.' } }, { '@type': 'Question', name: 'What is SPFx alternative bundler?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx alternative bundler and SharePoint Framework alternative build tool. It supports Vite (default, esbuild), Rsbuild and Rspack (Rust webpack-compatible) — same config/config.json → same AMD define bundle, switch with one plugin import.' } }, { '@type': 'Question', name: 'How to SPFx replace Webpack or eject webpack?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx lets you SPFx replace Webpack or SPFx eject webpack entirely. It deletes config/spfx-customize-webpack.js and Heft rig via rspfx migrate and writes vite.config.ts/rspack.config.ts. Re-add needed webpack plugins as Vite/Rspack plugins.' } }, { '@type': 'Question', name: 'What is SPFx custom build pipeline?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx is the SPFx custom build pipeline without Heft/gulp — rspfx calls Vite/Rsbuild/Rspack directly via packages/core/src/build.ts. Customize via vite.config.ts plugins and FrameworkPreset, not Heft rig.' } }, { '@type': 'Question', name: 'What is SPFx Rspack and SPFx esbuild?', acceptedAnswer: { '@type': 'Answer', text: 'SPFx Rspack is RSpfxPlugin on @rspack/core (Rust, SWC, disk cache). SPFx esbuild is Vite dev using esbuild for fast transforms. Pick Vite for esbuild speed, Rspack for webpack-compatible loaders.' } }, { '@type': 'Question', name: 'What is SPFx Heft custom toolchain replacement?', acceptedAnswer: { '@type': 'Answer', text: 'RSPFx replaces Heft, spfx-heft-plugins, spfx-web-build-rig and sp-build-web. Version switching becomes spfxVersion: 1.24 in one file, validated by rspfx doctor, instead of rig + generator + sp-* pins.' } }] })],
     ['script', {}, `(function(){try{var k='rspfx-theme',lk='rspfx-accent',v=localStorage.getItem(k)||localStorage.getItem(lk);if(!v){document.documentElement.setAttribute('data-accent','emerald');return;}if(v==='slate')v='slate-accent';var shadcnMap={'zinc':'zinc','slate':'slate','stone':'stone','gray':'gray','neutral':'neutral','red':'red','rose':'rose','orange':'orange','green':'green','blue-shadcn':'blue','yellow':'yellow','violet-shadcn':'violet'};var accentMap={'blue':null,'violet':'violet','emerald':'emerald','coral':'coral','slate-accent':'slate'};if(shadcnMap[v]){document.documentElement.setAttribute('data-theme',shadcnMap[v]);}else if(v in accentMap){var av=accentMap[v];if(av)document.documentElement.setAttribute('data-accent',av);}else if(v){document.documentElement.setAttribute('data-theme',v);} }catch(e){}} )()`],
     ['script', {}, `(function(){try{var k='rspfx-pm',v=localStorage.getItem(k);if(v&&['npm','pnpm','yarn','bun','deno'].includes(v)){document.documentElement.setAttribute('data-pm',v);window.__RSPFX_PM=v;}}catch(e){}} )()`],
     ['script', {}, `(function(){function p(){try{var y=new Date().getFullYear();var el=document.querySelector('.VPFooter .copyright');if(!el)return false;if(el.dataset.patched==='1'&&el.querySelector('a[href*="master8848"]'))return true;el.innerHTML='Copyright \\u00A9 '+y+' <a href="https://github.com/master8848" target="_blank" rel="noopener noreferrer">master8848</a>';el.dataset.patched='1';return true}catch(e){return false}}p();document.addEventListener('DOMContentLoaded',p);var t=setInterval(function(){if(p())clearInterval(t)},250);setTimeout(function(){clearInterval(t)},8000);try{new MutationObserver(p).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}window.addEventListener('popstate',p);window.addEventListener('hashchange',p);document.addEventListener('visibilitychange',p);})()`],
@@ -204,12 +280,12 @@ export default defineConfig({
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'RSPFx' }],
     ['meta', { property: 'og:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
-    ['meta', { property: 'og:description', content: 'No Heft, no webpack, no gulp. Vite default — Rsbuild & Rspack ready. Same manifests, same .sppkg.' }],
+    ['meta', { property: 'og:description', content: 'SPFx Vite replacement — SharePoint Framework Vite alternative bundler. Replace webpack, eject webpack, Heft custom toolchain. Vite, Rspack, Rsbuild & esbuild pipeline — same manifests, same .sppkg.' }],
     ['meta', { property: 'og:image', content: '/hero.svg' }],
-    ['meta', { property: 'og:image:alt', content: 'RSPFx' }],
+    ['meta', { property: 'og:image:alt', content: 'RSPFx — SPFx Vite replacement' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'RSPFx — SPFx-compatible build toolchain' }],
-    ['meta', { name: 'twitter:description', content: 'Build SharePoint web parts without the old toolchain. Vite by default — Rsbuild & Rspack ready.' }],
+    ['meta', { name: 'twitter:title', content: 'RSPFx — SPFx Vite replacement & alternative bundler' }],
+    ['meta', { name: 'twitter:description', content: 'SharePoint Framework Vite alternative build tool. Replace webpack, Heft, gulp with Vite, Rspack, Rsbuild & esbuild — same .sppkg.' }],
     ['meta', { name: 'twitter:image', content: '/hero.svg' }],
   ],
   themeConfig: {
@@ -221,13 +297,15 @@ export default defineConfig({
     // Component checks: frontmatter.copyMarkdown ?? theme.copyMarkdown ?? true
     copyMarkdown: true as unknown as boolean,
     nav: [
-      { text: 'Docs', link: '/docs/getting-started' },
-      { text: 'Guide', link: '/docs/commands' },
-      { text: 'Why RSPFx', link: '/docs/why-rspfx' },
+      { text: 'Guide', link: '/docs/guide/getting-started' },
+      { text: 'Reference', link: '/docs/reference/' },
+      { text: 'Why RSPFx', link: '/docs/guide/why-rspfx' },
     ],
     sidebar: {
       '/llms': docsSidebar as any,
       '/llm': docsSidebar as any,
+      '/docs/guide/': guideSidebar as any,
+      '/docs/reference/': referenceSidebar as any,
       '/docs/': docsSidebar as any,
     },
     socialLinks: [
@@ -318,7 +396,13 @@ export default defineConfig({
                 return
               }
               const isDisabled = (r: string) => r === 'llm.md' || r === 'llms.md' || r.startsWith('llm')
-              if (isDisabled(rel) || isDisabled(rel + '.md')) {
+              const isHidden = (r: string) =>
+                r === 'docs/AGENTS.md' ||
+                r.startsWith('docs/plan-0.1.0/') ||
+                r.startsWith('docs/plans/') ||
+                r === 'docs/real-tenant-validation.md' ||
+                r === 'docs/supporting-a-new-spfx-version.md'
+              if (isDisabled(rel) || isDisabled(rel + '.md') || isHidden(rel) || isHidden(rel + '.md')) {
                 res.statusCode = 404
                 res.setHeader('Content-Type', 'text/plain; charset=utf-8')
                 res.end('Not found')
@@ -339,7 +423,7 @@ export default defineConfig({
                 const resolved = resolve(cand)
                 if (!resolved.startsWith(srcDirAbs)) continue
                 const candRel = relative(srcDirAbs, resolved)
-                if (isDisabled(candRel)) {
+                if (isDisabled(candRel) || isHidden(candRel)) {
                   res.statusCode = 404
                   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
                   res.end('Not found')

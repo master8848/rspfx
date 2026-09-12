@@ -70,7 +70,7 @@ export function runBundlerBuild(projectRoot: string, bin: string, buildFailedCod
   const result = spawnSync(process.execPath, [bin, 'build'], {
     cwd: projectRoot,
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' }
+    env: { ...process.env, NODE_ENV: 'production', VITE_CONFIG_NATIVE_IGNORE_WARNING: 'true' }
   });
   if (result.status !== 0) {
     throw new RspfxError(buildFailedCode, `${label} build failed (exit ${result.status ?? 'signal'})`);
@@ -89,6 +89,8 @@ export function spawnBundlerDev(
     env: {
       ...process.env,
       NODE_ENV: 'development',
+      // Vite 8 native configLoader warns on ESM syntax in CJS vite.config.ts — suppress until project migrates to .mjs/.mts or type:module
+      VITE_CONFIG_NATIVE_IGNORE_WARNING: 'true',
       ...(opts.fastRefresh ? { RSPFX_FAST_REFRESH: '1' } : {}),
       ...(opts.openBrowser !== undefined ? { RSPFX_OPEN_BROWSER: opts.openBrowser ? '1' : '0' } : {})
     }

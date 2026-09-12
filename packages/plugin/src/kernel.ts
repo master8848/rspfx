@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { RspfxConfig } from '@mbsks/rspfx-core';
 import type { BundleEntry, CompileContext } from '@mbsks/rspfx-compiler-rspack';
 import {
@@ -12,7 +11,7 @@ import {
 } from '@mbsks/rspfx-dev-runtime';
 import type { RefreshRuntime } from '@mbsks/rspfx-dev-runtime';
 import type { FrameworkPreset } from '@mbsks/rspfx-plugin-api';
-import { amdName, collectExternals, computeUniqueName, writeStatsJson } from './shared.js';
+import { amdName, collectExternals, computeUniqueName, cacheVersionHash, writeStatsJson } from './shared.js';
 
 export interface KernelOpts {
   root: string;
@@ -51,16 +50,12 @@ export interface Kernel {
 export function createKernel(opts: KernelOpts): Kernel {
   const externals = collectExternals(opts.root, opts.project.externals, opts.project.localizedResources);
 
-  const cacheVersion = createHash('md5')
-    .update(
-      JSON.stringify({
-        framework: opts.config.framework,
-        spfxVersion: opts.config.spfxVersion,
-        build: opts.config.build
-      })
-    )
-    .digest('hex')
-    .slice(0, 8);
+  const cacheVersion = cacheVersionHash({
+    framework: opts.config.framework,
+    // build-core expects version optional; spfxVersion maps to version for cache key
+    version: opts.config.spfxVersion,
+    build: opts.config.build
+  });
 
   const uniqueName = (): string => computeUniqueName(opts.project.webParts.entries);
 
@@ -128,3 +123,5 @@ export function createKernel(opts: KernelOpts): Kernel {
 
 // Re-export for testing convenience
 export { readProject };
+// Re-export build-core helpers for backward compat (kernel historically re-exported some shared helpers)
+export { amdName, collectExternals, computeUniqueName, cacheVersionHash } from '@mbsks/rspfx-build-core';

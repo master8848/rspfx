@@ -81,17 +81,18 @@ src/ → bundler → dist/ → manifest-generator → release/ → sppkg-builder
    │generator   │    │             │    │server        │
    └────────────┘    └─────────────┘    └──────────────┘
          ▲                  ▲                  ▲
-         └─────────┬────────┴──────────────────┘
-                   ▼
-            ┌────────────┐
-            │dev-runtime │  (local + sharepoint modes, reload, preview)
-            └─────┬──────┘
-                  ▼
-            ┌─────────┐
-            │ plugin  │  (RSpfxPlugin / rspfxVite / rspfxRsbuild)
-            └────┬────┘
-                  ▼
-              rspfx CLI (composes everything)
+         └─────────┬────────┴────────┬─────────┘
+                   ▼                 ▼
+            ┌────────────┐    ┌────────────┐
+            │build-core  │    │dev-runtime │  (local + sharepoint modes, reload, preview)
+            └─────┬──────┘    └─────┬──────┘
+                  ▼                 ▼
+            ┌─────────┐       ┌────────────┐
+            │ plugin  │       │ plugin-dev │  (vite-first dev-only, lean)
+            └────┬────┘       └─────┬──────┘
+                 └────────┬─────────┘
+                          ▼
+                      rspfx CLI (composes everything)
 ```
 
 Rules:
@@ -99,8 +100,9 @@ Rules:
 - `core` has no runtime dependencies.
 - `webpart-base` owns `@microsoft/sp-webpart-base`. `core` never imports it.
 - `compiler-rspack` knows nothing about SharePoint.
-- `manifest-server` + `dev-runtime` only run in dev. Certs only; serving is in the bundler dev server.
-- `plugin` carries `RspfxConfig` via `RSPFX_PLUGIN_MARKER`.
+- `build-core` is lean shared helpers (amd, externals, defines, css, output) with zero heavy deps; used by `plugin`.
+- `manifest-server` + `dev-runtime` + `plugin-dev` only run in dev. Certs only; serving is in the bundler dev server.
+- `plugin` (full) and `plugin-dev` (lean dev-only) both carry `RspfxConfig` via `RSPFX_PLUGIN_MARKER`. `plugin-dev` has no `@rspack/core`/`sass`/framework deps.
 - CLI composes everything. No cycles.
 
 ---
@@ -116,9 +118,11 @@ Rules:
 | `compiler-rspack` | `core`, `plugin-api`, `diagnostics` | Rspack config, SWC, SCSS, assets, cache, `startDevServer`. |
 | `manifest-generator` | `core`, `diagnostics` | Component manifests, `manifests.js`, sp-* ids. |
 | `sppkg-builder` | `core`, `diagnostics` | `package-solution.json` → `.sppkg` ZIP. |
+| `build-core` | `core`, `diagnostics`, `manifest-generator`, `plugin-api` | Shared helpers: amd, externals, defines, css, output. Zero heavy deps. |
 | `manifest-server` | `core`, `diagnostics` | Certs in `~/.rspfx/certs`. |
 | `dev-runtime` | `core`, `compiler-rspack`, `manifest-server`, `manifest-generator`, `diagnostics`, `plugin-api`, `sharepoint-runtime`, `framework-*` | Dev server, reload (`/__rspfx_hot.json`), preview page + mock `/_api`, workbench URL. |
-| `plugin` | `core`, `compiler-rspack`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api`, `@rspack/core` | `RSpfxPlugin` / `rspfxVite` / `rspfxRsbuild`. |
+| `plugin` | `core`, `build-core`, `compiler-rspack`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api`, `@rspack/core` | Full plugin: `RSpfxPlugin` / `rspfxVite` / `rspfxRsbuild` (build + dev + package). |
+| `plugin-dev` | `core`, `dev-runtime`, `manifest-generator`, `manifest-server`, `diagnostics`, `plugin-api` | Lean vite-first dev-only: `rspfxDevPlugin` / `rspfxViteDev` (`configureServer` only, no `@rspack/core`/`sass`/frameworks). |
 | `framework-vanilla/react/solid/preact/vue/svelte` | `core`, `plugin-api`, `webpart-base` | Adapter + preset + thin web part shim. |
 | `fluent-adapter` | `core`, `framework-react`, `webpart-base` | Fluent theme sync. |
 | `sharepoint-runtime` | `core`, `diagnostics` | Local preview context, `local-runtime.js`, sp-* bridges. |

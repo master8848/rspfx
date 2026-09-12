@@ -1,0 +1,37 @@
+{
+  "name": "@mbsks/rspfx-build-core",
+  "version": "0.0.15",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "license": "MIT",
+  "scripts": {
+    "build": "rslib build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "description": "RSPFx shared build helpers: amd, externals, defines, css, output",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-diagnostics": "workspace:*",
+    "@mbsks/rspfx-manifest-generator": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

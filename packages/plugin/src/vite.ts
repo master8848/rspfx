@@ -1,6 +1,10 @@
-import os from 'node:os';
+/**
+ * @fileoverview Vite plugin — 944 LOC god file.
+ * TODO: split into `vite/config.ts` (createConfig), `vite/bundle.ts` (transformEntryBundle/esToAmd),
+ * `vite/dev.ts` (configureServer) and `vite/utils.ts` (getViteVersion). Tracked at https://github.com/master8848/rspfx/issues/2
+ * Sections: 1) Vite version detection 2) build helpers 3) rspfxVite plugin 4) utils
+ */
 import fs from 'node:fs';
-import * as fspEsm from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createRequire } from 'node:module';
@@ -17,7 +21,6 @@ import {
   scriptUrlCaptureLine,
   scriptUrlPublicPathExpression
 } from '@mbsks/rspfx-compiler-rspack';
-import { ensureCertificates } from '@mbsks/rspfx-manifest-server';
 import { createHookBus, getPlugins, type FrameworkPreset } from '@mbsks/rspfx-plugin-api';
 import {
   readProject,
@@ -30,13 +33,24 @@ import {
   assembleRelease,
   openBrowser,
   loadFrameworkPreset,
-  decodeIfEncoded,
-  type ServeSettings
+  decodeIfEncoded
 } from '@mbsks/rspfx-dev-runtime';
+import {
+  VITE_BASE_EXTENSIONS,
+  resolveTsconfigRaw,
+  checkNodeVersion,
+  checkViteConfigEsm,
+  updateOriginWithActualPort,
+  ensureAndTrustCerts,
+  patchFsForSpaces
+} from '@mbsks/rspfx-dev-runtime/vite-shared';
+import '@mbsks/rspfx-dev-runtime/vite-shared';
 import { createLogger, RspfxError } from '@mbsks/rspfx-diagnostics';
 import type { BundleEntry } from '@mbsks/rspfx-compiler-rspack';
 import type { RspfxPluginOptions } from './types.js';
-import { collectExternals } from './shared.js';
+import { validatePluginOptions } from './validation.js';
+import { collectExternals, inlineStyleCode } from '@mbsks/rspfx-build-core';
+import { writeStatsJson } from './shared.js';
 
 const logger = createLogger('rspfx');
 
@@ -51,32 +65,41 @@ const viteAls = new AsyncLocalStorage<BundleEntry>();
  * Vite), then falling back to the rspfx installation's Vite. Returns
  * undefined when Vite is not installed or version cannot be read.
  */
+const viteVersionMemo = new Map<string, string | undefined>();
 function getViteVersion(root: string): string | undefined {
+  if (viteVersionMemo.has(root)) return viteVersionMemo.get(root);
   const tryRead = (pkgPath: string): string | undefined => {
     try {
       const raw = fs.readFileSync(pkgPath, 'utf8');
       const pkg = JSON.parse(raw) as { version?: string };
       return typeof pkg.version === 'string' ? pkg.version : undefined;
-    } catch {
+    } catch (e) {
+      logger.debug(`getViteVersion read ${pkgPath} failed: ${String(e)}`);
       return undefined;
     }
   };
-  // 1) project-local vite
+  let version: string | undefined;
   try {
     const requireFromProject = createRequire(path.join(root, 'package.json'));
     const pkgPath = requireFromProject.resolve('vite/package.json');
     const v = tryRead(pkgPath);
-    if (v) return v;
-  } catch {}
-  // 2) fallback to this package's vite
-  try {
-    const basePath = decodeIfEncoded(import.meta.url);
-    const fallbackRequire = createRequire(basePath);
-    const pkgPath = fallbackRequire.resolve('vite/package.json');
-    const v = tryRead(pkgPath);
-    if (v) return v;
-  } catch {}
-  return undefined;
+    if (v) version = v;
+  } catch (e) {
+    logger.debug(`getViteVersion project resolve failed: ${String(e)}`);
+  }
+  if (!version) {
+    try {
+      const basePath = decodeIfEncoded(import.meta.url);
+      const fallbackRequire = createRequire(basePath);
+      const pkgPath = fallbackRequire.resolve('vite/package.json');
+      const v = tryRead(pkgPath);
+      if (v) version = v;
+    } catch (e) {
+      logger.debug(`getViteVersion fallback resolve failed: ${String(e)}`);
+    }
+  }
+  viteVersionMemo.set(root, version);
+  return version;
 }
 
 function getViteMajor(root: string): number | undefined {
@@ -91,48 +114,7 @@ function isVite8OrLater(root: string): boolean {
   return major !== undefined && major >= 8;
 }
 
-// Eager patch for Vite's loadAndTransform which does `fsp.readFile(file)` where
-// `file` may be "/Volumes/New%20Volume/..." when the workspace path contains a
-// space (pathToFileURL encodes it, Vite's cleanUrl leaves %20). Decode %20
-// before the actual read so the build succeeds on such paths.
-(() => {
-  const patchTarget = (target: unknown): void => {
-    try {
-      const mod = target as { readFile: (...args: unknown[]) => Promise<unknown>; _rspfxPatched?: boolean };
-      if (!mod || typeof mod.readFile !== 'function' || mod._rspfxPatched) return;
-      const orig = mod.readFile.bind(mod);
-      (mod as unknown as { readFile: unknown }).readFile = (file: unknown, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const decoded = decodeURIComponent(file);
-            if (decoded !== file) file = decoded;
-          } catch {}
-        }
-        return (orig as (...a: unknown[]) => unknown)(file, ...args);
-      };
-      mod._rspfxPatched = true;
-    } catch {}
-  };
-  patchTarget(fs.promises);
-  patchTarget(fspEsm as unknown);
-  // Also patch the classic fs.readFile
-  try {
-    const fsAny = fs as unknown as { readFile: (...a: unknown[]) => unknown; _rspfxPatched?: boolean };
-    if (fsAny && typeof fsAny.readFile === 'function' && !fsAny._rspfxPatched) {
-      const orig = fsAny.readFile.bind(fs);
-      fsAny.readFile = (file: unknown, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const d = decodeURIComponent(file as string);
-            if (d !== file) file = d;
-          } catch {}
-        }
-        return (orig as (...a: unknown[]) => unknown)(file, ...args);
-      };
-      fsAny._rspfxPatched = true;
-    }
-  } catch {}
-})();
+
 
 /**
  * Environment contract between the CLI and the Vite plugin:
@@ -195,8 +177,6 @@ interface ViteStatsJson {
   moduleCounts?: Record<string, number>;
 }
 
-const VITE_BASE_EXTENSIONS = ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'];
-
 const presetCache = new Map<string, Promise<FrameworkPreset>>();
 
 function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPreset> {
@@ -210,30 +190,16 @@ function loadPreset(root: string, framework: FrameworkId): Promise<FrameworkPres
 }
 
 function writeStats(root: string, entryName: string, moduleCount: number): void {
-  const file = path.join(root, '.rspfx', 'stats.json');
-  let existing: ViteStatsJson = {};
-  try {
-    existing = JSON.parse(fs.readFileSync(file, 'utf8')) as ViteStatsJson;
-  } catch {
-    // No stats file yet.
-  }
-  const moduleCounts: Record<string, number> = {
-    ...(typeof existing.moduleCounts === 'object' && existing.moduleCounts !== null
-      ? existing.moduleCounts
-      : {}),
-    [entryName]: moduleCount
-  };
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ ...existing, moduleCounts }, null, 2));
+  writeStatsJson(root, { [entryName]: moduleCount });
 }
 
-function inlineStyleCode(css: string): string {
-  return (
-    `\n(function(){var e=document.createElement("style");e.type="text/css";` +
-    `e.textContent=${JSON.stringify(css)};(document.head||document.documentElement).appendChild(e);})();\n`
-  );
-}
-
+/**
+ * @deprecated Disk fallback for leftover CSS files not caught by transformEntryBundle.
+ * With cssCodeSplit:false and transformEntryBundle deleting CSS assets from the bundle map,
+ * this fallback is normally a no-op (no stale assets). Kept for legacy Vite configs with
+ * custom assetFileNames or extraction enabled. Adjusts sourcemaps on disk consistently with
+ * packages/core/src/inline-css.ts helper (prepend ';' to mappings for the capture line).
+ */
 function inlineRemainingCssFiles(root: string, outDir: string, entryNames: string[]): void {
   const distDir = path.join(root, outDir);
   if (!fs.existsSync(distDir)) return;
@@ -278,6 +244,21 @@ function inlineRemainingCssFiles(root: string, outDir: string, entryNames: strin
     const codeWithoutMap = sourceMapComment ? js.slice(0, -sourceMapComment.length) : js;
     js = codeWithoutMap + inlineStyleCode(combinedCss) + (sourceMapComment || '');
     fs.writeFileSync(jsPath, js);
+    // Adjust corresponding .js.map on disk (if emitted) to keep mappings in sync.
+    // Reuses ';' logic from packages/core/src/inline-css.ts: prepend ';' for the prepended capture line.
+    // If sourcemaps are disabled (production default), no .map file exists and this is a no-op, ensuring
+    // no stale .map artifacts are left. If sourcemaps are enabled (e.g. dev or hidden), adjust instead of deleting.
+    try {
+      const mapPath = `${jsPath}.map`;
+      if (fs.existsSync(mapPath)) {
+        const raw = fs.readFileSync(mapPath, 'utf8');
+        const parsed = JSON.parse(raw) as { mappings?: string };
+        if (typeof parsed.mappings === 'string' && !parsed.mappings.startsWith(';')) {
+          parsed.mappings = ';' + parsed.mappings;
+          fs.writeFileSync(mapPath, JSON.stringify(parsed));
+        }
+      }
+    } catch {}
   }
   // Delete the now-inlined CSS files
   for (const f of cssFiles) {
@@ -507,6 +488,11 @@ function createEntryPlugins(
  *   rebuild the AMD bundles to `dist/` and open the workbench.
  */
 export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
+  const pluginValidation = validatePluginOptions(options as unknown as Record<string, unknown>);
+  if (!pluginValidation.ok) {
+    const msg = pluginValidation.error.map((e) => `${e.path.join('.') || '<root>'}: ${e.message} (${e.code})`).join('\n');
+    throw new RspfxError('CONFIG_VALIDATION_FAILED', `plugin option validation failed:\n${msg}`, pluginValidation.error as unknown as Error);
+  }
   const { projectRoot, ...rest } = options;
   const root = projectRoot ?? process.cwd();
   const resolved = resolveConfig(rest);
@@ -537,11 +523,16 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
     const viteMajor = viteVersion ? Number(viteVersion.split('.')[0] ?? '') : undefined;
     const isVite8 = viteMajor !== undefined && Number.isFinite(viteMajor) && viteMajor >= 8;
 
-    const certs =
-      mode === 'development' && settings.https
-        ? await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'), settings.hostname)
-        : undefined;
+    let certs: { key: string; cert: string } | undefined;
+    if (mode === 'development' && settings.https) {
+      const autoTrust = (resolved.dev as { autoTrust?: boolean | 'prompt' }).autoTrust;
+      certs = await ensureAndTrustCerts({ hostname: settings.hostname, autoTrust });
+    }
 
+    checkNodeVersion();
+    checkViteConfigEsm(root);
+    const explicitTsconfig = (resolved as { tsconfigPath?: string }).tsconfigPath ?? (resolved.build as { tsconfigPath?: string })?.tsconfigPath;
+    const tsconfigRaw = resolveTsconfigRaw(root, explicitTsconfig);
     const fastRefresh =
       command === 'serve' && (process.env[VITE_ENV.fastRefresh] === '1' || (resolved.dev.fastRefresh ?? false));
     const preset = await loadPreset(root, resolved.framework);
@@ -596,11 +587,14 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
           }
         };
 
+    const esbuild = tsconfigRaw
+      ? { ...(viteContribs?.esbuild as Record<string, unknown> | undefined), tsconfigRaw: JSON.stringify(tsconfigRaw) }
+      : viteContribs?.esbuild;
     return {
       root,
       base: './',
       define,
-      esbuild: viteContribs?.esbuild,
+      esbuild,
       plugins: [
         ...createEntryPlugins(entry.name, root, { isVite8, amdId, externals }),
         ...(viteContribs?.plugins ?? [])
@@ -625,17 +619,16 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         https: certs ? { key: certs.key, cert: certs.cert } : settings.https ? true : false,
         open: false
       },
-      // Future-proof experimental flag: Vite 7 ignores unknown keys, Vite 8
-      // currently has no Rollup fallback – this is a no-op today but documents
-      // intent and will take effect if a future Vite 8.x re-introduces a
-      // `rolldown: false` / `builder: 'rollup'` escape hatch.
+      // Vite 7 (Rollup) / Vite 8 (Rolldown) compat: experimental.rolldown is a forward-compat no-op.
+      // Vite 7 ignores unknown keys; Vite 8 currently has no Rollup fallback.
+      // Kept in case a future Vite re-introduces `rolldown: false` / `builder: 'rollup'` escape hatch.
       // See https://vite.dev/guide/migration and https://github.com/vitejs/vite/discussions/22820
       experimental: {
         // `rolldown: false` is the hypothetical flag discussed for Vite 8 to
         // force Rollup. It is ignored on Vite 7 and currently not implemented
         // on Vite 8, but including it makes the config forward-compatible.
         rolldown: false
-      } as unknown as Record<string, unknown>,
+      } as Record<string, unknown>,
       build: {
         outDir: resolved.build.outDir,
         emptyOutDir: overrides.emptyOutDir ?? false,
@@ -772,7 +765,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
         await Promise.all(
           project.webParts.entries.map((entry, index) =>
             viteAls.run(entry, async () => {
-              await (vite as unknown as ViteBuildApi).build({
+              await (vite as ViteBuildApi).build({
                 ...(await createConfig({ minify: false, sourcemap: true, emptyOutDir: index === 0 }, entry))
               });
             })
@@ -859,7 +852,7 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       await Promise.all(
         project.webParts.entries.slice(1).map((entry) =>
           viteAls.run(entry, async () => {
-            await (vite as unknown as ViteBuildApi).build({
+            await (vite as ViteBuildApi).build({
               ...(await createConfig({}, entry))
             });
           })
@@ -883,21 +876,6 @@ export function rspfxVite(options: RspfxPluginOptions): ViteRspfxPlugin {
       });
     }
   };
-}
-
-function updateOriginWithActualPort(
-  settings: ServeSettings,
-  devServer: ConnectMiddlewareServer
-): string {
-  try {
-    const address = (devServer.httpServer as { address(): unknown } | undefined)?.address();
-    if (address && typeof address === 'object' && 'port' in address) {
-      return `${settings.scheme}://${settings.hostname}:${(address as { port: number }).port}`;
-    }
-  } catch {
-    // Fall back to the configured origin.
-  }
-  return settings.origin;
 }
 
 function selectEntry(
@@ -957,7 +935,7 @@ async function importViteFrom(root: string): Promise<unknown> {
       throw new RspfxError(
         'VITE_NOT_FOUND',
         'Vite is not installed in this project. Add "vite" to devDependencies (rspfx dev/build use the project-local Vite).',
-        error as unknown as Error
+        error as Error
       );
     }
   }
@@ -977,43 +955,5 @@ async function importViteFrom(root: string): Promise<unknown> {
 }
 
 function patchViteForSpaces(_viteMod: unknown): void {
-  // Vite's dev server loadAndTransform does `file = cleanUrl(id)` then
-  // `fsp.readFile(file)`. When the workspace path contains a space, `id`
-  // / `url` may be "/Volumes/New%20Volume/..." and cleanUrl leaves %20 literal.
-  // Monkey-patch both fs.promises and fs/promises to decode %20 on the fly.
-  const patch = (target: unknown): void => {
-    try {
-      const fsp = target as { readFile: typeof fs.promises.readFile; _rspfxPatched?: boolean };
-      if (!fsp || typeof fsp.readFile !== 'function' || fsp._rspfxPatched) return;
-      const origReadFile = fsp.readFile.bind(fsp);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (fsp.readFile as any) = (file: string, ...args: unknown[]) => {
-        if (typeof file === 'string' && file.includes('%')) {
-          try {
-            const decoded = decodeURIComponent(file);
-            if (decoded !== file) file = decoded;
-          } catch {
-            // keep original
-          }
-        }
-        // @ts-expect-error variadic
-        return origReadFile(file, ...args);
-      };
-      fsp._rspfxPatched = true;
-    } catch {
-      // best-effort
-    }
-  };
-  patch(fs.promises);
-  try {
-    // Also patch the separate 'node:fs/promises' ESM namespace that Vite imports
-    // as `import fsp from 'node:fs/promises'`.
-    const fspModule = createRequire(fileURLToPath(import.meta.url))('node:fs/promises') as unknown;
-    patch(fspModule);
-    // Also patch 'fs/promises' without node: prefix (Vite also imports it)
-    try {
-      const fspModule2 = createRequire(fileURLToPath(import.meta.url))('fs/promises') as unknown;
-      patch(fspModule2);
-    } catch {}
-  } catch {}
+  patchFsForSpaces();
 }

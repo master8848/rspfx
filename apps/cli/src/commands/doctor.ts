@@ -4,9 +4,9 @@ import net from 'node:net';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createLogger, RspfxError, RspfxErrorCode } from '@mbsks/rspfx-diagnostics';
-import { SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
+import { DEFAULT_DEV_PORT, DEV_SERVER_HTTPS_ORIGIN, SPFX_DEFAULT_TARGET, tryResolveConfig } from '@mbsks/rspfx-core';
 import { ensureProjectConfigs, readProject } from '@mbsks/rspfx-dev-runtime';
-import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted } from '@mbsks/rspfx-manifest-server';
+import { ensureCertificates, formatTrustInstructions, getCertStatus, isCertTrusted, tryTrustCert } from '@mbsks/rspfx-manifest-server';
 import { loadConfig, type LoadedProject } from '../config.js';
 import { resolveViteBin } from '../vite.js';
 import { resolveRsbuildBin } from '../rsbuild.js';
@@ -25,7 +25,7 @@ export interface DoctorResult {
   checks: DoctorCheck[];
 }
 
-export async function runDoctor(cwd: string, opts?: { fix?: boolean }): Promise<DoctorResult> {
+export async function runDoctor(cwd: string, opts?: { fix?: boolean; trust?: boolean }): Promise<DoctorResult> {
   if (opts?.fix) {
     try {
       ensureProjectConfigs(cwd);
@@ -35,6 +35,25 @@ export async function runDoctor(cwd: string, opts?: { fix?: boolean }): Promise<
       await ensureCertificates(path.join(os.homedir(), '.rspfx', 'certs'));
       logger.info('✓ ensured certificates');
     } catch {}
+  }
+  if (opts?.trust || opts?.fix) {
+    try {
+      const certsDir = path.join(os.homedir(), '.rspfx', 'certs');
+      const certPath = path.join(certsDir, 'cert.pem');
+      if (fs.existsSync(certPath)) {
+        const trusted = await isCertTrusted(certPath);
+        if (trusted.trusted === false) {
+          logger.info('Attempting to trust dev cert...');
+          const result = await tryTrustCert(certPath);
+          if (result.trusted) logger.success(`Cert trusted: ${result.detail}`);
+          else logger.warn(`Trust failed: ${result.detail} — ${formatTrustInstructions(certsDir)}`);
+        } else if (trusted.trusted === true) {
+          logger.info(`Cert already trusted: ${trusted.detail}`);
+        }
+      }
+    } catch (error) {
+      logger.warn(`Trust attempt failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   const checks: DoctorCheck[] = [];
 
@@ -132,7 +151,7 @@ export async function runDoctor(cwd: string, opts?: { fix?: boolean }): Promise<
     });
   }
 
-  const devPort = config?.dev.port ?? 4321;
+  const devPort = config?.dev.port ?? DEFAULT_DEV_PORT;
   const portFree = await isPortFree(devPort);
   checks.push({ name: `port ${devPort} free (dev server)`, ok: portFree });
 
@@ -323,7 +342,7 @@ async function checkCertTrusted(): Promise<DoctorCheck> {
       return {
         name: 'dev cert trusted (OS store)',
         ok: false,
-        detail: `${result.detail} — browsers block https://localhost:4321 until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). ${formatTrustInstructions(certsDir)} — then restart browser. See ${path.join(certsDir, 'cert.pem.trust.txt')}`
+        detail: `${result.detail} — browsers block ${DEV_SERVER_HTTPS_ORIGIN} until trusted (CORS / ERR_CERT_AUTHORITY_INVALID). ${formatTrustInstructions(certsDir)} — then restart browser. See ${path.join(certsDir, 'cert.pem.trust.txt')}`
       };
     }
     return {

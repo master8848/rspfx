@@ -1,6 +1,6 @@
 # Getting Started
 
-Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+Build SharePoint web parts without gulp + webpack. Same `.sppkg`, much faster — the SPFx Vite / SharePoint Framework Vite path. RSPFx is the SPFx Vite replacement, SPFx alternative bundler and SharePoint Framework alternative build tool, with Vite, Rspack and esbuild as the SPFx custom build pipeline. See Microsoft docs: [SharePoint Framework overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/sharepoint-framework-overview) and [Set up your development environment](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment). Also see [Why RSPFx](why-rspfx.md#search-terms--spfx-vite-replacement-and-alternative-bundlers) for "SPFx replace Webpack", "SPFx custom Webpack", "SPFx eject webpack", and "SPFx Heft custom toolchain".
 
 ## 1. Install
 
@@ -57,13 +57,25 @@ rspfx new my-app --framework react --spfx-version 1.22 --yes  # CI
 
 `rspfx new` is a convenience wrapper that does the same (writes `vite.config.ts` + manifests). Flags: `--bundler vite|rsbuild|rspack` (default `vite`), `--yes` accepts defaults. See [commands.md#rspfx-new-name](commands.md#rspfx-new-name).
 
-For existing Heft/Gulp projects, preview with `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
+For existing Heft/Gulp projects, try without migrating — easiest is `rspfx dev:vite` (auto-generates `vite.config.ts`, no manual config). See [try-mode.md](try-mode.md) and [dev-vite.md](dev-vite.md). To preview a full switch, run `rspfx migrate --dry-run`. See [hybrid-dev.md](hybrid-dev.md).
 
 ## 3. Dev server on :4321
 
+Easiest in an existing SPFx project: `rspfx dev:vite` auto-detects `spfxVersion`/`framework`/`tsconfig.json` and creates `vite.config.ts` with the lean dev plugin, then starts Vite.
+
+See [dev-vite.md](dev-vite.md) and [commands.md#rspfx-devvite](commands.md#rspfx-devvite).
+
 ```sh
-rspfx dev
-rspfx dev --refresh   # state-preserving refresh where supported
+npx @mbsks/rspfx-cli dev:vite --dry-run
+npx @mbsks/rspfx-cli dev:vite
+```
+
+Primary for new projects: `vite dev` with `rspfxViteDev()` / `rspfxVite()` — Vite handles HMR/serve, the plugin adds `/temp/manifests.js`, reload, and workbench URL via `configureServer`.
+
+```sh
+vite dev --port 4321
+vite dev --port 4321 -- --refresh   # state-preserving refresh where supported (dev.fastRefresh)
+# alternative: rspfx dev [--refresh] uses the same dev-runtime but is not required for Vite users
 ```
 
 Port `4321` is the single dev port. Mode is picked by whether a tenant is configured:
@@ -77,7 +89,7 @@ Local preview: browse `http://localhost:4321/` — lists every web part, mock `/
 
 Workbench: RSPFx prints `https://<tenant>/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=<encoded https://localhost:4321/temp/manifests.js>` — SharePoint loads bundles from `https://localhost:4321/dist/*`. See Microsoft docs: [Serve your web part in a workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/serve-your-web-part-in-a-workbench) and [Use the Workbench](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/tools/workbench).
 
-Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or `rspfx dev --tenant https://contoso.sharepoint.com`. See [commands.md#rspfx-dev](commands.md#rspfx-dev).
+Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or CLI flag (`vite dev` reads config/env; `rspfx dev --tenant https://contoso.sharepoint.com` as alternative). See [commands.md#rspfx-dev](commands.md#rspfx-dev).
 
 > **Tip:** Put `tenantUrl` in `vite.config.ts` (`dev: { tenantUrl: 'https://contoso.sharepoint.com' }`) so teammates don't need flags.
 
@@ -85,7 +97,7 @@ Set tenant via `dev.tenantUrl` in config, `SPFX_SERVE_TENANT_DOMAIN` env var, or
 
 ### Cert trust (SharePoint mode only)
 
-Workbench mode needs HTTPS. `rspfx dev` auto-generates a cert in `~/.rspfx/certs` on first run. If untrusted, the workbench shows `NET::ERR_CERT_AUTHORITY_INVALID` or a blank page.
+Workbench mode needs HTTPS. The dev plugin (`vite dev`) and `rspfx dev` auto-generate a cert in `~/.rspfx/certs` on first run (via `ensureCertificates`). If untrusted, the workbench shows `NET::ERR_CERT_AUTHORITY_INVALID` or a blank page.
 
 Trust once per machine, then restart the browser:
 
@@ -102,6 +114,8 @@ Save → rebuild → auto-reload. Dev builds are unminified; `rspfx build` minif
 > **Tip:** If `Load debug scripts` reappears every reload, check cert trust or Local Network Access — it should show once per session.
 
 ## 4. Build and package
+
+`vite build` alone does not generate `manifests.js` or `.sppkg`. Use the CLI for build/package:
 
 ```sh
 rspfx build      # → dist/ + release/

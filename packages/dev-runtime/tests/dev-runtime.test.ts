@@ -1,10 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, afterAll, beforeAll } from 'vitest';
+import { describe, expect, it, afterAll, beforeAll, vi, afterEach } from 'vitest';
 import { resolveConfig, type RspfxConfig } from '@mbsks/rspfx-core';
 import { resolveServeMode, startServe } from '../src/index.js';
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+vi.stubEnv('NODE_TLS_REJECT_UNAUTHORIZED', '0');
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.stubEnv('NODE_TLS_REJECT_UNAUTHORIZED', '0');
+});
 
 const FIXTURE = path.join(process.cwd(), 'tests', 'fixtures', 'proj');
 
@@ -19,23 +24,20 @@ function makeConfig(overrides: Partial<RspfxConfig> = {}): RspfxConfig {
   });
 }
 
-function rmRetry(target: string): void {
+async function rmRetry(target: string): Promise<void> {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      fs.rmSync(target, { recursive: true, force: true });
+      await fs.promises.rm(target, { recursive: true, force: true });
       return;
     } catch {
       // Files may still be flushing; retry briefly.
     }
-    const end = Date.now() + 100;
-    while (Date.now() < end) {
-      // busy-wait
-    }
+    await new Promise<void>((r) => setTimeout(r, 100));
   }
 }
 
-beforeAll(() => {
-  rmRetry(FIXTURE);
+beforeAll(async () => {
+  await rmRetry(FIXTURE);
   const webpartsDir = path.join(FIXTURE, 'src', 'webparts', 'hello');
   const extensionsDir = path.join(FIXTURE, 'src', 'extensions', 'header');
   fs.mkdirSync(path.join(FIXTURE, 'node_modules', '@microsoft', 'sp-core-library', 'dist'), {
@@ -155,8 +157,8 @@ beforeAll(() => {
   );
 });
 
-afterAll(() => {
-  rmRetry(FIXTURE);
+afterAll(async () => {
+  await rmRetry(FIXTURE);
 });
 
 describe('startServe', () => {

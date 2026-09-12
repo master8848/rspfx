@@ -3,6 +3,7 @@
   "version": "0.0.15",
   "private": false,
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,15 +18,14 @@
       "default": "./dist/define.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {},
   "peerDependencies": {
     "@microsoft/sp-webpart-base": "^1.20.0 || ^1.21.0 || ^1.22.0 || ^1.23.0"
   },
@@ -38,5 +38,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

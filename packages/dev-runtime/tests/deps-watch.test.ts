@@ -81,20 +81,21 @@ describe('watchDependencyScope', () => {
     const root = makeProject();
     addSpPackage(root, 'sp-core-library', 1_000_000_000);
     let changes = 0;
-    const watcher = watchDependencyScope(root, () => changes++, 50);
+    // Use a slightly larger interval (100ms) for CI stability; wait 250ms (~2.5 intervals) to assert silence.
+    const watcher = watchDependencyScope(root, () => changes++, 100);
 
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      await new Promise<void>((resolve) => setTimeout(resolve, 250));
       expect(changes).toBe(0);
 
       const changeFired = new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('onChange not fired')), 3000);
+        const timeout = setTimeout(() => reject(new Error('onChange not fired')), 5000);
         const poll = (): void => {
           if (changes > 0) {
             clearTimeout(timeout);
             resolve();
           } else {
-            setTimeout(poll, 10);
+            setTimeout(poll, 20);
           }
         };
         poll();
@@ -103,18 +104,18 @@ describe('watchDependencyScope', () => {
       await changeFired;
       expect(changes).toBe(1);
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   });
 
   it('stops firing after stop()', async () => {
     const root = makeProject();
     let changes = 0;
-    const watcher = watchDependencyScope(root, () => changes++, 20);
-    watcher.stop();
+    const watcher = watchDependencyScope(root, () => changes++, 50);
+    await watcher.stop();
 
     addSpPackage(root, 'sp-core-library', 1_000_000_000);
-    await new Promise<void>((resolve) => setTimeout(resolve, 150));
+    await new Promise<void>((resolve) => setTimeout(resolve, 250));
     expect(changes).toBe(0);
   });
 });

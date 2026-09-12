@@ -22,19 +22,14 @@
       "default": "./dist/headless.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rslib build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@mbsks/rspfx-core": "workspace:*",
-    "@mbsks/rspfx-plugin-api": "workspace:*",
-    "@mbsks/rspfx-webpart-base": "workspace:*",
     "@vitejs/plugin-vue": "^5.2.0",
     "@vue/compiler-sfc": "^3.5.13",
     "vue-loader": "^17.4.2"
@@ -49,11 +44,18 @@
     }
   },
   "devDependencies": {
+    "@mbsks/rspfx-core": "workspace:*",
+    "@mbsks/rspfx-plugin-api": "workspace:*",
+    "@mbsks/rspfx-webpart-base": "workspace:*",
     "vue": "^3.5.13"
   },
   "description": "RSPFx Vue framework preset and web part base class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/master8848/rspfx.git"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
