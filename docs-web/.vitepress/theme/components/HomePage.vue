@@ -126,8 +126,8 @@ const features = [
     <section class="rspfx-hero">
       <div class="rspfx-hero-inner">
         <div class="rspfx-hero-content">
-          <h1 class="rspfx-hero-name">RSPFx</h1>
-          <p class="rspfx-hero-text">Ship SharePoint web parts without the legacy toolchain</p>
+          <p class="rspfx-eyebrow">RSPFx</p>
+          <h1 class="rspfx-hero-text">Ship SharePoint web parts without the legacy toolchain</h1>
           <p class="rspfx-hero-tagline">SPFx development shouldn't be frustrating. RSPFx dev server runs in seconds with modern tooling (Vite, Rsbuild, Rspack) — not minutes waiting on Heft and webpack.</p>
           <div class="rspfx-hero-actions">
             <a class="rspfx-btn rspfx-btn-brand" href="/docs/getting-started">Get started</a>
@@ -141,7 +141,7 @@ const features = [
               <svg v-if="!promptCopied && !promptFailed" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /><path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" /></svg>
               <svg v-else-if="promptCopied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
               <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
-              {{ promptCopied ? 'COPIED!' : promptFailed ? 'FAILED' : 'COPY PROMPT' }}
+              {{ promptCopied ? 'Copied!' : promptFailed ? 'Failed' : 'Copy prompt' }}
             </button>
           </div>
         </div>
@@ -409,8 +409,8 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: radial-gradient(ellipse 80% 62% at 50% 0%, #000 68%, transparent 108%);
   -webkit-mask-image: radial-gradient(ellipse 80% 62% at 50% 0%, #000 68%, transparent 108%);
@@ -418,8 +418,8 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
 }
 :global(.dark) .rspfx-hero::after {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   opacity: 1;
 }
 .rspfx-hero-inner {
@@ -431,32 +431,31 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   margin: 0 auto;
 }
 .rspfx-hero-content { flex: 1 1 0; min-width: 0; }
-.rspfx-hero-name {
-  margin: 0;
-  font-size: 56px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-  background: var(--vp-home-hero-name-background);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.rspfx-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vp-c-brand-1);
+  line-height: 1;
 }
 .rspfx-hero-text {
-  margin: 12px 0 0;
-  font-size: 36px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  margin: 0;
+  font-size: 44px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
   color: var(--vp-c-text-1);
-  line-height: 1.15;
+  line-height: 1.08;
   max-width: 560px;
+  text-wrap: balance;
 }
 .rspfx-hero-tagline {
   margin: 14px 0 0;
   color: var(--vp-c-text-2);
-  font-size: 16px;
+  font-size: 16.5px;
   line-height: 1.6;
-  max-width: 580px;
+  max-width: 560px;
   text-wrap: balance;
 }
 .rspfx-hero-actions {
@@ -470,9 +469,9 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: 44px;
   padding: 0 20px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
@@ -500,16 +499,16 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   justify-content: center;
   gap: 8px;
   box-sizing: border-box;
-  height: 40px;
+  height: 44px;
   padding: 0 20px;
-  border-radius: 9999px;
-  border: 1.5px solid hsl(var(--primary));
-  background: transparent;
-  color: hsl(var(--primary));
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
   font-family: var(--vp-font-family-base);
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -517,15 +516,15 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   outline: none;
   user-select: none;
 }
-.rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.08); transform: translateY(-1px); box-shadow: 0 4px 16px hsl(var(--primary) / 0.14); }
+.rspfx-hero-copy:hover { background: var(--vp-c-default-soft); border-color: color-mix(in srgb, var(--vp-c-brand-1) 22%, var(--vp-c-divider)); transform: translateY(-1px); box-shadow: 0 4px 16px hsl(var(--primary) / 0.14); }
 .rspfx-hero-copy:active { transform: translateY(0); }
 .rspfx-hero-copy:focus-visible { box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.40); }
 .rspfx-hero-copy.copied { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
 .rspfx-hero-copy.failed { border-color: #ef4444; color: #ef4444; }
 :global(.dark) .rspfx-hero-copy.failed { color: #f87171; border-color: #f87171; }
-:global(.dark) .rspfx-hero-copy:hover { background: hsl(var(--primary) / 0.14); }
-.rspfx-hero-copy.copied:hover { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
-.rspfx-hero-copy.failed:hover { background: transparent; }
+:global(.dark) .rspfx-hero-copy:hover { background: var(--vp-c-default-soft); }
+.rspfx-hero-copy.copied:hover { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
+.rspfx-hero-copy.failed:hover { background: var(--vp-c-bg-soft); }
 
 .rspfx-hero-image {
   position: relative;
@@ -550,23 +549,23 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  border-radius: 22px;
   border: 1px solid var(--vp-c-divider);
   box-shadow: var(--rspfx-shadow-soft);
-  background: var(--vp-c-bg);
+  background: var(--vp-c-bg-soft);
 }
 :global(.dark) .rspfx-hero-image img { border-color: rgba(255,255,255,0.08); }
 
 @media (max-width: 960px) {
   .rspfx-hero-inner { flex-direction: column; align-items: flex-start; }
   .rspfx-hero-image { flex: none; width: 280px; height: 280px; align-self: center; }
-  .rspfx-hero-name { font-size: 48px; }
-  .rspfx-hero-text { font-size: 30px; }
+  .rspfx-hero-text { font-size: 38px; }
 }
 @media (max-width: 640px) {
   .rspfx-hero { padding-top: 24px; }
-  .rspfx-hero-name { font-size: 40px; }
-  .rspfx-hero-text { font-size: 26px; }
+  .rspfx-hero-text { font-size: 32px; }
   .rspfx-hero-image { width: 240px; height: 240px; }
 }
 
