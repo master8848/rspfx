@@ -5,9 +5,9 @@ import { copyToClipboard } from '../utils/copy.js'
 
 // ── Hero: Copy Prompt (inline, no slot dependency — layout: page has no home-hero-actions-after) ──
 const RSPFX_PROMPT = `Use RSPFx from https://github.com/master8848/rspfx — docs at https://rspfx.mbsks.me — for this SPFx project. Read skills/rspfx/SKILL.md and docs/ in that repo (or https://rspfx.mbsks.me) for all toolchain details (Vite is default, Rsbuild/Rspack only if needed). Check ARCHITECTURE.md and packages/*/src if docs lag — code is truth. Do not use webpack/Heft/gulp.
-You can use vite or rsbuild to scafold the app and follow docs on github to add plugin
-Build with RSPFx's Vite-first pipeline: zero-config from config/config.json and *.manifest.json, single spfxVersion switch for SPFx 1.20–1.24, any framework via preset (React/Vue/Svelte/Solid/Preact/custom), CSS bundled into JS, dev server at localhost:4321, output to sharepoint/solution/*.sppkg, deploy with rspfx deploy. Keep manifests as contract and target the SharePoint runtime without changing the app model.
-For existing Heft/gulp projects: try without migrating — one file vite.config.ts with devTryMode: true + tryComponents and two installs (npm i -D @mbsks/rspfx-plugin @mbsks/rspfx-cli) then rspfx dev. Keep gulp/heft for production. See docs/guide/try-mode.md.`
+Scaffold the app with vite or rsbuild and follow docs on github to add the plugin.
+Build with RSPFx's Vite-first pipeline: zero-config from config/config.json and *.manifest.json, single spfxVersion switch (full 1.20–1.24, dev-only 1.11–1.19), any framework via preset (React/Vue/Svelte/Solid/Preact/custom), CSS bundled into JS, dev server at localhost:4321, output to sharepoint/solution/*.sppkg, deploy with rspfx deploy. Keep manifests as contract and target the SharePoint runtime without changing the app model.
+For existing Heft/gulp projects: try without migrating — run rspfx dev:vite (auto-scaffolds vite.config.ts with lean @mbsks/rspfx-plugin-dev / rspfxViteDev; manual alternative devTryMode:true + tryComponents), then npm run dev:vite / vite --port 4321 (rspfx dev also works). http://localhost:4321 is local preview, https + workbench debugManifestsFile with --tenant. Keep gulp/heft for production. See docs/guide/try-mode.md.`
 const promptCopied = ref(false)
 const promptFailed = ref(false)
 let promptTimer: ReturnType<typeof setTimeout> | null = null
@@ -261,22 +261,22 @@ rspfx package      <span class="c"># → sharepoint/solution/my-app.sppkg</span>
         <!-- Existing project — try mode (pushed way, keeps gulp/heft) -->
         <div v-else-if="activeTab === 'existing'" class="rspfx-start-content">
           <div class="rspfx-code-block rspfx-code-block-muted">
-            <pre class="rspfx-code"><code><span class="c"># in your existing Heft/gulp SPFx project — one file + two installs, keeps gulp/heft</span>
-<span class="c"># 1. install two dev deps</span>
+            <pre class="rspfx-code"><code><span class="c"># in your existing Heft/gulp SPFx project — easiest: rspfx dev:vite (auto-scaffolds lean @mbsks/rspfx-plugin-dev); manual try-mode below, keeps gulp/heft</span>
+<span class="c"># 1. install two dev deps (manual alternative)</span>
 {{ addCmd }}   <span class="c"># adds @mbsks/rspfx-plugin + @mbsks/rspfx-cli</span></code></pre>
           </div>
           <div class="rspfx-code-block rspfx-code-block-code">
             <div class="rspfx-code-header">
               <span class="rspfx-code-lang">ts</span>
             </div>
-            <pre class="rspfx-code"><code><span class="c">// 2. add vite.config.ts — single file, synthetic manifests, no config.json edits</span>
+            <pre class="rspfx-code"><code><span class="c">// 2. manual try-mode vite.config.ts — synthetic manifests via devTryMode + tryComponents, no config.json edits</span>
 <span class="kw">import</span> { defineConfig } <span class="kw">from</span> <span class="str">'vite'</span>
 <span class="kw">import</span> { rspfxVite } <span class="kw">from</span> <span class="str">'@mbsks/rspfx-plugin'</span>
 <span class="kw">export default</span> defineConfig({ plugins: [rspfxVite({ name: <span class="str">'my-project'</span>, framework: <span class="str">'react'</span>, spfxVersion: <span class="str">'1.24'</span>, devTryMode: <span class="kw">true</span>, tryComponents: [{ name: <span class="str">'hello-world'</span> }] })] })</code></pre>
           </div>
           <div class="rspfx-code-block rspfx-code-block-muted">
-            <pre class="rspfx-code"><code><span class="c"># 3. run — gulp/heft stay for production, rspfx dev only for dev</span>
-rspfx dev          <span class="c"># http://localhost:4321 — or https with --tenant</span>
+            <pre class="rspfx-code"><code><span class="c"># 3. run — primary: npm run dev:vite / vite --port 4321 (rspfx dev also works); gulp/heft stay for production</span>
+rspfx dev:vite     <span class="c"># auto-scaffold + start: http://localhost:4321 local preview, https workbench with --tenant</span>
 <span class="c"># delete vite.config.ts to revert; fully migrate later with rspfx migrate --dry-run</span>
 <span class="c"># docs: /docs/guide/try-mode</span></code></pre>
           </div>
@@ -288,11 +288,11 @@ rspfx dev          <span class="c"># http://localhost:4321 — or https with --t
             <div class="rspfx-code-header">
               <span class="rspfx-code-lang">ts</span>
             </div>
-            <pre class="rspfx-code"><code><span class="c">// vite.config.ts — add to any Vite starter (create-vite, better-t-stack, TanStack Router…)</span>
+            <pre class="rspfx-code"><code><span class="c">// vite.config.ts — greenfield: add plain rspfxVite to any new Vite starter (create-vite, better-t-stack, TanStack Router…) — not try-mode</span>
 <span class="kw">import</span> { defineConfig } <span class="kw">from</span> <span class="str">'vite'</span>
 <span class="kw">import</span> { rspfxVite } <span class="kw">from</span> <span class="str">'@mbsks/rspfx-plugin'</span>
 <span class="kw">export default</span> defineConfig({ plugins: [rspfxVite({ name: <span class="str">'my-app'</span>, framework: <span class="str">'react'</span>, spfxVersion: <span class="str">'1.24'</span> })] })
-<span class="c">// Rsbuild: rspfxRsbuild() in rsbuild.config.ts, Rspack: new RSpfxPlugin() in rspack.config.ts</span></code></pre>
+<span class="c">// Rsbuild: rspfxRsbuild() in rsbuild.config.ts, Rspack: new RspfxPlugin() in rspack.config.ts</span></code></pre>
           </div>
         </div>
       </div>
